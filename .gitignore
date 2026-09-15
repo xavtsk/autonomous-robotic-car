@@ -1,0 +1,21 @@
+# Generated build directories
+/build/
+/build-*/
+/cmake-build-*/
+
+# Generated C and firmware artifacts
+*.o
+*.obj
+*.a
+*.elf
+*.bin
+*.hex
+*.uf2
+*.map
+
+# Local editor and operating system files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
