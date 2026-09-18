@@ -1,24 +1,27 @@
 # Buddy 1 — WiFi Communication, Command and Telemetry
 
-Starter modules only; no functionality is implemented.
-Matching headers are in `include/buddy1/`.
+Implemented communications subsystem. Matching public headers live under
+`include/buddy1/`; shared message vocabulary and frozen run configuration
+live under `include/shared/` and `src/shared/`.
 
-| Source / header basename | Purpose |
+| Module | Responsibility |
 | --- | --- |
-| `communication` | Public communication subsystem interface. |
-| `wifi_connection` | WiFi connectivity and connection recovery. |
-| `mqtt_client` | MQTT session and messaging management. |
-| `telemetry` | Telemetry publishing, heartbeat, and status reporting. |
-| `command_receiver` | Command subscription and reception. |
+| `communication` | Public façade and non-blocking coordination |
+| `wifi_connection` | Pico W association, link monitoring and reconnect backoff |
+| `mqtt_client` | MQTT connection, topics, bounded command buffering and QoS 1 replies |
+| `telemetry` | JSON payloads, event FIFO, periodic latest values and snapshots |
+| `command_receiver` | Pure parsing and validation of permitted MQTT commands |
+| `telemetry_port_pico` | Pico clock and the future μT-Kernel locking seam |
 
-Only `communication.h` declares the proposed subsystem lifecycle API:
-`communication_init(void)` and `communication_process(void)`.
-These functions have no definitions yet and cannot be linked until implemented.
-The remaining headers contain interface TODOs.
+The laptop configures the barcode mapping before the run and observes
+telemetry. MQTT does not command motors or choose mission behavior. During an
+autonomous run, navigation must continue if WiFi, the broker or the laptop is
+lost.
 
-Agree on data types, units, errors, timing, and ownership before implementation.
-Route cross-subsystem requests and observations through the future integration
-layer in `src/main.c`; do not call other Buddies' modules directly.
-Define micro T-Kernel task, queue, and synchronization contracts during integration.
-Keep private implementation details within this source directory and follow the
-Barr C Coding Standard as development proceeds.
+`communication_process()` is non-blocking and is intended for the eventual
+lowest-priority network task at roughly 10 ms intervals. The exact task and
+delay APIs must come from the lecturer's μT-Kernel starter port rather than
+being invented here.
+
+Host-test instructions are in `tests/buddy1/README.md`. The complete wire
+contract is in `docs/buddy1/MQTT_PROTOCOL.md`.

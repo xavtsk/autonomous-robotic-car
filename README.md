@@ -64,10 +64,15 @@ Each Buddy directory contains a short README so Git tracks it.
 
 ## Current status
 
-This repository contains structure and placeholders only. No subsystem logic,
-hardware drivers, GPIO assignments, or specific sensor models are defined.
-`src/main.c` is a comment-only placeholder, and `include/system_config.h`
-contains only an include guard and a comment.
+Buddy 1 now has an implemented and host-tested communications draft covering
+telemetry, command validation, WiFi/MQTT state machines, heartbeat and
+reconnection. Its host suite is under `tests/buddy1/`, and its wire contract
+is under `docs/buddy1/`.
 
-Build configuration, Pico C SDK setup, and micro T-Kernel integration will be
-added later. There is currently no runnable firmware or test suite.
+The shared, hardware-independent mission controller is under
+`include/controller/` and `src/controller/`, with its scenario tests under
+`tests/controller/`. It is intentionally separate from Buddy 1.
+
+Buddies 2–5 remain scaffolding. `src/main.c` and `include/system_config.h` are
+still shared placeholders. Team-level Pico C SDK build configuration,
+micro T-Kernel integration and physical hardware validation remain pending.
