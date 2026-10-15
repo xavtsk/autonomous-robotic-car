@@ -1,1 +1,0 @@
-/* Placeholder for the integrated system entry point. */
