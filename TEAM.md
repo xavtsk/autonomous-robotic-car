@@ -1,7 +1,8 @@
 # Team and subsystems
 
-Subsystem numbers correspond to Buddy numbers. All car modules are placeholders;
-fill in owners and agree on pins and interfaces before implementation.
+Subsystem numbers correspond to Buddy numbers. Resource claims below are still
+incomplete for Buddy 2's motion implementation; check its code as well. Buddy 3's
+one-sensor bench claims are recorded here. Fill in owners and remaining interfaces.
 
 Fill this in at the start of the project and keep it up to date. It is the
 single place that says **who owns what**, so that five people can work in
@@ -71,9 +72,9 @@ fixed.
 | GP20 | | |
 | GP21 | | |
 | GP22 | | |
-| GP26 | | (ADC0 capable) |
-| GP27 | | (ADC1 capable) |
-| GP28 | | (ADC2 capable) |
+| GP26 | 3 | Offset/barcode IR analogue input, Grove 6 white wire, ADC0 (enabled by default; pin mapping verified against board labels) |
+| GP27 | 3 | Provisional left IR, ADC1; disabled by default |
+| GP28 | 3 | Provisional right IR, ADC2; check VBAT jumper before wiring; disabled by default |
 
 ## 3. Peripherals
 
@@ -110,7 +111,7 @@ the drivers have no locking to stop it.
 | I2C1 | | | |
 | SPI0 | | | |
 | SPI1 | | | |
-| ADC | | | GP26–GP28 |
+| ADC | 3 | `ir-sample` (only with `IR_BENCH=1`); exclusive kernel `adca` driver | GP26 barcode; GP27 left and GP28 right provisionally reserved, disabled by default |
 | PWM slices (list) | | | |
 | WiFi radio, TCP/IP, MQTT | *kernel* | `cyw43_utk_task` (built in) | GP23–25, GP29 |
 
@@ -148,7 +149,7 @@ change it only by team agreement. Write down every task you create.
 |---|---|---|
 | 1 | 12–13 | No tasks yet |
 | 2 | 14–15 | No tasks yet |
-| 3 | 16–17 | No tasks yet |
+| 3 | 16–17 | `ir-sample` - 16 - core 0; `ir-report` - 17 - core 0; both only with `IR_BENCH=1` |
 | 4 | 18–19 | No tasks yet |
 | 5 | 20–21 | No tasks yet |
 
@@ -163,25 +164,36 @@ sends to it or waits on it. Agree on the data format before coding.
 | ID | From → To | Mechanism | Object ID name | Data / meaning | Agreed by |
 |---|---|---|---|---|---|
 
+Buddy 3 now exposes a **proposed, software-tested** context API in
+`app_program/subsystem3/line_navigation.h`; see `INTEGRATION.md` in that folder.
+It emits observations, speed proposals in m/s and one-shot navigation events.
+The host suite uses a simulated consumer. No cross-subsystem kernel object or
+Vehicle Controller adapter has been agreed or created. A=left, B=right,
+C=straight, D=U-turn is a replaceable development mapping.
+
 Each interface is tested by at least one integration test
 (`testing/integration/TEST_LOG.md`).
 
 ## 6. Kernel object budget
 
 Limits are set in `config/config.h`. If the team needs more, raise the
-limit there. All application subsystem usage is currently zero; the kernel has its own usage.
+limit there. The table still needs Buddy 2's existing task/mutex/cyclic-handler
+usage filled in by its owner; zeros there are not a complete resource audit.
+Buddy 3 uses two tasks, one snapshot mutex and one 10 ms cyclic handler only
+in the bench profile. The existing ADC driver owns its completion flag; Buddy 3
+does not create another flag. The kernel has its own usage.
 
 | Object | Limit | S1 | S2 | S3 | S4 | S5 |
 |---|---|---|---|---|---|---|
-| Task | 32 | 0 | 0 | 0 | 0 | 0 |
+| Task | 32 | 0 | 0 | 2 in IR bench profile | 0 | 0 |
 | Semaphore | 16 | 0 | 0 | 0 | 0 | 0 |
 | Event flag | 16 | 0 | 0 | 0 | 0 | 0 |
 | Mailbox | 12 | 0 | 0 | 0 | 0 | 0 |
-| Mutex | 12 | 0 | 0 | 0 | 0 | 0 |
+| Mutex | 12 | 0 | 0 | 1 in IR bench profile | 0 | 0 |
 | Message buffer | 12 | 0 | 0 | 0 | 0 | 0 |
 | Fixed memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
 | Variable memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
-| Cyclic handler | 12 | 0 | 0 | 0 | 0 | 0 |
+| Cyclic handler | 12 | 0 | 0 | 1 in IR bench profile | 0 | 0 |
 | Alarm handler | 12 | 0 | 0 | 0 | 0 | 0 |
 
 (The kernel's USB and WiFi service tasks also use a few of these.)

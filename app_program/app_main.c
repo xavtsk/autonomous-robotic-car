@@ -2,7 +2,7 @@
  * Application entry point, adapted from INF2004_ProjectTemplate.
  * The kernel starts usermain() in its initial task. Initialize all subsystem
  * objects before starting any tasks, since the second core may run immediately.
- * All five subsystem hooks are placeholders; no car hardware is driven.
+ * IR_BENCH builds start only subsystem 3 for stationary sensor setup.
  */
 #include "app.h"
 
@@ -41,6 +41,10 @@ EXPORT ID app_start_task(FP entry, PRI pri, UW prc, const char *name)
 	/* tk_sta_tsk: DORMANT -> READY.  The int is passed as stacd. */
 	er = tk_sta_tsk(tid, 0);
 	CHECK(er, name);
+	if (er < E_OK) {
+		(void)tk_del_tsk(tid);
+		return (ID)er;
+	}
 	return tid;
 }
 
@@ -59,6 +63,17 @@ EXPORT INT usermain(void)
 	tm_printf((UB*)"single-core build\n");
 #endif
 
+#if APP_IR_BENCH
+	/* Isolated bench profile: never initialise/start the motion subsystem. */
+	{
+		ER er = subsystem3_init();
+		CHECK(er, "subsystem3_init");
+		if (er == E_OK) {
+			CHECK(subsystem3_start(), "subsystem3_start");
+		}
+	}
+	tm_printf((UB*)"IR BENCH: other application tasks and tests disabled.\n");
+#else
 	/* Phase 1: every subsystem creates its kernel objects */
 	CHECK(subsystem1_init(), "subsystem1_init");
 	CHECK(subsystem2_init(), "subsystem2_init");
@@ -73,7 +88,7 @@ EXPORT INT usermain(void)
 	CHECK(subsystem4_start(), "subsystem4_start");
 	CHECK(subsystem5_start(), "subsystem5_start");
 
-	tm_printf((UB*)"All subsystem hooks complete; car functionality is not implemented\n\n");
+	tm_printf((UB*)"All subsystem startup hooks called.\n\n");
 
 #if APP_TEST
 	/* Test build (make TEST=1): run every subsystem's tests in turn,
@@ -87,6 +102,7 @@ EXPORT INT usermain(void)
 	subsystem5_test();
 	tm_printf((UB*)"[TEST] === test run end ===\n");
 #endif
+#endif /* APP_IR_BENCH */
 
 	/* Sleep forever.  Returning from usermain() would shut down. */
 	tk_slp_tsk(TMO_FEVR);

@@ -6,8 +6,15 @@ by five Buddies in C with micro T-Kernel 3.0.
 This repository uses the structure and RTOS foundation from
 [sirfonzie/INF2004_ProjectTemplate](https://github.com/sirfonzie/INF2004_ProjectTemplate).
 The original car module scaffolding is preserved inside the subsystem folders.
-All car modules and subsystem lifecycle hooks are placeholders: no motor,
-sensor, navigation, or communication application functionality is implemented.
+This branch includes Buddy 2's motion implementation and Buddy 3's software-tested
+sensor processing, line observations, proportional steering proposals, provisional
+Code 39 decoder and navigation events. The Vehicle Controller integration and
+real-track navigation validation are still pending.
+
+For stationary sensor diagnostics, use the dedicated `IR_BENCH=1` build:
+[Buddy 3 setup](testing/subsystem3/README.md). It starts only Buddy 3's sampling
+and reporting tasks, with GP26 enabled by default, and skips motor startup.
+See the [team-interface handoff](app_program/subsystem3/INTEGRATION.md).
 
 ## Subsystem ownership
 
@@ -98,8 +105,8 @@ not been flashed or verified on hardware as part of this structure migration.
 - Keep each Buddy's implementation and drivers inside its subsystem folder.
 - `subsystemN_init()` creates kernel objects; `subsystemN_start()` starts tasks
   only after every subsystem has completed initialization.
-- Existing module lifecycle declarations such as `motion_init()` remain
-  proposals without definitions. Do not call them until implemented.
+- Buddy 2 owns motion startup and processing. Buddy 3's normal navigation
+  lifecycle declarations remain proposals; only its IR bench task is implemented.
 - Use the RTOS/BSP APIs provided by the template. Standalone Pico SDK `main()`,
   runtime initialization and CMake code are not drop-in replacements here.
 - Follow Barr C style for new application code; preserve upstream notices.
