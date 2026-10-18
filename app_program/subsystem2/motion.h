@@ -152,6 +152,23 @@ float   robot_distance_m(void);         /* centre of the robot               */
 float   robot_speed_mps(void);
 float   robot_heading_deg(void);        /* since start, + = anticlockwise    */
 
+/* Coherent, non-consuming feedback for the Buddy 3 integration. timestamp_us
+ * is the last completed motion update, never the time a reader called this API.
+ * epoch changes on initialisation/recalibration. valid is false before hardware
+ * readiness, during calibration, or when encoder initialisation failed. */
+typedef struct
+{
+    float centre_m;
+    uint32_t timestamp_us, epoch;
+    motion_state_t state;
+    motion_fault_t fault;
+    bool valid, braked;
+} motion_feedback_t;
+bool motion_get_feedback(motion_feedback_t *feedback);
+/* Exclusive navigation-owner lease. Refresh each healthy integration cycle.
+ * Expiry faults/brakes even during a DRIVE/TURN; disabled by default. */
+void motion_navigation_heartbeat(bool enabled);
+
 /* ---- Calibration (one-off setup, outside the statechart) ----------------
  * motion_request_calibration() is accepted in IDLE; the motion task then:
  *   1. Waits for EACH wheel to be turned by hand exactly 10 full turns in the

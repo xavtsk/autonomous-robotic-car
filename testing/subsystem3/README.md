@@ -4,6 +4,16 @@ The core software is implemented and host-tested. The new firmware has **not**
 been flashed or validated on the car. Use the isolated bench UF2 for stationary
 checks; the normal firmware retains Buddy 2's existing motion startup.
 
+## Buddy 2 integration
+
+The separate `S3_MOTION=1` profile connects steering, distance feedback,
+manoeuvres, fault braking and a motion-owner watchdog. It boots disarmed.
+See [operation and control API](../../app_program/subsystem3/MOTION_INTEGRATION.md).
+Build with `tools/build-s3-motion.ps1`; never confuse its `_s3_motion.uf2` output
+with the stationary `_ir_bench.uf2`. No motor-capable image was flashed here.
+The same host test command also runs the real Buddy 2/Buddy 3 integration tests
+and production motion-feedback tests with mocked kernel/hardware boundaries.
+
 ## Repeatable host tests
 
 From the repository root in PowerShell:
@@ -24,7 +34,13 @@ junction persistence/rearming, steering direction/limits/faults; all A-Z frames
 forward and reversed through timestamped samples and run fixtures, timestamp
 wrap, width variation, malformed/truncated frames, quiet zones, duplicate
 suppression, timing failures and overflow; mappings, unmapped letters, manoeuvre
-suppression, simulated follow -> barcode -> junction and loss/fault recovery.
+suppression, simulated calibration -> start -> follow -> barcode -> rearm,
+initial/subsequent line loss and explicit fault reset/restart. `test_navigation.c`
+adds provisional/disabled/stale/missing-input start gates, atomic inactive-only
+mapping/calibration updates, net forward/reverse rearming and oscillation,
+malformed capture recovery, odometry epoch changes, persistent stop requests,
+no suppressed replay and synthetic 5 ms/10 ms traces with jitter. The existing
+acquisition, calibration, line, steering, A-Z and independent A/Z tests remain.
 These are synthetic tests, not measured physical detection performance.
 
 `barcode_fixtures.h` contains independent bar widths from all four pages of the
@@ -118,21 +134,27 @@ Illustrative output, not a captured hardware result:
 
 ```text
 [S3 BENCH] enabled=1 cal=PROVISIONAL status=0 samples=20 gap=10000us max=10020us target=10ms
+  run=INACTIVE readiness=0xf accepted_cal=0x0 odometry=0 rearming=0 stop_requested=0 faults=0x0
+  readiness bits: 1=channels 2=calibration 4=sensors 8=odometry 16=fault; gaps>5ms=19 diagnostic_letters=0 actionable_steering=0
   barcode GP26 valid=1 raw=150/4095 dark=0/1000 WHITE white=150 black=280 adc_error=0
   left GP27 DISABLED/unavailable
   right GP28 DISABLED/unavailable
-  line valid=0 present=0 error=0 junction_candidate=0 steer_valid=0 L=0 R=0 mm/s PROPOSAL ONLY
+  line valid=0 present=0 error=0 junction_candidate=0 preview_valid=0 L=0 R=0 mm/s DIAGNOSTIC PREVIEW ONLY
 ```
 
 Reports also include cumulative barcode/junction/lost/reacquired/fault event
-counts, last decoded letter/direction/action, ADC errors, barcode rejects and
+counts, diagnostic-letter count, last decoded letter/direction/action, ADC errors, barcode rejects and
 timing/overflow counts. Speed proposals are formatted in mm/s for the console;
-the public API uses m/s. No motor moves are requested. A missing front sensor
+the public API uses m/s. The bench stays inactive and has no odometry adapter,
+calibration UI or automatic start: diagnostic letters/previews never become actions.
+The printed accepted-calibration mask differs from numerical provisional references.
+No motor moves are requested. A missing front sensor
 pair correctly means no valid steering proposal in the default mode.
 
 Sampling targets 10 ms on core 0 at priority 16; reporting runs separately at
 priority 17 every 200 ms. Actual timestamps/gaps are used. Console or kernel
-activity can delay sampling. Frames reset on inadequate timing; this is not a
+activity can delay sampling. Counts of measured gaps over 5 ms expose the Week 6
+scheduling mismatch; they do not fix it. The kernel tick/priorities are unchanged. Frames reset on inadequate timing; this is not a
 claim of guaranteed barcode operating speed. ADC errors invalidate samples, but
 a disconnected floating wire can still look valid: software cannot certify wire
 health from ADC counts alone.
@@ -145,3 +167,11 @@ channels; tune the line thresholds and gains. Check printed barcode quiet zones,
 then measure decoding under actual movement and sampling jitter. Confirm real
 junction behaviour and action mapping with the team. Vehicle Controller/Buddy 2
 integration comes after these checks. See [test evidence](TEST_LOG.md).
+
+## Week 6 scope
+
+The [handoff traceability table](../../app_program/subsystem3/INTEGRATION.md#week-6-traceability-and-outstanding-team-decisions)
+distinguishes preserved algorithms, changed sensor roles, behaviour implemented
+within Buddy 3 and work awaiting integration. Outstanding decisions are sensor
+roles, 5 ms scheduling, distance tuning, mapping delivery, fault-to-brake handling
+and full-system priority/timing validation. None is certified by host tests.

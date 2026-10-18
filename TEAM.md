@@ -111,7 +111,7 @@ the drivers have no locking to stop it.
 | I2C1 | | | |
 | SPI0 | | | |
 | SPI1 | | | |
-| ADC | 3 | `ir-sample` (only with `IR_BENCH=1`); exclusive kernel `adca` driver | GP26 barcode; GP27 left and GP28 right provisionally reserved, disabled by default |
+| ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP26 barcode; GP27 left/GP28 right disabled in default bench, enabled in explicit integrated profile |
 | PWM slices (list) | | | |
 | WiFi radio, TCP/IP, MQTT | *kernel* | `cyw43_utk_task` (built in) | GP23–25, GP29 |
 
@@ -149,7 +149,7 @@ change it only by team agreement. Write down every task you create.
 |---|---|---|
 | 1 | 12–13 | No tasks yet |
 | 2 | 14–15 | No tasks yet |
-| 3 | 16–17 | `ir-sample` - 16 - core 0; `ir-report` - 17 - core 0; both only with `IR_BENCH=1` |
+| 3 | 16–17 | `ir-sample` - 16 - core 0; `ir-report` - 17 - core 0; bench with `IR_BENCH=1`; alternatively `s3-motion`/`s3-status` at the same priorities/core with `S3_MOTION=1` |
 | 4 | 18–19 | No tasks yet |
 | 5 | 20–21 | No tasks yet |
 
@@ -167,9 +167,20 @@ sends to it or waits on it. Agree on the data format before coding.
 Buddy 3 now exposes a **proposed, software-tested** context API in
 `app_program/subsystem3/line_navigation.h`; see `INTEGRATION.md` in that folder.
 It emits observations, speed proposals in m/s and one-shot navigation events.
-The host suite uses a simulated consumer. No cross-subsystem kernel object or
-Vehicle Controller adapter has been agreed or created. A=left, B=right,
-C=straight, D=U-turn is a replaceable development mapping.
+The host suite uses a simulated consumer. The optional `S3_MOTION=1` profile now connects a two-buddy controller adapter
+to Buddy 2; see `subsystem3/MOTION_INTEGRATION.md`. This is not full-team
+arbitration. Buddy 2 should review the feedback/lease API additions before merge. A=left, B=right,
+C=straight, D=U-turn is a replaceable development mapping. The inactive-only
+26-entry update API is the FR11 receiving boundary; MQTT delivery is not connected.
+The adapter must provide timestamped signed centre distance plus a reset epoch,
+apply explicit per-sensor calibration/start controls, and translate the latched
+`stop_requested` into Buddy 2 braking. The opt-in adapter now makes those calls; the portable navigation core does not.
+
+Week 6 assigns GP26/27/28 to L/C/R. Buddy 3 currently proposes offset barcode/front
+left/front right on those pins instead. Team agreement is still required. The
+bench's 10 ms target also differs from Week 6's 5 ms Line+Barcode schedule; no
+shared tick or priority changes are made here. See the handoff traceability table
+for scheduling, mapping delivery, distance tuning and fault-to-brake decisions.
 
 Each interface is tested by at least one integration test
 (`testing/integration/TEST_LOG.md`).
@@ -177,23 +188,23 @@ Each interface is tested by at least one integration test
 ## 6. Kernel object budget
 
 Limits are set in `config/config.h`. If the team needs more, raise the
-limit there. The table still needs Buddy 2's existing task/mutex/cyclic-handler
-usage filled in by its owner; zeros there are not a complete resource audit.
-Buddy 3 uses two tasks, one snapshot mutex and one 10 ms cyclic handler only
-in the bench profile. The existing ADC driver owns its completion flag; Buddy 3
+limit there. Buddy 2's task, mutex and cyclic handler are now recorded from its implementation;
+this is still not a full kernel/library resource audit.
+Buddy 3 uses two tasks, one snapshot/control mutex and one 10 ms cyclic handler
+in either opt-in profile (bench or integrated; never both). The existing ADC driver owns its completion flag; Buddy 3
 does not create another flag. The kernel has its own usage.
 
 | Object | Limit | S1 | S2 | S3 | S4 | S5 |
 |---|---|---|---|---|---|---|
-| Task | 32 | 0 | 0 | 2 in IR bench profile | 0 | 0 |
+| Task | 32 | 0 | 1 | 2 in either opt-in S3 profile | 0 | 0 |
 | Semaphore | 16 | 0 | 0 | 0 | 0 | 0 |
 | Event flag | 16 | 0 | 0 | 0 | 0 | 0 |
 | Mailbox | 12 | 0 | 0 | 0 | 0 | 0 |
-| Mutex | 12 | 0 | 0 | 1 in IR bench profile | 0 | 0 |
+| Mutex | 12 | 0 | 1 | 1 in either opt-in S3 profile | 0 | 0 |
 | Message buffer | 12 | 0 | 0 | 0 | 0 | 0 |
 | Fixed memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
 | Variable memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
-| Cyclic handler | 12 | 0 | 0 | 1 in IR bench profile | 0 | 0 |
+| Cyclic handler | 12 | 0 | 1 | 1 in either opt-in S3 profile | 0 | 0 |
 | Alarm handler | 12 | 0 | 0 | 0 | 0 | 0 |
 
 (The kernel's USB and WiFi service tasks also use a few of these.)

@@ -9,6 +9,7 @@
  */
 
 #include "motion.h"
+#include "motion_lease.h"
 #include "motion_controller.h"
 #include "motion_estimation.h"
 #include "motor_control.h"
@@ -77,6 +78,11 @@ static volatile bool        g_b_cal_running = false;
 static volatile bool        g_b_cal_done = false;
 static motion_calibration_t g_cal_result;
 
+static motion_feedback_t g_feedback;
+static bool g_feedback_ready;
+static bool g_navigation_lease;
+static uint32_t g_navigation_refresh_us;
+
 /* ---- Helpers ------------------------------------------------------------ */
 
 static uint32_t time_now_us(void)
@@ -137,6 +143,10 @@ void motion_init(void)
     motion_estimation_init(m_per_count(ENCODER_COUNTS_PER_REV), TRACK_WIDTH_M);
 
     motion_lock();
+    g_feedback.epoch++;
+    g_feedback.valid = false;
+    g_feedback_ready = er >= (int32_t)E_OK;
+    g_navigation_lease = false;
     motion_controller_init(MOTOR_MAX_SPEED_MPS, STOP_LEAD_DRIVE_M,
                            STOP_LEAD_TURN_M);
     if (er < (int32_t)E_OK)
@@ -164,6 +174,7 @@ void motion_process(void)
     {
         g_b_cal_request = false;
         g_b_cal_running = true;
+        g_feedback.valid = false;
         motion_controller_set_busy(true);
     }
     motion_unlock();
@@ -176,6 +187,8 @@ void motion_process(void)
         motion_estimation_init(m_per_count(ENCODER_COUNTS_PER_REV),
                                TRACK_WIDTH_M);
         motion_lock();
+        g_feedback.epoch++;
+        g_feedback.valid = false;
         g_cal_result = result;
         g_b_cal_done = true;
         g_b_cal_running = false;
@@ -210,7 +223,18 @@ void motion_process(void)
 
     motion_lock();
     motion_estimation_update(dt_s);
+    if (motion_lease_expired(g_navigation_lease, now, g_navigation_refresh_us))
+    {
+        motion_controller_navigation_timeout();
+        g_navigation_lease = false;
+    }
     motion_controller_step(dt_s, now);
+    g_feedback.centre_m = motion_estimation_robot_distance();
+    g_feedback.timestamp_us = now;
+    g_feedback.valid = g_feedback_ready && motion_is_calibrated()
+                       && !g_b_cal_running && !g_b_cal_request;
+    g_feedback.braked = (motor_control_duty(WHEEL_LEFT) == 0.0f)
+                       && (motor_control_duty(WHEEL_RIGHT) == 0.0f);
     motion_unlock();
 }
 
@@ -525,6 +549,35 @@ float robot_heading_deg(void)
 /* Calibration (one-off setup, outside the statechart)                        */
 /* ========================================================================== */
 
+bool motion_get_feedback(motion_feedback_t *feedback)
+{
+    if ((feedback == 0) || (g_mutex_id <= 0))
+    {
+        return false;
+    }
+    if (tk_loc_mtx(g_mutex_id, TMO_FEVR) != E_OK)
+    {
+        return false;
+    }
+    *feedback = g_feedback;
+    feedback->state = motion_controller_state();
+    feedback->fault = motion_controller_fault();
+    feedback->valid = feedback->valid && !g_b_cal_request && !g_b_cal_running
+                      && !motion_controller_is_busy();
+    motion_unlock();
+    return true;
+}
+void motion_navigation_heartbeat(bool enabled)
+{
+    motion_lock();
+    g_navigation_lease = enabled;
+    if (enabled)
+    {
+        g_navigation_refresh_us = time_now_us();
+    }
+    motion_unlock();
+}
+
 bool motion_is_calibrated(void)
 {
     return (ENCODER_COUNTS_PER_REV > 0.0f);
@@ -535,7 +588,11 @@ motion_result_t motion_request_calibration(void)
     motion_result_t res = MOTION_OK;
 
     motion_lock();
-    if (motion_controller_state() == MOTION_FAULT)
+    if (g_navigation_lease)
+    {
+        res = MOTION_ERR_BUSY;
+    }
+    else if (motion_controller_state() == MOTION_FAULT)
     {
         res = MOTION_ERR_FAULT;
     }

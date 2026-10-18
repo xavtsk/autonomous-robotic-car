@@ -73,6 +73,29 @@ EXPORT INT usermain(void)
 		}
 	}
 	tm_printf((UB*)"IR BENCH: other application tasks and tests disabled.\n");
+#elif APP_S3_MOTION
+    /* Explicit two-buddy profile, disarmed until calibrated and started. */
+    {
+        ER er = subsystem2_init();
+        CHECK(er, "motion init");
+        if (er == E_OK)
+        {
+            er = subsystem3_init();
+            CHECK(er, "integration init");
+        }
+        if (er == E_OK)
+        {
+            er = subsystem2_start();
+            CHECK(er, "motion start");
+        }
+        if (er == E_OK)
+        {
+            er = subsystem3_start();
+            CHECK(er, "integration start");
+        }
+        tm_printf((UB *)"S3+S2 integration: DISARMED; explicit calibration/start "
+                        "required. status=%d\n", (int)er);
+    }
 #else
 	/* Phase 1: every subsystem creates its kernel objects */
 	CHECK(subsystem1_init(), "subsystem1_init");

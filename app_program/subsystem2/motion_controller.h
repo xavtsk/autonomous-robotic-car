@@ -37,6 +37,8 @@ motion_result_t motion_controller_request_move(motion_state_t kind,
                                                float dist_m, float speed_mps,
                                                uint32_t now_us);
 void            motion_controller_stop(void);
+/* Motion task only, under its mutex: stale navigation owner. */
+void            motion_controller_navigation_timeout(void);
 bool            motion_controller_reset(void);
 motion_state_t  motion_controller_poll(void);
 motion_state_t  motion_controller_state(void);

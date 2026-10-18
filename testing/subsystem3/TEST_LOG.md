@@ -6,6 +6,74 @@ Buddy 3 core software is implemented and software-tested. Actual track and
 moving-car validation remain pending. The current stationary UF2 has not been
 flashed. The general target `TEST=1` hook reports SKIP; the host suite is separate.
 
+## Buddy 2 integration acceptance, 2026-10-18
+
+Uncommitted `buddy3` working tree; earlier Week 6 alignment changes preserved.
+The new opt-in profile is motor-capable after explicit calibration/start, but no
+firmware was flashed and no hardware/motor test was performed.
+
+| Check | Result | Evidence / limit |
+|---|---|---|
+| Existing reflectance/core/navigation suites | PASS | Warning-clean host tests retained |
+| Real B2 controller/PID/estimator + S3 bridge | PASS | `test_drive.c`; mocked encoders/PWM/public wrappers, all four mappings, brake-before-turn, one-shot completion, reacquisition, unmapped/expired directions, stop/cancel, line/sensor/motion faults, rejection and explicit restart |
+| Production `motion.c` feedback/lease | PASS | `test_motion_feedback.c` with mocked kernel/hardware; source timestamps preserved across reads, epoch on reinitialisation, calibration exclusion, watchdog brakes TURN |
+| Integrated firmware | PASS | `build/host-tests/s3-motion-build.log`, S3_MOTION=1 IR_BENCH=0 WIFI=none TEST=0 |
+| Normal Wi-Fi firmware | PASS | `normal-motion-regression.log`; integration off, S3 lifecycle remains no-op |
+| Stationary bench firmware | PASS | `bench-motion-regression.log`; only S3 startup, no motion API references in its S3 objects |
+| ARM strict warnings | PASS | 15 S3/application/touched B2 C sources, Wall/Wextra/Werror syntax checks; all three firmware build logs warning-free |
+| Startup boundaries | PASS | Integrated app_main starts only S2/S3; bench starts only S3; host init/default tests issue no velocity/manoeuvre requests |
+| UF2 integrity | PASS | Both images: block numbering, RP2040 family, magic and unique in-range addresses |
+| RTOS control queue and concurrent timing | BUILD/STATIC ONLY | Queue/startup inspected; scheduling, concurrent commands and actual stop latency need on-device validation |
+| Hardware / navigation / 5 ms compliance | NOT VERIFIED | No flash, actual-track run, obstacle integration or measured timing compliance |
+
+The host command remains `powershell -ExecutionPolicy Bypass -File tools/test-buddy3.ps1`.
+The integration build command is `powershell -ExecutionPolicy Bypass -File tools/build-s3-motion.ps1`.
+
+Integrated, disarmed at boot: `build_make/mtk3pico_smp1_usb_cdc_s3_motion.uf2`, 349 blocks / 178688 bytes.
+SHA-256: `f0f6f00fc9b204826ba8e481f67c7334da6d52e4288d73399b3b0b110aebb1e3`.
+
+Stationary bench: `build_make/mtk3pico_smp1_usb_cdc_ir_bench.uf2`, 350 blocks / 179200 bytes.
+SHA-256: `4f75dedd8ab13fc8e476f88418011cc5cbbaba5db5522ddb975f8a1685aaa698`.
+
+Machine-readable evidence: `build/host-tests/s3-motion-verification.json`.
+The records below describe earlier snapshots and hashes. See
+[MOTION_INTEGRATION.md](../../app_program/subsystem3/MOTION_INTEGRATION.md)
+for the explicit application control API and remaining user-interface/hardware work.
+
+## Week 6 alignment acceptance, 2026-10-18
+
+Checkout: `buddy3`, base commit `477230c` plus this uncommitted update. No flash,
+commit or push performed. This extends the portable core; it does not implement
+MQTT, the shared Vehicle Controller or motion integration.
+
+| Check | Result | Evidence and limits |
+|---|---|---|
+| Host tests, warnings as errors | PASS | `tools/test-buddy3.ps1`; existing acquisition/calibration/line/steering/A-Z/PDF fixture checks plus `test_navigation.c` lifecycle suite |
+| Lifecycle/configuration | PASS | Explicit synthetic per-sensor calibration, provisional/disabled/stale/missing-input start blocks, inactive-only atomic mapping/calibration updates |
+| Rearming | PASS | Forward/reverse net clearance, insufficient displacement, oscillation, white/line persistence, configurable thresholds, malformed capture and epoch reset |
+| Fault/recovery | PASS | Invalid sensor/ADC, stale channel/odometry, missing/invalid/non-finite distance, excessive gaps, epoch change; persistent stop, failed premature/stale reset, healthy interval, explicit restart |
+| Line/mode/consumer | PASS | Initial and later line loss, loss during capture, junction, suppressed partial capture/no replay, unmapped/mapped letters, diagnostic scans without odometry |
+| Timing traces | PASS | Synthetic 5 ms and 10 ms inputs, jitter, excessive gaps and wrapping clock; not measured physical scan speed |
+| Independent A/Z fixture extraction | PASS | Four PDF page arrays and original source hash checked again |
+| Isolated bench firmware | PASS | `build/host-tests/bench-alignment.log`; IR_BENCH=1, WIFI=none, TEST=0; no compiler warnings |
+| Normal firmware | PASS | `build/host-tests/normal-alignment.log`; IR_BENCH=0, TEST=0, default CYW43 Wi-Fi; no compiler warnings |
+| Strict ARM warning checks | PASS | Eleven S3/application C sources with Wall/Wextra/Werror syntax checks |
+| Startup/symbol isolation | PASS | Bench app_main references only S3 init/start; S3 objects reference neither motion/motor APIs nor automatic `s3_navigation_start`; normal S3 hooks return zero without calls |
+| Stationary UF2 integrity | PASS | 341 blocks, 174592 bytes; magic, RP2040 family, numbering and unique in-range addresses checked |
+| New firmware on hardware | NOT RUN | No flashing, actual-track calibration, moving scan or braking test |
+| Week 6 5 ms / concurrent timing | NOT VERIFIED | Bench target remains 10 ms; actual gaps and counts over 5 ms will be printed; shared kernel settings unchanged |
+
+Current stationary UF2: `build_make/mtk3pico_smp1_usb_cdc_ir_bench.uf2`.
+SHA-256: `33642b247b008914979da1465f21834e0674de189996766f30e4e81347bf20f3`.
+Local machine-readable record: `build/host-tests/buddy3-alignment-verification.json`.
+Symbol records: `bench-alignment-symbols.txt`, `normal-alignment-symbols.txt` in
+the same ignored folder. Historical hashes below refer to earlier firmware.
+
+See [Week 6 traceability](../../app_program/subsystem3/INTEGRATION.md#week-6-traceability-and-outstanding-team-decisions)
+for preserved/changed/implemented/awaiting-integration items. Actual sensor roles,
+5 ms scheduling, distance tuning, mapping delivery, fault-to-brake handling and
+full-system priority/timing validation still require the team and hardware.
+
 ## Core implementation acceptance, 2026-10-16
 
 Checkout: `buddy3`, HEAD `816d7f0` plus uncommitted working changes. Existing

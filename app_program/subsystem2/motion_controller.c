@@ -444,6 +444,11 @@ motion_result_t motion_controller_request_move(motion_state_t kind,
     return MOTION_OK;
 }
 
+void motion_controller_navigation_timeout(void)
+{
+    raise_fault(MOTION_FAULT_STALE_COMMAND);
+}
+
 void motion_controller_stop(void)
 {
     if (g_state != MOTION_FAULT)

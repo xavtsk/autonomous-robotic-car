@@ -2,8 +2,10 @@
 
 Two front sensors provide line observations; the offset sensor provides barcode
 transitions. Algorithms are portable C with no GPIO, RTOS or Buddy 2 dependency.
-The target adapter is used only by an opt-in stationary bench. No motor requests,
-recovery manoeuvres, pending turns or Vehicle Controller are implemented here.
+The portable core remains independent. An opt-in `S3_MOTION=1` adapter now
+connects it to Buddy 2, with explicit start/calibration, pending directions,
+manoeuvres and braking. See [motion integration](MOTION_INTEGRATION.md). The
+stationary `IR_BENCH` remains separate. Full-team arbitration is not implemented.
 
 | Module | Responsibility |
 |---|---|
@@ -14,7 +16,7 @@ recovery manoeuvres, pending turns or Vehicle Controller are implemented here.
 | `line_detection` | Signed line error, persistence, loss/reacquisition and junction candidates |
 | `line_controller` | Limited proportional left/right speed proposals in m/s |
 | `barcode_decoder` | Bounded Code 39 single-letter framing and direction detection |
-| `line_navigation` | Context API, events, replaceable action map and manoeuvre suppression mode |
+| `line_navigation` | Readiness/run lifecycle, distance rearming, pre-run mapping, latched stop requests and manoeuvre suppression |
 | `ir_bench_config` | Explicit sensor enablement and provisional per-sensor references |
 | `subsystem3` | Sampling/reporting tasks and protected diagnostic snapshot |
 
@@ -28,7 +30,9 @@ that input. Do not read GP29, which belongs to the Pico W radio.
 White=150 and black=280 are development references for every channel, based on
 approximate user-reported paper readings. They are **not measured track
 calibration**. Each channel has independent references and classifier state.
-Calibration never adapts automatically while passing a junction or barcode.
+Defaults do not authorise navigation: all three sensors need explicitly accepted
+calibration, fresh input and odometry before an explicit start. The bench never
+calls start. Calibration never adapts automatically while passing a junction or barcode.
 
 The default line error is `(right_darkness-left_darkness)/10`, in -100..+100.
 Negative means line left. This assumes the sensors straddle opposite line edges:
@@ -58,13 +62,18 @@ reads/processes outside the lock; only snapshot publication and counters are
 protected. Cumulative event counts preserve visibility between reports; the last
 barcode/action is diagnostic history, never a pending turn. Counters wrap at
 32 bits. Console/kernel activity can still delay sampling, so 10 ms is a target,
-not a deadline guarantee. Latest/max gaps and timing rejects are displayed.
+not a deadline guarantee. Latest/max gaps, counts exceeding the Week 6 5 ms target and timing rejects are
+displayed. This 10 ms bench does not meet the proposed 5 ms schedule.
+
+Active faults latch a persistent stop request; recovery requires 100 ms of healthy
+inputs, explicit reset to inactive and a separate restart. Diagnostic previews
+are separate from actionable steering. See the handoff for the full contract.
 
 Default maximum gap is 30 ms. A bad gap, stale/failed input or unknown barcode
 classification resets affected detection state. Barcode elements must have
 sufficient samples relative to observed gaps. No moving scan speed is certified.
 
-`IR_BENCH=0` leaves both Buddy 3 lifecycle hooks as no-ops: no new ADC access,
+`IR_BENCH=0 S3_MOTION=0` leaves both Buddy 3 lifecycle hooks as no-ops: no new ADC access,
 tasks or navigation startup. The normal firmware otherwise retains Buddy 2's
 existing startup behaviour. `IR_BENCH=1 TEST=1` is rejected by Make.
 
