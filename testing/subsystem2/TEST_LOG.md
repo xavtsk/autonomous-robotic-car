@@ -50,11 +50,13 @@ are manual hardware tests: the robot is measured by hand.
 | S2-U27 | Stop during a drive | `stop()` priority, braking | Manual (evaluation build) | 0.5 m drive at 0.2 m/s, `stop()` after 1.5 s; 3 runs; measure from the start mark | Stops at once; robot rests within a few cm of where `stop()` was called |
 | S2-U28 | Stall detection (wheel held) | STALL fault, 600 ms no progress | Manual (evaluation build) | 1 m drive; hold one wheel completely still once it moves | STALL fault ~0.6 s after the wheel stops; motors braked |
 | S2-U29 | Encoder disconnection | STALL fault (no encoder progress) | Manual (evaluation build) | Unplug one encoder cable, start a 0.3 m drive | STALL fault ~0.6 s after the start; motors braked |
-| S2-U30 | Drive timeout | TIMEOUT fault (3 × expected time + 2 s) | Manual | Drive 1 m against a wall so the wheels spin and slip | TIMEOUT fault after ~17 s; motors braked |
+| S2-U30 | Drive timeout | TIMEOUT fault (move deadline = 3 × expected time + 2 s) | Manual (timeout-test build: deadline cut to 0.5 × expected + 0 s) | 0.5 m drive at 0.2 m/s on the floor, nothing in the way (expected 2.5 s, deadline 1.25 s); 3 runs. A real deadline cannot be reached on purpose: blocked wheels give STALL first, slipping wheels still count to the distance | TIMEOUT fault at ~1250 ms, well short of 0.5 m; motors braked; no STALL |
 
-The PID step test (S2-U24) and the evaluation tests (S2-U25 to S2-U29) used
-test-only firmware: the subsystem 2 code above plus a scratch routine that
-runs the steps and prints the results. That routine is not part of the
+The PID step test (S2-U24), the evaluation tests (S2-U25 to S2-U29) and the
+timeout test (S2-U30) used test-only firmware: the subsystem 2 code above plus
+a scratch routine that runs the steps and prints the results. For S2-U30 the
+only other change is the deadline (`TIMEOUT_FACTOR` 0.5, `TIMEOUT_MARGIN_S` 0
+in `motion_controller.c`); the timeout check itself is unchanged. That routine is not part of the
 repository; its output is in `logs/`.
 
 ## Results
@@ -75,19 +77,17 @@ one report per command, timeout limit, packed-input checks).
 | 2026-10-21 | S2-U01–U04, U06–U22 | † | 2503508 | PASS | `logs/2026-10-21_drive_tests.png` | First run with S2-U21/U22: 21 passed, 0 failed; turns measured ~90° |
 | 2026-10-22 | S2-U24 | † | 2503508 | PASS | `logs/2026-10-22_S2-U24_pid_round1.png`, `logs/2026-10-22_S2-U24_pid_results.csv` | Round 1 (Kp 0.8–3.2, Ki 0–20): Ki = 0 never settles (13–24 mm/s short); overshoot rises with Ki; Kp 1.6 / Ki 5 best (3 %, 160 ms) |
 | 2026-10-22 | S2-U24 | † | 2503508 | PASS | `logs/2026-10-22_S2-U24_pid_round2.png`, `logs/2026-10-22_S2-U24_pid_results.csv` | Round 2 (Kp 1.6–4.8 × Ki 5/10): Ki 5 better at every Kp; Kp 3.2 / Ki 5 chosen. Left wheel showed 7–8 mm/s error and > 2 s settling: later traced to a loose left motor wire |
-| 2026-10-22 | S2-U25 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U25_eval_*.png`, `logs/2026-10-22_S2-U25-U26_motion_eval_cases3-13.txt`, `logs/2026-10-22_S2-U25-U29_motion_eval_all_runs.csv` | 0.2 m and 0.5 m at 0.1–0.3 m/s and 0.5 m backward: every mean within ±3.3 mm, SD ≤ 1.2 mm, heading change 0 to −0.5°. 1.0 m: encoder 1001 mm (5 runs), not measured (no space) |
-| 2026-10-22 | S2-U26 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U25-U26_motion_eval_cases3-13.txt`, `logs/2026-10-22_S2-U25-U29_motion_eval_all_runs.csv` | 90° left/right, 180°, 360° (runs 1–3): measured means within 3.3°, encoder within 0.4–0.6°; angles read to about ±5° |
+| 2026-10-22 | S2-U25 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U25_eval_*.png`, `logs/2026-10-22_S2-U25-U26_motion_eval_cases3-13.txt` | 0.2 m and 0.5 m at 0.1–0.3 m/s and 0.5 m backward: every mean within ±3.3 mm, SD ≤ 1.2 mm, heading change 0 to −0.5°. 1.0 m: encoder 1001 mm (5 runs), not measured (no space) |
+| 2026-10-22 | S2-U26 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U25-U26_motion_eval_cases3-13.txt` | 90° left/right, 180°, 360° (runs 1–3): measured means within 3.3°, encoder within 0.4–0.6°; angles read to about ±5° |
 | 2026-10-22 | S2-U26 | † ‡ | 2503508 | FAIL | `logs/2026-10-22_S2-U25-U26_motion_eval_cases3-13.txt` | 360° runs 4–5 (and the square, later dropped): STALL at 619 ms, only the right wheel moving. Cause: left motor ground wire came loose (hardware). Stall detection worked as designed. Fixed by reconnecting the wire |
 | 2026-10-22 | S2-U26 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U26-U29_eval_rerun.png` | 360° runs 4–5 re-run after the wire fix: encoder 360.6° / 361.0° |
-| 2026-10-22 | S2-U27 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U26-U29_eval_rerun.png`, `logs/2026-10-22_S2-U25-U29_motion_eval_all_runs.csv` | `stop()` at 281–282 mm; robot rests 10–11 mm later by encoder; heading within ±0.6°. Measured totals ~11 mm shorter than the encoder after this abrupt stop |
+| 2026-10-22 | S2-U27 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U26-U29_eval_rerun.png` | `stop()` at 281–282 mm; robot rests 10–11 mm later by encoder; heading within ±0.6°. Measured totals ~11 mm shorter than the encoder after this abrupt stop |
 | 2026-10-22 | S2-U28 | † ‡ | 2503508 | Invalid run | `logs/2026-10-22_S2-U26-U29_eval_rerun.png` | No STALL: the wheel was only slowed, not stopped (1001 mm in 5399 ms, same as a free drive). The speed controller held the speed, as intended. Repeated below |
 | 2026-10-22 | S2-U28 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U28_stall_pass.png` | Wheel held still: STALL at 819 ms (~0.6 s after it stopped), motors braked |
 | 2026-10-22 | S2-U29 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U26-U29_eval_rerun.png` | Encoder unplugged: STALL at 619 ms, motors braked |
 | 2026-10-22 | S2-U01–U04, U06–U22 | † ‡ | 2503508 | PASS | `logs/2026-10-22_drive_tests_after_review.png` | Final code: 21 passed, 0 failed; S2-U05 SKIP |
+| 2026-10-22 | S2-U30 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U30_timeout_pass.png` | Timeout-test build, 3 runs: "drive/turn timed out" (TIMEOUT) at 1279 / 1259 / 1279 ms after 143 / 134 / 138 mm (encoder), heading change −2.1° to +1.0°; motors braked, no STALL |
 
-S2-U30 (drive timeout) has not been run yet.
-
-For S2-U25 to S2-U29, `logs/2026-10-22_S2-U25-U29_motion_eval_all_runs.csv`
-has every run (5 per case) and
-`logs/2026-10-22_S2-U25-U29_motion_eval_3runs.csv` the three runs per case
-chosen at random (fixed seed) for the accuracy evaluation.
+For S2-U25 to S2-U29, `logs/2026-10-22_S2-U25-U29_motion_eval_3runs.csv` has
+the three runs per case chosen at random (fixed seed) for the accuracy
+evaluation.
