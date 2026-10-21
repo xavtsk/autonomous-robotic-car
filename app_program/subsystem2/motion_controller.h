@@ -17,8 +17,13 @@
 #include <stdint.h>
 #include "motion.h"
 
+/* Called for every done / cancelled / fault report, with the Buddy 2 mutex
+ * held. It must not block. */
+typedef void (*motion_report_sink_t)(const motion_report_t *p_report);
+
 void motion_controller_init(float max_speed_mps, float stop_lead_drive_m,
-                            float stop_lead_turn_m);
+                            float stop_lead_turn_m,
+                            motion_report_sink_t p_sink);
 
 /* One control period: speed control, statechart, fault checks */
 void motion_controller_step(float dt_s, uint32_t now_us);
@@ -37,10 +42,15 @@ motion_result_t motion_controller_request_move(motion_state_t kind,
                                                float dist_m, float speed_mps,
                                                uint32_t now_us);
 void            motion_controller_stop(void);
+motion_result_t motion_controller_cancel(uint8_t command_id);
 bool            motion_controller_reset(void);
 motion_state_t  motion_controller_poll(void);
 motion_state_t  motion_controller_state(void);
-motion_fault_t  motion_controller_fault(void);
+motion_fault_t  motion_controller_fault(void);       /* lowest fault bit */
+uint8_t         motion_controller_fault_bits(void);  /* MOTION_FAULT_BIT() */
+uint8_t         motion_controller_command_id(void);
+void            motion_controller_ack_complete(uint8_t command_id);
+bool            motion_controller_is_stopped(void);
 float           motion_controller_speed_cap(void);
 
 /* While busy (calibration), requests are rejected and the step does nothing */
