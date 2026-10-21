@@ -22,8 +22,8 @@
 #include "wheel_encoder.h"
 
 /* ---- Tuning (the defaults should work; change only if needed) ----------- */
-#define SPEED_KP_N              (1.6f)   /* P gain, normalised to top speed  */
-#define SPEED_KI_N              (10.0f)  /* I gain, per second (same units)  */
+#define SPEED_KP_N              (3.2f)   /* P gain, normalised to top speed  */
+#define SPEED_KI_N              (5.0f)   /* I gain, per second (same units)  */
 #define SPEED_KD_N              (0.0f)   /* D gain, seconds; 0 = PI only     */
 #define SYNC_GAIN               (4.0f)   /* m/s per m of left/right mismatch */
 #define ACCEL_MPS2              (1.5f)   /* speed ramp; stops wheel slip     */
@@ -46,6 +46,9 @@
 #define STILL_MS_MAX            (60000U)
 #define TIMEOUT_FACTOR          (3.0f)    /* allowed time = 3 x expected     */
 #define TIMEOUT_MARGIN_S        (2.0f)    /*                 + 2 s           */
+#define MOVE_TIME_MAX_S         (600.0f)  /* longer allowed time: rejected;  */
+                                          /* keeps the us deadline far below */
+                                          /* the 2^31 us wrap-safe limit     */
 
 /* ---- Field widths (each covers its range; DATA_FORMAT.md) -------------- */
 #define STATE_BITS              (3U)      /* 6 states                        */
@@ -68,20 +71,21 @@ typedef struct
     uint32_t    glitch_bucket : GLITCH_BUCKET_BITS; /* leaky bucket        */
 } wheel_ctrl_t;
 
-/* Statechart state, latched fault bits, command ID and flags: 20 bits */
+/* Statechart state, latched fault bits, command ID and flags: 21 bits */
 typedef struct
 {
     uint32_t state      : STATE_BITS;               /* motion_state_t      */
     uint32_t fault_bits : MOTION_FAULT_BITS_WIDTH;  /* MOTION_FAULT_BIT()  */
     uint32_t cmd_id     : CMD_ID_BITS;  /* running / last accepted         */
     uint32_t b_busy     : 1;            /* calibration running             */
+    uint32_t b_brake_pending : 1;       /* stopped, brake not applied yet  */
     uint32_t b_mv_turn  : 1;            /* move kind: 1 = TURN, 0 = DRIVE  */
     uint32_t mv_back    : WHEEL_COUNT;  /* move direction, bit per wheel:  */
                                         /* 1 = backward                    */
 } ctrl_t;
 
 static wheel_ctrl_t   g_wheel[WHEEL_COUNT];
-static ctrl_t         g_ctl = { (uint32_t)MOTION_IDLE, 0U, 0U, 0U, 0U, 0U };
+static ctrl_t         g_ctl = { (uint32_t)MOTION_IDLE, 0U, 0U, 0U, 0U, 0U, 0U };
 static uint16_t       g_still_ms = 0U;  /* 0 ... STILL_MS_MAX              */
 static float          g_max_speed_mps = 1.0f;
 static float          g_lead_drive_m = 0.0f;
@@ -174,11 +178,14 @@ static float mv_sign(wheel_id_t wheel)
     return (((g_ctl.mv_back >> (uint32_t)wheel) & 1U) != 0U) ? -1.0f : 1.0f;
 }
 
+/* Motion task only: brake both motors. Clears a pending stop, which lets
+ * requests in again (stop priority). */
 static void outputs_safe(void)
 {
     uint32_t i;
 
     motor_control_brake_all();
+    g_ctl.b_brake_pending = 0U;
     for (i = 0U; i < (uint32_t)WHEEL_COUNT; i++)
     {
         speed_pid_reset(&g_wheel[i].pid);
@@ -493,7 +500,8 @@ motion_result_t motion_controller_request_velocity(float left_mps,
     {
         return MOTION_ERR_FAULT;
     }
-    if ((g_ctl.b_busy != 0U)
+    /* Stop priority: nothing new until the motion task has braked */
+    if ((g_ctl.b_busy != 0U) || (g_ctl.b_brake_pending != 0U)
         || ((state() != MOTION_IDLE) && (state() != MOTION_VELOCITY)))
     {
         return MOTION_ERR_BUSY;
@@ -517,15 +525,24 @@ motion_result_t motion_controller_request_move(motion_state_t kind,
                                                float dist_m, float speed_mps,
                                                uint32_t now_us)
 {
-    float allowed_s;
+    float speed = min_f(speed_mps, motion_controller_speed_cap());
+    float allowed_s = ((dist_m / speed) * TIMEOUT_FACTOR) + TIMEOUT_MARGIN_S;
 
     if (state() == MOTION_FAULT)
     {
         return MOTION_ERR_FAULT;
     }
-    if ((g_ctl.b_busy != 0U) || (state() != MOTION_IDLE))
+    /* Stop priority: nothing new until the motion task has braked */
+    if ((g_ctl.b_busy != 0U) || (g_ctl.b_brake_pending != 0U)
+        || (state() != MOTION_IDLE))
     {
         return MOTION_ERR_BUSY;
+    }
+    /* Reject what the deadline cannot represent (also NaN / infinity) */
+    if (!(dist_m >= 0.0f) || !(speed > 0.0f)
+        || !(allowed_s <= MOVE_TIME_MAX_S))
+    {
+        return MOTION_ERR_BAD_ARG;
     }
 
     g_ctl.b_mv_turn = (kind == MOTION_TURN) ? 1U : 0U;
@@ -534,8 +551,7 @@ motion_result_t motion_controller_request_move(motion_state_t kind,
     g_mv_start[WHEEL_LEFT].bits = wheel_encoder_bits(WHEEL_LEFT);
     g_mv_start[WHEEL_RIGHT].bits = wheel_encoder_bits(WHEEL_RIGHT);
     g_mv_dist_m = dist_m;
-    g_mv_speed_mps = min_f(speed_mps, motion_controller_speed_cap());
-    allowed_s = ((dist_m / g_mv_speed_mps) * TIMEOUT_FACTOR) + TIMEOUT_MARGIN_S;
+    g_mv_speed_mps = speed;
     g_mv_deadline_us = now_us + (uint32_t)(allowed_s * 1000000.0f);
     clear_checks();
     new_command();
@@ -548,12 +564,14 @@ motion_result_t motion_controller_request_move(motion_state_t kind,
     return MOTION_OK;
 }
 
+/* One result per command: DONE is final once it is reported, so a stop
+ * after completion only acknowledges it (no CANCELLED for the same ID). */
 void motion_controller_stop(void)
 {
-    /* STOP wins over a completion that has not been reported yet */
-    if (is_active(state()) || (state() == MOTION_COMPLETE))
+    if (is_active(state()))
     {
         report(MOTION_OUTCOME_CANCELLED, MOTION_FAULT_NONE);
+        g_ctl.b_brake_pending = 1U;     /* motors may still be driven */
     }
     if (state() != MOTION_FAULT)
     {
@@ -567,8 +585,9 @@ motion_result_t motion_controller_cancel(uint8_t command_id)
     {
         return MOTION_ERR_FAULT;        /* a cancel never clears a fault */
     }
+    /* Only a running command can be cancelled; a completed one is final */
     if ((command_id == 0U) || (command_id != g_ctl.cmd_id)
-        || (!is_active(state()) && (state() != MOTION_COMPLETE)))
+        || !is_active(state()))
     {
         return MOTION_ERR_OBSOLETE;
     }
@@ -638,9 +657,13 @@ void motion_controller_ack_complete(uint8_t command_id)
     }
 }
 
+/* Never "stopped" while a stop is still being braked or calibration (which
+ * drives the motors itself) is running */
 bool motion_controller_is_stopped(void)
 {
-    return !is_active(state()) && (g_still_ms >= STOPPED_STILL_MS);
+    return !is_active(state()) && (g_ctl.b_busy == 0U)
+           && (g_ctl.b_brake_pending == 0U)
+           && (g_still_ms >= STOPPED_STILL_MS);
 }
 
 float motion_controller_speed_cap(void)

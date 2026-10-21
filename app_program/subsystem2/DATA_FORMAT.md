@@ -81,6 +81,7 @@ Stored inside Buddy 2 as C bit-fields of the width their range needs.
 | Latched fault bits | `g_ctl.fault_bits` | 5 faults | 32 (enum code) | 5 | 1 bit per fault, OR-ed in, cleared by `motion_reset()` |
 | Command ID | `g_ctl.cmd_id` | 0 … 255 | 8 | 8 | unsigned, 255 → 1 |
 | Busy (calibration) | `g_ctl.b_busy` | 0 / 1 | 8 (bool) | 1 | flag |
+| Brake pending (stop priority) | `g_ctl.b_brake_pending` | 0 / 1 | — (new) | 1 | flag: set by `stop()`, cleared when the motion task brakes |
 | Move kind | `g_ctl.b_mv_turn` | DRIVE / TURN | 32 (enum) | 1 | 1 = TURN |
 | Move direction | `g_ctl.mv_back` | forward / backward per wheel | 2 × 32 (int ±1) | 2 | 1 bit per wheel, 1 = backward |
 | Stored encoder counts: move start, stall reference, estimator's last count, encoder's last FIFO value | `wheel_count_t`, `wheel_ctrl_t`, `wheel_estimate_t`, `encoder_t` | ±524 287 counts = ±42.5 m | 32 (int32) | 20 | two's complement; subtract with `wheel_encoder_delta()`, correct across the wrap |
@@ -90,12 +91,13 @@ Stored inside Buddy 2 as C bit-fields of the width their range needs.
 | Glitch bucket | `wheel_ctrl_t.glitch_bucket` | 0 … 50 | 32 | 6 | unsigned |
 | Wheels-still timer | `g_still_ms` | 0 … 60 049 ms | 32 | 16 | `uint16_t` |
 | Calibration requested / running / done | `motion.c` `g_flags` | 0 / 1 each | 3 × 8 (bool) | 3 × 1 | flags |
+| Calibration abort | `g_flags.b_cal_abort` | 0 / 1 | — (new) | 1 | flag: `stop()` during calibration |
 | Report lost | `g_flags.b_report_lost` | 0 / 1 | 8 (bool) | 1 | flag |
 | Reports queued, peak | `g_flags.report_queued`, `report_peak` | 0 … 8 | 2 × 32 | 2 × 4 | unsigned |
 | Encoder pin, state machine, inverted | `wheel_encoder.c` `encoder_t` | GPIO 0 … 29, SM 0 … 3, 0 / 1 | 32, 32, 8 | 5, 2, 1 | unsigned, flag |
 | Motor pins, inverted | `motor_control.c` `motor_t` | GPIO 0 … 29 ×2, 0 / 1 | 32, 32, 8 | 5, 5, 1 | unsigned, flag |
 
-`g_ctl` holds 20 bits in one word and `g_flags` 12 bits in one word.
+`g_ctl` holds 21 bits in one word and `g_flags` 13 bits in one word.
 
 Kept at full width, on purpose:
 
@@ -113,16 +115,18 @@ Kept at full width, on purpose:
   of a packed word never interleaves with another one.
 - The encoder and motor configuration fields and the estimator's last count
   are written only by the motion task (single writer).
-- The encoder's last FIFO value can be updated by any task that reads a
-  count, so it sits in a word of its own (zero-width bit-field) and never
-  shares a read-modify-write with the inversion flag.
+- **One encoder reader:** only the motion task reads the PIO
+  (`wheel_encoder_sample()`, once per control period and during
+  calibration). Every other task reads the published snapshot, which sits
+  in a word of its own (zero-width bit-field) and is written with one store,
+  so readers on either core see the old or the new count, never a mix.
 
 ### Encoders: no ISR
 
 The Week 6 design and Tribunal 1 assumed GPIO interrupts for the encoders.
 The implementation decodes them in the PIO instead (README, *Encoder
 decoding*), so there is no ISR and no ISR/task sharing. A count is one 32-bit
-FIFO read, so a reader never sees a torn value, and counts are never reset:
+snapshot load, so a reader never sees a torn value, and counts are never reset:
 moves and estimates use differences, so there is no copy-and-reset race.
 20 bits cover a 30 m run (30 000 / 0.0811 = 370 k counts = 19 bits +
 direction), and `wheel_encoder_delta()` stays correct when a count wraps.
@@ -205,8 +209,21 @@ memory: 8 × (4-byte kernel header + 4-byte rounded message) = 64 bytes (was
 Build a word with `motion_cmd_velocity()`, `motion_cmd_drive()`,
 `motion_cmd_turn()`, `motion_cmd_manoeuvre()`, `motion_cmd_stop()`,
 `motion_cmd_cancel()` or `motion_cmd_reset()`, and run it with
-`motion_request_packed()`. An unknown type (7) is rejected. The existing
-functions (`moveForward()`, `turnLeft()`, `stop()`, …) stay.
+`motion_request_packed()`. The existing functions (`moveForward()`,
+`turnLeft()`, `stop()`, …) stay.
+
+Command validation (no undefined behaviour, no unintended command):
+
+- Builders accept only finite values inside the field ranges above, a drive
+  or turn speed of at least one step (2 mm/s), and manoeuvres 0 … 3.
+  Anything else (NaN, infinity, a negative or zero move speed, a value out
+  of range) returns `MOTION_CMD_INVALID_WORD` (type 7) instead of a clipped
+  or different command.
+- `motion_unpack_cmd()` rejects type 7, any bit set outside the type's used
+  bits (row *Used bits*), and a drive or turn with speed 0.
+  `motion_request_packed()` then returns `MOTION_ERR_BAD_ARG`.
+- Moves whose allowed time (distance / speed × 3 + 2 s) is over 600 s are
+  rejected before the deadline is computed, so it cannot overflow.
 
 ## To agree with the team
 

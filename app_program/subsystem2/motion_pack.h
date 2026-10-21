@@ -76,8 +76,19 @@ void     motion_unpack_status(uint64_t word, motion_status_t *p_status);
 uint16_t motion_pack_report(const motion_report_t *p_report);
 void     motion_unpack_report(uint16_t word, motion_report_t *p_report);
 
+/* Type 7 is not a command: what the builders return for invalid input */
+#define MOTION_CMD_INVALID_WORD     (7U)
+
 /* Commands (Vehicle Controller side): 32 bits. Send them with
- * motion_request_packed(). */
+ * motion_request_packed(). Valid input:
+ *   speeds   finite, |v| <= 1.022 m/s (velocity: either sign);
+ *            drive / turn speed > 0 (at least 2 mm/s)
+ *   meters   finite, |m| <= 8.191 m          degrees  finite, |d| <= 511
+ *   manoeuvre MANOEUVRE_LEFT ... MANOEUVRE_U_TURN
+ * Anything else (NaN, infinity, negative or zero move speed, out of range,
+ * unknown manoeuvre) gives MOTION_CMD_INVALID_WORD, which
+ * motion_request_packed() rejects with MOTION_ERR_BAD_ARG: never a
+ * clipped or different command. */
 uint32_t motion_cmd_velocity(float left_mps, float right_mps);
 uint32_t motion_cmd_drive(float meters, float speed_mps);
 uint32_t motion_cmd_turn(float degrees, float speed_mps);
@@ -86,7 +97,8 @@ uint32_t motion_cmd_stop(void);
 uint32_t motion_cmd_cancel(uint8_t command_id);
 uint32_t motion_cmd_reset(void);
 
-/* False if the type code is not a known command */
+/* False if the type is unknown, any bit outside the type's fields is set,
+ * or a drive / turn has speed 0 */
 bool     motion_unpack_cmd(uint32_t word, motion_cmd_t *p_cmd);
 
 #endif /* BUDDY2_MOTION_PACK_H */

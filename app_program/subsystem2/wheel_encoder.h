@@ -10,6 +10,11 @@
  * +-524 287 counts = +-42.5 m per wheel, more than the 30 m longest run.
  * Store them as WHEEL_COUNT_BITS-bit fields (wheel_encoder_bits()) and
  * subtract with wheel_encoder_delta(), which is correct across the wrap.
+ *
+ * One reader: only the motion task reads the PIO, with
+ * wheel_encoder_sample() once per control period (and during calibration).
+ * Every other call returns that snapshot: one 32-bit load per wheel, safe
+ * from any task, never touching the PIO FIFO.
  */
 
 #ifndef BUDDY2_WHEEL_ENCODER_H
@@ -42,6 +47,10 @@ typedef struct
  */
 int32_t  wheel_encoder_init(bool b_left_inverted, bool b_right_inverted);
 
+/* Motion task only: read both PIO counts into the snapshot */
+void     wheel_encoder_sample(void);
+
+/* The snapshot from the last wheel_encoder_sample(); any task */
 int32_t  wheel_encoder_count(wheel_id_t wheel);       /* + = forward        */
 uint32_t wheel_encoder_bits(wheel_id_t wheel);        /* same, 20-bit field */
 

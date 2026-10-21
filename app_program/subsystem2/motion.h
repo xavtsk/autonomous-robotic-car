@@ -127,6 +127,7 @@ typedef struct
     bool  b_enc_l_ok;           /* false: ENC_L did not count                */
     bool  b_enc_r_ok;           /* false: ENC_R did not count                */
     bool  b_encoders_swapped;   /* true: ENC_L / ENC_R cables swapped        */
+    bool  b_aborted;            /* true: stopped by stop() (not valid)       */
 } motion_calibration_t;
 
 /* ---- Lifecycle (Buddy 2 internal, called by subsystem2.c only) ---------- */
@@ -147,8 +148,12 @@ motion_result_t turnLeft(float angle);      /* on the spot, anticlockwise */
 motion_result_t turnRight(float angle);     /* on the spot, clockwise     */
 
 /* Stop: any active state -> IDLE, both motors braked within one control
- * period, reported as cancelled. Takes priority over any running command.
- * No effect in MOTION_FAULT (use motion_reset()). */
+ * period, reported as cancelled. Takes priority over any running command:
+ * every new request is rejected with MOTION_ERR_BUSY until the motion task
+ * has applied the brake (stop() wakes it at once). A command that already
+ * completed is not reported again (its DONE stands). Also aborts a running
+ * calibration within 10 ms, motors braked (b_aborted in its result).
+ * No effect on MOTION_FAULT (use motion_reset()). */
 void stop(void);
 
 /* ---- Requests (non-blocking) --------------------------------------------- */
@@ -158,7 +163,9 @@ void stop(void);
  * (stale command). Negative = backward. Speeds above the limit are capped. */
 motion_result_t motion_request_velocity(float left_mps, float right_mps);
 
-/* DRIVE straight. Negative distance = backward. IDLE only. */
+/* DRIVE straight. Negative distance = backward. IDLE only. Drives and turns
+ * whose allowed time (distance / speed x 3 + 2 s) exceeds 600 s are
+ * rejected with MOTION_ERR_BAD_ARG, so the deadline cannot overflow. */
 motion_result_t motion_request_drive(float meters, float speed_mps);
 
 /* TURN on the spot. Positive = left (anticlockwise), negative = right.
@@ -173,8 +180,10 @@ motion_result_t motion_request_u_turn(float speed_mps);
 motion_result_t motion_request_manoeuvre(manoeuvre_t m);
 
 /* Cancel the running command, like stop(), but only if command_id is the
- * one running (or completed and not yet reported). Returns MOTION_OK,
- * MOTION_ERR_OBSOLETE for any other ID, or MOTION_ERR_FAULT. */
+ * one running. Every command ends with exactly one report: a command that
+ * has completed (DONE) cannot be cancelled. Returns MOTION_OK,
+ * MOTION_ERR_OBSOLETE for any other ID or a completed command, or
+ * MOTION_ERR_FAULT. */
 motion_result_t motion_cancel(uint8_t command_id);
 
 /* Run a packed 32-bit command word (motion_pack.h: motion_cmd_...()).
@@ -211,7 +220,8 @@ bool motion_wait_report(motion_report_t *p_out, int32_t timeout_ms);
 /* Most reports ever waiting in the queue, to validate its length */
 uint32_t motion_report_peak(void);
 
-/* Stopped acknowledgement: no command running and both wheels still */
+/* Stopped acknowledgement: no command running, brake applied, no
+ * calibration running and both wheels still */
 bool motion_is_stopped(void);
 
 /* Current state. MOTION_COMPLETE is returned exactly once (the completion

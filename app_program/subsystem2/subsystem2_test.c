@@ -9,7 +9,7 @@
  * forward, turn left, turn right and drive back, ending where they started;
  * they run only when S2_TEST_MOVE is 1 (robot on the floor, 30 cm
  * clear ahead).
- * S2-U05..U20 need the CALIBRATE values in motion.c and report SKIP without.
+ * S2-U05..U22 need the CALIBRATE values in motion.c and report SKIP without.
  *
  * S2_TEST_CALIBRATE = 1 runs calibration instead of the tests and prints the
  * CALIBRATE values for motion.c. Follow the [CAL] prompts on the console.
@@ -125,6 +125,12 @@ static void calibrate(void)
 
         return;
     }
+    if (cal.b_aborted)
+    {
+        tm_printf((UB *) "[CAL] stopped by stop(): no result, motors braked\n");
+
+        return;
+    }
     if (!cal.b_enc_l_ok || !cal.b_enc_r_ok)
     {
         tm_printf((UB *) "[CAL] FAILED: encoder not counting (L ok=%s,"
@@ -158,7 +164,7 @@ static void calibrate(void)
               bool_text(cal.b_enc_r_inverted));
 }
 
-/* S2-U01..U20; see the file header */
+/* S2-U01..U22; see the file header */
 static void run_unit_tests(void)
 {
     volatile float zero = 0.0f;
@@ -205,7 +211,7 @@ static void run_unit_tests(void)
                    && (motion_request_velocity(0.0f, 0.0f)
                        == MOTION_ERR_NOT_CALIBRATED),
                    "moves rejected until calibrated");
-        skip("S2-U06..U20", "ENCODER_COUNTS_PER_REV not set in motion.c");
+        skip("S2-U06..U22", "ENCODER_COUNTS_PER_REV not set in motion.c");
         TEST_SUMMARY("subsystem2");
 
         return;
@@ -292,6 +298,7 @@ static void run_unit_tests(void)
     b_ok = (motion_request_velocity(0.0f, 0.0f) == MOTION_OK);
     id1 = motion_command_id();
     stop();                                         /* report 1: cancelled */
+    (void)tk_dly_tsk(STOP_WAIT_MS);                 /* brake before a new  */
     b_ok = b_ok && (motion_request_drive(0.0f, 0.2f) == MOTION_OK);
     id2 = motion_command_id();                      /* report 2: done      */
     b_ok = b_ok && motion_get_report(&rep) && (rep.command_id == id1)
@@ -463,7 +470,7 @@ void subsystem2_test(void)
     if (S2_TEST_CALIBRATE)
     {
         calibrate();
-        skip("S2-U01..U20", "S2_TEST_CALIBRATE is 1");
+        skip("S2-U01..U22", "S2_TEST_CALIBRATE is 1");
     }
     else
     {

@@ -87,6 +87,7 @@ typedef struct
     uint32_t b_cal_request : 1;         /* requested, not started yet      */
     uint32_t b_cal_running : 1;
     uint32_t b_cal_done    : 1;         /* g_cal_result is valid           */
+    uint32_t b_cal_abort   : 1;         /* stop() during calibration       */
     uint32_t b_report_lost : 1;         /* a report was dropped            */
     uint32_t report_queued : REPORT_COUNT_BITS;
     uint32_t report_peak   : REPORT_COUNT_BITS;
@@ -95,7 +96,7 @@ typedef struct
 static ID                   g_mutex_id = 0;
 static ID                   g_task_id = 0;
 static uint32_t             g_last_step_us = 0U;
-static motion_flags_t       g_flags = { 0U, 0U, 0U, 0U, 0U, 0U };
+static motion_flags_t       g_flags = { 0U, 0U, 0U, 0U, 0U, 0U, 0U };
 static motion_calibration_t g_cal_result;
 static ID                   g_report_mbf_id = 0;
 
@@ -254,6 +255,7 @@ void motion_init(void)
     time_start();
     motor_control_init(M1_INVERTED, M2_INVERTED);
     er = wheel_encoder_init(ENC_L_INVERTED, ENC_R_INVERTED);
+    wheel_encoder_sample();             /* this task is the only PIO reader */
     motion_estimation_init(m_per_count(ENCODER_COUNTS_PER_REV), TRACK_WIDTH_M);
 
     motion_lock();
@@ -293,12 +295,15 @@ void motion_process(void)
         motion_calibration_t result;
 
         run_calibration(&result);
+        motor_control_brake_all();      /* also after an abort */
+        wheel_encoder_sample();
         motion_estimation_init(m_per_count(ENCODER_COUNTS_PER_REV),
                                TRACK_WIDTH_M);
         motion_lock();
         g_cal_result = result;
         g_flags.b_cal_done = 1U;
         g_flags.b_cal_running = 0U;
+        g_flags.b_cal_abort = 0U;
         motion_controller_set_busy(false);
         motion_unlock();
         (void)tk_can_wup(TSK_SELF);     /* drop ticks queued meanwhile */
@@ -329,6 +334,7 @@ void motion_process(void)
     }
 
     motion_lock();
+    wheel_encoder_sample();             /* the one PIO read this period */
     motion_estimation_update(dt_s);
     motion_controller_step(dt_s, now);
     motion_unlock();
@@ -485,6 +491,11 @@ void stop(void)
 {
     motion_lock();
     motion_controller_stop();
+    if ((g_flags.b_cal_request != 0U) || (g_flags.b_cal_running != 0U))
+    {
+        g_flags.b_cal_request = 0U;     /* not started: never starts      */
+        g_flags.b_cal_abort = (g_flags.b_cal_running != 0U) ? 1U : 0U;
+    }
     motion_unlock();
     if (g_task_id > 0)
     {
@@ -842,26 +853,47 @@ bool motion_get_calibration(motion_calibration_t *p_out)
     return b_done;
 }
 
+/* Calibration wait: CAL_POLL_MS at a time, sampling the encoders. Returns
+ * false at once if stop() aborted calibration; the caller then brakes. */
+static bool cal_wait(int32_t ms)
+{
+    bool b_abort;
+
+    do
+    {
+        (void)tk_dly_tsk(CAL_POLL_MS);
+        ms -= CAL_POLL_MS;
+        wheel_encoder_sample();
+        motion_lock();
+        b_abort = (g_flags.b_cal_abort != 0U);
+        motion_unlock();
+    } while (!b_abort && (ms > 0));
+
+    return !b_abort;
+}
+
 /* Calibration step 2: run one motor alone at full power (wheels off the
- * ground) and measure how far each encoder moved */
-static void cal_spin(wheel_id_t motor, int32_t *p_d_l, int32_t *p_d_r,
+ * ground) and measure how far each encoder moved. False if aborted. */
+static bool cal_spin(wheel_id_t motor, int32_t *p_d_l, int32_t *p_d_r,
                      float *p_secs)
 {
     uint32_t l0;
     uint32_t r0;
     uint32_t t0;
+    bool     b_ok;
 
     motor_control_set(motor, 1.0f);
-    (void)tk_dly_tsk(CAL_SPINUP_MS);
+    b_ok = cal_wait(CAL_SPINUP_MS);
     l0 = wheel_encoder_bits(WHEEL_LEFT);
     r0 = wheel_encoder_bits(WHEEL_RIGHT);
     t0 = time_now_us();
-    (void)tk_dly_tsk(CAL_MEASURE_MS);
+    b_ok = b_ok && cal_wait(CAL_MEASURE_MS);
     *p_d_l = wheel_encoder_delta(wheel_encoder_bits(WHEEL_LEFT), l0);
     *p_d_r = wheel_encoder_delta(wheel_encoder_bits(WHEEL_RIGHT), r0);
     *p_secs = (float)(time_now_us() - t0) / US_PER_S;
     motor_control_brake_all();
-    (void)tk_dly_tsk(CAL_SETTLE_MS);
+
+    return b_ok && cal_wait(CAL_SETTLE_MS);
 }
 
 static int32_t abs_i(int32_t x)
@@ -869,14 +901,16 @@ static int32_t abs_i(int32_t x)
     return (x < 0) ? -x : x;
 }
 
+/* Runs in the motion task (maintenance mode: requests rejected, never
+ * "stopped"). stop() aborts it within CAL_POLL_MS with the motors braked. */
 static void run_calibration(motion_calibration_t *p_out)
 {
-    const uint32_t l0 = wheel_encoder_bits(WHEEL_LEFT);
-    const uint32_t r0 = wheel_encoder_bits(WHEEL_RIGHT);
+    uint32_t l0;
+    uint32_t r0;
     const uint32_t start = time_now_us();
     uint32_t last_move = start;
-    uint32_t ref_l = l0;
-    uint32_t ref_r = r0;
+    uint32_t ref_l;
+    uint32_t ref_r;
     int32_t  tl;
     int32_t  tr;
     float    cpr_l;
@@ -896,6 +930,11 @@ static void run_calibration(motion_calibration_t *p_out)
 
     *p_out = (motion_calibration_t){ 0 };
     motor_control_brake_all();
+    wheel_encoder_sample();
+    l0 = wheel_encoder_bits(WHEEL_LEFT);
+    r0 = wheel_encoder_bits(WHEEL_RIGHT);
+    ref_l = l0;
+    ref_r = r0;
 
     /* Step 1: counts per wheel turn and encoder direction (hand turning).
      * Gives up if an encoder is not counting (unplugged, or a broken wire:
@@ -926,7 +965,12 @@ static void run_calibration(motion_calibration_t *p_out)
 
             return;
         }
-        (void)tk_dly_tsk(CAL_POLL_MS);
+        if (!cal_wait(CAL_POLL_MS))
+        {
+            p_out->b_aborted = true;
+
+            return;
+        }
     }
     p_out->b_enc_l_ok = true;
     p_out->b_enc_r_ok = true;
@@ -946,9 +990,16 @@ static void run_calibration(motion_calibration_t *p_out)
 
     /* Step 2: top speed, motor direction and encoder ports, one motor at a
      * time, wheels off the ground */
-    (void)tk_dly_tsk(CAL_LIFT_MS);
-    cal_spin(WHEEL_LEFT,  &m1_l, &m1_r, &s1);
-    cal_spin(WHEEL_RIGHT, &m2_l, &m2_r, &s2);
+    if (!cal_wait(CAL_LIFT_MS) || !cal_spin(WHEEL_LEFT, &m1_l, &m1_r, &s1)
+        || !cal_spin(WHEEL_RIGHT, &m2_l, &m2_r, &s2))
+    {
+        wheel_encoder_set_inverted(WHEEL_LEFT,  ENC_L_INVERTED);
+        wheel_encoder_set_inverted(WHEEL_RIGHT, ENC_R_INVERTED);
+        motor_control_brake_all();
+        p_out->b_aborted = true;
+
+        return;
+    }
 
     /* Each motor should turn its own encoder; if the left motor moves ENC_R
      * and the right motor moves ENC_L, the encoder cables are swapped */

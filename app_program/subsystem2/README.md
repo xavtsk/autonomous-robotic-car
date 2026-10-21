@@ -72,9 +72,11 @@ never clears a latched fault.
 
 The encoders are decoded in **PIO0**, one state machine per wheel (SM0 left on
 GP16/GP17, SM1 right on GP4/GP5), with the quadrature program from
-pico-examples. The PIO keeps the count; the CPU takes no interrupt per edge and
-reads the latest count from the RX FIFO. Subsystem 2 therefore does not use the
-shared IO_BANK0 GPIO interrupt. PIO1 is left to the CYW43 WiFi driver.
+pico-examples. The PIO keeps the count; the CPU takes no interrupt per edge.
+Only the motion task reads the latest count from the RX FIFO, once per control
+period; every other task reads that published snapshot. Subsystem 2 therefore
+does not use the shared IO_BANK0 GPIO interrupt. PIO1 is left to the CYW43 WiFi
+driver.
 This replaces the "Wheel encoder GPIO ISR" of the Week 6 design (sections 2
 and 4), following the instructor's review.
 
@@ -82,13 +84,13 @@ Edge rate (counts are quadrature edges, 4 per encoder line):
 
 | | Value |
 | --- | --- |
-| Formula | edges/s = wheel speed ÷ (π × 0.061 m) × `ENCODER_COUNTS_PER_REV` |
-| Worst case | motor at no load (wheels lifted): 117 RPM + 10 % = 129 RPM = 2.15 turns/s |
-| Per wheel | 2.15 × 2000 = **4.3 k edges/s** (one every ~233 µs) |
-| Both wheels | **8.6 k edges/s** (one every ~116 µs on average) |
-| PIO limit | ≤ 10 cycles per loop at 125 MHz = 12.5 M edges/s per wheel (~2900× margin) |
+| Formula | edges/s = wheel speed ÷ (π × 0.0654 m) × `ENCODER_COUNTS_PER_REV` |
+| Worst case | measured top speed (calibration, wheels lifted): 0.884 m/s = 4.30 turns/s |
+| Per wheel | 4.30 × 2534 = **10.9 k edges/s** (one every ~92 µs) |
+| Both wheels | **21.8 k edges/s** (one every ~46 µs on average) |
+| PIO limit | ≤ 10 cycles per loop at 125 MHz = 12.5 M edges/s per wheel (~1150× margin) |
 
-With a GPIO interrupt per edge the same rate would mean ~8.6 k interrupts/s,
+With a GPIO interrupt per edge the same rate would mean ~21.8 k interrupts/s,
 and any interrupt latency longer than the gap between two edges of one wheel
 loses a step. The PIO samples every few cycles, so latency cannot lose steps.
 
@@ -103,4 +105,5 @@ Keep hardware drivers in this folder and register ownership/interfaces in
 top-level `include/` directory now belongs to the kernel and board support.
 
 The test hook (`subsystem2_test.c`, `make TEST=1`) runs unit tests S2-U01 to
-S2-U20. Record evidence in `testing/subsystem2/TEST_LOG.md`.
+S2-U22; S2-U11, U12, U21 and U22 drive the robot and need `S2_TEST_MOVE` set
+to 1. Record evidence in `testing/subsystem2/TEST_LOG.md`.

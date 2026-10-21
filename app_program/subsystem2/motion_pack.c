@@ -69,13 +69,19 @@ static uint64_t field_put(uint32_t value, uint32_t lsb, uint32_t bits)
     return (uint64_t)(value & mask_of(bits)) << lsb;
 }
 
-/* Rounded, saturated magnitude in steps; NaN gives 0 */
+static bool is_finite(float x)
+{
+    return (x == x) && ((x - x) == 0.0f);   /* rejects NaN and infinity */
+}
+
+/* Rounded, saturated magnitude in steps; NaN or negative gives 0 (no cast
+ * of a negative float to unsigned) */
 static uint32_t to_steps(float magnitude, float step, uint32_t bits)
 {
     uint32_t max_steps = mask_of(bits);
     float    steps = (magnitude / step) + 0.5f;
 
-    if (steps != steps)
+    if (!(steps >= 1.0f))
     {
         return 0U;
     }
@@ -244,9 +250,31 @@ void motion_unpack_report(uint16_t word, motion_report_t *p_report)
 
 /* ---- Commands ------------------------------------------------------------ */
 
+/* Bits each command type uses (type + payload); others must be 0 */
+#define CMD_VELOCITY_BITS       (TYPE_BITS + (2U * SPEED_BITS))         /* 23 */
+#define CMD_DRIVE_BITS          (TYPE_BITS + DRIVE_BITS + MOVE_SPEED_BITS)
+#define CMD_TURN_BITS           (TYPE_BITS + ANGLE_BITS + MOVE_SPEED_BITS)
+#define CMD_MANOEUVRE_BITS      (TYPE_BITS + MANOEUVRE_BITS)            /*  5 */
+#define CMD_CANCEL_BITS         (TYPE_BITS + ID_BITS)                   /* 11 */
+
 static uint32_t cmd_type(motion_cmd_type_t type)
 {
     return (uint32_t)field_put((uint32_t)type, 0U, TYPE_BITS);
+}
+
+/* Finite and within the field after rounding (no silent saturation) */
+static bool fits(float value, float step, uint32_t mag_bits)
+{
+    return is_finite(value)
+           && (((abs_f(value) / step) + 0.5f) < (float)(mask_of(mag_bits) + 1U));
+}
+
+/* A drive / turn speed: finite, at least one step, within the field */
+static bool move_speed_ok(float speed_mps)
+{
+    return fits(speed_mps, MOTION_PACK_SPEED_STEP_MPS, MOVE_SPEED_BITS)
+           && (to_steps(speed_mps, MOTION_PACK_SPEED_STEP_MPS,
+                        MOVE_SPEED_BITS) != 0U);
 }
 
 uint32_t motion_cmd_velocity(float left_mps, float right_mps)
@@ -255,6 +283,14 @@ uint32_t motion_cmd_velocity(float left_mps, float right_mps)
                             MOTION_PACK_SPEED_MAG_BITS);
     uint32_t right = sm_pack(right_mps, MOTION_PACK_SPEED_STEP_MPS,
                              MOTION_PACK_SPEED_MAG_BITS);
+
+    if (!fits(left_mps, MOTION_PACK_SPEED_STEP_MPS,
+              MOTION_PACK_SPEED_MAG_BITS)
+        || !fits(right_mps, MOTION_PACK_SPEED_STEP_MPS,
+                 MOTION_PACK_SPEED_MAG_BITS))
+    {
+        return MOTION_CMD_INVALID_WORD;
+    }
 
     return cmd_type(MOTION_CMD_VELOCITY)
            | (uint32_t)field_put(left, CMD_ARG_LSB, SPEED_BITS)
@@ -268,6 +304,12 @@ uint32_t motion_cmd_drive(float meters, float speed_mps)
                             MOTION_PACK_DRIVE_MAG_BITS);
     uint32_t speed = to_steps(speed_mps, MOTION_PACK_SPEED_STEP_MPS,
                               MOVE_SPEED_BITS);
+
+    if (!fits(meters, MOTION_PACK_DIST_STEP_M, MOTION_PACK_DRIVE_MAG_BITS)
+        || !move_speed_ok(speed_mps))
+    {
+        return MOTION_CMD_INVALID_WORD;
+    }
 
     return cmd_type(MOTION_CMD_DRIVE)
            | (uint32_t)field_put(dist, CMD_ARG_LSB, DRIVE_BITS)
@@ -283,6 +325,12 @@ uint32_t motion_cmd_turn(float degrees, float speed_mps)
     uint32_t speed = to_steps(speed_mps, MOTION_PACK_SPEED_STEP_MPS,
                               MOVE_SPEED_BITS);
 
+    if (!fits(degrees, MOTION_PACK_ANGLE_STEP_DEG, MOTION_PACK_ANGLE_MAG_BITS)
+        || !move_speed_ok(speed_mps))
+    {
+        return MOTION_CMD_INVALID_WORD;
+    }
+
     return cmd_type(MOTION_CMD_TURN)
            | (uint32_t)field_put(angle, CMD_ARG_LSB, ANGLE_BITS)
            | (uint32_t)field_put(speed, CMD_ARG_LSB + ANGLE_BITS,
@@ -291,6 +339,12 @@ uint32_t motion_cmd_turn(float degrees, float speed_mps)
 
 uint32_t motion_cmd_manoeuvre(manoeuvre_t m)
 {
+    /* Out-of-range values must not be masked into a different manoeuvre */
+    if ((uint32_t)m > (uint32_t)MANOEUVRE_U_TURN)
+    {
+        return MOTION_CMD_INVALID_WORD;
+    }
+
     return cmd_type(MOTION_CMD_MANOEUVRE)
            | (uint32_t)field_put((uint32_t)m, CMD_ARG_LSB, MANOEUVRE_BITS);
 }
@@ -311,11 +365,40 @@ uint32_t motion_cmd_reset(void)
     return cmd_type(MOTION_CMD_RESET);
 }
 
+/* Number of bits a valid word of this type may use */
+static uint32_t cmd_bits(uint32_t type)
+{
+    uint32_t bits;
+
+    switch (type)
+    {
+    case MOTION_CMD_VELOCITY:  bits = CMD_VELOCITY_BITS;  break;
+    case MOTION_CMD_DRIVE:     bits = CMD_DRIVE_BITS;     break;
+    case MOTION_CMD_TURN:      bits = CMD_TURN_BITS;      break;
+    case MOTION_CMD_MANOEUVRE: bits = CMD_MANOEUVRE_BITS; break;
+    case MOTION_CMD_CANCEL:    bits = CMD_CANCEL_BITS;    break;
+    default:                   bits = TYPE_BITS;          break;
+    }
+
+    return bits;
+}
+
 bool motion_unpack_cmd(uint32_t word, motion_cmd_t *p_cmd)
 {
     uint32_t type = field_get(word, 0U, TYPE_BITS);
 
-    if ((p_cmd == NULL) || (type > (uint32_t)MOTION_CMD_RESET))
+    /* Unknown type, or bits set outside the type's fields: not a command */
+    if ((p_cmd == NULL) || (type > (uint32_t)MOTION_CMD_RESET)
+        || ((word & ~mask_of(cmd_bits(type))) != 0U))
+    {
+        return false;
+    }
+    /* A drive / turn needs a speed of at least one step */
+    if (((type == (uint32_t)MOTION_CMD_DRIVE)
+         && (field_get(word, CMD_ARG_LSB + DRIVE_BITS, MOVE_SPEED_BITS) == 0U))
+        || ((type == (uint32_t)MOTION_CMD_TURN)
+            && (field_get(word, CMD_ARG_LSB + ANGLE_BITS, MOVE_SPEED_BITS)
+                == 0U)))
     {
         return false;
     }
