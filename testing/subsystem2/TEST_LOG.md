@@ -47,7 +47,7 @@ are manual hardware tests: the robot is measured by hand.
 | S2-U24 | Wheel-speed PID step response | Speed PID (Kp, Ki), feedforward, ramp | Manual, wheels lifted (step-test build) | Steps 0→0.2 and 0.2→0.4 m/s on both wheels for each gain set; rise, overshoot, settling, steady-state error printed per wheel | Steady-state error < 8 mm/s (one count per period); chosen gains justified by the table |
 | S2-U25 | Straight-drive accuracy | Drive distance, straight-line correction | Manual (evaluation build) | 0.2 m and 0.5 m at 0.1/0.2/0.3 m/s, 0.5 m backward; 5 runs each; measure from a start mark | Each drive within ±20 mm; record mean, SD and heading change |
 | S2-U26 | Turn accuracy | On-the-spot turns | Manual (evaluation build) | Left 90°, right 90°, U-turn 180°, left 360°; 5 runs each; measure the angle | Each turn within ±10° |
-| S2-U27 | Stop during a drive | `stop()` priority, braking | Manual (evaluation build) | 0.5 m drive at 0.2 m/s, `stop()` after 1.5 s; 3 runs; measure from the start mark | Stops at once; robot rests within a few cm of where `stop()` was called |
+| S2-U27 | Stop during a drive | `stop()` priority, braking | Manual (evaluation build) | 0.5 m drive at 0.2 m/s, `stop()` after 1.5 s; 3 runs; measure how far the robot moves after `stop()` | Stops at once; robot rests within a few cm of where `stop()` was called |
 | S2-U28 | Stall detection (wheel held) | STALL fault, 600 ms no progress | Manual (evaluation build) | 1 m drive; hold one wheel completely still once it moves | STALL fault ~0.6 s after the wheel stops; motors braked |
 | S2-U29 | Encoder disconnection | STALL fault (no encoder progress) | Manual (evaluation build) | Unplug one encoder cable, start a 0.3 m drive | STALL fault ~0.6 s after the start; motors braked |
 | S2-U30 | Drive timeout | TIMEOUT fault (move deadline = 3 × expected time + 2 s) | Manual (timeout-test build: deadline cut to 0.5 × expected + 0 s) | 0.5 m drive at 0.2 m/s on the floor, nothing in the way (expected 2.5 s, deadline 1.25 s); 3 runs. A real deadline cannot be reached on purpose: blocked wheels give STALL first, slipping wheels still count to the distance | TIMEOUT fault at ~1250 ms, well short of 0.5 m; motors braked; no STALL |
@@ -81,13 +81,13 @@ one report per command, timeout limit, packed-input checks).
 | 2026-10-22 | S2-U26 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U25-U26_motion_eval_cases3-13.txt` | 90° left/right, 180°, 360° (runs 1–3): measured means within 3.3°, encoder within 0.4–0.6°; angles read to about ±5° |
 | 2026-10-22 | S2-U26 | † ‡ | 2503508 | FAIL | `logs/2026-10-22_S2-U25-U26_motion_eval_cases3-13.txt` | 360° runs 4–5 (and the square, later dropped): STALL at 619 ms, only the right wheel moving. Cause: left motor ground wire came loose (hardware). Stall detection worked as designed. Fixed by reconnecting the wire |
 | 2026-10-22 | S2-U26 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U26-U29_eval_rerun.png` | 360° runs 4–5 re-run after the wire fix: encoder 360.6° / 361.0° |
-| 2026-10-22 | S2-U27 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U26-U29_eval_rerun.png` | `stop()` at 281–282 mm; robot rests 10–11 mm later by encoder; heading within ±0.6°. Measured totals ~11 mm shorter than the encoder after this abrupt stop |
+| 2026-10-22 | S2-U27 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U26-U29_eval_rerun.png`, `logs/2026-10-22_S2-U25-U29_motion_eval.csv` | `stop()` at 281–282 mm; robot moved 10–11 mm after it by encoder, 12 / 10 / 11 mm measured (within 2 mm of the encoder each run); heading within ±0.6° |
 | 2026-10-22 | S2-U28 | † ‡ | 2503508 | Invalid run | `logs/2026-10-22_S2-U26-U29_eval_rerun.png` | No STALL: the wheel was only slowed, not stopped (1001 mm in 5399 ms, same as a free drive). The speed controller held the speed, as intended. Repeated below |
 | 2026-10-22 | S2-U28 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U28_stall_pass.png` | Wheel held still: STALL at 819 ms (~0.6 s after it stopped), motors braked |
 | 2026-10-22 | S2-U29 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U26-U29_eval_rerun.png` | Encoder unplugged: STALL at 619 ms, motors braked |
 | 2026-10-22 | S2-U01–U04, U06–U22 | † ‡ | 2503508 | PASS | `logs/2026-10-22_drive_tests_after_review.png` | Final code: 21 passed, 0 failed; S2-U05 SKIP |
 | 2026-10-22 | S2-U30 | † ‡ | 2503508 | PASS | `logs/2026-10-22_S2-U30_timeout_pass.png` | Timeout-test build, 3 runs: "drive/turn timed out" (TIMEOUT) at 1279 / 1259 / 1279 ms after 143 / 134 / 138 mm (encoder), heading change −2.1° to +1.0°; motors braked, no STALL |
 
-For S2-U25 to S2-U29, `logs/2026-10-22_S2-U25-U29_motion_eval_3runs.csv` has
+For S2-U25 to S2-U29, `logs/2026-10-22_S2-U25-U29_motion_eval.csv` has
 the three runs per case chosen at random (fixed seed) for the accuracy
 evaluation.

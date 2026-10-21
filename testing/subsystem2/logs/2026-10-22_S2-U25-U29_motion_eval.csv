@@ -32,8 +32,8 @@ CSV,11,U-turn 180,180,deg,0.15,4,180.5,180,,1639,complete,encoder distance 0 mm;
 CSV,12,Turn left 360,360,deg,0.15,1,360.5,360,,2819,complete,encoder distance 0 mm; Measured: real angle (deg)
 CSV,12,Turn left 360,360,deg,0.15,2,360.4,360,,2859,complete,encoder distance 0 mm; Measured: real angle (deg)
 CSV,12,Turn left 360,360,deg,0.15,3,361,370,,2859,complete,encoder distance 0 mm; Measured: real angle (deg)
-CSV,14,Stop during 0.5 m drive,500,mm,0.2,1,10,12,,1749,IDLE (stopped),Encoder = distance after stop(); stop() at 282 mm; encoder total from start 292 mm; Measured = real total from the start mark
-CSV,14,Stop during 0.5 m drive,500,mm,0.2,2,11,10,,1770,IDLE (stopped),Encoder = distance after stop(); stop() at 282 mm; encoder total from start 292 mm; Measured = real total from the start mark
-CSV,14,Stop during 0.5 m drive,500,mm,0.2,3,11,11,,1769,IDLE (stopped),Encoder = distance after stop(); stop() at 282 mm; encoder total from start 292 mm; Measured = real total from the start mark
+CSV,14,Stop during 0.5 m drive,500,mm,0.2,1,10,12,,1749,IDLE (stopped),Encoder = distance after stop() (mm); stop() at 282 mm; encoder total from start 292 mm; Measured = real distance moved after stop() (mm)
+CSV,14,Stop during 0.5 m drive,500,mm,0.2,2,11,10,,1770,IDLE (stopped),Encoder = distance after stop() (mm); stop() at 282 mm; encoder total from start 292 mm; Measured = real distance moved after stop() (mm)
+CSV,14,Stop during 0.5 m drive,500,mm,0.2,3,11,11,,1769,IDLE (stopped),Encoder = distance after stop() (mm); stop() at 282 mm; encoder total from start 292 mm; Measured = real distance moved after stop() (mm)
 CSV,15,Stall: hold a wheel,1000,mm,0.2,1,819,,,819,stall / no encoder progress (wheel jammed; encoder unplugged or wire broken),Encoder = time to fault (ms); STALL as expected; held wheel stopped; other wheel moved (encoder distance 27 mm; heading change 27.8 deg); earlier attempt: wheel not fully stopped; no stall
 CSV,16,Encoder unplugged,300,mm,0.2,1,619,,,619,stall / no encoder progress (wheel jammed; encoder unplugged or wire broken),Encoder = time to fault (ms); STALL as expected; encoder distance 0 mm
