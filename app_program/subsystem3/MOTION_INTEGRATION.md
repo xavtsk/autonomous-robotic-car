@@ -1,5 +1,11 @@
 # Buddy 2 + Buddy 3 integration
 
+Updated against `origin/Buddy2` commit `a29f973` (22 October 2026). Its PIO
+encoders, calibrated constants, PID settings, packed formats and report queue are
+preserved. These upstream changes are included in the working tree; no branch
+merge commit, flash or push was performed. The remaining local motion changes
+are the feedback/lease contract described below.
+
 ## What is connected
 
 `S3_MOTION=1 IR_BENCH=0 TEST=0` starts only Buddy 2 and Buddy 3 application tasks.
@@ -8,16 +14,22 @@ It initialises motor outputs braked, enables all three sensor inputs and stays
 the stationary sensor diagnostic. Conflicting test/bench/integration flags fail
 at build time. No firmware was flashed or motor operated during development.
 
-- `s3_drive` passes valid active steering (m/s) to `motion_request_velocity()`.
+- `app_program/controller/s3_drive` passes valid active steering (m/s) to `motion_request_velocity()`.
 - `motion_get_feedback()` provides a mutex-protected distance/source timestamp,
-  validity, reset epoch, current motion state/fault and last applied brake status.
+  validity, reset epoch, current motion state/fault, command ID, report-loss count
+  and stopped acknowledgement.
   Reads do not refresh measurement timestamps or consume completion events.
-- The adapter alone uses `motion_poll()`, once when its own manoeuvre completes.
+- The temporary controller alone drains `motion_get_report()` every cycle, even
+  while inactive. It matches completion to the accepted command ID and never uses
+  `motion_poll()`. Unexpected cancellation, queue loss and wrong current IDs fault
+  the run; an old completion cannot finish a newer manoeuvre.
 - A mapped barcode arms one direction for the next persistent junction candidate.
   Two pending codes, an unmapped letter or an unassigned junction halt the run.
 - Before manoeuvring, it requests stop and waits for a **newer** motion update
-  reporting IDLE and applied zero motor duties. This is a brake-output
-  acknowledgement, not proof that the physical wheels have stopped.
+  reporting IDLE, applied brakes and at least 100 ms of encoder-observed
+  stillness (`motion_controller_is_stopped`). A short invalid steering interval
+  also waits for this acknowledgement before resuming. Physical stopping remains
+  dependent on working encoders and requires hardware validation.
 - Navigation capture is suppressed during a manoeuvre; sensor/freshness faults
   still stop it. On completion, tracking is restored with fresh framing/rearming.
   The car remains braked until the front line is reacquired. No blind line search
@@ -42,7 +54,13 @@ heartbeat. The motion task publishes distance and its original measurement time
 under its existing mutex. Feedback is unavailable before its first update, after
 initialisation/recalibration until another update, during calibration or after
 encoder initialisation failure. Epoch changes on initialisation/recalibration.
-Existing scalar getters and movement APIs are retained.
+Signed centre distance accumulates modular 20-bit encoder deltas, so a counter
+wrap does not look like a large displacement and incorrectly rearm a barcode.
+Distance starts at zero in each epoch. A monotonically increasing report-loss
+counter exposes dropped reports immediately, without waiting for another report.
+Existing scalar getters, movement APIs and packed telemetry format are retained.
+The shared `monotonic_clock.h` starts the hardware clock for both motion and the
+stationary bench without resetting a running counter or changing the kernel tick.
 
 The navigation lease is disabled by default. While the adapter is running it
 refreshes the lease after each healthy processing cycle. The motion task latches
@@ -50,8 +68,8 @@ STALE_COMMAND and brakes if the lease age exceeds 30 ms, also during DRIVE/TURN
 where the old velocity-only timeout did not apply. This catches a blocked/dead
 integration task while the motion task is still running; it is not a hardware
 watchdog for a stopped kernel. Motion calibration requests are rejected while the
-lease is armed. The existing PID, motor settings and 10 ms motion period are
-unchanged. These limited changes should be reviewed by Buddy 2 before merging.
+lease is armed. The latest Buddy 2 PID, motor settings and 10 ms motion period are
+unchanged relative to `a29f973`. These limited changes should be reviewed by Buddy 2 before merging.
 
 A positive `motion_is_calibrated()` means Buddy 2 has non-zero configured encoder
 scaling. It does not prove the currently configured motor/encoder values were
@@ -59,7 +77,7 @@ measured on this car. Physical calibration remains necessary.
 
 ## Explicit control API
 
-Include `s3_integration.h` from a future command/UI task. It exposes a bounded,
+Include `app_program/controller/s3_integration.h` from a future command/UI task. It exposes a bounded,
 thread-safe control queue and copied status; only the sampling owner touches the
 navigation context. `s3_integration_submit()` returning true means queued, not
 executed. Observe `command_sequence` changing and `command_ok` in
@@ -81,7 +99,7 @@ Per physical sensor (BARCODE, LEFT, RIGHT), while disarmed:
 
 Optional `S3_CONTROL_MAPPING` carries a full validated 26-entry table while
 inactive. `S3_CONTROL_START` requires all three accepted calibrations, fresh valid
-samples/odometry, Buddy 2 IDLE with applied brakes and no fault. `S3_CONTROL_STOP`
+samples/odometry, Buddy 2 IDLE with acknowledged stillness and no fault. `S3_CONTROL_STOP`
 ends a healthy run. `S3_CONTROL_RESET` attempts both fault resets but never starts
 motion. Buddy 2 may reset before the next copied feedback reflects IDLE, so retry
 a reset after another status update if required; persistent faults still reject.
@@ -116,8 +134,8 @@ processed before acquisition; a stalled ADC/control task is covered by the lease
 
 The integrated profile is the sole motion-request and completion consumer. Do not
 run Buddy 2 calibration/movement tests or another controller concurrently. Future
-obstacle/IMU/network arbitration must be added to one controller, not competing
-motor callers. The default profile still builds all existing subsystems normally.
+obstacle/IMU/network arbitration belongs to one controller. See the explicit
+[replacement contract](../controller/README.md). No Buddy 1 draft was imported. The default profile still builds all existing subsystems normally.
 
 The shared kernel tick and priorities are unchanged. Measured sampling gaps and
 counts above Week 6's 5 ms target are printed. A 10 ms target does not satisfy the
@@ -132,7 +150,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-s3-motion.ps1
 
 Output: `build_make/mtk3pico_smp1_usb_cdc_s3_motion.uf2` (motor-capable after an
 explicit accepted start). The separate stationary build script remains
-`tools/build-ir-bench.ps1`; its output ends `_ir_bench.uf2`. Neither script flashes.
+`tools/build-ir-bench.ps1`; its default output ends `_ir_bench.uf2` (GP26 only).
+Use `-Sensors 3` for `_ir_bench_3sensor.uf2` (GP26/GP27/GP28). Both are stationary,
+never call navigation START and never initialise motion. Neither script flashes.
 
 Host tests compile with warnings as errors. `test_drive.c` links the real Buddy 2
 controller/PID/estimator and real Buddy 3 core/adapter, mocking only hardware and

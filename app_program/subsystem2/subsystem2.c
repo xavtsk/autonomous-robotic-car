@@ -4,7 +4,7 @@
  * Purpose: RTOS lifecycle: the motion task and its 10 ms tick.
  *
  * A cyclic handler wakes the motion task every S2_PERIOD_MS. The task owns
- * the motor PWM and the encoder interrupt, and runs motion_process() once
+ * the motor PWM and the encoder PIO, and runs motion_process() once
  * per wake-up. stop() also wakes it, so the motors brake at once.
  */
 
@@ -28,7 +28,7 @@ static void subsystem2_task(INT stacd, void *p_exinf)
     (void)stacd;
     (void)p_exinf;
 
-    motion_init();                      /* PWM, encoders + IRQ on this core */
+    motion_init();                      /* motor PWM, encoder PIO           */
     for (;;)
     {
         (void)tk_slp_tsk(TMO_FEVR);
@@ -41,7 +41,7 @@ ER subsystem2_init(void)
     T_CCYC  ccyc = { 0 };
     int32_t er;
 
-    er = motion_create();               /* mutex */
+    er = motion_create();               /* mutex, report queue */
     if (er < (int32_t)E_OK)
     {
         return (ER)er;

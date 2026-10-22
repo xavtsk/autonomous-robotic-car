@@ -3,7 +3,7 @@
 #include "ir_sensor.h"
 #include "line_navigation.h"
 #include "ir_bench_config.h"
-#include "s3_integration.h"
+#include "../controller/s3_integration.h"
 
 #if APP_IR_BENCH
 typedef struct

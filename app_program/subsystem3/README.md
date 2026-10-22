@@ -2,7 +2,8 @@
 
 Two front sensors provide line observations; the offset sensor provides barcode
 transitions. Algorithms are portable C with no GPIO, RTOS or Buddy 2 dependency.
-The portable core remains independent. An opt-in `S3_MOTION=1` adapter now
+The portable core remains independent. An opt-in `S3_MOTION=1` controller in
+`app_program/controller/` now
 connects it to Buddy 2, with explicit start/calibration, pending directions,
 manoeuvres and braking. See [motion integration](MOTION_INTEGRATION.md). The
 stationary `IR_BENCH` remains separate. Full-team arbitration is not implemented.
@@ -23,8 +24,8 @@ stationary `IR_BENCH` remains separate. Full-team arbitration is not implemented
 ## Development configuration
 
 Default roles are barcode=GP26/ADC0, left=GP27/ADC1, right=GP28/ADC2. Only
-barcode is enabled. Set `IR_BENCH_ENABLED_MASK` to 7 explicitly for three connected
-sensors. GP28's Robo Pico battery-sensing jumper must be checked before connecting
+barcode is enabled in the default bench. Build with `tools/build-ir-bench.ps1
+-Sensors 3` (or Make `IR_CHANNELS=3`) for three connected sensors. GP28's Robo Pico battery-sensing jumper must be checked before connecting
 that input. Do not read GP29, which belongs to the Pico W radio.
 
 White=150 and black=280 are development references for every channel, based on

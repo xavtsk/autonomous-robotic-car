@@ -20,18 +20,19 @@
 #define PWM_DIV_ONE             (1U << 4)       /* 8.4 fixed point: 1.0 */
 #define PWM_SLICE_STRIDE        (0x14U)
 
+/* Minimum-bit fields; only the motion task writes them (single owner) */
 typedef struct
 {
-    uint32_t pin_a;
-    uint32_t pin_b;
-    bool     b_inverted;
-    float    duty;
+    uint32_t pin_a      : 5;            /* GPIO 0 ... 29                   */
+    uint32_t pin_b      : 5;
+    uint32_t b_inverted : 1;
+    float    duty;                      /* last duty, control precision    */
 } motor_t;
 
 static motor_t g_motor[WHEEL_COUNT] =
 {
-    { M1A, M1B, false, 0.0f },
-    { M2A, M2B, false, 0.0f }
+    { M1A, M1B, 0U, 0.0f },
+    { M2A, M2B, 0U, 0.0f }
 };
 
 static inline uint32_t pwm_slice(uint32_t pin)
@@ -51,8 +52,15 @@ static void motor_pin_init(uint32_t pin)
 
 void motor_control_init(bool b_m1_inverted, bool b_m2_inverted)
 {
-    g_motor[WHEEL_LEFT].b_inverted  = b_m1_inverted;
-    g_motor[WHEEL_RIGHT].b_inverted = b_m2_inverted;
+    g_motor[WHEEL_LEFT].b_inverted  = b_m1_inverted ? 1U : 0U;
+    g_motor[WHEEL_RIGHT].b_inverted = b_m2_inverted ? 1U : 0U;
+
+    /* The kernel releases PWM from reset only when USE_PTMR is set */
+    clr_w(RESETS_RESET, RESETS_RESET_PWM);
+    while ((in_w(RESETS_RESET_DONE) & RESETS_RESET_PWM) == 0U)
+    {
+        /* PWM reset release takes a few cycles */
+    }
 
     motor_pin_init(M1A);
     motor_pin_init(M1B);
@@ -78,7 +86,7 @@ void motor_control_set(wheel_id_t wheel, float duty)
     }
     p_motor->duty = duty;
 
-    out = p_motor->b_inverted ? -duty : duty;
+    out = (p_motor->b_inverted != 0U) ? -duty : duty;
     mag = (out >= 0.0f) ? out : -out;
     level = (uint32_t)(mag * (float)(PWM_WRAP + 1U));
     if (level > PWM_WRAP + 1U)

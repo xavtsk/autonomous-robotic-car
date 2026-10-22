@@ -2,12 +2,12 @@
 
 Buddy 2 + Buddy 3 now have an opt-in integrated runtime (`S3_MOTION=1`). It uses
 the existing motion task/PID, a coherent feedback snapshot and a bounded controller
-slice in `s3_drive`. See [integrated operation](MOTION_INTEGRATION.md) for builds,
+slice in `app_program/controller/s3_drive`. See [integrated operation](MOTION_INTEGRATION.md) for builds,
 control requests, tests and limitations. Boot is disarmed; nothing starts moving
 without explicit accepted sensor calibration and a start request.
 
-The portable navigation core below still calls no motor APIs. The integration
-adapter owns those calls. Normal/default and stationary `IR_BENCH` profiles retain
+The portable navigation core below still calls no motor APIs. The temporary controller
+under `app_program/controller/` owns those calls. Normal/default and stationary `IR_BENCH` profiles retain
 their previous startup boundaries. This does not integrate Buddy 1/4/5, MQTT or
 obstacle avoidance, and does not establish full Week 6 or hardware compliance.
 
@@ -31,8 +31,9 @@ be supplied on every active processing call; NULL does not reuse old input.
   The producer increments/changes the epoch whenever its counter resets. Supply
   signed centre displacement, not absolute accumulated travel or either wheel alone.
   The portable core does not call motion getters or consume `motion_poll()`.
-  The integrated adapter obtains `motion_get_feedback()` and alone consumes
-  completion when its own manoeuvre is complete.
+  The controller obtains `motion_get_feedback()` and forwards its odometry here;
+  it alone drains ID-tagged motion reports, including cancellations. See the
+  [future-controller contract](../controller/README.md).
 - All timestamps use the same unsigned 32-bit microsecond clock. Subtraction
   handles wrap; intervals must be below half the clock range. Future/stale samples,
   non-finite distances and invalid flags are unusable. Repeated odometry snapshots

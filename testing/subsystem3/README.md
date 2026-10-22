@@ -59,7 +59,18 @@ python .\tools\check-barcode-fixtures.py 'A:\OneDrive - Singapore Institute Of T
 powershell -ExecutionPolicy Bypass -File .\tools\build-ir-bench.ps1
 ```
 
-Output: `build_make/mtk3pico_smp1_usb_cdc_ir_bench.uf2`.
+Output: `build_make/mtk3pico_smp1_usb_cdc_ir_bench.uf2` (GP26 only).
+For all three physically connected sensors:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\build-ir-bench.ps1 -Sensors 3
+```
+
+Output: `build_make/mtk3pico_smp1_usb_cdc_ir_bench_3sensor.uf2`. It enables
+barcode GP26, left GP27 and right GP28 and reports each channel separately.
+Its startup still cannot initialise motion. The build scripts automatically run
+`tools/check-buddy3-profile.ps1` against the compiled object symbols. A channel
+being enabled does not prove its wiring works.
 The script builds only; it never flashes. It uses MSYS2, local Arm GNU Toolchain
 14.3.Rel1 in `build/tooling/arm`, and Pico SDK 2.3.0 with TinyUSB in
 `build/tooling/pico-sdk`. These dependencies are ignored by Git and must be
@@ -96,9 +107,9 @@ earlier yellow-to-GP26 advice was wrong. Follow printed labels, not sensor
 orientation. GP26 also appears at another Grove port; never attach two analogue
 outputs to the same input.
 
-`app_program/subsystem3/ir_bench_config.h` keeps mask=1: barcode=GP26 enabled,
+`app_program/subsystem3/ir_bench_config.h` defaults to mask=1: barcode=GP26 enabled,
 left=GP27 and right=GP28 disabled/unavailable. After both front AO signals are
-connected correctly, explicitly change the mask to 7 and rebuild. **Check GP28's
+connected correctly, build with `-Sensors 3`. **Check GP28's
 battery-sensing jumper before connecting that input.** These pin reservations do
 not claim that the physical three-sensor wiring has been verified. Default left
 and right are the car's left/right when facing forward.

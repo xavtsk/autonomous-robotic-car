@@ -94,6 +94,10 @@ endif
 # IR_BENCH=1 starts only Buddy 3's stationary USB diagnostics (GP26 default). Motor and
 # other application tasks/tests are not started. Normal builds stay unchanged.
 IR_BENCH ?= 0
+IR_CHANNELS ?= 1
+ifneq ($(filter $(IR_CHANNELS),1 3),$(IR_CHANNELS))
+$(error IR_CHANNELS must be 1 or 3)
+endif
 ifneq ($(filter $(IR_BENCH),0 1),$(IR_BENCH))
 $(error Unknown IR_BENCH '$(IR_BENCH)'; use 0 or 1)
 endif
@@ -102,6 +106,9 @@ ifneq ($(TEST),0)
 $(error IR_BENCH=1 requires TEST=0; do not run movement tests during sensor setup)
 endif
 IR_BENCH_SUFFIX := _ir_bench
+ifeq ($(IR_CHANNELS),3)
+IR_BENCH_SUFFIX := _ir_bench_3sensor
+endif
 endif
 
 # Explicit Buddy 2 + Buddy 3 integration. No automatic navigation start.
@@ -202,7 +209,7 @@ CFLAGS  += -DCNF_SMP=1
 ASFLAGS += -DCNF_SMP=1
 endif
 CFLAGS  += -DAPP_TEST=$(TEST)
-CFLAGS  += -DAPP_IR_BENCH=$(IR_BENCH) -DAPP_S3_MOTION=$(S3_MOTION)
+CFLAGS  += -DAPP_IR_BENCH=$(IR_BENCH) -DAPP_S3_MOTION=$(S3_MOTION) -DAPP_IR_CHANNELS=$(IR_CHANNELS)
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)
 CFLAGS  += -DBOARD_UART0_FREE=1
@@ -235,7 +242,7 @@ endif
 # before any recipe executes.
 ################################################################################
 
-PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-s3motion$(S3_MOTION)
+PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)
 PROFILE_FILE := .build_profile
 
 ifneq ($(strip $(shell cat $(PROFILE_FILE) 2>/dev/null)),$(PROFILE_ID))

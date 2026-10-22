@@ -1,5 +1,7 @@
 #ifndef S3_INTEGRATION_H
 #define S3_INTEGRATION_H
+/* Temporary controller runtime. A future controller must replace this sole
+ * motion/report owner, not run alongside it. */
 #include "s3_drive.h"
 typedef enum
 {

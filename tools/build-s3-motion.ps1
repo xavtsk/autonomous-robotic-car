@@ -22,6 +22,7 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Firmware build failed (exit $LASTEXITCODE). Do not flash an older file."
     }
+    & "$PSScriptRoot\check-buddy3-profile.ps1" -Profile motion
     Write-Host "Firmware: $repoRoot\build_make\mtk3pico_smp1_usb_cdc_s3_motion.uf2"
 } finally {
     $env:PATH = $originalPath

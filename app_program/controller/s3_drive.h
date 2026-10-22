@@ -1,7 +1,7 @@
 #ifndef S3_DRIVE_H
 #define S3_DRIVE_H
-#include "line_navigation.h"
 #include "../subsystem2/motion.h"
+#include "../subsystem3/line_navigation.h"
 typedef enum
 {
     S3_DRIVE_OFF,
@@ -22,15 +22,19 @@ typedef enum
     S3_DRIVE_NO_DIRECTION,
     S3_DRIVE_UNMAPPED,
     S3_DRIVE_TIMEOUT,
+    S3_DRIVE_REPORT_FAULT,
     S3_DRIVE_BAD_INPUT
 } s3_drive_reason_t;
-/* Only this adapter owns motion requests/poll in the integrated profile. */
+/* Temporary controller: sole owner of motion requests AND report consumption.
+ * The future Vehicle Controller replaces this owner; the sensor core is
+ * unchanged. */
 typedef struct
 {
     motion_result_t (*velocity)(float left, float right);
     motion_result_t (*manoeuvre)(manoeuvre_t action);
     void (*stop)(void);
-    motion_state_t (*poll)(void);
+    bool (*report)(motion_report_t *out);
+    uint8_t (*command_id)(void);
     bool (*reset)(void);
     void (*heartbeat)(bool enabled);
 } s3_drive_port_t;
@@ -44,7 +48,9 @@ typedef struct
     s3_drive_reason_t reason;
     s3_nav_action_t pending;
     uint32_t phase_us, pending_us;
-    bool configured;
+    uint32_t report_loss_count;
+    uint8_t command_id, cancel_id;
+    bool configured, waiting_stop;
 } s3_drive_t;
 bool s3_drive_init(s3_drive_t *drive, const s3_navigation_config_t *config,
                    const s3_drive_port_t *port);

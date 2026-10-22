@@ -1,8 +1,8 @@
 /* Opt-in runtime. One sampling owner serialises all navigation/control calls.
  */
 #include "s3_integration.h"
-#include "subsystem3.h"
-#include "ir_sensor.h"
+#include "../subsystem3/ir_sensor.h"
+#include "../subsystem3/subsystem3.h"
 #include <sys/sysdef.h>
 #if APP_S3_MOTION
 #define S3_COLLECTION_US (1000000U)
@@ -16,10 +16,7 @@ static bool g_collecting;
 static s3_sensor_id_t g_sensor;
 static ir_surface_t g_label;
 static uint32_t g_collect_since;
-static uint32_t now_us(void)
-{
-    return in_w(TIMER_TIMERAWL);
-}
+static uint32_t now_us(void) { return in_w(TIMER_TIMERAWL); }
 bool s3_integration_submit(const s3_control_request_t *request)
 {
     bool accepted = false;
@@ -240,6 +237,10 @@ static void report(INT code, void *unused)
             motion_state_name(s.motion.state), (unsigned)s.motion.valid,
             (int)s.adc_status, (unsigned)s.navigation.sample_gap_us,
             (unsigned)s.max_gap_us, (unsigned)s.over_5ms);
+        tm_printf(
+            (UB *)"  motion_id=%u stopped=%u odom_epoch=%u report_losses=%u\n",
+            (unsigned)s.motion.command_id, (unsigned)s.motion.braked,
+            (unsigned)s.motion.epoch, (unsigned)s.motion.report_loss_count);
         tm_printf((UB *)"  command=%u ok=%u collecting=%u sensor=%u white n=%u "
                         "[%u,%u] black n=%u [%u,%u]\n",
                   (unsigned)s.command_sequence, (unsigned)s.command_ok,
@@ -280,12 +281,10 @@ int32_t s3_integration_init(void)
     T_CMTX mutex = {0};
     T_CCYC cycle = {0};
     s3_navigation_config_t cfg = s3_navigation_defaults();
-    const s3_drive_port_t port = {motion_request_velocity,
-                                  motion_request_manoeuvre,
-                                  stop,
-                                  motion_poll,
-                                  motion_reset,
-                                  motion_navigation_heartbeat};
+    const s3_drive_port_t port = {
+        motion_request_velocity,    motion_request_manoeuvre, stop,
+        motion_get_report,          motion_command_id,        motion_reset,
+        motion_navigation_heartbeat};
     if (g_mutex > 0)
     {
         return E_OBJ;
@@ -353,12 +352,6 @@ bool s3_integration_status(s3_integration_status_t *status)
     (void)status;
     return false;
 }
-int32_t s3_integration_init(void)
-{
-    return E_NOSPT;
-}
-int32_t s3_integration_start(void)
-{
-    return E_NOSPT;
-}
+int32_t s3_integration_init(void) { return E_NOSPT; }
+int32_t s3_integration_start(void) { return E_NOSPT; }
 #endif

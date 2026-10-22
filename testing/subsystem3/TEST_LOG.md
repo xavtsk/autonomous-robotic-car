@@ -6,6 +6,44 @@ Buddy 3 core software is implemented and software-tested. Actual track and
 moving-car validation remain pending. The current stationary UF2 has not been
 flashed. The general target `TEST=1` hook reports SKIP; the host suite is separate.
 
+## Updated Buddy 2 integration, 2026-10-22
+
+Working tree based on `buddy3` `9be6b6e`, incorporating Buddy 2 `a29f973`
+without a commit/merge commit. Upstream motor settings, PIO encoders, packed
+formats and existing test evidence are preserved. No hardware was connected,
+flashed or exercised for this update. Upstream photos/logs are teammate evidence,
+not new measurements by this integration check.
+
+| Check | Result | Evidence / limitation |
+|---|---|---|
+| Reflectance, acquisition, calibration, line, barcode and navigation | PASS | Existing strict host suites retained |
+| Latest B2 controller/PID/estimator + temporary controller | PASS | `test_drive.c`: matching DONE IDs, old DONE ignored, unexpected cancellation, report-loss flag/counter, bounded inactive drain, brake/stillness wait, all previous scenarios |
+| Production motion front end + mocked kernel/PIO/PWM | PASS | `test_motion_feedback.c`: original timestamps, epochs, calibration abort/exclusion, 30 ms turn watchdog, source validity, actual packed report queue overflow, old report acknowledgement, ID wrap, forward/reverse 20-bit counter wrap, clock startup idempotence |
+| Normal Wi-Fi / integrated / GP26-only bench / three-sensor bench | PASS | `build/host-tests/build-{normal,s3,ir1,ir3}-updated.log`; no compiler warnings/errors |
+| Strict ARM checks | PASS | 27 source/profile combinations, `-Wall -Wextra -Werror -fsyntax-only`; integrated and bench application sources plus touched motion front end/controller |
+| Startup and dependency boundaries | PASS | `tools/check-buddy3-profile.ps1`: bench starts S3 only, normal S3 hooks inactive, integrated starts S2/S3 and uses reports, portable core has no motion/RTOS dependencies |
+| UF2 structure | PASS | Magic/family/block numbers, unique flash addresses and sizes; `build/host-tests/updated-integration-verification.json` |
+| New physical wiring, moving navigation, scheduling and concurrent RTOS commands | NOT VERIFIED | Host mocks and compiled startup checks cannot establish these |
+
+Repeat: `powershell -ExecutionPolicy Bypass -File tools/test-buddy3.ps1`.
+Build: `tools/build-s3-motion.ps1`, `tools/build-ir-bench.ps1`, or
+`tools/build-ir-bench.ps1 -Sensors 3` from PowerShell. Builds do not flash.
+
+| Image | Bytes / blocks | SHA-256 |
+|---|---|---|
+| `mtk3pico_smp1_usb_cdc_s3_motion.uf2` | 202240 / 395 | `fe2baa2c37f163ab0027892152f0f47bac4b7d21408da91387b66c6d06b1aba4` |
+| `mtk3pico_smp1_usb_cdc_ir_bench.uf2` | 202752 / 396 | `64355f4a7b1596753ee0b61e5f5e92d045634b2e645e6ef9df5efa46a5ea30c5` |
+| `mtk3pico_smp1_usb_cdc_ir_bench_3sensor.uf2` | 202752 / 396 | `05dabbddb388433c30dcbc2e57b9c5a6c53b3bd50b06c6ace548953d91da13a8` |
+
+Images are under `build_make/` and ignored by Git. The integrated image is
+motor-capable only after explicit calibration/start through the application API;
+no USB command parser exists. Both bench images are stationary. The temporary
+controller moved to `app_program/controller/`; Buddy 1's draft was not imported.
+The 10 ms sampling target and 30 ms freshness/lease limit remain provisional,
+and no measured 5 ms compliance is claimed.
+
+Earlier records below describe their dated snapshots and different image hashes.
+
 ## Buddy 2 integration acceptance, 2026-10-18
 
 Uncommitted `buddy3` working tree; earlier Week 6 alignment changes preserved.

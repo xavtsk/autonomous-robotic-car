@@ -1,31 +1,37 @@
 /* Real Buddy 2 controller/PID/estimator + real Buddy 3 core/bridge.
  * Hardware edges and PWM are mocked; this cannot prove physical behaviour. */
-#include <assert.h>
-#include <stdio.h>
-#include "s3_drive.h"
 #include "motion_controller.h"
 #include "motion_estimation.h"
 #include "motion_lease.h"
 #include "motor_control.h"
+#include "s3_drive.h"
+#include <assert.h>
+#include <stdio.h>
 static uint32_t now, lease_stamp, epoch = 1U;
 static bool lease, reject_velocity, reject_turn;
 static unsigned int polls, turns, velocities, stops;
+static uint32_t report_losses;
 static manoeuvre_t last_turn;
 static int32_t counts[2];
 static float duty[2];
-int32_t wheel_encoder_count(wheel_id_t w)
+int32_t wheel_encoder_count(wheel_id_t w) { return counts[w]; }
+uint32_t wheel_encoder_bits(wheel_id_t w)
 {
-    return counts[w];
+    return (uint32_t)counts[w] & WHEEL_COUNT_MASK;
+}
+int32_t wheel_encoder_delta(uint32_t now_bits, uint32_t then_bits)
+{
+    uint32_t delta = (now_bits - then_bits) & WHEEL_COUNT_MASK;
+    return (delta & (1UL << (WHEEL_COUNT_BITS - 1U)))
+               ? (int32_t)delta - (int32_t)(WHEEL_COUNT_MASK + 1U)
+               : (int32_t)delta;
 }
 uint32_t wheel_encoder_glitches(wheel_id_t w)
 {
     (void)w;
     return 0U;
 }
-void motor_control_set(wheel_id_t w, float value)
-{
-    duty[w] = value;
-}
+void motor_control_set(wheel_id_t w, float value) { duty[w] = value; }
 void motor_control_brake_all(void)
 {
     duty[0] = 0.0f;
@@ -63,15 +69,33 @@ static void brake(void)
     stops++;
     motion_controller_stop();
 }
-static motion_state_t poll(void)
+static motion_report_t reports[MOTION_REPORT_QUEUE_LEN];
+static unsigned int report_count;
+static void post(const motion_report_t *report)
 {
-    polls++;
-    return motion_controller_poll();
+    assert(report_count < MOTION_REPORT_QUEUE_LEN);
+    reports[report_count++] = *report;
 }
-static bool reset(void)
+static bool receive(motion_report_t *report)
 {
-    return motion_controller_reset();
+    if (report_count == 0U)
+    {
+        return false;
+    }
+    *report = reports[0];
+    for (unsigned int i = 1U; i < report_count; i++)
+    {
+        reports[i - 1U] = reports[i];
+    }
+    report_count--;
+    if (report->outcome == MOTION_OUTCOME_DONE)
+    {
+        polls++;
+        motion_controller_ack_complete(report->command_id);
+    }
+    return true;
 }
+static bool reset(void) { return motion_controller_reset(); }
 static void heartbeat(bool enabled)
 {
     lease = enabled;
@@ -100,7 +124,9 @@ static void tick(uint16_t barcode, uint16_t left, uint16_t right, bool valid)
                                    motion_controller_state(),
                                    motion_controller_fault(),
                                    true,
-                                   duty[0] == 0.0f && duty[1] == 0.0f};
+                                   motion_controller_is_stopped(),
+                                   motion_controller_command_id(),
+                                   report_losses};
     frame.timestamp_us = now;
     for (i = 0; i < 3U; i++)
     {
@@ -123,8 +149,9 @@ static void hold(unsigned int ticks, uint16_t barcode, uint16_t left,
 static void init(bool calibrated)
 {
     s3_navigation_config_t cfg = s3_navigation_defaults();
-    const s3_drive_port_t port = {velocity, manoeuvre, brake,
-                                  poll,     reset,     heartbeat};
+    const s3_drive_port_t port = {
+        velocity, manoeuvre, brake, receive, motion_controller_command_id,
+        reset,    heartbeat};
     s3_calibration_collector_t collector;
     unsigned int i;
     now = 0U;
@@ -136,7 +163,9 @@ static void init(bool calibrated)
     counts[0] = counts[1] = 0;
     duty[0] = duty[1] = 0;
     motion_estimation_init(0.001f, 0.13f);
-    motion_controller_init(0.30f, 0.0f, 0.0f);
+    report_count = 0U;
+    report_losses = 0U;
+    motion_controller_init(0.30f, 0.0f, 0.0f, post);
     cfg.acquisition.enabled_mask = S3_ALL_SENSORS;
     assert(s3_drive_init(&drive, &cfg, &port));
     if (calibrated)
@@ -153,7 +182,7 @@ static void init(bool calibrated)
                 &drive.navigation, (s3_sensor_id_t)i, &collector));
         }
     }
-    tick(150U, 202U, 202U, true);
+    hold(12U, 150U, 202U, 202U);
 }
 static void start(void)
 {
@@ -211,7 +240,7 @@ static void test_turn_cycle(void)
     scan_a();
     hold(4U, 150U, 280U, 280U);
     assert(drive.state == S3_DRIVE_BRAKING && turns == 0U);
-    tick(150U, 280U, 280U, true);
+    hold(20U, 150U, 280U, 280U);
     assert(drive.state == S3_DRIVE_MANOEUVRE && turns == 1U &&
            last_turn == MANOEUVRE_LEFT);
     assert(drive.navigation.mode == S3_MODE_SUPPRESSED);
@@ -222,7 +251,7 @@ static void test_turn_cycle(void)
         tick(150U, 150U, 150U, true);
     }
     assert(drive.state == S3_DRIVE_REACQUIRE && polls == 1U && turns == 1U);
-    hold(8U, 150U, 202U, 202U);
+    hold(25U, 150U, 202U, 202U);
     assert(drive.state == S3_DRIVE_FOLLOW && polls == 1U && velocities > 1U);
     assert(drive.pending == S3_NAV_NONE);
     s3_drive_stop(&drive);
@@ -244,7 +273,7 @@ static void test_faults_and_stops(void)
     tick(150U, 202U, 202U, true);
     assert(duty[0] == 0.0f && duty[1] == 0.0f);
     assert(!s3_drive_reset(&drive, now));
-    hold(12U, 150U, 202U, 202U);
+    hold(30U, 150U, 202U, 202U);
     assert(s3_drive_reset(&drive, now));
     assert(drive.state == S3_DRIVE_OFF);
     start();
@@ -260,7 +289,7 @@ static void test_faults_and_stops(void)
     assert(drive.state == S3_DRIVE_HALTED);
     init(true);
     start();
-    hold(5U, 150U, 280U, 280U);
+    hold(25U, 150U, 280U, 280U);
     assert(drive.state == S3_DRIVE_HALTED &&
            drive.reason == S3_DRIVE_NO_DIRECTION && turns == 0U);
     init(true);
@@ -272,7 +301,7 @@ static void test_faults_and_stops(void)
     start();
     scan_a();
     reject_turn = true;
-    hold(5U, 150U, 280U, 280U);
+    hold(25U, 150U, 280U, 280U);
     assert(drive.state == S3_DRIVE_FAULT && polls == 0U);
     /* Independently running motion owner detects a stalled integration task,
      * including during a turn (which the old velocity timeout did not cover).
@@ -280,7 +309,7 @@ static void test_faults_and_stops(void)
     init(true);
     start();
     scan_a();
-    hold(5U, 150U, 280U, 280U);
+    hold(25U, 150U, 280U, 280U);
     assert(motion_controller_state() == MOTION_TURN);
     now += 40000U;
     assert(motion_lease_expired(lease, now, lease_stamp));
@@ -317,7 +346,7 @@ static void test_mapping_and_expiry(void)
         start();
         scan_a();
         assert(drive.pending == actions[i]);
-        hold(5U, 150U, 280U, 280U);
+        hold(25U, 150U, 280U, 280U);
         assert(turns == 1U && last_turn == expected[i]);
         s3_drive_stop(&drive);
         tick(150U, 202U, 202U, true);
@@ -351,16 +380,90 @@ static void test_mapping_and_expiry(void)
     hold(40U, 150U, 202U, 202U);
     hold(4U, 280U, 202U, 202U);
     s3_drive_stop(&drive);
-    tick(150U, 202U, 202U, true);
+    hold(20U, 150U, 202U, 202U);
     assert(s3_drive_start(&drive, now));
     hold(20U, 150U, 202U, 202U);
     assert(drive.pending == S3_NAV_NONE && turns == 0U);
+}
+static void enter_turn(void)
+{
+    init(true);
+    start();
+    scan_a();
+    hold(25U, 150U, 280U, 280U);
+    assert(drive.state == S3_DRIVE_MANOEUVRE);
+}
+static void test_new_motion_contract(void)
+{
+    unsigned int sent;
+    motion_report_t report;
+    /* Pending stop and observed wheel stillness are not immediate. A short
+     * ambiguous reading must not fault merely because the brake is pending. */
+    init(true);
+    start();
+    for (unsigned int i = 0U; i < 10U; i++)
+    {
+        counts[0]++;
+        counts[1]++;
+        tick(150U, 202U, 202U, true);
+    }
+    sent = velocities;
+    tick(150U, 280U, 280U, true);
+    assert(drive.waiting_stop && drive.command_id == 0U);
+    hold(3U, 150U, 202U, 202U);
+    assert(velocities == sent && drive.state == S3_DRIVE_FOLLOW);
+    hold(15U, 150U, 202U, 202U);
+    assert(velocities > sent && drive.state == S3_DRIVE_FOLLOW);
+    assert(report_count == 0U && drive.cancel_id == 0U);
+
+    enter_turn();
+    report = (motion_report_t){(uint8_t)(drive.command_id - 1U),
+                               MOTION_OUTCOME_DONE, MOTION_FAULT_NONE, false};
+    post(&report);
+    tick(150U, 280U, 280U, true);
+    assert(drive.state == S3_DRIVE_MANOEUVRE); /* old ID cannot finish turn */
+    report.command_id = drive.command_id;
+    report.outcome = MOTION_OUTCOME_CANCELLED;
+    post(&report);
+    tick(150U, 280U, 280U, true);
+    assert(drive.state == S3_DRIVE_FAULT &&
+           drive.reason == S3_DRIVE_REPORT_FAULT);
+
+    enter_turn();
+    report = (motion_report_t){drive.command_id, MOTION_OUTCOME_DONE,
+                               MOTION_FAULT_NONE, true};
+    post(&report);
+    tick(150U, 280U, 280U, true);
+    assert(drive.state == S3_DRIVE_FAULT); /* report flags loss */
+
+    enter_turn();
+    report_losses++;
+    tick(150U, 280U, 280U, true);
+    assert(drive.state == S3_DRIVE_FAULT &&
+           !lease); /* no later report needed */
+
+    enter_turn();
+    motion_controller_stop(); /* another caller cancelled our manoeuvre */
+    tick(150U, 280U, 280U, true);
+    assert(drive.state == S3_DRIVE_FAULT);
+
+    /* Drain the full bounded queue even when inactive. */
+    init(true);
+    report = (motion_report_t){100U, MOTION_OUTCOME_CANCELLED,
+                               MOTION_FAULT_NONE, false};
+    for (unsigned int i = 0U; i < MOTION_REPORT_QUEUE_LEN; i++)
+    {
+        post(&report);
+    }
+    tick(150U, 202U, 202U, true);
+    assert(report_count == 0U && drive.state == S3_DRIVE_OFF);
 }
 int main(void)
 {
     test_turn_cycle();
     test_faults_and_stops();
     test_mapping_and_expiry();
+    test_new_motion_contract();
     puts("PASS: real Buddy 2 controller/PID + Buddy 3 navigation bridge; "
          "mocked hardware");
     return 0;

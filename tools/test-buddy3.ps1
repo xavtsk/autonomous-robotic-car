@@ -21,9 +21,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Buddy 3 host tests failed.' }
     $driveExe = Join-Path $testDir 'test_s3_drive.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
-        "-I$repoRoot\app_program\subsystem3" "-I$repoRoot\app_program\subsystem2" @sources `
-        "$repoRoot\app_program\subsystem3\s3_drive.c" `
+        "-I$repoRoot\app_program\subsystem3" "-I$repoRoot\app_program\subsystem2" "-I$repoRoot\app_program\controller" @sources `
+        "$repoRoot\app_program\controller\s3_drive.c" `
         "$repoRoot\app_program\subsystem2\motion_controller.c" `
+        "$repoRoot\app_program\subsystem2\motion_pack.c" `
         "$repoRoot\app_program\subsystem2\motion_estimation.c" `
         "$repoRoot\app_program\subsystem2\speed_pid.c" `
         "$repoRoot\testing\subsystem3\test_drive.c" -o $driveExe
@@ -32,10 +33,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Integration tests failed.' }
     $feedbackExe = Join-Path $testDir 'test_motion_feedback.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
-        "-I$repoRoot\app_program\subsystem2" `
+        "-I$repoRoot\app_program\subsystem2" "-I$repoRoot\app_program\controller" `
         -include "$repoRoot\testing\subsystem3\motion_kernel_stub.h" `
         "$repoRoot\app_program\subsystem2\motion.c" `
         "$repoRoot\app_program\subsystem2\motion_controller.c" `
+        "$repoRoot\app_program\subsystem2\motion_pack.c" `
         "$repoRoot\app_program\subsystem2\motion_estimation.c" `
         "$repoRoot\app_program\subsystem2\speed_pid.c" `
         "$repoRoot\testing\subsystem3\test_motion_feedback.c" -o $feedbackExe

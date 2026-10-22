@@ -111,7 +111,7 @@ the drivers have no locking to stop it.
 | I2C1 | | | |
 | SPI0 | | | |
 | SPI1 | | | |
-| ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP26 barcode; GP27 left/GP28 right disabled in default bench, enabled in explicit integrated profile |
+| ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP26 barcode; GP27 left/GP28 right disabled in default bench; enabled with IR_CHANNELS=3 or explicit integrated profile |
 | PWM slices (list) | | | |
 | WiFi radio, TCP/IP, MQTT | *kernel* | `cyw43_utk_task` (built in) | GP23–25, GP29 |
 
@@ -176,6 +176,16 @@ The adapter must provide timestamped signed centre distance plus a reset epoch,
 apply explicit per-sensor calibration/start controls, and translate the latched
 `stop_requested` into Buddy 2 braking. The opt-in adapter now makes those calls; the portable navigation core does not.
 
+The temporary controller now lives in `app_program/controller/`, outside Buddy
+3's sensing modules. It consumes Buddy 2's command-ID report queue exclusively;
+the future Vehicle Controller replaces this owner and forwards motion odometry
+to Buddy 3. Buddy 1's old draft is not integrated. Upstream Buddy 2 `a29f973` uses
+PIO0 SM0/SM1 for encoders and retains its measured settings. The local additions
+retain source timestamps/reset epochs, accumulate wrap-safe centre displacement,
+expose report loss and preserve the opt-in navigation lease. Review these API
+extensions with Buddy 2; its packed status format is unchanged. See
+`app_program/controller/README.md` for the handoff.
+
 Week 6 assigns GP26/27/28 to L/C/R. Buddy 3 currently proposes offset barcode/front
 left/front right on those pins instead. Team agreement is still required. The
 bench's 10 ms target also differs from Week 6's 5 ms Line+Barcode schedule; no
@@ -201,7 +211,7 @@ does not create another flag. The kernel has its own usage.
 | Event flag | 16 | 0 | 0 | 0 | 0 | 0 |
 | Mailbox | 12 | 0 | 0 | 0 | 0 | 0 |
 | Mutex | 12 | 0 | 1 | 1 in either opt-in S3 profile | 0 | 0 |
-| Message buffer | 12 | 0 | 0 | 0 | 0 | 0 |
+| Message buffer | 12 | 0 | 1 (8 packed completion reports) | 0 | 0 | 0 |
 | Fixed memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
 | Variable memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
 | Cyclic handler | 12 | 0 | 1 | 1 in either opt-in S3 profile | 0 | 0 |

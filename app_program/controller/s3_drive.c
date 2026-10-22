@@ -1,4 +1,5 @@
-/* Controller slice for Buddy 2 + Buddy 3 only. No GPIO/RTOS in this file. */
+/* Temporary controller for Buddy 2 + Buddy 3; replace with the team controller.
+ * This is orchestration, not Buddy 3 sensing. No GPIO/RTOS in this file. */
 #include "s3_drive.h"
 #define S3_BRAKE_WAIT_US (500000U)
 #define S3_MANOEUVRE_WAIT_US (10000000U)
@@ -17,6 +18,8 @@ static void halt(s3_drive_t *d, s3_drive_state_t state,
     (void)s3_navigation_end_run(
         &d->navigation); /* A sensor latch is retained. */
     d->pending = S3_NAV_NONE;
+    d->command_id = d->cancel_id = 0U;
+    d->waiting_stop = false;
     d->output.steering.valid = false;
     d->output.action = S3_NAV_NONE;
     d->output.events &= S3_EVENT_SENSOR_FAULT;
@@ -34,8 +37,8 @@ bool s3_drive_init(s3_drive_t *d, const s3_navigation_config_t *cfg,
     }
     *d = (s3_drive_t){0};
     if ((port == 0) || !port->velocity || !port->manoeuvre || !port->stop ||
-        !port->poll || !port->reset || !port->heartbeat ||
-        !s3_navigation_init(&d->navigation, cfg))
+        !port->report || !port->command_id || !port->reset ||
+        !port->heartbeat || !s3_navigation_init(&d->navigation, cfg))
     {
         return false;
     }
@@ -110,22 +113,99 @@ static bool request_turn(s3_drive_t *d)
     manoeuvre_t m;
     switch (d->pending)
     {
-        case S3_NAV_LEFT:
-            m = MANOEUVRE_LEFT;
-            break;
-        case S3_NAV_RIGHT:
-            m = MANOEUVRE_RIGHT;
-            break;
-        case S3_NAV_STRAIGHT:
-            m = MANOEUVRE_STRAIGHT;
-            break;
-        case S3_NAV_UTURN:
-            m = MANOEUVRE_U_TURN;
-            break;
-        default:
-            return false;
+    case S3_NAV_LEFT:
+        m = MANOEUVRE_LEFT;
+        break;
+    case S3_NAV_RIGHT:
+        m = MANOEUVRE_RIGHT;
+        break;
+    case S3_NAV_STRAIGHT:
+        m = MANOEUVRE_STRAIGHT;
+        break;
+    case S3_NAV_UTURN:
+        m = MANOEUVRE_U_TURN;
+        break;
+    default:
+        return false;
     }
-    return d->port.manoeuvre(m) == MOTION_OK;
+    if (d->port.manoeuvre(m) != MOTION_OK)
+    {
+        return false;
+    }
+    d->command_id = d->port.command_id();
+    return d->command_id != 0U;
+}
+/* A stop request is not a stopped acknowledgement. Wait for the motion
+ * owner to apply its brake and observe stationary wheels before resuming. */
+static void request_stop(s3_drive_t *d, uint32_t now)
+{
+    if (!d->waiting_stop)
+    {
+        d->cancel_id = d->command_id;
+        d->command_id = 0U;
+        d->waiting_stop = true;
+        d->phase_us = now;
+        d->port.stop();
+    }
+}
+static bool stopped_after_request(const s3_drive_t *d)
+{
+    return d->feedback.braked && d->feedback.state == MOTION_IDLE &&
+           d->cancel_id == 0U &&
+           (int32_t)(d->feedback.timestamp_us - d->phase_us) > 0;
+}
+/* Bounded drain, also while disarmed. Never use motion_poll(): it does not
+ * consume reports. Only a matching DONE may finish our current manoeuvre. */
+static bool receive_reports(s3_drive_t *d, bool running, bool *done)
+{
+    motion_report_t report;
+    bool healthy = true;
+    *done = false;
+    for (unsigned int i = 0U; i < MOTION_REPORT_QUEUE_LEN; i++)
+    {
+        if (!d->port.report(&report))
+        {
+            break;
+        }
+        if (!running)
+        {
+            continue;
+        }
+        if (report.b_lost)
+        {
+            healthy = false;
+        }
+        if (report.command_id == 0U)
+        {
+            healthy = false;
+            continue;
+        }
+        if (report.command_id == d->cancel_id)
+        {
+            if (report.outcome != MOTION_OUTCOME_CANCELLED)
+            {
+                healthy = false;
+            }
+            d->cancel_id = 0U;
+        }
+        else if (report.command_id == d->command_id)
+        {
+            if (d->state == S3_DRIVE_MANOEUVRE &&
+                report.outcome == MOTION_OUTCOME_DONE && !*done &&
+                report.fault == MOTION_FAULT_NONE)
+            {
+                *done = true;
+            }
+            else
+            {
+                healthy = false;
+            }
+        }
+        /* Old reports cannot complete a newer command. The single-owner
+         * contract and draining before new commands prevent ID-wrap aliasing.
+         */
+    }
+    return healthy;
 }
 static void follow(s3_drive_t *d, uint32_t now)
 {
@@ -163,14 +243,30 @@ static void follow(s3_drive_t *d, uint32_t now)
             halt(d, S3_DRIVE_HALTED, S3_DRIVE_NO_DIRECTION);
             return;
         }
-        d->port.stop();
+        request_stop(d, now);
         d->state = S3_DRIVE_BRAKING;
-        d->phase_us = now;
         return;
+    }
+    if (d->waiting_stop)
+    {
+        if ((uint32_t)(now - d->phase_us) > S3_BRAKE_WAIT_US)
+        {
+            halt(d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
+            return;
+        }
+        if (!stopped_after_request(d))
+        {
+            return;
+        }
+        if (!out->steering.valid)
+        {
+            return;
+        }
+        d->waiting_stop = false;
     }
     if (!out->steering.valid)
     {
-        d->port.stop();
+        request_stop(d, now);
         return;
     }
     if (d->port.velocity(out->steering.left_mps, out->steering.right_mps) !=
@@ -178,13 +274,21 @@ static void follow(s3_drive_t *d, uint32_t now)
     {
         halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
     }
+    else
+    {
+        d->command_id = d->port.command_id();
+        if (d->command_id == 0U)
+        {
+            halt(d, S3_DRIVE_FAULT, S3_DRIVE_REPORT_FAULT);
+        }
+    }
 }
 bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
                       const motion_feedback_t *feedback)
 {
     s3_odometry_sample_t odometry = {0};
     uint32_t now;
-    bool running;
+    bool running, done, reports_healthy;
     if ((d == 0) || !d->configured)
     {
         return false;
@@ -196,6 +300,13 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
     }
     now = frame->timestamp_us;
     d->feedback = feedback ? *feedback : (motion_feedback_t){0};
+    running = (d->state >= S3_DRIVE_FOLLOW) && (d->state <= S3_DRIVE_REACQUIRE);
+    reports_healthy = receive_reports(d, running, &done);
+    if (running && d->feedback.report_loss_count != d->report_loss_count)
+    {
+        reports_healthy = false;
+    }
+    d->report_loss_count = d->feedback.report_loss_count;
     odometry =
         (s3_odometry_sample_t){d->feedback.centre_m, d->feedback.timestamp_us,
                                d->feedback.epoch, d->feedback.valid};
@@ -221,6 +332,12 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
     {
         return true;
     }
+    if (!reports_healthy ||
+        (d->command_id != 0U && d->feedback.command_id != d->command_id))
+    {
+        halt(d, S3_DRIVE_FAULT, S3_DRIVE_REPORT_FAULT);
+        return true;
+    }
     d->port.heartbeat(true);
     if (d->state == S3_DRIVE_FOLLOW)
     {
@@ -232,9 +349,9 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
         {
             halt(d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
         }
-        else if (d->feedback.braked && (d->feedback.state == MOTION_IDLE) &&
-                 ((int32_t)(d->feedback.timestamp_us - d->phase_us) > 0))
+        else if (stopped_after_request(d))
         {
+            d->waiting_stop = false;
             (void)s3_navigation_set_mode(&d->navigation, S3_MODE_SUPPRESSED);
             if (!request_turn(d))
             {
@@ -254,22 +371,17 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
         {
             halt(d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
         }
-        else if (d->feedback.state == MOTION_COMPLETE)
+        else if (done)
         {
-            if (d->port.poll() != MOTION_COMPLETE)
-            {
-                halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
-            }
-            else
-            {
-                d->port.stop();
-                (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
-                d->state = S3_DRIVE_REACQUIRE;
-                d->phase_us = now;
-            }
+            d->command_id = 0U;
+            d->port.stop();
+            (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
+            d->state = S3_DRIVE_REACQUIRE;
+            d->phase_us = now;
         }
         else if ((d->feedback.state != MOTION_TURN) &&
-                 (d->feedback.state != MOTION_DRIVE))
+                 (d->feedback.state != MOTION_DRIVE) &&
+                 (d->feedback.state != MOTION_COMPLETE))
         {
             halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
         }
@@ -281,7 +393,7 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
         {
             halt(d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
         }
-        else if (d->output.steering.valid)
+        else if (d->output.steering.valid && stopped_after_request(d))
         {
             d->state = S3_DRIVE_FOLLOW;
         }
