@@ -206,7 +206,9 @@ static void tick(void)
                              motion_controller_state(), motion_controller_fault(), true,
                              motion_controller_is_stopped(), motion_controller_command_id(), 0U};
     f.timestamp_us = now;
-    f.sensor[S3_SENSOR_BARCODE] = (s3_raw_sample_t){now, 158U, 0, true, true};
+    f.sensor[S3_SENSOR_BARCODE] = (s3_raw_sample_t){now,
+        drive.navigation.config.calibration[S3_SENSOR_BARCODE].white_raw,
+        0, true, true};
     f.sensor[S3_SENSOR_LEFT] = (s3_raw_sample_t){now, raw(0), 0, true, true};
     f.sensor[S3_SENSOR_RIGHT] = (s3_raw_sample_t){now, raw(1), 0, true, true};
     (void)s3_drive_process(&drive, &f, &fb);

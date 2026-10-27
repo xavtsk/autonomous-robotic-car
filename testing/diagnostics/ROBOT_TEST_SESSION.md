@@ -76,7 +76,7 @@ the sensor-only image ends in `_ir_bench.uf2`.
 `DIAGNOSTICS=1` is opt-in, normal-mode only: it observes task intervals and
 prints low-rate summaries; it does not start autonomous driving. Normal mode
 enables all three IR sensors. IR bench starts no motors/controller and enables
-only the GP26 barcode sensor by default (`IR_BENCH_ENABLED_MASK=1`).
+only the GP28 barcode sensor by default (`IR_BENCH_ENABLED_MASK=1`).
 
 For Wi-Fi/MQTT, privately fill `config/wifi_secrets.h` from the example before
 building. Do not commit credentials or put them in test notes. Compile-only
@@ -111,7 +111,7 @@ copy redacted conclusions/evidence links into the appropriate `testing/` log.
    encodes/decodes bytes; it is not itself a live MQTT client. Send binary bytes,
    not printed hex text. See [the protocol](../../app_program/subsystem1/MQTT_PROTOCOL.md).
 2. **Buddy 3, stationary first:** record white/black ranges at final mounting
-   height on actual track material. GP26-only bench results do not validate the
+   height on actual track material. Barcode-only bench results do not validate the
    two line sensors. Later test line, junction and moving-barcode recognition.
 3. **Buddy 2:** reuse the teammate's calibration procedure and record its full
    output. `S2_TEST_CALIBRATE` and `S2_TEST_MOVE` are currently 0. Selecting

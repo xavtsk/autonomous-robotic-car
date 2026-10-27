@@ -72,9 +72,9 @@ fixed.
 | GP20 | MOTION_SMOKE and S3_MOTION operator panel | Next calibration step / START (3 s countdown); hold 2 s = recalibrate; no automatic start |
 | GP21 | MOTION_SMOKE and S3_MOTION operator panel | Software STOP button; power switch remains the independent fallback |
 | GP22 | | |
-| GP26 | 3 | Front-LEFT line IR analogue input (AO), ADC0. Car wired to the Week 6 L/C/R layout; bench-confirmed 2026-10-26 |
-| GP27 | 3 | Right-offset BARCODE IR analogue input (AO), ADC1; bench-confirmed 2026-10-26 |
-| GP28 | 3 | Front-RIGHT line IR analogue input (AO), ADC2; check VBAT jumper; not yet bench-confirmed (signal wire was unplugged) |
+| GP26 | 3 | Front-RIGHT line IR analogue input (AO), ADC0, Grove 5; wiring confirmed 2026-10-27 |
+| GP27 | 3 | Front-LEFT line IR analogue input (AO), ADC1, Grove 6; wiring confirmed 2026-10-27 |
+| GP28 | 3 | BARCODE IR analogue input (AO), ADC2, Grove 7 yellow wire; wiring confirmed 2026-10-27; check VBAT jumper |
 
 ## 3. Peripherals
 
@@ -111,7 +111,7 @@ the drivers have no locking to stop it.
 | I2C1 | | | |
 | SPI0 | | | |
 | SPI1 | | | |
-| ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP27 barcode only in default bench; GP26 left/GP28 right enabled with IR_CHANNELS=3 or the integrated profile. Mapping: `S3_ADC_CHANNEL_*` in `ir_acquisition.h` |
+| ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP28 barcode only in default bench; GP27 left/GP26 right enabled with IR_CHANNELS=3 or the integrated profile. Mapping: `S3_ADC_CHANNEL_*` in `ir_acquisition.h` |
 | PWM slices (list) | | | |
 | WiFi radio, TCP/IP, MQTT | *kernel* | `cyw43_utk_task` (built in) | GP23–25, GP29 |
 
@@ -194,9 +194,9 @@ centre displacement, report loss and the opt-in navigation lease. Buddy 1's
 v2 telemetry range is narrower; the adapter invalidates out-of-range speeds.
 See `app_program/controller/README.md` for the current handoff.
 
-Week 6 assigns GP26/27/28 to L/C/R and the car is wired that way: GP26 front-left,
-GP27 the right-offset barcode sensor (formerly "C"), GP28 front-right. The code
-follows the wiring via `S3_ADC_CHANNEL_*` in `ir_acquisition.h` (2026-10-26). The
+The car's wiring confirmed on 2026-10-27 differs from the Week 6 L/C/R pin order:
+GP27 front-left, GP26 front-right, GP28 barcode. The code follows this wiring
+via `S3_ADC_CHANNEL_*` in `ir_acquisition.h`. The
 bench's 10 ms target also differs from Week 6's 5 ms Line+Barcode schedule; no
 shared tick or priority changes are made here. See the handoff traceability table
 for scheduling, mapping delivery, distance tuning and fault-to-brake decisions.

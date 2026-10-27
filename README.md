@@ -20,7 +20,7 @@ revisions, compatibility decisions, current tests and remaining hardware gaps.
 
 For stationary sensor diagnostics, use the dedicated `IR_BENCH=1` build:
 [Buddy 3 setup](testing/subsystem3/README.md). It starts only Buddy 3's sampling
-and reporting tasks, with GP26 enabled by default, and skips motor startup.
+and reporting tasks, with barcode GP28 enabled by default, and skips motor startup.
 See the [team-interface handoff](app_program/subsystem3/INTEGRATION.md).
 
 For the first hardware session, start with the

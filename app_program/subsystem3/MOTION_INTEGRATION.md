@@ -61,8 +61,9 @@ at build time. No firmware was flashed or motor operated during development.
 Development timeouts: pending direction 5 s, brake acknowledgement 500 ms,
 manoeuvre 10 s, post-manoeuvre line reacquisition 1 s. Distance rearming remains
 30 ms stable clear line + 20 mm net displacement. These policies/tunings need
-team and track validation. Sensor roles follow the car's Week 6 L/C/R wiring: left GP26, barcode GP27,
-right GP28 (`S3_ADC_CHANNEL_*` in `ir_acquisition.h`). Check GP28's VBAT jumper.
+team and track validation. Sensor roles follow the wiring confirmed on 2026-10-27:
+left GP27 (Grove 6), barcode GP28 (Grove 7), right GP26 (Grove 5)
+(`S3_ADC_CHANNEL_*` in `ir_acquisition.h`). Check GP28's VBAT jumper.
 
 ## Small Buddy 2 changes
 
@@ -111,8 +112,10 @@ Per physical sensor (BARCODE, LEFT, RIGHT), while disarmed:
 3. Submit `S3_CONTROL_APPLY_CALIBRATION`. Check command success and that sensor's
    acceptance bit. Rejection retains the previous accepted calibration. Each
    collection replaces only its chosen label, leaving the other label intact.
-4. Repeat for all three sensors. References are RAM-only and must be accepted
-   again after reboot. Provisional 150/280 values never authorise a start.
+4. Repeat for all three sensors. Button/API recalibration is RAM-only; reboot
+   restores the built-in measured ranges, when enabled. Persist new measurements
+   by updating `controller/builtin_calibration.h` and rebuilding. Provisional
+   150/280 core defaults never authorise a start.
 
 Optional `S3_CONTROL_MAPPING` carries a full validated 26-entry table while
 inactive. `S3_CONTROL_START` requires all three accepted calibrations, fresh valid
@@ -167,7 +170,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-s3-motion.ps1
 
 Output: `build_make/mtk3pico_smp1_usb_cdc_s3_motion.uf2` (motor-capable after an
 explicit accepted start). The separate stationary build script remains
-`tools/build-ir-bench.ps1`; its default output ends `_ir_bench.uf2` (barcode sensor only, GP27).
+`tools/build-ir-bench.ps1`; its default output ends `_ir_bench.uf2` (barcode sensor only, GP28).
 Use `-Sensors 3` for `_ir_bench_3sensor.uf2` (GP26/GP27/GP28). Both are stationary,
 never call navigation START and never initialise motion. Neither script flashes.
 

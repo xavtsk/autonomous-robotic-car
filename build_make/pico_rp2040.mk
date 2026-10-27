@@ -91,7 +91,7 @@ ifeq ($(TEST),1)
 TEST_SUFFIX := _test
 endif
 
-# IR_BENCH=1 starts only Buddy 3's stationary USB diagnostics (GP26 default). Motor and
+# IR_BENCH=1 starts only Buddy 3's stationary USB diagnostics (GP28 default). Motor and
 # other application tasks/tests are not started. Normal builds stay unchanged.
 IR_BENCH ?= 0
 IR_CHANNELS ?= 1

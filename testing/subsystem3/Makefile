@@ -13,6 +13,8 @@ test:
 	mkdir -p $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_core.c test_navigation.c $(SOURCES) -o $(BUILD)/test_core
 	$(BUILD)/test_core
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_mapping.c $(SOURCES) -o $(BUILD)/test_mapping
+	$(BUILD)/test_mapping
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_ir_reflectance.c $(SOURCE_DIR)/ir_reflectance.c -o $(BUILD)/test_ir_reflectance
 	$(BUILD)/test_ir_reflectance
 

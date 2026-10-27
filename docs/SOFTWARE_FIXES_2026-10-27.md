@@ -167,7 +167,8 @@ Build logs are saved alongside the host logs in `testing/integration/logs/`.
 ## Hardware checks still required
 
 1. Resolve the front-sensor spacing/height with the team. Mapping now follows
-   the measured wiring: **GP26 left line, GP27 barcode, GP28 right line**.
+   the wiring confirmed in the 27 October calibration session:
+   **GP27 left line (Grove 6), GP28 barcode (Grove 7), GP26 right line (Grove 5)**.
 2. Recalibrate after remounting. Built-in references reflect the old fixture;
    numeric table acceptance/READY is not proof the new mounting is calibrated.
 3. Test Wi-Fi absent at boot, then enable the hotspot; test repeated loss/rejoin.

@@ -139,14 +139,14 @@ int main(void)
     /* 1. GP20 held at power-up must not count as a press. */
     op_button_init(&go_b);m=mark();
     go_down=true;run_ms(500);go_down=false;run_ms(200);
-    assert(said_since(0,"Calibration 1/6: put the front-LEFT line sensor (GP26) over plain WHITE"));
+    assert(said_since(0,"Calibration 1/6: put the front-LEFT line sensor (GP27) over plain WHITE"));
     assert(!said_since(m,"Sampling for 1 s"));
 
     /* 2. Full walkthrough calibrates all three sensors for real. */
     m=mark();calibrate_all();
-    assert(said_since(m,"Calibration 2/6: put the front-LEFT line sensor (GP26) over the BLACK line"));
-    assert(said_since(m,"front-RIGHT line sensor (GP28) calibrated."));
-    assert(said_since(m,"BARCODE sensor (GP27) calibrated."));
+    assert(said_since(m,"Calibration 2/6: put the front-LEFT line sensor (GP27) over the BLACK line"));
+    assert(said_since(m,"front-RIGHT line sensor (GP26) calibrated."));
+    assert(said_since(m,"BARCODE sensor (GP28) calibrated."));
     assert(said_since(m,"All 3 sensors calibrated."));
     assert(said_since(m,"READY: put the car on the line"));
     assert(g_drive.navigation.accepted_calibration==S3_ALL_SENSORS);
@@ -229,7 +229,7 @@ int main(void)
 
     /* 8. Overlapping white/black is rejected and the same sensor is redone. */
     m=mark();set_all(1000);press_go(80);run_ms(1200);press_go(80);run_ms(1300);
-    assert(said_since(m,"front-LEFT line sensor (GP26) REJECTED"));
+    assert(said_since(m,"front-LEFT line sensor (GP27) REJECTED"));
     assert(said_since(m,"Calibration 1/6"));
 
     /* 9. STOP while sampling returns to the same step. */

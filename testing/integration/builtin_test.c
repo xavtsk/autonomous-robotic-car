@@ -13,6 +13,7 @@
 #include "controller_test_kernel.h"
 #include "../../app_program/controller/s3_integration.h"
 #include "../../app_program/controller/operator_logic.h"
+#include "../../app_program/subsystem3/ir_bench_config.h"
 #include <assert.h>
 #include <setjmp.h>
 #include <stdarg.h>
@@ -112,12 +113,26 @@ int main(void)
     /* All three accepted through the normal validation path at init. */
     assert(g_drive.navigation.accepted_calibration==S3_ALL_SENSORS);
     {
-        const ir_calibration_t *l=&g_drive.navigation.config.calibration[S3_SENSOR_LEFT];
-        const ir_calibration_t *r=&g_drive.navigation.config.calibration[S3_SENSOR_RIGHT];
-        const ir_calibration_t *b=&g_drive.navigation.config.calibration[S3_SENSOR_BARCODE];
-        assert(l->white_raw>=130&&l->white_raw<=180&&l->black_raw>=1560&&l->black_raw<=1640);
-        assert(r->white_raw>=155&&r->white_raw<=228&&r->black_raw>=3130&&r->black_raw<=3250);
-        assert(b->white_raw>=130&&b->white_raw<=186&&b->black_raw>=1880&&b->black_raw<=1930);
+        const uint16_t measured[S3_SENSOR_COUNT][4]={
+            S3_BUILTIN_CAL_BARCODE,S3_BUILTIN_CAL_LEFT,S3_BUILTIN_CAL_RIGHT};
+        const uint16_t bench[S3_SENSOR_COUNT][2]={
+            {IR_BENCH_WHITE_RAW,IR_BENCH_BLACK_RAW},
+            {IR_BENCH_LEFT_WHITE_RAW,IR_BENCH_LEFT_BLACK_RAW},
+            {IR_BENCH_RIGHT_WHITE_RAW,IR_BENCH_RIGHT_BLACK_RAW}};
+        for (unsigned i=0;i<S3_SENSOR_COUNT;i++) {
+            const ir_calibration_t *c=&g_drive.navigation.config.calibration[i];
+            ir_reflectance_t sensor;
+            uint16_t dark;
+            /* The boot validation and bench must use the same references;
+             * every measured endpoint must classify on the correct side. */
+            assert(c->white_raw==bench[i][0]&&c->black_raw==bench[i][1]);
+            assert(ir_reflectance_init(&sensor,c));
+            for (unsigned j=0;j<4;j++) {
+                assert(ir_reflectance_update(&sensor,measured[i][j],&dark));
+                if (j<2) { assert(dark<=400&&sensor.surface==IR_SURFACE_WHITE); }
+                else { assert(dark>=600&&sensor.surface==IR_SURFACE_BLACK); }
+            }
+        }
     }
     assert(operator_init(&op,&port));
     op_button_init(&go_b);op_button_init(&stop_b);
@@ -126,10 +141,13 @@ int main(void)
     assert(said_since(0,"Using built-in calibration."));
     assert(said_since(0,"READY: put the car on the line"));
     assert(!said_since(0,"Calibration 1/6"));
-    /* Readings with the built-in values: each line sensor half on the tape
-     * (left raw ~880 of 150..1600, right ~1700 of 190..3190) -> line present,
-     * no junction, so a START drives. */
-    raw[S3_SENSOR_LEFT]=880;raw[S3_SENSOR_RIGHT]=1700;raw[S3_SENSOR_BARCODE]=150;
+    /* Half-dark line inputs stay independent of each session's measured
+     * calibration: line present, no junction, so a START drives. */
+    for (unsigned i=0;i<S3_SENSOR_COUNT;i++) {
+        const ir_calibration_t *c=&g_drive.navigation.config.calibration[i];
+        raw[i]=(i==S3_SENSOR_BARCODE) ? c->white_raw
+                    : (uint16_t)((c->white_raw+c->black_raw)/2U);
+    }
     run_ms(200);
     assert(g_drive.output.line.present&&!g_drive.output.line.junction_candidate);
     m=mark();press_go(80);run_ms(3300);

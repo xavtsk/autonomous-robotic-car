@@ -26,7 +26,7 @@ test:
 	$(BUILD)/builtin_test
 	$(CC) -I$(APP)/subsystem2 -I$(APP)/subsystem3 -I$(APP)/controller $(CFLAGS) course_test.c $(APP)/controller/s3_drive.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/course_test
 	$(BUILD)/course_test
-	$(CC) -D_DEFAULT_SOURCE -I$(APP)/subsystem2 -I$(APP)/subsystem3 -I$(APP)/controller $(CFLAGS) course_sim.c $(APP)/controller/s3_drive.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) $(addprefix $(APP)/subsystem2/,motion_controller.c motion_pack.c motion_estimation.c speed_pid.c) -lm -o $(BUILD)/course_sim
+	$(CC) -D_DEFAULT_SOURCE -D_USE_MATH_DEFINES -I$(APP)/subsystem2 -I$(APP)/subsystem3 -I$(APP)/controller $(CFLAGS) course_sim.c $(APP)/controller/s3_drive.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) $(addprefix $(APP)/subsystem2/,motion_controller.c motion_pack.c motion_estimation.c speed_pid.c) -lm -o $(BUILD)/course_sim
 	$(BUILD)/course_sim
 
 sanitize:
