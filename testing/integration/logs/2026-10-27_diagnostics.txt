@@ -1,0 +1,17 @@
+mkdir -p ../../build/diagnostics
+cc -DAPP_H -DAPP_DIAGNOSTICS=1 -include firmware_test_kernel.h -I. -Ifakes -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g firmware_test.c ../../app_program/subsystem2/motion_codec.c -o ../../build/diagnostics/firmware_test
+../../build/diagnostics/firmware_test
+PASS: diagnostic timing, first samples, wrap, deferred publication, saturation, lock boundaries and non-consuming motion observations
+Private/published channel sizes: 36/28 bytes; retained diagnostic state 128 bytes plus mutex ID
+cc -DAPP_H -DAPP_DIAGNOSTICS=1 -include firmware_test_kernel.h -I. -Ifakes -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g startup_test.c -o ../../build/diagnostics/startup_test
+../../build/diagnostics/startup_test
+PASS: actual diagnostic startup, all original subsystem hooks, low-priority delay/report, and non-fatal init/priority failures
+/Applications/Xcode.app/Contents/Developer/usr/bin/make -f firmware_test.mk test CFLAGS='-std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'
+mkdir -p ../../build/diagnostics
+cc -DAPP_H -DAPP_DIAGNOSTICS=1 -include firmware_test_kernel.h -I. -Ifakes -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer firmware_test.c ../../app_program/subsystem2/motion_codec.c -o ../../build/diagnostics/firmware_test
+../../build/diagnostics/firmware_test
+PASS: diagnostic timing, first samples, wrap, deferred publication, saturation, lock boundaries and non-consuming motion observations
+Private/published channel sizes: 36/28 bytes; retained diagnostic state 128 bytes plus mutex ID
+cc -DAPP_H -DAPP_DIAGNOSTICS=1 -include firmware_test_kernel.h -I. -Ifakes -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer startup_test.c -o ../../build/diagnostics/startup_test
+../../build/diagnostics/startup_test
+PASS: actual diagnostic startup, all original subsystem hooks, low-priority delay/report, and non-fatal init/priority failures

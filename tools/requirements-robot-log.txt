@@ -1,0 +1,2 @@
+# Only live USB capture/listing needs this; replay tests use the standard library.
+pyserial==3.5

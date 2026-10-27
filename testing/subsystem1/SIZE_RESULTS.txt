@@ -1,0 +1,16 @@
+mkdir -p ../../build/buddy1
+cc -DAPP_H -DAPP_TEST=1 -DTM_MQTT=1 -include host_kernel.h -I. -Ifakes -I../../app_program/subsystem1 -I../../lib/liblwip/sysdepend/pico_rp2040 -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -fshort-enums size_report.c ../../app_program/subsystem1/telemetry_codec.c -o ../../build/buddy1/size_report
+../../build/buddy1/size_report
+Outgoing slot: 452 -> 17 bytes
+Command slot: 450 -> 5 bytes
+4-slot outbox including RTOS per-message headers/alignment: 1824 -> 96 bytes
+2-slot commands including RTOS per-message headers/alignment: 912 -> 24 bytes
+Combined message-buffer storage requested at startup: 2736 -> 120 bytes
+Shared snapshot cache: 52 -> 16 bytes
+Example MQTT application payloads (exclude topic/TCP/MQTT headers):
+car/telemetry/motion: 33 -> 4 bytes
+car/telemetry/barcode: 30 -> 2 bytes
+car/telemetry/hump: 26 -> 5 bytes
+car/telemetry/heading: 19 -> 3 bytes
+car/telemetry/obstacle: 49 -> 6 bytes
+car/telemetry/state: 26 -> 2 bytes

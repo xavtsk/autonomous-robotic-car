@@ -31,6 +31,7 @@ Release
 *.o
 *.d
 build_make/tools/elf2uf2
+build_make/tools/elf2uf2.exe
 tools/elf2uf2/elf2uf2
 build_make/.build_profile
 
@@ -44,6 +45,10 @@ config/wifi_secrets.h
 *.webm
 *.avi
 *.mkv
+
+# Python decoder/test bytecode
+__pycache__/
+*.pyc
 
 # macOS
 .DS_Store
