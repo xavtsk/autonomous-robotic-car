@@ -17,8 +17,14 @@ if ($Profile -eq 'bench') {
         throw 'Stationary bench startup boundary failed.'
     }
 } elseif ($Profile -eq 'motion') {
-    if ($main -notcontains 'subsystem2_start' -or $main -notcontains 'subsystem3_start' -or
-        ($main -match '^subsystem[145]_(init|start)$') -or
+    # The integrated profile now includes Buddy 1's telemetry mirror and the
+    # button panel. It still must not start Buddy 4/5 or a second motion owner.
+    if ($main -notcontains 'subsystem1_start' -or
+        $main -notcontains 'vehicle_controller_init' -or
+        $main -notcontains 'operator_panel_start' -or
+        $main -notcontains 'subsystem2_start' -or $main -notcontains 'subsystem3_start' -or
+        ($main -match '^subsystem[45]_(init|start)$') -or
+        $main -contains 'motion_smoke_run' -or
         $runtime -notcontains 'motion_get_report' -or $runtime -contains 'motion_poll') {
         throw 'Integrated controller ownership boundary failed.'
     }

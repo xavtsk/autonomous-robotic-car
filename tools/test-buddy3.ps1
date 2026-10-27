@@ -19,6 +19,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Buddy 3 host compilation failed.' }
     & $testExe
     if ($LASTEXITCODE -ne 0) { throw 'Buddy 3 host tests failed.' }
+    $mappingExe = Join-Path $testDir 'test_ir_mapping.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
+        "-I$repoRoot\app_program\subsystem3" @sources `
+        "$repoRoot\testing\subsystem3\test_mapping.c" -o $mappingExe
+    if ($LASTEXITCODE -ne 0) { throw 'IR mapping test compilation failed.' }
+    & $mappingExe
+    if ($LASTEXITCODE -ne 0) { throw 'IR mapping tests failed.' }
     $driveExe = Join-Path $testDir 'test_s3_drive.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
         "-I$repoRoot\app_program\subsystem3" "-I$repoRoot\app_program\subsystem2" "-I$repoRoot\app_program\controller" @sources `

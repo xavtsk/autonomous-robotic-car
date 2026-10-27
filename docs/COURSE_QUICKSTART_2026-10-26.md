@@ -1,8 +1,8 @@
 # First course trial — Buddies 1, 2 and 3
 
 > Historical 26 October instructions below predate the evening wiring and
-> built-in calibration changes. Current mapping is GP26 left line, GP27 barcode,
-> GP28 right line; built-in calibration is enabled but must be rechecked after
+> built-in calibration changes. Current mapping (confirmed 27 October) is GP27
+> left line, GP28 barcode, GP26 right line; built-in calibration must be rechecked after
 > moving sensors. Follow the team's verified power/BOOTSEL arrangement, not an
 > assumption that the switch can remain off. See the latest
 > [27 October software update and retest checklist](SOFTWARE_FIXES_2026-10-27.md).

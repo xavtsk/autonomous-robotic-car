@@ -6,6 +6,24 @@ Buddy 3 core software is implemented and software-tested. Actual track and
 moving-car validation remain pending. The current stationary UF2 has not been
 flashed. The general target `TEST=1` hook reports SKIP; the host suite is separate.
 
+## Wiring and measured calibration correction, 2026-10-27
+
+Local `main` based on `6da2977`: left=Grove 6 GP27, right=Grove 5 GP26,
+barcode=Grove 7 GP28. Raw button collections used the installed firmware's GPIO
+numbers to translate its incorrect logical labels. The user confirmed that one
+barcode pair used black path material; that pair is excluded from saved defaults.
+
+| Check | Result | Evidence / limitation |
+|---|---|---|
+| Per-sensor raw white/black collection | PASS | At least 3 valid pairs per sensor, 101 samples per surface; combined ranges do not overlap |
+| Physical ADC routing and barcode isolation | PASS | `test_mapping.c`, independent ADC0/1/2 inputs and line-sign checks |
+| Buddy 3 and integration host suites | PASS | Saved-calibration endpoints, bench agreement, operator controls/rejection, navigation, motion feedback and course simulation |
+| GP28-only bench, all-three bench, offline integrated firmware | PASS | ARM compile/link and profile-symbol checks; final UF2 structure validated |
+| Flash and power-cycle verification | NOT RUN | RPI-RP2 did not appear; user requested finishing the source changes without flashing |
+
+See [raw ranges, exclusions, build hash and verification details](IR_CALIBRATION_2026-10-27.md).
+No driving test or firmware flash was performed.
+
 ## Updated Buddy 2 integration, 2026-10-22
 
 Working tree based on `buddy3` `9be6b6e`, incorporating Buddy 2 `a29f973`

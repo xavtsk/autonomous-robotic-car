@@ -18,23 +18,26 @@ stationary `IR_BENCH` remains separate. Full-team arbitration is not implemented
 | `line_controller` | Limited proportional left/right speed proposals in m/s |
 | `barcode_decoder` | Bounded Code 39 single-letter framing and direction detection |
 | `line_navigation` | Readiness/run lifecycle, distance rearming, pre-run mapping, latched stop requests and manoeuvre suppression |
-| `ir_bench_config` | Explicit sensor enablement and provisional per-sensor references |
+| `ir_bench_config` | Explicit sensor enablement and measured per-sensor bench references |
 | `subsystem3` | Sampling/reporting tasks and protected diagnostic snapshot |
 
 ## Development configuration
 
-Roles follow the car's wiring (Week 6 L/C/R layout): left=GP26/ADC0,
-barcode=GP27/ADC1, right=GP28/ADC2, set once by `S3_ADC_CHANNEL_*` in
+Roles follow the car's wiring confirmed on 2026-10-27: left=Grove 6 GP27/ADC1,
+barcode=Grove 7 GP28/ADC2, right=Grove 5 GP26/ADC0, set once by `S3_ADC_CHANNEL_*` in
 `ir_acquisition.h`. Only
 barcode is enabled in the default bench. Build with `tools/build-ir-bench.ps1
 -Sensors 3` (or Make `IR_CHANNELS=3`) for three connected sensors. GP28's Robo Pico battery-sensing jumper must be checked before connecting
 that input. Do not read GP29, which belongs to the Pico W radio.
 
-White=150 and black=280 are development references for every channel, based on
-approximate user-reported paper readings. They are **not measured track
-calibration**. Each channel has independent references and classifier state.
-Defaults do not authorise navigation: all three sensors need explicitly accepted
-calibration, fresh input and odometry before an explicit start. The bench never
+The 27 October measured white/black references are left 144/1501, right
+182/3068, and barcode 156/305. Front sensors use black path material; the barcode
+sensor uses printed paper. See [measurement evidence](../../testing/subsystem3/IR_CALIBRATION_2026-10-27.md).
+The bench uses these numerical references but stays inactive. The integrated
+profile validates and accepts the built-in ranges at boot; button recalibration
+overrides them in RAM until reboot. The portable core's 150/280 development
+defaults remain unaccepted. Navigation requires all three accepted calibrations,
+fresh input and odometry before an explicit start. The bench never
 calls start. Calibration never adapts automatically while passing a junction or barcode.
 
 The default line error is `(right_darkness-left_darkness)/10`, in -100..+100.

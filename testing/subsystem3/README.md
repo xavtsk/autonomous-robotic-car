@@ -11,6 +11,11 @@ The core software is implemented and host-tested. The new firmware has **not**
 been flashed or validated on the car. Use the isolated bench UF2 for stationary
 checks; the normal firmware retains Buddy 2's existing motion startup.
 
+The [27 October wiring/calibration correction](IR_CALIBRATION_2026-10-27.md)
+records measured raw ranges, the excluded wrong-material capture, passing host
+tests/builds, and the user's decision to defer flashing. Saved calibration and
+sensor roles are corrected in source; the Pico still runs its older image.
+
 ## Buddy 2 integration
 
 The separate `S3_MOTION=1` profile connects steering, distance feedback,
@@ -66,7 +71,7 @@ python .\tools\check-barcode-fixtures.py 'A:\OneDrive - Singapore Institute Of T
 powershell -ExecutionPolicy Bypass -File .\tools\build-ir-bench.ps1
 ```
 
-Output: `build_make/mtk3pico_smp1_usb_cdc_ir_bench.uf2` (GP26 only).
+Output: `build_make/mtk3pico_smp1_usb_cdc_ir_bench.uf2` (barcode GP28 only).
 For all three physically connected sensors:
 
 ```powershell
@@ -74,7 +79,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-ir-bench.ps1 -Sensors 3
 ```
 
 Output: `build_make/mtk3pico_smp1_usb_cdc_ir_bench_3sensor.uf2`. It enables
-barcode GP26, left GP27 and right GP28 and reports each channel separately.
+barcode GP28, left GP27 and right GP26 and reports each channel separately.
 Its startup still cannot initialise motion. The build scripts automatically run
 `tools/check-buddy3-profile.ps1` against the compiled object symbols. A channel
 being enabled does not prove its wiring works.
@@ -100,30 +105,31 @@ Buddy 3 tasks. The kernel USB console still runs. No motion request is issued.
 ## Wiring and enablement
 
 Disconnect USB and battery before changing wiring. For initial stationary tests,
-leave the battery disconnected and use USB power. Current offset/barcode sensor:
+leave the battery disconnected and use USB power. Wiring confirmed 2026-10-27:
 
-| Grove 6 cable | Sensor pin |
-|---|---|
-| White: GP26 / ADC0 | AO |
-| Red: 3V3 | VCC |
-| Black: GND | GND |
-| Yellow: GP27 | Disconnected for the GP26-only test |
+| Physical sensor | Grove port | Signal connected to AO |
+|---|---|---|
+| Front-left | 6 | GP27 / ADC1 |
+| Front-right | 5 | GP26 / ADC0 |
+| Barcode | 7 | GP28 / ADC2 (yellow wire, confirmed by board label) |
 
-Leave sensor DO disconnected. This wiring follows the user's board photo:
-earlier yellow-to-GP26 advice was wrong. Follow printed labels, not sensor
-orientation. GP26 also appears at another Grove port; never attach two analogue
-outputs to the same input.
+For each sensor, red 3V3 connects to VCC and black connects to GND. Leave DO
+and unused signal wires disconnected. Follow printed GPIO labels rather than
+assuming cable colours. Grove 6 also exposes GP26: use GP27 there so it does
+not share the right sensor's analogue input. Check GP28's VBAT-sensing jumper.
 
-`app_program/subsystem3/ir_bench_config.h` defaults to mask=1: barcode=GP26 enabled,
-left=GP27 and right=GP28 disabled/unavailable. After both front AO signals are
+`app_program/subsystem3/ir_bench_config.h` defaults to mask=1: barcode=GP28 enabled,
+left=GP27 and right=GP26 disabled/unavailable. After both front AO signals are
 connected correctly, build with `-Sensors 3`. **Check GP28's
-battery-sensing jumper before connecting that input.** These pin reservations do
-not claim that the physical three-sensor wiring has been verified. Default left
-and right are the car's left/right when facing forward.
+battery-sensing jumper before connecting that input.** Left and right are the
+car's left/right when facing forward. Earlier logs use superseded firmware role
+labels; identify those observations by GPIO when comparing them with this wiring.
 
-Each sensor has its own reference macros. White=150, black=280 are provisional,
-based on approximate paper readings near 5 mm, not measured track calibration.
-Do not substitute the black-desk reading for the assessed track. Keep height and
+Each sensor has its own measured reference macros: left white/black=144/1501,
+right=182/3068, barcode=156/305. These use the 27 October mounted-sensor raw
+collections; front sensors were tested on path material and barcode on printed
+paper. See [ranges, exclusions and verification](IR_CALIBRATION_2026-10-27.md).
+Do not substitute black path or desk readings for printed barcode black. Keep height and
 lighting fixed while comparing surfaces. The classifier normalises to darkness
 0..1000 and supports either polarity; WHITE at <=400, BLACK at >=600, retaining
 state between boundaries. Startup is UNKNOWN until a boundary is reached.
@@ -151,12 +157,12 @@ powershell -ExecutionPolicy Bypass -File .\tools\read-ir.ps1
 Illustrative output, not a captured hardware result:
 
 ```text
-[S3 BENCH] enabled=1 cal=PROVISIONAL status=0 samples=20 gap=10000us max=10020us target=10ms
+[S3 BENCH] enabled=1 cal=MEASURED_2026-10-27 status=0 samples=20 gap=10000us max=10020us target=10ms
   run=INACTIVE readiness=0xf accepted_cal=0x0 odometry=0 rearming=0 stop_requested=0 faults=0x0
   readiness bits: 1=channels 2=calibration 4=sensors 8=odometry 16=fault; gaps>5ms=19 diagnostic_letters=0 actionable_steering=0
-  barcode GP26 valid=1 raw=150/4095 dark=0/1000 WHITE white=150 black=280 adc_error=0
+  barcode GP28 valid=1 raw=156/4095 dark=0/1000 WHITE white=156 black=305 adc_error=0
   left GP27 DISABLED/unavailable
-  right GP28 DISABLED/unavailable
+  right GP26 DISABLED/unavailable
   line valid=0 present=0 error=0 junction_candidate=0 preview_valid=0 L=0 R=0 mm/s DIAGNOSTIC PREVIEW ONLY
 ```
 
@@ -165,7 +171,7 @@ counts, diagnostic-letter count, last decoded letter/direction/action, ADC error
 timing/overflow counts. Speed proposals are formatted in mm/s for the console;
 the public API uses m/s. The bench stays inactive and has no odometry adapter,
 calibration UI or automatic start: diagnostic letters/previews never become actions.
-The printed accepted-calibration mask differs from numerical provisional references.
+Measured numerical references do not set the bench's accepted-calibration mask.
 No motor moves are requested. A missing front sensor
 pair correctly means no valid steering proposal in the default mode.
 

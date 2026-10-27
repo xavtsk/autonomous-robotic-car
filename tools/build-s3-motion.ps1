@@ -18,7 +18,7 @@ $originalPath = $env:PATH
 Push-Location $repoRoot
 try {
     $env:PATH = "$compilerBin;$MsysRoot\ucrt64\bin;$MsysRoot\usr\bin;$originalPath"
-    & $bashPath -c 'make -C build_make PICO_SDK_PATH=../build/tooling/pico-sdk S3_MOTION=1 IR_BENCH=0 WIFI=none TEST=0 -j8'
+    & $bashPath -c 'make -C build_make PICO_SDK_PATH=../build/tooling/pico-sdk CONSOLE=usb_cdc S3_MOTION=1 IR_BENCH=0 WIFI=none NET=none MQTT=0 TEST=0 DIAGNOSTICS=0 MOTION_SMOKE=0 -j8'
     if ($LASTEXITCODE -ne 0) {
         throw "Firmware build failed (exit $LASTEXITCODE). Do not flash an older file."
     }

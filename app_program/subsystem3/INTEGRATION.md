@@ -193,7 +193,7 @@ The submitted PDF is unchanged.
 | Week 6 item | Status in this update | Limit / next owner |
 |---|---|---|
 | Sensor acquisition, calibration and line/barcode algorithms | Preserved and extended | Actual-track calibration and moving tests remain open (A4) |
-| L/C/R on GP26/27/28 | Changed proposal | Current roles are offset barcode=GP26, front left=GP27, front right=GP28; team must agree mounting/roles; check GP28 VBAT jumper |
+| L/C/R on GP26/27/28 | Confirmed different wiring, 2026-10-27 | Barcode=Grove 7 GP28, front left=Grove 6 GP27, front right=Grove 5 GP26; check GP28 VBAT jumper |
 | CALIBRATE then TRACK/start gate | Implemented within Buddy 3 | All three accepted calibrations and fresh odometry required; calibration UI/storage not supplied |
 | Encoder-distance capture input and REARM | Implemented within Buddy 3 | Distance metadata and net-clearance gate; element widths still use time; tune 30 ms/20 mm physically |
 | Line-loss / manoeuvre suppression | Implemented within Buddy 3 | Independent front-line events; controller still owns recovery and turns |

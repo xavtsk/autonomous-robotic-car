@@ -1,0 +1,39 @@
+[OP]   WHITE: 101 samples, raw 154..217
+[OP]   BLACK: 101 samples, raw 3100..3165
+[OP] front-LEFT line sensor (GP26) calibrated.
+[OP]   WHITE: 101 samples, raw 139..178
+[OP]   BLACK: 101 samples, raw 293..332
+[OP] front-RIGHT line sensor (GP28) calibrated.
+[OP]   WHITE: 101 samples, raw 115..172
+[OP]   BLACK: 101 samples, raw 1704..1761
+[OP] BARCODE sensor (GP27) calibrated.
+[OP] All 3 sensors calibrated.
+[OP] Recalibrating all sensors.
+[OP]   WHITE: 101 samples, raw 149..214
+[OP]   BLACK: 101 samples, raw 3108..3176
+[OP] front-LEFT line sensor (GP26) calibrated.
+[OP]   WHITE: 101 samples, raw 136..175
+[OP]   BLACK: 101 samples, raw 1987..2024
+[OP] front-RIGHT line sensor (GP28) calibrated.
+[OP]   WHITE: 101 samples, raw 121..173
+[OP]   BLACK: 101 samples, raw 1536..1588
+[OP] BARCODE sensor (GP27) calibrated.
+[OP] All 3 sensors calibrated.
+[OP] Recalibrating all sensors.
+[OP]   WHITE: 101 samples, raw 146..216
+[OP]   BLACK: 101 samples, raw 2960..3029
+[OP] front-LEFT line sensor (GP26) calibrated.
+[OP]   WHITE: 101 samples, raw 138..179
+[OP]   BLACK: 101 samples, raw 275..314
+[OP] front-RIGHT line sensor (GP28) calibrated.
+[OP]   WHITE: 101 samples, raw 119..174
+[OP]   BLACK: 101 samples, raw 1242..1300
+[OP] BARCODE sensor (GP27) calibrated.
+[OP] All 3 sensors calibrated.
+[OP] Recalibrating all sensors.
+[OP]   WHITE: 101 samples, raw 148..218
+[OP]   BLACK: 101 samples, raw 3104..3166
+[OP] front-LEFT line sensor (GP26) calibrated.
+[OP]   WHITE: 101 samples, raw 134..176
+[OP]   BLACK: 101 samples, raw 296..335
+[OP] front-RIGHT line sensor (GP28) calibrated.
