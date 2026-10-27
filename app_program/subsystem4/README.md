@@ -1,40 +1,64 @@
-# Buddy 4 — IMU Motion and Terrain Monitoring
+# Buddy 4: GY-511 / LSM303DLHC
 
-Starter modules only; no functionality is implemented.
-Matching headers are in this folder.
+Implemented: I2C sensor configuration/readout, signed acceleration and magnetic
+samples, level/still offset calibration, tilt, compass-derived turn rate,
+encoder-assisted hump height, highest completed valid hump per run, motion/impact
+classification, protected snapshots and bounded event queue.
 
-| Source / header basename | Purpose |
-| --- | --- |
-| `terrain_monitor` | Public terrain monitoring subsystem interface. |
-| `imu_sensor` | IMU sample acquisition. |
-| `imu_calibration` | IMU calibration. |
-| `tilt_estimation` | IMU-based tilt estimation. |
-| `hump_detection` | Hump detection and peak hump measurement. |
-| `motion_events` | Collision detection and turn-rate/motion events. |
+## Wiring and mounting
 
-Only `terrain_monitor.h` declares the proposed subsystem lifecycle API:
-`terrain_monitor_init(void)` and `terrain_monitor_process(void)`.
-These functions have no definitions yet and cannot be linked until implemented.
-The remaining headers contain interface TODOs.
+Grove 2: black GND, red 3.3V, white GP2 SDA, yellow GP3 SCL. I2C1 only.
+Board flat, pins upwards; sensor +X left and +Y rearwards. Vehicle axes are
+(-sensor Y, sensor X, sensor Z). At rest expect vehicle Z approximately +1g.
+A failed level calibration can indicate incorrect Z orientation.
 
-Agree on data types, units, errors, timing, and ownership before implementation.
-Route cross-subsystem requests and observations through the future integration
-layer in `app_program/app_main.c`; do not call other Buddies' modules directly.
-Define micro T-Kernel task, queue, and synchronization contracts during integration.
-Keep private implementation details within this source directory and follow the
-Barr C Coding Standard as development proceeds.
+## Isolated bench build
 
-## RTOS template lifecycle
+Use the existing Make toolchain and initialized Pico SDK:
 
-This folder is now subsystem 4: IMU-based motion and terrain monitoring.
-The original module files above remain placeholders. The separate
-`subsystem4_init()` and `subsystem4_start()` hooks currently return `E_OK`
-without creating objects, starting tasks, or configuring hardware.
+```sh
+make -C build_make S4_BENCH=1 S3_MOTION=0 MOTION_SMOKE=0 DIAGNOSTICS=0 TEST=0 IR_BENCH=0 WIFI=none NET=none MQTT=0 PICO_SDK_PATH="C:/Users/aiken/.pico-sdk/sdk/2.3.0" -j8
+```
 
-Implement these hooks when this Buddy's module interfaces are ready. Keep
-hardware drivers in this folder and register ownership/interfaces in `TEAM.md`.
-Shared configuration is in `app_program/system_config.h`; the top-level
-`include/` directory now belongs to the kernel and board support.
+The image suffix is `_s4_bench`. Other application tasks are disabled. Keep the
+car level/still for 100 accepted samples (at least two seconds). USB reports once
+per second; pitch_x10 and roll_x10 are tenths of a degree. No encoder data exists
+in bench mode, so height and moving/stationary classification remain unavailable.
+Compass turn rate remains invalid until measured magnetic calibration is supplied.
+No firmware has been flashed or physically verified by this change.
 
-The test hook reports SKIP until real tests are written. Record evidence in
-`testing/subsystem4/TEST_LOG.md`.
+## Processing and integration
+
+`terrain_monitor_process()` is portable and receives sensor samples plus coherent
+odometry. Height integrates distance times sine of pitch; this is a provisional
+wheel-path estimate, not a guaranteed physical hump-height measurement. Vehicle
+wheelbase, rear/top mounting, acceleration, wheel slip and filtering cause error.
+Test on measured humps before declaring accuracy. Reject gaps, reverse travel,
+large roll, obvious dynamics and implausible distance changes. Only a completed
+ascent/descent with plausible return to level contributes to the run maximum.
+
+Runtime `S4=1` in the normal profile reads Buddy 2's timestamped feedback. S4 is
+not yet started in the S3_MOTION branch. That integration requires the existing
+controller owner to call `subsystem4_reset_run(false)` at each accepted run start,
+consume `subsystem4_event()` and publish snapshots through Buddy 1. Reset requests
+are applied asynchronously by the sensing task. Readers must check flags and age.
+A previous valid run peak survives transient read failures until reset.
+
+`subsystem4_set_magnetic_calibration()` accepts measured vehicle-axis hard-iron
+bias and diagonal soft-iron scale. Identity coefficients must not be used as a
+claim that calibration was done. Compass turn rate is an estimate, not gyro data;
+motor magnetic interference must be measured. Stationary offset calibration does
+not calibrate the compass or prove acceleration scale accuracy.
+
+Thresholds in the processing modules are provisional engineering defaults. Impact
+is a candidate event, not proof of collision. No automatic safety/motor response
+is wired yet. S4 is off in existing profiles unless explicitly requested.
+
+## Validation status
+
+All Buddy 4 source modules and bench app_main compiled to ARM objects with GCC.
+Host tests compiled with -Wall -Wextra -Werror; Windows Application Control
+blocked their execution. MSYS Make failed to start (access denied), so full
+firmware linking/UF2 generation remains unverified. No hardware tests passed yet.
+Run testing/subsystem4/host_test.c on an environment permitting test executables.
+On-target TEST=1 includes S4-U01 through S4-U03, without a hardware pass claim.
