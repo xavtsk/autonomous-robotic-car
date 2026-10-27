@@ -30,6 +30,14 @@
 #ifndef S3_SENSOR_TO_AXLE_MM
 #define S3_SENSOR_TO_AXLE_MM 0
 #endif
+/* Steering gain (m/s of wheel-speed difference per full error). Buddy 3's
+ * default 0.06 gives a tightest turn of about 13 cm radius (inner wheel held at
+ * the 0.06 m/s minimum); the course tiles measured about 14 cm on 27 Oct, too
+ * little margin. 0.10 stops the inner wheel on a full error (0 m/s is not a
+ * stall) and the outer runs at 0.20 m/s: simulator follows 10 cm curves. */
+#ifndef S3_COURSE_STEERING_KP
+#define S3_COURSE_STEERING_KP (0.10f)
+#endif
 /* The junction is reported a few mm after the sensors reach the crossing tape;
  * the crossing centre is about this much further on. */
 #define S3_CROSSING_CENTRE_MM 5
@@ -41,12 +49,13 @@
 #endif
 /* A sensor must have touched the tape this recently when the spin is done. */
 #ifndef S3_TURN_LINE_WINDOW_US
-#define S3_TURN_LINE_WINDOW_US (500000U)
+#define S3_TURN_LINE_WINDOW_US (300000U)
 #endif
 
 static inline void s3_course_navigation(s3_navigation_config_t *cfg)
 {
     cfg->line.between = (S3_LINE_BETWEEN != 0);
+    cfg->steering.kp_mps = S3_COURSE_STEERING_KP;
 }
 static inline s3_drive_options_t s3_course_options(void)
 {

@@ -89,8 +89,16 @@ int main(void)
         s3_navigation_config_t nav = s3_navigation_defaults();
         s3_course_navigation(&nav);
         assert(nav.line.between == (S3_LINE_BETWEEN != 0));
+        assert(nav.steering.kp_mps == S3_COURSE_STEERING_KP);
+        assert(s3_steering_config_valid(&nav.steering));
+        {   /* full error: inner wheel stopped, outer at the 0.20 m/s cap */
+            const s3_line_observation_t full = {true, true, false, -100,
+                                                false, false, false, true};
+            const s3_steering_request_t r = s3_steering_compute(&nav.steering, &full);
+            assert(r.valid && r.left_mps == 0.0f && r.right_mps > 0.199f);
+        }
         assert(c.cross_straight && c.pending_wait_us == 20000000U &&
-               c.turn_line_window_us == 500000U);
+               c.turn_line_window_us == 300000U);
 #if S3_SENSOR_TO_AXLE_MM == 0
         assert(c.turn_advance_m == 0.0f && c.drive == 0);
 #endif

@@ -110,6 +110,7 @@ void motor_control_brake_all(void) { duty[0] = duty[1] = 0.0f; }
 static double px, py, ph;            /* axle centre, heading (rad)           */
 static double sensor_ahead = 0.060;  /* axle -> front sensor heads           */
 static double sensor_gap = 0.022;    /* head centre to head centre           */
+static float steering_kp = -1.0f;    /* <0: use the firmware's value (argv 3)*/
 static uint32_t now, lease_stamp;
 static bool lease;
 static motion_report_t reports[MOTION_REPORT_QUEUE_LEN];
@@ -243,6 +244,7 @@ static void setup(double x, double y, double heading, double advance_m)
     motion_controller_init((float)VMAX_MPS, 0.0f, 0.0f, post);
     cfg.acquisition.enabled_mask = S3_ALL_SENSORS;
     s3_course_navigation(&cfg);
+    if (steering_kp >= 0.0f) cfg.steering.kp_mps = steering_kp;
     if (!s3_drive_init(&drive, &cfg, &port)) { puts("FAIL: init"); exit(1); }
     opt.turn_advance_m = (float)advance_m;
     opt.advance_mps = 0.10f;
@@ -422,6 +424,7 @@ int main(int argc, char **argv)
 {
     if (argc > 1) sensor_gap = atof(argv[1]) / 1000.0;
     if (argc > 2) sensor_ahead = atof(argv[2]) / 1000.0;
+    if (argc > 3) steering_kp = (float)atof(argv[3]);
     const double adv = sensor_ahead + S3_CROSSING_CENTRE_MM / 1000.0;
     printf("Car model: sensor gap %.0f mm, sensors %.0f mm ahead of the axle, tape %.0f mm\n",
            sensor_gap * 1000, sensor_ahead * 1000, TAPE_W * 1000);
@@ -432,7 +435,12 @@ int main(int argc, char **argv)
     scenario_curve(0.20, -1, true);
     scenario_curve(0.15, +1, true);
     scenario_curve(0.15, -1, true);
+    scenario_curve(0.14, +1, true);   /* course tiles measured ~14 cm, 27 Oct */
+    scenario_curve(0.14, -1, true);
+    scenario_curve(0.12, +1, true);   /* margin below the tiles */
+    scenario_curve(0.12, -1, true);
     scenario_s_bend(0.15);
+    scenario_s_bend(0.14);
     scenario_cross_straight(S3_NAV_NONE);
     scenario_cross_straight(S3_NAV_STRAIGHT);
     scenario_turn(S3_NAV_LEFT, adv, true);
