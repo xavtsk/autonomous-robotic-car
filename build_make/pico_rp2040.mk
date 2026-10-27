@@ -112,6 +112,24 @@ endif
 endif
 
 # Explicit Buddy 2 + Buddy 3 integration. No automatic navigation start.
+S4 ?= 0
+S4_BENCH ?= 0
+ifneq ($(filter $(S4),0 1),$(S4))
+$(error S4 must be 0 or 1)
+endif
+ifneq ($(filter $(S4_BENCH),0 1),$(S4_BENCH))
+$(error S4_BENCH must be 0 or 1)
+endif
+ifeq ($(S4_BENCH),1)
+override S4 = 1
+endif
+ifeq ($(S4),1)
+S4_SUFFIX := _s4
+endif
+ifeq ($(S4_BENCH),1)
+S4_SUFFIX := _s4_bench
+endif
+
 S3_MOTION ?= 0
 ifneq ($(filter $(S3_MOTION),0 1),$(S3_MOTION))
 $(error S3_MOTION must be 0 or 1)
@@ -183,7 +201,12 @@ endif
 # a live hazard: an SMP=1 build was once flashed in place of an SMP=0 one and
 # only the banner in the log revealed it.
 #
-EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)
+ifeq ($(S4_BENCH),1)
+ifneq ($(TEST)$(IR_BENCH)$(S3_MOTION)$(MOTION_SMOKE)$(DIAGNOSTICS),00000)
+$(error S4_BENCH=1 requires TEST=0 IR_BENCH=0 S3_MOTION=0 MOTION_SMOKE=0 DIAGNOSTICS=0)
+endif
+endif
+EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)$(S4_SUFFIX)
 
 GCC := arm-none-eabi-gcc
 AS := arm-none-eabi-gcc
@@ -243,6 +266,7 @@ ifeq ($(SMP),1)
 CFLAGS  += -DCNF_SMP=1
 ASFLAGS += -DCNF_SMP=1
 endif
+CFLAGS += -DAPP_S4=$(S4) -DAPP_S4_BENCH=$(S4_BENCH)
 CFLAGS  += -DAPP_TEST=$(TEST)
 CFLAGS  += -DAPP_IR_BENCH=$(IR_BENCH) -DAPP_S3_MOTION=$(S3_MOTION) -DAPP_IR_CHANNELS=$(IR_CHANNELS)
 CFLAGS  += -DAPP_DIAGNOSTICS=$(DIAGNOSTICS)
@@ -279,7 +303,7 @@ endif
 # before any recipe executes.
 ################################################################################
 
-PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)
+PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)-s4$(S4)-s4bench$(S4_BENCH)
 PROFILE_FILE := .build_profile
 
 ifneq ($(strip $(shell cat $(PROFILE_FILE) 2>/dev/null)),$(PROFILE_ID))

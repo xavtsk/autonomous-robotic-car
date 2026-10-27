@@ -51,8 +51,8 @@ fixed.
 | GP23, GP24, GP25, GP29 | *reserved* | Pico W radio |
 | GP0 | | (taken whenever the team builds with `CRASH_REPORT=1`) |
 | GP1 | | (taken whenever the team builds with `CRASH_REPORT=1`) |
-| GP2 | | |
-| GP3 | | |
+| GP2 | 4 | Grove 2 IMU SDA, I2C1 |
+| GP3 | 4 | Grove 2 IMU SCL, I2C1 |
 | GP4 | | |
 | GP5 | | |
 | GP6 | | |
@@ -108,7 +108,7 @@ the drivers have no locking to stop it.
 |---|---|---|---|
 | UART1 | | | |
 | I2C0 | | | |
-| I2C1 | | | |
+| I2C1 | 4 | Buddy 4 sensing task, S4=1 | GP2/GP3 |
 | SPI0 | | | |
 | SPI1 | | | |
 | ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP28 barcode only in default bench; GP27 left/GP26 right enabled with IR_CHANNELS=3 or the integrated profile. Mapping: `S3_ADC_CHANNEL_*` in `ir_acquisition.h` |
@@ -227,3 +227,12 @@ does not create another flag. The kernel has its own usage.
 | Alarm handler | 12 | 0 | 0 | 0 | 0 | 0 |
 
 (The kernel's USB and WiFi service tasks also use a few of these.)
+
+## Buddy 4 implementation, 27 October 2026
+
+S4=1 enables the priority-18, core-0 sensing task (4096-byte stack) and one
+priority-inheritance mutex. S4_BENCH=1 is the isolated stationary sensor build.
+The task exclusively owns iicb. Shared snapshot and eight event slots use explicit
+11-byte packets; overflow drops the oldest event and reports loss.
+Controller run-reset, event handling, safety response and WiFi adapters remain
+integration work. No automatic motor action is taken by Buddy 4.

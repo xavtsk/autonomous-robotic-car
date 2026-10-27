@@ -85,7 +85,14 @@ EXPORT INT usermain(void)
 	CHECK(diagnostic_status, "robot_diagnostics_init");
 #endif
 
-#if APP_MOTION_SMOKE
+#if APP_S4_BENCH
+    {
+        ER er = subsystem4_init();
+        if (er == E_OK) { er = subsystem4_start(); }
+        CHECK(er, "S4 bench startup");
+        tm_printf((UB *)"S4 BENCH: keep board level/still for calibration; other application tasks disabled.\n");
+    }
+#elif APP_MOTION_SMOKE
 	/* No Vehicle Controller, IR, networking or other application tasks. */
 	{
 		ER er = subsystem2_init();
