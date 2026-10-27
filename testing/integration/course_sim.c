@@ -108,7 +108,8 @@ void motor_control_brake_all(void) { duty[0] = duty[1] = 0.0f; }
 
 /* ---- Car pose and Buddy 2 boundary --------------------------------------- */
 static double px, py, ph;            /* axle centre, heading (rad)           */
-static double sensor_ahead = 0.060;  /* axle -> front sensor heads           */
+/* axle -> front sensor heads: the car's measured value (course_profile.h) */
+static double sensor_ahead = (S3_SENSOR_TO_AXLE_MM > 0) ? S3_SENSOR_TO_AXLE_MM / 1000.0 : 0.060;
 static double sensor_gap = 0.022;    /* head centre to head centre           */
 static float steering_kp = -1.0f;    /* <0: use the firmware's value (argv 3)*/
 static uint32_t now, lease_stamp;
@@ -131,8 +132,10 @@ static bool receive(motion_report_t *r)
 static float floor_wheel(float v) { return (v > 0.0f && v < MIN_WHEEL) ? MIN_WHEEL : v; }
 static motion_result_t velocity(float l, float r)
 { return motion_controller_request_velocity(floor_wheel(l), floor_wheel(r), now); }
+static double turn_scale = 1.0; /* models a turn that ends short/long */
 static motion_result_t turn_deg(float deg, float speed)   /* motion.c mapping */
 {
+    deg = (float)(deg * turn_scale);
     float arc = fabsf(deg) / 360.0f * (float)M_PI * (float)TRACK_M;
     int32_t sl = deg > 0.0f ? -1 : 1;
     turns_done++;
@@ -155,6 +158,9 @@ static motion_result_t drive_m(float m, float speed)
     advances++;
     return motion_controller_request_move(MOTION_DRIVE, s, s, fabsf(m), speed, now);
 }
+/* The course profile names Buddy 2's drive call when the sensor distance is
+ * set; the simulator always installs drive_m() itself. */
+motion_result_t motion_request_drive(float m, float speed) { return drive_m(m, speed); }
 static void brake(void) { motion_controller_stop(); }
 static bool reset(void) { return motion_controller_reset(); }
 static void heartbeat(bool on) { lease = on; if (on) lease_stamp = now; }
@@ -310,7 +316,7 @@ static void scenario_straight(double offset)
     add_line(-0.2, 0, 2.0, 0);
     setup(0, offset, 0, 0);
     goal_x = 1.5;
-    double worst = run(25, past_x);
+    double worst = run(10.0 + 1.6 / S3_COURSE_BASE_MPS, past_x); /* any cruise speed */
     snprintf(d, sizeof d, "reached x=%.2f m, worst centre error %.1f mm, %s", px, worst * 1000,
              state_name(drive.state));
     char n[64]; snprintf(n, sizeof n, "straight 1.5 m, start %+.0f mm off centre", offset * 1000);
@@ -409,6 +415,31 @@ static void scenario_turn(s3_nav_action_t action, double advance_m, bool expect_
         verdict(n, ok, d);
     }
 }
+/* The 90 degree spin itself ends off the line (wheel slip, battery): the
+ * after-turn search must sweep and find the new arm, not halt. */
+static void scenario_turn_error(s3_nav_action_t action, double advance_m, double scale)
+{
+    char d[200], n[96];
+    bool ok;
+    turn_scale = scale;
+    cross_track();
+    setup(0, 0, 0, advance_m);
+    drive.pending = action; drive.pending_us = now;
+    if (action == S3_NAV_LEFT) {
+        goal_y = 0.4; (void)run(40, above_y);
+        ok = py > 0.4 && fabs(px - 0.6) < 0.01;
+    } else {
+        goal_y = -0.4; (void)run(40, below_y);
+        ok = py < -0.4 && fabs(px - 0.6) < 0.01;
+    }
+    ok = ok && drive.state == S3_DRIVE_FOLLOW;
+    turn_scale = 1.0;
+    snprintf(d, sizeof d, "end (%.2f, %.2f) m heading %.0f deg, %s %s", px, py,
+             fmod(ph * 180 / M_PI + 720, 360), state_name(drive.state), reason_name(drive.reason));
+    snprintf(n, sizeof n, "%s, spin ends at %.0f deg: search finds line",
+             action == S3_NAV_LEFT ? "LEFT" : "RIGHT", 90.0 * scale);
+    verdict(n, ok, d);
+}
 static void scenario_tape_gone(void)
 {
     char d[160];
@@ -450,6 +481,10 @@ int main(int argc, char **argv)
     scenario_turn(S3_NAV_UTURN, adv, true);
     scenario_turn(S3_NAV_LEFT, 0.0, false);
     scenario_turn(S3_NAV_RIGHT, 0.0, false);
+    scenario_turn_error(S3_NAV_LEFT, adv, 0.70);   /* 63 deg: undershoot */
+    scenario_turn_error(S3_NAV_RIGHT, adv, 0.70);
+    scenario_turn_error(S3_NAV_LEFT, adv, 1.30);   /* 117 deg: overshoot */
+    scenario_turn_error(S3_NAV_RIGHT, adv, 1.30);
     scenario_tape_gone();
     printf("%s: %d failure(s)\n", failures ? "COURSE SIM FAIL" : "COURSE SIM PASS", failures);
     return failures ? 1 : 0;

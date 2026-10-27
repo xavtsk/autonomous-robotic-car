@@ -69,6 +69,15 @@ typedef struct
      * most this long before the turn finished, else the new line was not
      * reached and the run halts with LINE_LOST. 0 = no check (original). */
     uint32_t turn_line_window_us;
+    /* If that check fails: sweep slowly on the spot up to +/- search_deg
+     * around where the turn ended (first towards the side the line most
+     * likely is, then back across) and resume following as soon as a front
+     * sensor touches the tape; not found -> halt LINE_LOST. Keep it below
+     * 45 deg so the sweep cannot reach a neighbouring arm of the crossing.
+     * 0 = no search (halt at once). Needs turn_line_window_us. */
+    float search_deg;
+    float search_mps; /* each wheel's speed while sweeping */
+    float track_m;    /* wheel centre-to-centre: converts angle to time */
 } s3_drive_options_t;
 s3_drive_options_t s3_drive_default_options(void);
 typedef struct
@@ -90,6 +99,10 @@ typedef struct
     uint32_t touch_us;        /* last time a front sensor touched the tape */
     s3_nav_action_t turn;     /* manoeuvre in progress */
     bool advancing, touched;  /* advance leg running; touch_us is valid */
+    bool searching;           /* sweeping for the new line after a turn */
+    int8_t search_sign;       /* +1 anticlockwise, -1 clockwise */
+    uint8_t search_leg;       /* 0 = first sweep, 1 = back across */
+    uint32_t search_us;       /* start of the current sweep leg */
 } s3_drive_t;
 bool s3_drive_init(s3_drive_t *drive, const s3_navigation_config_t *config,
                    const s3_drive_port_t *port);

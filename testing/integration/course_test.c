@@ -12,6 +12,8 @@ static s3_line_observation_t step(s3_line_detector_t *d, uint32_t *t,
     return s3_line_update(d, *t, true, left, right);
 }
 static motion_result_t fake_drive(float m, float v) { (void)m; (void)v; return MOTION_OK; }
+/* Referenced by the course profile when S3_SENSOR_TO_AXLE_MM > 0. */
+motion_result_t motion_request_drive(float m, float v) { (void)m; (void)v; return MOTION_OK; }
 static motion_result_t fake_velocity(float l, float r) { (void)l; (void)r; return MOTION_OK; }
 static motion_result_t fake_manoeuvre(manoeuvre_t m) { (void)m; return MOTION_OK; }
 static void fake_stop(void) {}
@@ -81,6 +83,7 @@ int main(void)
         const s3_drive_options_t def = s3_drive_default_options();
         assert(!def.cross_straight && def.turn_advance_m == 0.0f &&
                def.pending_wait_us == 5000000U && def.turn_line_window_us == 0U &&
+               def.search_deg == 0.0f &&
                def.drive == 0);
     }
     /* Course profile values. */
@@ -90,17 +93,37 @@ int main(void)
         s3_course_navigation(&nav);
         assert(nav.line.between == (S3_LINE_BETWEEN != 0));
         assert(nav.steering.kp_mps == S3_COURSE_STEERING_KP);
+        /* Barcode cut-offs: barcode sensor only, line sensors unchanged. */
+        assert(nav.calibration[S3_SENSOR_BARCODE].white_limit == S3_BARCODE_WHITE_LIMIT &&
+               nav.calibration[S3_SENSOR_BARCODE].black_limit == S3_BARCODE_BLACK_LIMIT);
+        assert(nav.calibration[S3_SENSOR_LEFT].white_limit == 400U &&
+               nav.calibration[S3_SENSOR_LEFT].black_limit == 600U &&
+               nav.calibration[S3_SENSOR_RIGHT].white_limit == 400U &&
+               nav.calibration[S3_SENSOR_RIGHT].black_limit == 600U);
+        {   /* and they are valid for the reflectance model */
+            ir_reflectance_t chk;
+            assert(ir_reflectance_init(&chk, &nav.calibration[S3_SENSOR_BARCODE]));
+        }
+        assert(nav.steering.base_mps == S3_COURSE_BASE_MPS);
         assert(s3_steering_config_valid(&nav.steering));
-        {   /* full error: inner wheel stopped, outer at the 0.20 m/s cap */
+        {   /* full error: inner wheel stopped, outer at base + gain */
             const s3_line_observation_t full = {true, true, false, -100,
                                                 false, false, false, true};
             const s3_steering_request_t r = s3_steering_compute(&nav.steering, &full);
-            assert(r.valid && r.left_mps == 0.0f && r.right_mps > 0.199f);
+            assert(r.valid && r.left_mps == 0.0f &&
+                   r.right_mps > S3_COURSE_BASE_MPS + S3_COURSE_STEERING_KP - 0.001f);
         }
-        assert(c.cross_straight && c.pending_wait_us == 20000000U &&
+        assert(c.cross_straight && c.pending_wait_us == S3_COURSE_PENDING_WAIT_US &&
                c.turn_line_window_us == 300000U);
+        /* After-turn search: on, below 45 deg (cannot reach the next arm). */
+        assert(c.search_deg == S3_TURN_SEARCH_DEG && c.search_deg > 0.0f &&
+               c.search_deg < 45.0f && c.search_mps == S3_TURN_SEARCH_MPS &&
+               c.track_m == S3_TRACK_M);
 #if S3_SENSOR_TO_AXLE_MM == 0
         assert(c.turn_advance_m == 0.0f && c.drive == 0);
+#else
+        assert(c.drive == motion_request_drive && c.advance_mps > 0.0f &&
+               c.turn_advance_m > 0.10f * (float)S3_SENSOR_TO_AXLE_MM / 100.0f);
 #endif
     }
     /* set_options validation. */
@@ -124,8 +147,22 @@ int main(void)
         o2.turn_advance_m = 0.5f; /* beyond any plausible sensor distance */
         assert(!s3_drive_set_options(&drive, &o2));
         o2.turn_advance_m = 0.065f;
+        o2.search_deg = 70.0f;                         /* too wide */
+        assert(!s3_drive_set_options(&drive, &o2));
+        o2.search_deg = 35.0f; o2.search_mps = 0.0f;   /* sweep needs a speed */
+        assert(!s3_drive_set_options(&drive, &o2));
+        o2.search_mps = 0.05f; o2.turn_line_window_us = 0U; /* needs the check */
+        assert(!s3_drive_set_options(&drive, &o2));
+        o2.turn_line_window_us = 300000U;
+        assert(s3_drive_set_options(&drive, &o2));
+        o2.turn_advance_m = 0.065f;
         o2.pending_wait_us = 0U;
         assert(!s3_drive_set_options(&drive, &o2));
+        /* A halt keeps this cycle's barcode event so telemetry still
+         * reports the letter that caused it (e.g. an unmapped one). */
+        drive.output.events = S3_EVENT_BARCODE | S3_EVENT_JUNCTION;
+        s3_drive_stop(&drive);
+        assert(drive.output.events == S3_EVENT_BARCODE);
         drive.state = S3_DRIVE_FOLLOW; /* not while running */
         o2.pending_wait_us = 20000000U;
         assert(!s3_drive_set_options(&drive, &o2));

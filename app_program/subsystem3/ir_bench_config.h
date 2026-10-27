@@ -18,8 +18,8 @@
 #define IR_BENCH_RIGHT_CHANNEL   S3_ADC_CHANNEL_RIGHT   /* GP26 */
 /* Midpoints of controller/builtin_calibration.h measured ranges.
  * builtin_test.c checks that boot and bench references remain identical. */
-#define IR_BENCH_WHITE_RAW    (156U)
-#define IR_BENCH_BLACK_RAW    (305U)
+#define IR_BENCH_WHITE_RAW    (215U)
+#define IR_BENCH_BLACK_RAW    (3550U)
 #define IR_BENCH_LEFT_WHITE_RAW  (144U)
 #define IR_BENCH_LEFT_BLACK_RAW  (1501U)
 #define IR_BENCH_RIGHT_WHITE_RAW (182U)

@@ -72,7 +72,7 @@ static host_data_cb fragment;
 static void (*heartbeat)(void *);
 static unsigned publish_count;
 static char published_topic[64];
-static UB published[16];
+static UB published[MQTT_UTK_DEBUG_PAYLOAD_MAX];
 static u16_t published_len;
 static u8_t published_qos, published_retain;
 static unsigned publish_attempts;
@@ -99,7 +99,8 @@ err_t mqtt_publish(mqtt_client_t *c, const char *topic, const void *payload, u16
 {
     assert(c->connected && len <= sizeof(published));
     ++publish_attempts;
-    strcpy(attempted.topic, topic); memcpy(attempted.payload, payload, len);
+    strcpy(attempted.topic, topic);
+    memcpy(attempted.payload, payload, len < sizeof attempted.payload ? len : sizeof attempted.payload);
     attempted.payload_len = len; attempted.qos = qos; attempted.retain = retain;
     if (publish_result != ERR_OK) return publish_result;
     strcpy(published_topic, topic); memcpy(published, payload, len);
@@ -124,6 +125,54 @@ static void complete_publish(err_t result)
     host_done_cb cb = deferred_done;
     void *arg = deferred_arg;
     assert(cb); deferred_done = NULL; deferred_arg = NULL; cb(arg, result);
+}
+
+/* Diagnostic text hook: a strong override of mqtt_utk_debug_take(). */
+static const char *debug_queue[4];
+static unsigned debug_head, debug_count, debug_asks;
+unsigned int mqtt_utk_debug_take(char *line, unsigned int size)
+{
+    unsigned n;
+    ++debug_asks;
+    if (debug_head >= debug_count) return 0;
+    n = (unsigned)strlen(debug_queue[debug_head]);
+    assert(n < size);
+    memcpy(line, debug_queue[debug_head++], n);
+    return n;
+}
+static void test_debug_lines(void)
+{
+    static char longest[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+    unsigned count;
+    memset(longest, 'x', sizeof longest - 1U);
+    empty_outbox();
+    poll_after(1000);
+    debug_queue[0] = "[BCAP] run summary: episodes=1";
+    debug_queue[1] = longest;
+    debug_head = 0; debug_count = 2;
+    /* Telemetry first: a queued report goes out before any debug line. */
+    assert(buddy1_report_heading(12) == E_OK);
+    count = publish_count;
+    poll_after(20);
+    assert(publish_count == count + 1 && strcmp(published_topic, "car/debug/barcode") != 0);
+    /* Then one debug line per paced slot, on the debug topic, QoS 0. */
+    poll_after(20);
+    assert(publish_count == count + 2 && strcmp(published_topic, MQTT_UTK_DEBUG_TOPIC) == 0 &&
+           published_qos == 0 && published_retain == 0 &&
+           published_len == strlen(debug_queue[0]) &&
+           memcmp(published, debug_queue[0], published_len) == 0);
+    /* A transient rejection keeps the same line and retries it later. */
+    publish_result = ERR_MEM;
+    poll_after(20);
+    assert(publish_count == count + 2 && debug_head == 2);
+    publish_result = ERR_OK;
+    poll_after(100);
+    assert(publish_count == count + 3 && published_len == sizeof longest - 1U);
+    /* Nothing left: no more publishes. */
+    poll_after(100); poll_after(100);
+    assert(publish_count == count + 3);
+    debug_count = 0; debug_head = 0;
+    puts("HOST PASS: diagnostic text lines only after telemetry, own topic, paced, retried, bounded");
 }
 
 static void test_publish_backpressure(void)
@@ -361,6 +410,7 @@ int main(void)
     heartbeat(NULL); assert(published_len == 2 &&
         buddy1_decode(BUDDY1_TOPIC_STATUS, published, published_len, &decoded));
     test_publish_backpressure();
+    test_debug_lines();
     emit_vectors();
     puts("HOST PASS: binary FIFO, full speed range, 64 fault masks, eight concurrent producers, real MQTT callbacks and bridge");
     return 0;

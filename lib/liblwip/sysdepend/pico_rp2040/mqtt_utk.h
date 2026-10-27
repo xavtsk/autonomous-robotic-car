@@ -39,6 +39,15 @@ void mqtt_utk_poll(void);
  * it in app_program/subsystem1/mqtt_bridge.c. */
 int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out);
 
+/* Optional low-priority diagnostic text (e.g. the barcode-sensor trace on
+ * MQTT_UTK_DEBUG_TOPIC). Asked for one line only when no application message
+ * is waiting, so telemetry always goes first; same single in-flight slot and
+ * pacing. Return the line length, or 0 when there is nothing to send. The
+ * weak default sends nothing. Called from the network task. */
+#define MQTT_UTK_DEBUG_TOPIC       "car/debug/barcode"
+#define MQTT_UTK_DEBUG_PAYLOAD_MAX 192
+unsigned int mqtt_utk_debug_take(char *line, unsigned int size);
+
 /* Called after a complete inbound MQTT payload has arrived. The weak default
  * ignores it; Buddy 1 overrides it and copies permitted commands into its
  * RTOS message buffer. */

@@ -11,8 +11,12 @@
  *                              3 valid rounds
  * Barcode round 2 used black path material and is excluded. See
  * testing/subsystem3/IR_CALIBRATION_2026-10-27.md and its raw range logs.
+ * BARCODE re-measured 27 Oct 21:48 from a course run (sensor moved, AO
+ * wiring): white paper/mat 170..260, bars 3250..3850 (Gin's 134..179 /
+ * 275..335 no longer valid). Replaying that run through the decoder with
+ * these references reads the barcode at any cut-off from raw 1000 to 3000.
  * Combined-range midpoint references are LEFT 144/1501, RIGHT 182/3068,
- * BARCODE 156/305. Keep the bench reference macros in sync with this table.
+ * BARCODE 215/3550. Keep the bench reference macros in sync with this table.
  * These values are ONLY valid for that mounting height and surface. If a
  * sensor is moved, recalibrate with the buttons and update this table.
  * They still pass the normal calibration checks (>=10 samples per surface,
@@ -29,7 +33,7 @@
 #endif
 
 /* {white_min, white_max, black_min, black_max}, indexed by s3_sensor_id_t. */
-#define S3_BUILTIN_CAL_BARCODE {134U, 179U, 275U, 335U}
+#define S3_BUILTIN_CAL_BARCODE {170U, 260U, 3250U, 3850U}
 #define S3_BUILTIN_CAL_LEFT    {115U, 174U, 1242U, 1761U}
 #define S3_BUILTIN_CAL_RIGHT   {146U, 218U, 2960U, 3176U}
 

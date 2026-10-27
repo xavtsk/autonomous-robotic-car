@@ -57,6 +57,10 @@ static T_MQTT_UTK_APP_MSG pending;
 static u32_t last_publish_ms;
 static u16_t publish_wait_ms;
 static u8_t pending_valid, pending_inflight, pending_warned, publish_paced;
+/* Diagnostic text slot: used only while no application packet is pending. */
+static char debug_line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+static u16_t debug_len;
+static u8_t debug_valid;
 
 static void heartbeat_timeout(void *arg);
 
@@ -89,6 +93,24 @@ static void application_publish_done_cb(void *arg, err_t result)
 		warn_pending(result);
 		pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
 	}
+}
+
+static void debug_publish_done_cb(void *arg, err_t result)
+{
+	(void)arg;
+	pending_inflight = 0;
+	if(result == ERR_OK) {
+		debug_valid = 0;
+	} else {
+		pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+	}
+}
+
+__attribute__((weak)) unsigned int mqtt_utk_debug_take(char *line, unsigned int size)
+{
+	(void)line;
+	(void)size;
+	return 0;
 }
 
 __attribute__((weak)) int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out)
@@ -325,7 +347,28 @@ void mqtt_utk_poll(void)
 	}
 
 	if(!pending_valid) {
-		if(!mqtt_utk_app_take(&pending)) return;
+		if(!mqtt_utk_app_take(&pending)) {
+			/* Nothing for telemetry: send one diagnostic line, if any. */
+			if(!debug_valid) {
+				unsigned int n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
+				if(n == 0U || n > sizeof debug_line) return;
+				debug_len = (u16_t)n;
+				debug_valid = 1;
+			}
+			pending_inflight = 1;
+			pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+			err = mqtt_publish(client, MQTT_UTK_DEBUG_TOPIC, debug_line,
+			                   debug_len, 0, 0, debug_publish_done_cb, NULL);
+			if(err != ERR_OK) {
+				pending_inflight = 0;
+				if(err == ERR_MEM || err == ERR_CONN) {
+					pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+				} else {
+					debug_valid = 0; /* cannot improve with a retry */
+				}
+			}
+			return;
+		}
 		pending.topic[MQTT_UTK_APP_TOPIC_MAX - 1] = '\0';
 		if(pending.payload_len > MQTT_UTK_APP_PAYLOAD_MAX ||
 		   pending.topic[0] == '\0' || pending.qos > 2 || pending.retain > 1) {
