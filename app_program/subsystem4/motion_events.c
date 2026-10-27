@@ -1,13 +1,11 @@
-/*
- * File: motion_events.c
- * Owner: Buddy 4 - IMU Motion and Terrain Monitoring
- * Purpose: Collision detection and turn-rate/motion events.
- */
-
 #include "motion_events.h"
-
-/*
- * TODO: Agree on event definitions, turn-rate units, and detection criteria.
- * TODO: Implement this module after its interface and requirements are agreed.
- * No functionality is implemented in this starter file.
- */
+#include <math.h>
+terrain_state_t motion_classify(float pitch,float speed,float longitudinal_g,float turn,bool turn_valid,bool impact)
+{
+    if(impact) { return TERRAIN_IMPACT; }
+    if(turn_valid && fabsf(turn)>15) { return TERRAIN_TURNING; }
+    if(fabsf(speed)>0.01f && pitch>4) { return TERRAIN_CLIMBING; }
+    if(fabsf(speed)>0.01f && pitch < -4) { return TERRAIN_DESCENDING; }
+    if(fabsf(longitudinal_g)>0.12f) { return TERRAIN_ACCELERATING; }
+    return fabsf(speed)<0.01f?TERRAIN_STATIONARY:TERRAIN_MOVING;
+}

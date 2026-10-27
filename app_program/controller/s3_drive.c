@@ -8,7 +8,8 @@
 #define S3_MIN_ADVANCE_M (0.003f) /* shorter advances are skipped */
 s3_drive_options_t s3_drive_default_options(void)
 {
-    return (s3_drive_options_t){false, 0.0f, 0.10f, 0, S3_PENDING_WAIT_US, 0U};
+    return (s3_drive_options_t){false, 0.0f, 0.10f, 0, S3_PENDING_WAIT_US, 0U,
+                                0.0f, 0.05f, 0.116f};
 }
 static bool finite_f(float x) { return (x == x) && ((x - x) == 0.0f); }
 static bool feedback_fresh(const s3_drive_t *d, uint32_t now)
@@ -31,11 +32,14 @@ static void halt(s3_drive_t *d, s3_drive_state_t state,
     d->turn = S3_NAV_NONE;
     d->advancing = false;
     d->touched = false;
+    d->searching = false;
     d->command_id = d->cancel_id = 0U;
     d->waiting_stop = false;
     d->output.steering.valid = false;
     d->output.action = S3_NAV_NONE;
-    d->output.events &= S3_EVENT_SENSOR_FAULT;
+    /* Keep this cycle's barcode event too: a barcode that causes the halt
+     * (e.g. an unmapped letter) must still reach telemetry. */
+    d->output.events &= (S3_EVENT_SENSOR_FAULT | S3_EVENT_BARCODE);
     d->output.lifecycle = d->navigation.lifecycle;
     d->output.diagnostic = true;
     d->state = state;
@@ -70,7 +74,14 @@ bool s3_drive_set_options(s3_drive_t *d, const s3_drive_options_t *o)
         ((o->turn_advance_m > 0.0f) &&
          ((o->drive == 0) || (o->advance_mps <= 0.0f))) ||
         (o->pending_wait_us == 0U) || (o->pending_wait_us >= 0x80000000U) ||
-        (o->turn_line_window_us >= 0x80000000U))
+        (o->turn_line_window_us >= 0x80000000U) ||
+        !finite_f(o->search_deg) || (o->search_deg < 0.0f) ||
+        (o->search_deg > 60.0f) ||
+        ((o->search_deg > 0.0f) &&
+         ((o->turn_line_window_us == 0U) || !finite_f(o->search_mps) ||
+          (o->search_mps <= 0.0f) || (o->search_mps > 0.30f) ||
+          !finite_f(o->track_m) || (o->track_m < 0.05f) ||
+          (o->track_m > 0.50f))))
     {
         return false;
     }
@@ -294,6 +305,59 @@ static bool receive_reports(s3_drive_t *d, bool running, bool *done)
     }
     return healthy;
 }
+/* Duration of one search_deg of spin on the spot at search_mps. */
+static uint32_t search_leg_us(const s3_drive_t *d)
+{
+    const float rad = d->options.search_deg * 0.0174533f;
+    const float s = rad * 0.5f * d->options.track_m / d->options.search_mps;
+    return (uint32_t)(s * 1000000.0f) + 1U;
+}
+/* The turn ended with no front sensor on the new line. If the last touch was
+ * in the second half of the spin, the line was passed (overshoot): sweep back
+ * first; otherwise (undershoot, or only the old line touched early) keep
+ * turning the same way first. Both sides are swept either way. */
+static void start_search(s3_drive_t *d, uint32_t now)
+{
+    const int8_t turn_sign = (d->turn == S3_NAV_RIGHT) ? -1 : 1;
+    const uint32_t spin_us = now - d->phase_us;
+    const bool overshoot = d->touched && (spin_us > 0U) &&
+                           ((uint32_t)(now - d->touch_us) < spin_us / 2U);
+    d->search_sign = overshoot ? (int8_t)-turn_sign : turn_sign;
+    d->search_leg = 0U;
+    d->search_us = now;
+    d->phase_us = now;
+    d->searching = true;
+}
+static void search_step(s3_drive_t *d, uint32_t now)
+{
+    float v;
+    if (d->output.line.valid && d->output.line.touching)
+    {
+        d->searching = false;
+        d->port.stop();
+        (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
+        d->state = S3_DRIVE_REACQUIRE;
+        d->phase_us = now;
+        return;
+    }
+    if ((uint32_t)(now - d->search_us) >=
+        search_leg_us(d) * (d->search_leg == 0U ? 1U : 2U))
+    {
+        if (d->search_leg != 0U)
+        {
+            halt(d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
+            return;
+        }
+        d->search_leg = 1U;
+        d->search_sign = (int8_t)-d->search_sign;
+        d->search_us = now;
+    }
+    v = d->options.search_mps * (float)d->search_sign; /* + = anticlockwise */
+    if (d->port.velocity(-v, v) != MOTION_OK)
+    {
+        halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
+    }
+}
 static void follow(s3_drive_t *d, uint32_t now)
 {
     const s3_navigation_output_t *out = &d->output;
@@ -478,6 +542,17 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
             }
         }
     }
+    else if ((d->state == S3_DRIVE_MANOEUVRE) && d->searching)
+    {
+        if ((uint32_t)(now - d->phase_us) > S3_MANOEUVRE_WAIT_US)
+        {
+            halt(d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
+        }
+        else
+        {
+            search_step(d, now);
+        }
+    }
     else if (d->state == S3_DRIVE_MANOEUVRE)
     {
         if (!d->advancing && d->output.line.valid && d->output.line.touching)
@@ -510,16 +585,27 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
                                 (d->turn == S3_NAV_UTURN);
             d->command_id = 0U;
             d->port.stop();
-            (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
-            d->state = S3_DRIVE_REACQUIRE;
-            d->phase_us = now;
             if (turned && (d->options.turn_line_window_us != 0U) &&
                 !(d->touched && ((uint32_t)(now - d->touch_us) <=
                                  d->options.turn_line_window_us)))
             {
                 /* The sensors never crossed the new line near the end of the
-                 * turn: they are beside it, not over it. Do not drive off. */
-                halt(d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
+                 * turn: they are beside it, not over it. Do not drive off:
+                 * sweep for it if enabled, else stop. */
+                if (d->options.search_deg > 0.0f)
+                {
+                    start_search(d, now); /* stays in MANOEUVRE */
+                }
+                else
+                {
+                    halt(d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
+                }
+            }
+            else
+            {
+                (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
+                d->state = S3_DRIVE_REACQUIRE;
+                d->phase_us = now;
             }
         }
         else if ((d->feedback.state != MOTION_TURN) &&

@@ -9,6 +9,10 @@ car and needs no extra packages: pipe mosquitto_sub's "topic hex" lines into it.
 
 By default repeated heartbeats and near-identical speed reports are folded so
 the screen stays readable; use --all to print every message.
+
+After every run the car also sends its barcode-sensor trace as text on
+car/debug/barcode. The viewer shows the summary/episode lines and saves the
+whole trace to barcode_trace_<date>_<time>.txt (see --trace-dir).
 """
 import argparse
 import sys
@@ -109,12 +113,51 @@ class Folder:
         return True
 
 
-def handle(line, folder, out):
+class TraceFile:
+    """Saves the car's barcode-sensor trace (car/debug/barcode) to a file."""
+
+    def __init__(self, folder):
+        self.folder = Path(folder)
+        self.handle = None
+        self.path = None
+
+    def line(self, text, out):
+        if text.startswith("[BCAP] run summary"):
+            self.close()
+            self.path = self.folder / time.strftime("barcode_trace_%Y%m%d_%H%M%S.txt")
+            self.handle = open(self.path, "w", encoding="ascii", errors="replace")
+            print(f"--- saving barcode trace to {self.path}", file=out, flush=True)
+        if self.handle:
+            self.handle.write(text + "\n")
+            self.handle.flush()
+        if text == "[BCAP] end":
+            if self.path:
+                print(f"--- barcode trace saved: {self.path}", file=out, flush=True)
+            self.close()
+
+    def close(self):
+        if self.handle:
+            self.handle.close()
+        self.handle = None
+
+
+def handle(line, folder, out, trace=None):
     line = line.strip()
     if not line:
         return
     topic, _, hexpart = line.partition(" ")
     stamp = time.strftime("%H:%M:%S")
+    if topic.startswith("car/debug/"):
+        try:
+            text = bytes.fromhex(hexpart.strip()).decode("ascii", "replace")
+        except ValueError:
+            text = hexpart.strip()
+        if trace is not None:
+            trace.line(text, out)
+        # Sample lines are long and many: show headers, keep samples in the file.
+        if not text.startswith("BC") or trace is None:
+            print(f"{stamp}  DEBUG  {text}", file=out, flush=True)
+        return
     try:
         payload = bytes.fromhex(hexpart.strip())
         d = decode(topic, payload)
@@ -130,13 +173,18 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--all", action="store_true",
                         help="print every message, including repeated heartbeats and speeds")
+    parser.add_argument("--trace-dir", default=".",
+                        help="folder for barcode_trace_*.txt files (default: current folder)")
     args = parser.parse_args()
     folder = Folder(args.all)
+    trace = TraceFile(args.trace_dir)
     try:
         for line in sys.stdin:
-            handle(line, folder, sys.stdout)
+            handle(line, folder, sys.stdout, trace)
     except KeyboardInterrupt:
         pass
+    finally:
+        trace.close()
 
 
 if __name__ == "__main__":

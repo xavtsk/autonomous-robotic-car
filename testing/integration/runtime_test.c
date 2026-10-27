@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <setjmp.h>
 #include <stdio.h>
+#include <string.h>
 #define TA_HLNG 2U
 #define TSK_SELF 0
 typedef struct { unsigned cycatr; FP cychdr; unsigned cyctim,cycphs; } T_CCYC;
@@ -57,6 +58,7 @@ bool motion_get_feedback(motion_feedback_t *f)
     .state=fb_fault?MOTION_FAULT:MOTION_IDLE,.fault=fb_fault?MOTION_FAULT_STALL:MOTION_FAULT_NONE};return true; }
 motion_result_t motion_request_velocity(float l,float r)
 { (void)l;(void)r;assert(!locked);fb_command_id=1;return MOTION_OK; }
+motion_result_t motion_request_drive(float m,float v) { (void)m;(void)v;return MOTION_OK; }
 motion_result_t motion_request_manoeuvre(manoeuvre_t m)
 { (void)m;assert(!locked);return MOTION_OK; }
 void stop(void) { assert(!locked);stops++;fb_command_id=0; }
@@ -190,6 +192,24 @@ int main(void)
     for(unsigned k=0;k<51;k++)cycle();
     assert(s3_integration_status(&status)&&!status.command_ok&&status.state==S3_DRIVE_FAULT);
     assert(status.command_sequence==sequence+1&&!g_reset_waiting&&!g_shared.reset_pending);
+#if defined(TM_MQTT) && TM_MQTT
+    {   /* After the run ended, the barcode trace goes out over Wi-Fi once,
+         * summary first and "[BCAP] end" last; then nothing more. */
+        char line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+        unsigned n, lines = 0U;
+        char first[MQTT_UTK_DEBUG_PAYLOAD_MAX] = "", last[MQTT_UTK_DEBUG_PAYLOAD_MAX] = "";
+        while ((n = mqtt_utk_debug_take(line, sizeof line)) != 0U)
+        {
+            assert(n < sizeof line && line[n] == '\0');
+            if (lines++ == 0U) { memcpy(first, line, n + 1U); }
+            memcpy(last, line, n + 1U);
+        }
+        assert(lines >= 2U && strncmp(first, "[BCAP] run summary", 18) == 0 &&
+               strcmp(last, "[BCAP] end") == 0);
+        assert(mqtt_utk_debug_take(line, sizeof line) == 0U);
+        puts("PASS: barcode trace published once over the Wi-Fi debug hook after the run");
+    }
+#endif
     puts("PASS: production runtime STOP precedence, packed status, calibration, signed errors, map freeze, per-run timing/fault interval, one-press asynchronous RESET, cancellation and timeout");
     return 0;
 }

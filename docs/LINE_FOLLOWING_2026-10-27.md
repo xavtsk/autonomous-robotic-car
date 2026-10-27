@@ -20,8 +20,12 @@ original detector calls that "no line" and halts after 0.1 s (run 5:
 | black, black for 30 ms | crossing | barcode action, or straight across if none |
 
 * Steering error and junction rule are Buddy 3's, unchanged (`error = (R - L)/10`,
-  both >= 600 for 30 ms). Steering strength unchanged (0.10 m/s base, 0.06 gain,
-  0.06 m/s minimum wheel speed).
+  both >= 600 for 30 ms). Steering gain raised for the car from 0.06 to **0.10**
+  (`S3_COURSE_STEERING_KP`): the course curves measured about **14 cm radius**
+  (27 Oct, circle fitted to the tape centre in a photo with a ruler), and with
+  0.06 the tightest turn is about 13 cm. With 0.10 a full error stops the inner
+  wheel (0 m/s is not a stall) and runs the outer at 0.20 m/s. Base speed
+  0.10 m/s and the 0.06 m/s minimum wheel speed are unchanged.
 * No "line lost" while following: the car always starts on the line, and the
   tiles' curves are expected to be within the car's tightest steering turn
   (see limits). GP21 is the stop if it ever leaves the line.
@@ -32,7 +36,9 @@ original detector calls that "no line" and halts after 0.1 s (run 5:
   first drives on so the axle is over the crossing, then turns
   (`S3_SENSOR_TO_AXLE_MM`, **must be measured**; 0 = not yet).
 * After LEFT/RIGHT/U-TURN a front sensor must have crossed the new line in the
-  last 0.5 s of the spin; otherwise the car halts with "line lost" instead of
+  last 0.3 s of the spin (0.5 s accepted a wrong turn when the sensors are only
+  40 mm ahead of the axle; 0.3 s rejects it and still accepts every correct
+  turn in the simulator); otherwise the car halts with "line lost" instead of
   driving off beside the line.
 * Barcode -> crossing limit 20 s (was 5 s; Y is about 1 m before crossing 2).
 
@@ -59,17 +65,17 @@ after-turn check, as intended.
 
 Limits found (wheel model constants are guesses):
 
-* Tightest curve the car follows is about **13 cm radius** (the 0.06 m/s
-  minimum inner wheel limits the turn). 12 cm and below: the tape escapes and
-  the car drives off. Tile curves must be measured; if they are under ~14 cm
-  the steering must allow a slower/stopped inner wheel.
+* With Buddy 3's gain 0.06 the tightest curve is about **13 cm radius** (12 cm
+  and below: the tape escapes and the car drives off). With the course gain
+  0.10 the simulator follows **10 cm** curves; straight-line weave grows by
+  about 1 mm. Tiles: ~14 cm.
 * The advance distance tolerates about +/-15 mm error.
 
 Run it: `make -C testing/integration -f controller_test.mk test`
-(or `build/controller/course_sim <gap_mm> <axle_to_sensor_mm>`).
+(or `build/controller/course_sim <gap_mm> <axle_to_sensor_mm> [steering_gain]`).
 
 ## To measure before car tests
 
 1. Sensor head centre-to-centre (expected > 18 mm).
-2. Tile curve radius at the tape centre (`c^2/8h + h/2`).
+2. ~~Tile curve radius~~ done: about 14 cm.
 3. Driven-wheel axle centre to the front sensor heads (along the car) -> `S3_SENSOR_TO_AXLE_MM`.

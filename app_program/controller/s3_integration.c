@@ -8,8 +8,27 @@
 #include "../subsystem3/subsystem3.h"
 #include "builtin_calibration.h"
 #include "course_profile.h"
+#include "barcode_capture.h"
 #include <sys/sysdef.h>
 #if APP_S3_MOTION
+#ifndef S3_BARCODE_CAPTURE
+#define S3_BARCODE_CAPTURE 1 /* barcode-sensor trace, printed over USB after a run */
+#endif
+#if S3_BARCODE_CAPTURE
+static bcap_t g_bcap; /* written by the sampling owner, read by report; g_mutex */
+static bool g_bcap_valid;
+/* Wi-Fi copy of the trace: sent line by line on MQTT_UTK_DEBUG_TOPIC after a
+ * run ends, only while no telemetry is waiting. The flag is a cheap hint read
+ * by the network task every poll; the cursor is used under g_mutex. */
+static volatile bool g_bcap_net_pending;
+static bcap_cursor_t g_bcap_net_cursor;
+#if defined(TM_CONSOLE_USB_CDC) && TM_CONSOLE_USB_CDC
+extern volatile UW tm_usb_link_state; /* 3 = USB terminal open (DTR) */
+#define BCAP_TERMINAL_OPEN() (tm_usb_link_state == 3U)
+#else
+#define BCAP_TERMINAL_OPEN() (true)
+#endif
+#endif
 #define S3_COLLECTION_US (1000000U)
 #define S3_EMPTY_RANGE_MINIMUM (4095U) /* 12-bit ADC maximum */
 static ID g_task, g_report, g_cycle, g_mutex;
@@ -232,6 +251,32 @@ static void sample(INT code, void *unused)
             g_reset_waiting = false;
             reset_completed();
         }
+#if S3_BARCODE_CAPTURE
+        if (was_running)
+        {
+            const bcap_input_t in = {
+                frame.timestamp_us,
+                frame.sensor[S3_SENSOR_BARCODE].raw,
+                g_drive.output.sensor[S3_SENSOR_BARCODE].darkness,
+                (uint8_t)g_drive.output.sensor[S3_SENSOR_BARCODE].surface,
+                (uint8_t)g_drive.output.barcode_status,
+                g_drive.output.barcode.letter,
+                g_drive.navigation.barcode.collecting != 0U,
+                g_drive.navigation.rearming,
+                feedback.valid ? feedback.centre_m : 0.0};
+            if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
+            {
+                bcap_record(&g_bcap, &in);
+                if (!drive_running(g_drive.state))
+                {
+                    bcap_end_run(&g_bcap);
+                    g_bcap_net_cursor = (bcap_cursor_t){0};
+                    g_bcap_net_pending = true;
+                }
+                (void)tk_unl_mtx(g_mutex);
+            }
+        }
+#endif
         if (was_running)
         {
             /* Include the interval which caused a halt/fault; do not allow
@@ -272,6 +317,15 @@ static void sample(INT code, void *unused)
             if ((command.kind == S3_CONTROL_START) && ok)
             {
                 s3_run_timing_begin(&working.run_timing, now_us());
+#if S3_BARCODE_CAPTURE
+                if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
+                {
+                    bcap_begin_run(&g_bcap, now_us());
+                    g_bcap_valid = true;
+                    g_bcap_net_pending = false;
+                    (void)tk_unl_mtx(g_mutex);
+                }
+#endif
             }
         }
         working.navigation = g_drive.output;
@@ -315,6 +369,72 @@ static void sample(INT code, void *unused)
         (void)tk_slp_tsk(TMO_FEVR);
     }
 }
+#if S3_BARCODE_CAPTURE
+#if defined(TM_MQTT) && TM_MQTT
+#include "mqtt_utk.h"
+/* Network task: next trace line for Wi-Fi, or 0. */
+unsigned int mqtt_utk_debug_take(char *line, unsigned int size)
+{
+    bool more = false;
+    unsigned int n = 0U;
+    if (!g_bcap_net_pending || (g_mutex <= 0))
+    {
+        return 0U;
+    }
+    if (tk_loc_mtx(g_mutex, TMO_FEVR) != E_OK)
+    {
+        return 0U;
+    }
+    if (g_bcap_net_pending)
+    {
+        more = bcap_format_next(&g_bcap, &g_bcap_net_cursor, line, size);
+        if (!more) { g_bcap_net_pending = false; }
+    }
+    (void)tk_unl_mtx(g_mutex);
+    while (more && (n < size) && (line[n] != '\0')) { n++; }
+    return more ? n : 0U;
+}
+#endif
+/* After a run, print the barcode trace over USB, a bounded number of lines
+ * per report period. Restarts whenever a USB terminal is (re)opened, so the
+ * car can run untethered and be plugged in afterwards. */
+static void report_barcode_capture(bool running)
+{
+    static bool was_running, was_open, dumping;
+    static bcap_cursor_t cursor;
+    static char line[200];
+    const bool open = BCAP_TERMINAL_OPEN();
+    unsigned int lines;
+    if (running)
+    {
+        dumping = false;
+    }
+    else if ((was_running || (open && !was_open)) && g_bcap_valid)
+    {
+        dumping = true;
+        cursor = (bcap_cursor_t){0};
+        tm_printf((UB *)"[BCAP] barcode sensor trace follows (copy from here "
+                        "to [BCAP] end)\n");
+    }
+    was_running = running;
+    was_open = open;
+    for (lines = 0U; dumping && open && (lines < 40U); lines++)
+    {
+        bool more = false;
+        if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
+        {
+            more = bcap_format_next(&g_bcap, &cursor, line, sizeof line);
+            (void)tk_unl_mtx(g_mutex);
+        }
+        if (!more)
+        {
+            dumping = false;
+            break;
+        }
+        tm_printf((UB *)"%s\n", line);
+    }
+}
+#endif
 static void report(INT code, void *unused)
 {
     static s3_integration_status_t s;
@@ -375,6 +495,34 @@ static void report(INT code, void *unused)
                   (unsigned)s.navigation.line.present,
                   (int)s.navigation.line.error,
                   (unsigned)s.navigation.line.junction_candidate);
+#if S3_BARCODE_CAPTURE
+        {
+            uint16_t decoded = 0U, rejected = 0U, timing = 0U, overflow = 0U;
+            uint8_t episodes = 0U;
+            char letters[sizeof g_bcap.letters] = "-";
+            if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
+            {
+                decoded = g_bcap.decoded;
+                rejected = g_bcap.rejected;
+                timing = g_bcap.timing;
+                overflow = g_bcap.overflow;
+                episodes = g_bcap.episodes;
+                if (g_bcap.letter_count != 0U)
+                {
+                    for (unsigned int i = 0U; i < sizeof letters; i++)
+                    {
+                        letters[i] = g_bcap.letters[i];
+                    }
+                }
+                (void)tk_unl_mtx(g_mutex);
+            }
+            tm_printf((UB *)"  BARCODE this run: decoded=%u letters=%s rejected=%u "
+                            "timing_error=%u overflow=%u dark_episodes=%u\n",
+                      (unsigned)decoded, letters, (unsigned)rejected,
+                      (unsigned)timing, (unsigned)overflow, (unsigned)episodes);
+        }
+        report_barcode_capture(drive_running(s.state));
+#endif
     }
 }
 static void cleanup(void)
@@ -410,7 +558,7 @@ static void cleanup(void)
  * moved reliably at 0.05 m/s. Raise only small positive requests; zero and
  * reverse requests pass through unchanged, and Buddy 3's steering algorithm
  * itself is untouched. Tune on the car; set to 0 to disable. */
-#define S3_MIN_WHEEL_MPS (0.06f)
+#define S3_MIN_WHEEL_MPS (0.01f)
 static float floor_wheel(float mps)
 {
     return ((mps > 0.0f) && (mps < S3_MIN_WHEEL_MPS)) ? S3_MIN_WHEEL_MPS

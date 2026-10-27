@@ -57,6 +57,7 @@ int32_t ir_sensor_read_frame(s3_sensor_frame_t *f)
 bool motion_get_feedback(motion_feedback_t *f)
 { *f=(motion_feedback_t){.timestamp_us=clock_value,.epoch=1,.valid=true,.braked=fb_braked,.command_id=fb_command_id,.fault=fb_fault?MOTION_FAULT_STALL:MOTION_FAULT_NONE};return true; }
 motion_result_t motion_request_velocity(float l,float r) { (void)l;(void)r;fb_command_id=1;return MOTION_OK; }
+motion_result_t motion_request_drive(float m,float v) { (void)m;(void)v;return MOTION_OK; }
 motion_result_t motion_request_manoeuvre(manoeuvre_t m) { (void)m;return MOTION_OK; }
 void stop(void) { stops++;fb_command_id=0; }
 bool motion_get_report(motion_report_t *r) { (void)r;return false; }
