@@ -7,6 +7,7 @@
 #include "../subsystem3/ir_sensor.h"
 #include "../subsystem3/subsystem3.h"
 #include "builtin_calibration.h"
+#include "course_profile.h"
 #include <sys/sysdef.h>
 #if APP_S3_MOTION
 #define S3_COLLECTION_US (1000000U)
@@ -459,12 +460,15 @@ int32_t s3_integration_init(void)
         velocity_with_floor,        motion_request_manoeuvre, stop,
         motion_get_report,          motion_command_id,        motion_reset,
         motion_navigation_heartbeat};
+    const s3_drive_options_t options = s3_course_options();
     if (g_mutex > 0)
     {
         return E_OBJ;
     }
     cfg.acquisition.enabled_mask = S3_ALL_SENSORS;
-    if (!s3_drive_init(&g_drive, &cfg, &port))
+    s3_course_navigation(&cfg);
+    if (!s3_drive_init(&g_drive, &cfg, &port) ||
+        !s3_drive_set_options(&g_drive, &options))
     {
         return E_PAR;
     }

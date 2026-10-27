@@ -11,6 +11,13 @@ typedef struct
     uint32_t junction_us;
     uint32_t rearm_us;
     uint32_t max_gap_us;
+    /* false (default): original design, each sensor sits on one tape edge and
+     * "both white" means no line (lost after lost_us).
+     * true: the tape runs BETWEEN the two sensors. Both white is the normal,
+     * centred state, so the line is never reported lost while following;
+     * signal_floor is then a per-sensor "touching the tape" level. Steering
+     * error and junction detection are identical in both modes. */
+    bool between;
 } s3_line_config_t;
 typedef struct
 {
@@ -27,6 +34,7 @@ typedef struct
     bool lost_event;
     bool reacquired_event;
     bool junction_event;
+    bool touching; /* between mode: a sensor is at/above signal_floor */
 } s3_line_observation_t;
 typedef struct
 {

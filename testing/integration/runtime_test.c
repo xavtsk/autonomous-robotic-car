@@ -5,6 +5,11 @@
 #define APP_DIAGNOSTICS 0
 #define APP_TEST 0
 #define S3_BUILTIN_CALIBRATION 0 /* these tests start uncalibrated */
+/* Original Buddy 3 line/junction behaviour; the course profile (tape between
+ * the sensors, straight across unannounced crossings) is tested in course_test.c */
+#define S3_LINE_BETWEEN 0
+#define S3_CROSS_STRAIGHT 0
+#define S3_COURSE_PENDING_WAIT_US (5000000U)
 #include "controller_test_kernel.h"
 #include "../../app_program/controller/s3_integration.h"
 #include <assert.h>

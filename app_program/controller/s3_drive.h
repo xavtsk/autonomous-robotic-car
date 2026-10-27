@@ -47,6 +47,30 @@ typedef struct
     bool (*reset)(void);
     void (*heartbeat)(bool enabled);
 } s3_drive_port_t;
+/* Course behaviour. s3_drive_init() installs the defaults below, which keep
+ * the original Buddy 3 behaviour exactly; the integration profile overrides
+ * them with s3_drive_set_options(). */
+typedef struct
+{
+    /* Junction with no pending action, or a pending STRAIGHT: keep driving
+     * straight across instead of halting (default false = halt). */
+    bool cross_straight;
+    /* LEFT/RIGHT only: after braking at a junction, drive this far measured
+     * from where the junction was detected, so the pivot (axle centre) is
+     * over the crossing before the on-the-spot turn. Set to the sensor-to-axle
+     * distance + ~5 mm. 0 = turn where the car stopped (original). */
+    float turn_advance_m;
+    float advance_mps;
+    /* Drive a distance (Buddy 2 motion_request_drive); required only when
+     * turn_advance_m > 0. */
+    motion_result_t (*drive)(float meters, float speed_mps);
+    uint32_t pending_wait_us; /* barcode -> junction limit (default 5 s) */
+    /* After LEFT/RIGHT/U-TURN: a front sensor must have touched the tape at
+     * most this long before the turn finished, else the new line was not
+     * reached and the run halts with LINE_LOST. 0 = no check (original). */
+    uint32_t turn_line_window_us;
+} s3_drive_options_t;
+s3_drive_options_t s3_drive_default_options(void);
 typedef struct
 {
     s3_navigation_t navigation;
@@ -61,9 +85,17 @@ typedef struct
     uint8_t command_id, cancel_id;
     bool configured, waiting_stop;
     unsigned reset_result : 2;
+    s3_drive_options_t options;
+    double junction_m;        /* odometry when the junction was detected */
+    uint32_t touch_us;        /* last time a front sensor touched the tape */
+    s3_nav_action_t turn;     /* manoeuvre in progress */
+    bool advancing, touched;  /* advance leg running; touch_us is valid */
 } s3_drive_t;
 bool s3_drive_init(s3_drive_t *drive, const s3_navigation_config_t *config,
                    const s3_drive_port_t *port);
+/* Only while OFF/HALTED/FAULT. Rejects a nonzero advance without a drive
+ * port and invalid numbers; the previous options stay in force. */
+bool s3_drive_set_options(s3_drive_t *drive, const s3_drive_options_t *options);
 bool s3_drive_start(s3_drive_t *drive, uint32_t now);
 void s3_drive_stop(s3_drive_t *drive);
 /* True means accepted, not completed. Completion requires a NEW braked,

@@ -2,7 +2,7 @@
 s3_line_config_t s3_line_defaults(void)
 {
     return (s3_line_config_t){200U,   600U,    100000U, 30000U,
-                              30000U, 100000U, 30000U};
+                              30000U, 100000U, 30000U, false};
 }
 void s3_line_reset(s3_line_detector_t *detector)
 {
@@ -31,7 +31,8 @@ bool s3_line_init(s3_line_detector_t *detector, const s3_line_config_t *config)
         (config->lost_us >= 0x80000000U) ||
         (config->reacquire_us >= 0x80000000U) ||
         (config->junction_us >= 0x80000000U) ||
-        (config->rearm_us >= 0x80000000U))
+        (config->rearm_us >= 0x80000000U) ||
+        (config->between && (config->signal_floor > 1000U)))
     {
         return false;
     }
@@ -77,25 +78,38 @@ s3_line_observation_t s3_line_update(s3_line_detector_t *detector,
     detector->seen_sample = true;
     out.valid = true;
     out.error = (int16_t)(((int32_t)right_dark - (int32_t)left_dark) / 10);
-    signal =
-        ((uint32_t)left_dark + right_dark) >= detector->config.signal_floor;
     both_black = (left_dark >= detector->config.junction_dark) &&
                  (right_dark >= detector->config.junction_dark);
-    if (persisted(&detector->lost, !signal, timestamp_us,
-                  detector->config.lost_us) &&
-        !detector->loss_reported)
+    if (detector->config.between)
     {
-        detector->present = false;
-        out.lost_event = true;
-        detector->loss_reported = true;
-    }
-    if (persisted(&detector->acquired, signal, timestamp_us,
-                  detector->config.reacquire_us) &&
-        !detector->present)
-    {
+        /* The tape lies between the sensors: both white = centred. There is
+         * no "line lost" while following; a sensor touching the tape is
+         * steered away from by the unchanged error term below. */
+        out.touching = (left_dark >= detector->config.signal_floor) ||
+                       (right_dark >= detector->config.signal_floor);
+        signal = true;
         detector->present = true;
-        detector->loss_reported = false;
-        out.reacquired_event = true;
+    }
+    else
+    {
+        signal = ((uint32_t)left_dark + right_dark) >=
+                 detector->config.signal_floor;
+        if (persisted(&detector->lost, !signal, timestamp_us,
+                      detector->config.lost_us) &&
+            !detector->loss_reported)
+        {
+            detector->present = false;
+            out.lost_event = true;
+            detector->loss_reported = true;
+        }
+        if (persisted(&detector->acquired, signal, timestamp_us,
+                      detector->config.reacquire_us) &&
+            !detector->present)
+        {
+            detector->present = true;
+            detector->loss_reported = false;
+            out.reacquired_event = true;
+        }
     }
     if (persisted(&detector->junction, both_black, timestamp_us,
                   detector->config.junction_us) &&
