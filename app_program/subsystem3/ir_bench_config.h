@@ -1,6 +1,7 @@
 /* Development references only. Final height/material/lighting need calibration. */
 #ifndef BUDDY3_IR_BENCH_CONFIG_H
 #define BUDDY3_IR_BENCH_CONFIG_H
+#include "ir_acquisition.h"
 /* Build with IR_CHANNELS=3 for all three connected sensors. Check the GP28
  * battery-sensing jumper before wiring GP28. Disabled inputs are not read. */
 #ifndef APP_IR_CHANNELS
@@ -11,9 +12,10 @@
 #else
 #define IR_BENCH_ENABLED_MASK (1U)
 #endif
-#define IR_BENCH_BARCODE_CHANNEL (0U) /* GP26: Grove 6 WHITE wire -> AO */
-#define IR_BENCH_LEFT_CHANNEL    (1U) /* GP27 */
-#define IR_BENCH_RIGHT_CHANNEL   (2U) /* GP28 */
+/* Same physical mapping as the integrated controller (ir_acquisition.h). */
+#define IR_BENCH_BARCODE_CHANNEL S3_ADC_CHANNEL_BARCODE /* GP27 */
+#define IR_BENCH_LEFT_CHANNEL    S3_ADC_CHANNEL_LEFT    /* GP26 */
+#define IR_BENCH_RIGHT_CHANNEL   S3_ADC_CHANNEL_RIGHT   /* GP28 */
 #define IR_BENCH_WHITE_RAW    (150U)
 #define IR_BENCH_BLACK_RAW    (280U)
 #define IR_BENCH_LEFT_WHITE_RAW  (150U)

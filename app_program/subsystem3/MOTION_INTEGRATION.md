@@ -1,5 +1,22 @@
 # Buddy 2 + Buddy 3 integration
 
+26 October operator update: the reviewed version 2 patch now provides the
+GP20/GP21 calibration/START/STOP/RESET interface in S3_MOTION, and fixes actual
+runtime calibration initialization. The older statements below that the adapter
+is outstanding are superseded. USB remains output-only. See
+[the course quickstart](../../docs/COURSE_QUICKSTART_2026-10-26.md); physical
+course success and STOP timing are not established by the host tests.
+
+25 October team adaptation: `S3_MOTION=1` now also starts Buddy 1 and uses its
+atomically frozen pre-run map. `vehicle_controller.c` is a taskless telemetry/UI
+facade over this same motion/report owner, not a second controller. Shared
+request/status packets are now 11/146 bytes (27 October run-timing extension).
+See [current controller contract](../controller/README.md).
+The source and policy description below is the imported teammate handoff; its
+"only Buddy 2 and Buddy 3" and "no MQTT" statements no longer describe this
+branch's combined profile. A user-facing calibration/start adapter is still
+outstanding, and USB text still cannot control the robot.
+
 Updated against `origin/Buddy2` commit `a29f973` (22 October 2026). Its PIO
 encoders, calibrated constants, PID settings, packed formats and report queue are
 preserved. These upstream changes are included in the working tree; no branch
@@ -44,8 +61,8 @@ at build time. No firmware was flashed or motor operated during development.
 Development timeouts: pending direction 5 s, brake acknowledgement 500 ms,
 manoeuvre 10 s, post-manoeuvre line reacquisition 1 s. Distance rearming remains
 30 ms stable clear line + 20 mm net displacement. These policies/tunings need
-team and track validation. Sensor roles remain barcode GP26, left GP27, right
-GP28, which differs from the Week 6 L/C/R assignment. Check GP28's VBAT jumper.
+team and track validation. Sensor roles follow the car's Week 6 L/C/R wiring: left GP26, barcode GP27,
+right GP28 (`S3_ADC_CHANNEL_*` in `ir_acquisition.h`). Check GP28's VBAT jumper.
 
 ## Small Buddy 2 changes
 
@@ -150,7 +167,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-s3-motion.ps1
 
 Output: `build_make/mtk3pico_smp1_usb_cdc_s3_motion.uf2` (motor-capable after an
 explicit accepted start). The separate stationary build script remains
-`tools/build-ir-bench.ps1`; its default output ends `_ir_bench.uf2` (GP26 only).
+`tools/build-ir-bench.ps1`; its default output ends `_ir_bench.uf2` (barcode sensor only, GP27).
 Use `-Sensors 3` for `_ir_bench_3sensor.uf2` (GP26/GP27/GP28). Both are stationary,
 never call navigation START and never initialise motion. Neither script flashes.
 

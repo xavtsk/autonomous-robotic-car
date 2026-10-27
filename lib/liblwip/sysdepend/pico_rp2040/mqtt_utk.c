@@ -10,13 +10,16 @@
  *	polling that task already does for DHCP and TCP -- nothing extra runs
  *	on any other task or core.
  *
- *	This file does not include tk/tkernel.h or any pico-sdk/cyw43 header
- *	(unlike cyw43_utk.c and sys_arch.c), so it isn't subject to either
- *	file's size_t workaround -- tm/tmonitor.h alone is namespace-safe here.
+ *	The lwIP clock declaration needs lwip/sys.h. Keep the toolchain size_t
+ *	definition alongside the kernel's monitor types, as in sys_arch.c.
+ *	No kernel or GPIO work is done by publish callbacks.
  */
 
+#define PROHIBIT_DEF_SIZE_T
+#include <stddef.h>
 #include "lwip/apps/mqtt.h"
 #include "lwip/ip_addr.h"
+#include "lwip/sys.h"
 #include "lwip/timeouts.h"
 #include "wifi_secrets.h"
 #include "mqtt_utk.h"
@@ -25,14 +28,15 @@
 #define MQTT_UTK_HEARTBEAT_MS   5000
 #define MQTT_UTK_KEEPALIVE_S    60
 #define MQTT_UTK_RETRY_MS       3000
+#define MQTT_UTK_PUBLISH_GAP_MS    20U
+#define MQTT_UTK_PUBLISH_RETRY_MS 100U
+#define MQTT_UTK_COMMAND_TOPIC  "car/cmd/#"
 
 /* Inbound message staging. A publish arrives as one topic callback followed by
- * one or more data callbacks, so the topic has to be kept until the fragment
- * carrying MQTT_DATA_FLAG_LAST shows up. Both buffers are sized well past the
- * heartbeat this demo publishes; anything longer is truncated and flagged
- * rather than being allowed to run off the end. */
+ * one or more data callbacks. Preserve raw bytes, including zero. Reject the
+ * entire packet if its topic/length is oversized or fragments do not match. */
 #define MQTT_UTK_RX_TOPIC_MAX   64
-#define MQTT_UTK_RX_DATA_MAX    128
+#define MQTT_UTK_RX_DATA_MAX    MQTT_UTK_APP_PAYLOAD_MAX
 
 static mqtt_client_t	*client;
 static ip_addr_t	broker_addr;
@@ -42,8 +46,79 @@ static char		rx_topic[MQTT_UTK_RX_TOPIC_MAX];
 static UB		rx_data[MQTT_UTK_RX_DATA_MAX];
 static u16_t		rx_len;
 static u8_t		rx_truncated;
+static u16_t             rx_expected;
+
+/* A fixed, single-owner retry slot, not another queue or a larger lwIP pool.
+ * Retain the complete packet until its publish callback succeeds. At most one
+ * application publish is in flight, leaving request slots for subscriptions
+ * and heartbeat. The bounded application FIFO applies backpressure behind it.
+ * No blocking waits or extra timeout objects are needed. */
+static T_MQTT_UTK_APP_MSG pending;
+static u32_t last_publish_ms;
+static u16_t publish_wait_ms;
+static u8_t pending_valid, pending_inflight, pending_warned, publish_paced;
 
 static void heartbeat_timeout(void *arg);
+
+static void pace_publish(u16_t wait_ms)
+{
+	last_publish_ms = sys_now();
+	publish_wait_ms = wait_ms;
+	publish_paced = 1;
+}
+
+static void warn_pending(err_t result)
+{
+	if(!pending_warned) {
+		tm_printf((UB*)"mqtt: application publish delayed, err=%d; retaining packet\n",
+		          (int)result);
+		pending_warned = 1;
+	}
+}
+
+static void application_publish_done_cb(void *arg, err_t result)
+{
+	(void)arg;
+	pending_inflight = 0;
+	if(result == ERR_OK) {
+		pending_valid = 0;
+		pending_warned = 0;
+	} else {
+		/* A request timeout is not proof that the broker never received it.
+		 * Retry is at-least-once best effort; consumers must tolerate repeats. */
+		warn_pending(result);
+		pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+	}
+}
+
+__attribute__((weak)) int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out)
+{
+	(void)out;
+	return 0;
+}
+
+__attribute__((weak)) void mqtt_utk_app_receive(const char *topic,
+					 const unsigned char *payload,
+					 unsigned short payload_len)
+{
+	(void)topic;
+	(void)payload;
+	(void)payload_len;
+}
+
+__attribute__((weak)) unsigned short mqtt_utk_app_status(unsigned char *payload,
+                                                       unsigned short capacity)
+{
+	if (capacity < 2) return 0;
+	payload[0] = MQTT_UTK_APP_WIRE_VERSION; payload[1] = 1; /* alive, faults unknown */
+	return 2;
+}
+
+__attribute__((weak)) int mqtt_utk_app_link(int up)
+{
+	(void)up;
+	return 1;
+}
 
 /* mqtt.c NUL-terminates the topic before handing it over, but it is only
  * valid for the duration of this call -- copy it out. */
@@ -52,7 +127,6 @@ static void incoming_publish_cb(void *arg, const char *topic, u32_t tot_len)
 	u32_t	i;
 
 	(void)arg;
-	(void)tot_len;
 
 	for(i = 0; i < (MQTT_UTK_RX_TOPIC_MAX - 1) && topic[i] != '\0'; i++) {
 		rx_topic[i] = topic[i];
@@ -60,7 +134,8 @@ static void incoming_publish_cb(void *arg, const char *topic, u32_t tot_len)
 	rx_topic[i] = '\0';
 
 	rx_len = 0;
-	rx_truncated = 0;
+	rx_truncated = (topic[i] != '\0' || tot_len > MQTT_UTK_RX_DATA_MAX);
+	rx_expected = (tot_len <= MQTT_UTK_RX_DATA_MAX) ? (u16_t)tot_len : 0;
 }
 
 static void incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
@@ -70,20 +145,20 @@ static void incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
 	(void)arg;
 
 	for(i = 0; i < len; i++) {
-		if(rx_len < (MQTT_UTK_RX_DATA_MAX - 1)) {
-			/* The console is a terminal -- keep raw bytes from a
-			 * payload this demo did not publish from scrambling it. */
-			UB c = data[i];
-			rx_data[rx_len++] = (c >= 0x20 && c < 0x7f)? c: '.';
+		if(rx_len < MQTT_UTK_RX_DATA_MAX) {
+			rx_data[rx_len++] = data[i];
 		} else {
 			rx_truncated = 1;
 		}
 	}
 
 	if((flags & MQTT_DATA_FLAG_LAST) != 0) {
-		rx_data[rx_len] = '\0';
-		tm_printf((UB*)"mqtt: RX [%s] \"%s\"%s\n", rx_topic, rx_data,
-			  rx_truncated? " (truncated)": "");
+		if(rx_len != rx_expected) rx_truncated = 1;
+		tm_printf((UB*)"mqtt: RX [%s] %u binary bytes%s\n", rx_topic,
+		          (unsigned)rx_len, rx_truncated? " (rejected)": "");
+		if(!rx_truncated) {
+			mqtt_utk_app_receive(rx_topic, rx_data, rx_len);
+		}
 	}
 }
 
@@ -97,6 +172,17 @@ static void subscribe_done_cb(void *arg, err_t result)
 	}
 }
 
+static void command_subscribe_done_cb(void *arg, err_t result)
+{
+	(void)arg;
+	if(result == ERR_OK) {
+		tm_printf((UB*)"mqtt: subscribed to " MQTT_UTK_COMMAND_TOPIC "\n");
+	} else {
+		tm_printf((UB*)"mqtt: command subscribe failed, err=%d\n",
+			  (int)result);
+	}
+}
+
 static void publish_done_cb(void *arg, err_t result)
 {
 	(void)arg;
@@ -107,15 +193,14 @@ static void publish_done_cb(void *arg, err_t result)
 
 static void heartbeat_timeout(void *arg)
 {
-	static unsigned int	count = 0;
-	UB			payload[48];
-	int			len;
+	UB payload[MQTT_UTK_APP_PAYLOAD_MAX];
+	unsigned short len;
 
 	(void)arg;
 
 	if(mqtt_client_is_connected(client)) {
-		len = tm_sprintf(payload, (const UB*)"hb %u", count++);
-		tm_printf((UB*)"mqtt: TX [" MQTT_TOPIC "] \"%s\"\n", payload);
+		len = mqtt_utk_app_status(payload, sizeof(payload));
+		if (len > 0 && len <= sizeof(payload))
 		(void)mqtt_publish(client, MQTT_TOPIC, payload, (u16_t)len,
 				   0 /* qos */, 0 /* retain */,
 				   publish_done_cb, NULL);
@@ -147,6 +232,7 @@ static void connection_cb(mqtt_client_t *c, void *arg, mqtt_connection_status_t 
 		 * is allowed to reconnect. Leaving it set would wedge the client
 		 * permanently after the first disconnect. */
 		connecting = 0;
+		pending_inflight = 0;
 
 		tm_printf((UB*)"mqtt: connected to " MQTT_BROKER_IP "\n");
 
@@ -166,6 +252,13 @@ static void connection_cb(mqtt_client_t *c, void *arg, mqtt_connection_status_t 
 				  (int)err);
 		}
 
+		err = mqtt_subscribe(client, MQTT_UTK_COMMAND_TOPIC, 1 /* qos */,
+				     command_subscribe_done_cb, NULL);
+		if(err != ERR_OK) {
+			tm_printf((UB*)"mqtt: command mqtt_subscribe() failed, err=%d\n",
+				  (int)err);
+		}
+
 		/* Drop any chain left over from a previous connection before
 		 * arming a new one. Each reconnect would otherwise add another
 		 * self-perpetuating heartbeat, and every one of them holds a
@@ -173,13 +266,12 @@ static void connection_cb(mqtt_client_t *c, void *arg, mqtt_connection_status_t 
 		sys_untimeout(heartbeat_timeout, NULL);
 		sys_timeout(MQTT_UTK_HEARTBEAT_MS, heartbeat_timeout, NULL);
 	} else {
-		/* mqtt_client_connect() reconnects on its own for a dropped
-		 * keepalive; a rejected/never-established connection does not
-		 * retry itself, so do that here -- on a delay, so a broker
-		 * that keeps rejecting (e.g. bad client ID) can't turn this
-		 * into a tight reconnect loop. */
+		/* lwIP clears requests without completion callbacks on close.
+		 * Keep our application packet for the next connection and schedule
+		 * the existing connection retry without adding a publish timer. */
 		tm_printf((UB*)"mqtt: connection status %d, retrying in %ds\n",
 			  (int)status, MQTT_UTK_RETRY_MS / 1000);
+		pending_inflight = 0;
 		sys_timeout(MQTT_UTK_RETRY_MS, retry_timeout, NULL);
 	}
 }
@@ -216,5 +308,53 @@ void mqtt_utk_start(void)
 	if(err != ERR_OK) {
 		tm_printf((UB*)"mqtt: mqtt_client_connect() failed, err=%d\n", (int)err);
 		connecting = 0;
+	}
+}
+
+void mqtt_utk_poll(void)
+{
+	err_t err;
+
+	if(client == NULL || !mqtt_client_is_connected(client)) {
+		pending_inflight = 0;
+		return;
+	}
+	if(pending_inflight ||
+	   (publish_paced && (u32_t)(sys_now() - last_publish_ms) < publish_wait_ms)) {
+		return;
+	}
+
+	if(!pending_valid) {
+		if(!mqtt_utk_app_take(&pending)) return;
+		pending.topic[MQTT_UTK_APP_TOPIC_MAX - 1] = '\0';
+		if(pending.payload_len > MQTT_UTK_APP_PAYLOAD_MAX ||
+		   pending.topic[0] == '\0' || pending.qos > 2 || pending.retain > 1) {
+			tm_printf((UB*)"mqtt: invalid application packet discarded\n");
+			pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+			return;
+		}
+		pending_valid = 1;
+		pending_warned = 0;
+	}
+
+	/* Set state before calling lwIP; test ports may complete synchronously.
+	 * The next packet cannot overtake this one or consume another request slot. */
+	pending_inflight = 1;
+	pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+	err = mqtt_publish(client, pending.topic, pending.payload,
+	                   (u16_t)pending.payload_len, pending.qos, pending.retain,
+	                   application_publish_done_cb, NULL);
+	if(err != ERR_OK) {
+		pending_inflight = 0;
+		if(err == ERR_MEM || err == ERR_CONN) {
+			warn_pending(err);
+			pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+		} else {
+			/* Bad arguments cannot improve with a retry. Drop this one packet
+			 * explicitly, then allow the next FIFO item on a later poll. */
+			tm_printf((UB*)"mqtt: application packet discarded, err=%d\n", (int)err);
+			pending_valid = 0;
+			pending_warned = 0;
+		}
 	}
 }

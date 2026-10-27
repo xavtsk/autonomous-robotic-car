@@ -23,7 +23,7 @@ static bool config_valid(const s3_barcode_config_t *config)
 void s3_barcode_reset(s3_barcode_decoder_t *decoder)
 {
     if (decoder != 0) {
-        s3_barcode_config_t config=decoder->config;
+        s3_barcode_stored_config_t config=decoder->config;
         bool configured=decoder->configured;
         *decoder=(s3_barcode_decoder_t){0};
         decoder->config=config;
@@ -35,7 +35,8 @@ bool s3_barcode_init(s3_barcode_decoder_t *decoder, const s3_barcode_config_t *c
     if (decoder == 0) { return false; }
     *decoder=(s3_barcode_decoder_t){0};
     if (!config_valid(config)) { return false; }
-    decoder->config=*config;
+    decoder->config=(s3_barcode_stored_config_t){config->max_gap_us,
+        config->min_narrow_us,config->max_run_us,config->max_frame_us,config->quiet_modules};
     decoder->configured=true;
     return true;
 }
@@ -143,7 +144,10 @@ s3_barcode_status_t s3_barcode_update(s3_barcode_decoder_t *decoder,
     if(decoder->pending) {
         if(black) { seed(decoder,timestamp_us,black);return S3_BARCODE_REJECTED; }
         if(elapsed>=decoder->trailing_required_us) {
-            *result=decoder->candidate;result->timestamp_us=timestamp_us;
+            result->letter=decoder->candidate.letter_code == 0U ? 0 :
+                (char)('A'+decoder->candidate.letter_code-1U);
+            result->reversed=decoder->candidate.reversed;
+            result->timestamp_us=timestamp_us;
             decoder->collecting=false;decoder->pending=false;decoder->count=0U;
             return S3_BARCODE_DECODED;
         }
@@ -158,13 +162,19 @@ s3_barcode_status_t s3_barcode_update(s3_barcode_decoder_t *decoder,
             if(decoder->count==S3_BARCODE_RUNS) {
                 uint16_t pattern;
                 uint32_t narrow;
+                s3_barcode_result_t candidate;
+                const s3_barcode_config_t config={decoder->config.max_gap_us,
+                    decoder->config.min_narrow_us,decoder->config.max_run_us,
+                    decoder->config.max_frame_us,decoder->config.quiet_modules};
                 if(black || !s3_barcode_decode_runs(decoder->runs,decoder->count,
                     decoder->leading_us,0x7FFFFFFFU,decoder->observed_gap_us,
-                    &decoder->config,&decoder->candidate) ||
+                    &config,&candidate) ||
                     !character(&decoder->runs[20],decoder->observed_gap_us,
-                        &decoder->config,&pattern,&narrow)) {
+                        &config,&pattern,&narrow)) {
                     seed(decoder,timestamp_us,black);return S3_BARCODE_REJECTED;
                 }
+                decoder->candidate=(s3_barcode_stored_result_t){
+                    (uint8_t)(candidate.letter-'A'+1),candidate.reversed};
                 decoder->trailing_required_us=narrow*decoder->config.quiet_modules;
                 decoder->pending=true;
             }

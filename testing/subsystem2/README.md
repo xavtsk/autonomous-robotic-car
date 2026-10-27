@@ -3,6 +3,15 @@
 Test cases and results are in [TEST_LOG.md](TEST_LOG.md); saved console output,
 screenshots and data are in `logs/`.
 
+## Current Mac/Linux software checks (25 October integration)
+
+`make -C testing/subsystem2 test adapter regression sizes` runs current packed
+boundaries, the teammate's production feedback and Buddy 2/3 drive tests, team
+adapters and comparisons against imported `71193e2`. These mock hardware and
+do not replace the teammate's saved physical evidence or new tests on this car.
+The old GPIO-IRQ regression harness is historical; default tests no longer use it.
+See [integration review](../../docs/INTEGRATION_2026-10-25.md).
+
 ## Unit tests (S2-U01 to S2-U22)
 
 Automated in `app_program/subsystem2/subsystem2_test.c`.

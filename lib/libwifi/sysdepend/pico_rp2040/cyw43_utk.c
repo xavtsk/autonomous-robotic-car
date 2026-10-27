@@ -15,6 +15,7 @@
 #include "lwip/init.h"
 #include "lwip/timeouts.h"
 #include "lwip/netif.h"
+#include "wifi_retry_policy.h"
 #include "wifi_secrets.h"
 #if TM_MQTT
 #include "mqtt_utk.h"
@@ -31,12 +32,6 @@
 #include <tm/tmonitor.h>
 
 #define CYW43_POLL_MS        2
-
-/* An association can fail transiently -- a busy channel, a weak beacon, an AP
- * that drops the handshake under load. Without a retry the radio would sit in
- * CYW43_LINK_FAIL until the next power cycle, so re-issue the join on a fixed
- * backoff for as long as the link is down. */
-#define WIFI_REJOIN_DELAY_US (5 * 1000 * 1000ull)
 
 /* Overridable from the makefile if an AP needs something else. MIXED accepts
  * both TKIP and AES; the driver treats it the same as WPA2_AES_PSK for a
@@ -202,6 +197,13 @@ static int scan_result(void *env, const cyw43_ev_scan_result_t *result)
 
 void cyw43_utk_task(int32_t stacd, void *exinf)
 {
+#if TM_NET_LWIP
+    bool interface_up = false;
+    wifi_retry_policy_t retry;
+#endif
+#if TM_MQTT
+    int app_link_reported = -1;
+#endif
 #if !TM_NET_LWIP
     cyw43_wifi_scan_options_t options = {0};
     bool was_scanning;
@@ -233,6 +235,9 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
                   "firmware load to the CYW43439 did not succeed)\n");
         result = -CYW43_EIO;
     } else {
+#if TM_NET_LWIP
+        interface_up = true;
+#endif
         (void)cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA,
                                  radio_status.mac);
 #if TM_NET_LWIP
@@ -269,13 +274,22 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
     /* A failed bus has nothing useful to poll.  More importantly, repeatedly
      * waking a failed high-rate service must not interfere with USB or the
      * rest of the kernel qualification. */
-    if(result != 0) {
-        for(;;) (void)tk_dly_tsk(1000);
+    if(result != 0
+#if TM_NET_LWIP
+       && !interface_up
+#endif
+       ) {
+        for(;;) {
+#if TM_MQTT
+            if(app_link_reported != 0 && mqtt_utk_app_link(0)) app_link_reported = 0;
+#endif
+            (void)tk_dly_tsk(1000);
+        }
     }
 
 #if TM_NET_LWIP
     int32_t  prev_link_status = radio_status.link_status;
-    uint64_t rejoin_at = 0;
+    wifi_retry_init(&retry, time_us_64(), result);
 #endif
 
     for(;;) {
@@ -286,6 +300,8 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
         radio_status.link_status = cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA);
         if(radio_status.link_status == CYW43_LINK_UP) {
             radio_status.ip_addr = ip4_addr_get_u32(netif_ip4_addr(&cyw43_state.netif[CYW43_ITF_STA]));
+        } else {
+            radio_status.ip_addr = 0;
         }
         if(radio_status.link_status != prev_link_status) {
             prev_link_status = radio_status.link_status;
@@ -299,18 +315,28 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
                           link_status_str(radio_status.link_status),
                           (int)radio_status.link_status);
             }
-
-            /* Negative == the association attempt is over and lost. Arm a
-             * retry; a positive-but-not-UP status (JOIN/NOIP) is still making
-             * progress, so leave it alone and let DHCP finish. */
-            rejoin_at = (radio_status.link_status < 0)?
-                        time_us_64() + WIFI_REJOIN_DELAY_US: 0;
         }
 
-        if(rejoin_at != 0 && time_us_64() >= rejoin_at) {
-            rejoin_at = 0;
-            if(radio_status.link_status < 0) {
-                (void)wifi_try_join();
+        {
+            wifi_retry_action_t action = wifi_retry_observe(
+                &retry, time_us_64(), radio_status.link_status);
+            if(action == WIFI_RETRY_LEAVE) {
+                int32_t leave_result;
+                tm_printf((UB*)"wifi: no IP within %u ms; disconnecting, retry in %u ms\n",
+                          (unsigned)(WIFI_CONNECT_TIMEOUT_US / 1000ULL),
+                          (unsigned)(retry.delay_us / 1000U));
+                /* Official driver disassociation, on the existing radio owner
+                 * under its lock. Keep polling DHCP/radio during the backoff;
+                 * never sleep for the timeout or restart the whole stack. */
+                leave_result = cyw43_wifi_leave(&cyw43_state, CYW43_ITF_STA);
+                if(leave_result != 0) {
+                    tm_printf((UB*)"wifi: leave request rejected, err=%d; retry remains scheduled\n",
+                              (int)leave_result);
+                }
+            } else if(action == WIFI_RETRY_JOIN) {
+                result = wifi_try_join();
+                wifi_retry_join_result(&retry, time_us_64(), result);
+                radio_status.ready = (result == 0);
                 /* Force the next iteration to treat whatever comes back as a
                  * change, so the new outcome is always reported. Must be a
                  * value cyw43_tcpip_link_status() can never return (it yields
@@ -334,12 +360,19 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
 #if TM_NET_LWIP
         sys_check_timeouts();
 #if TM_MQTT
+        /* Outside the radio lock: the application takes its own short mutex.
+         * Retry after startup until its objects exist. */
+        {
+            int up = radio_status.link_status == CYW43_LINK_UP;
+            if(up != app_link_reported && mqtt_utk_app_link(up)) app_link_reported = up;
+        }
         /* mqtt_utk_start() is idempotent (see its own connecting/is_connected
          * guard), so calling it on every poll iteration once the link is up
          * is fine -- it only actually does anything on the first call, or
          * again after connection_cb() schedules a retry. */
         if(radio_status.link_status == CYW43_LINK_UP) {
             mqtt_utk_start();
+            mqtt_utk_poll();
         }
 #endif
 #endif

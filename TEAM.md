@@ -69,12 +69,12 @@ fixed.
 | GP17 | | |
 | GP18 | | |
 | GP19 | | |
-| GP20 | | |
-| GP21 | | |
+| GP20 | MOTION_SMOKE and S3_MOTION operator panel | Next calibration step / START (3 s countdown); hold 2 s = recalibrate; no automatic start |
+| GP21 | MOTION_SMOKE and S3_MOTION operator panel | Software STOP button; power switch remains the independent fallback |
 | GP22 | | |
-| GP26 | 3 | Offset/barcode IR analogue input, Grove 6 white wire, ADC0 (enabled by default; pin mapping verified against board labels) |
-| GP27 | 3 | Provisional left IR, ADC1; disabled by default |
-| GP28 | 3 | Provisional right IR, ADC2; check VBAT jumper before wiring; disabled by default |
+| GP26 | 3 | Front-LEFT line IR analogue input (AO), ADC0. Car wired to the Week 6 L/C/R layout; bench-confirmed 2026-10-26 |
+| GP27 | 3 | Right-offset BARCODE IR analogue input (AO), ADC1; bench-confirmed 2026-10-26 |
+| GP28 | 3 | Front-RIGHT line IR analogue input (AO), ADC2; check VBAT jumper; not yet bench-confirmed (signal wire was unplugged) |
 
 ## 3. Peripherals
 
@@ -111,7 +111,7 @@ the drivers have no locking to stop it.
 | I2C1 | | | |
 | SPI0 | | | |
 | SPI1 | | | |
-| ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP26 barcode; GP27 left/GP28 right disabled in default bench; enabled with IR_CHANNELS=3 or explicit integrated profile |
+| ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP27 barcode only in default bench; GP26 left/GP28 right enabled with IR_CHANNELS=3 or the integrated profile. Mapping: `S3_ADC_CHANNEL_*` in `ir_acquisition.h` |
 | PWM slices (list) | | | |
 | WiFi radio, TCP/IP, MQTT | *kernel* | `cyw43_utk_task` (built in) | GP23–25, GP29 |
 
@@ -147,15 +147,32 @@ change it only by team agreement. Write down every task you create.
 
 | Subsystem | Priority band | Tasks (name – priority – core) |
 |---|---|---|
-| 1 | 12–13 | No tasks yet |
-| 2 | 14–15 | No tasks yet |
+| 1 | Command service 22 | `buddy1-cmd` - 22 - core 0; radio/lwIP/MQTT remain on kernel task 4 |
+| 2 | 14–15 | motion task - 14 - core 0; 10 ms cyclic; sole motor writer |
 | 3 | 16–17 | `ir-sample` - 16 - core 0; `ir-report` - 17 - core 0; bench with `IR_BENCH=1`; alternatively `s3-motion`/`s3-status` at the same priorities/core with `S3_MOTION=1` |
 | 4 | 18–19 | No tasks yet |
 | 5 | 20–21 | No tasks yet |
+| Controller operator panel | 24 | `operator` - 24 - core 0; `S3_MOTION=1` only; polls GP20/GP21 every 10 ms; talks only to `s3_integration` |
 
 Core: `TP_PRC1` = core 0, `TP_PRC2` = core 1, or "any".
 
+The optional diagnostics reporter runs in the initial task lowered to priority
+23; it adds one mutex. The old priority-15 Vehicle Controller task is not started:
+`s3-motion` is the sole navigation/motion-request/report owner in the integrated
+profile. Application tasks retain 2048-byte stacks; runtime high-water marks and
+radio-induced latency still require on-car measurements.
+
 ## 5. Interfaces between subsystems
+
+Current integration, 25 October 2026: Buddy 1's binary v2 service is connected
+to the single `s3_integration`/`s3_drive` controller through the taskless
+`vehicle_controller` facade. Its pre-run A=forward/B=left/C=right/D=U-turn map
+(or a validated remote replacement) is atomically frozen/copied on explicit
+start. The standalone sensor default mapping below is not authoritative at
+team start. Runtime requests/status use 11/146-byte explicit packets under
+the existing snapshot mutex. The older two-buddy-only description below is
+the imported handoff history; see `docs/INTEGRATION_2026-10-25.md` for current
+ownership, tests and open issues. No Buddy 4/5 arbitration is enabled.
 
 Every arrow between two subsystems is listed here. The **provider** creates
 the kernel object and publishes its ID in its own `subsystemN.h`; the **user** only
@@ -164,30 +181,22 @@ sends to it or waits on it. Agree on the data format before coding.
 | ID | From → To | Mechanism | Object ID name | Data / meaning | Agreed by |
 |---|---|---|---|---|---|
 
-Buddy 3 now exposes a **proposed, software-tested** context API in
-`app_program/subsystem3/line_navigation.h`; see `INTEGRATION.md` in that folder.
-It emits observations, speed proposals in m/s and one-shot navigation events.
-The host suite uses a simulated consumer. The optional `S3_MOTION=1` profile now connects a two-buddy controller adapter
-to Buddy 2; see `subsystem3/MOTION_INTEGRATION.md`. This is not full-team
-arbitration. Buddy 2 should review the feedback/lease API additions before merge. A=left, B=right,
-C=straight, D=U-turn is a replaceable development mapping. The inactive-only
-26-entry update API is the FR11 receiving boundary; MQTT delivery is not connected.
-The adapter must provide timestamped signed centre distance plus a reset epoch,
-apply explicit per-sensor calibration/start controls, and translate the latched
-`stop_requested` into Buddy 2 braking. The opt-in adapter now makes those calls; the portable navigation core does not.
+Buddy 3's pure context API in `app_program/subsystem3/line_navigation.h` emits
+observations, steering proposals in m/s and edge events. The controller supplies
+source-timestamped signed centre distance and reset epochs, serialises accepted
+calibration/start controls and turns persistent stop requests into Buddy 2
+braking. The sensing core calls no motors. Future Buddy 4/5 arbitration must
+extend this same owner, not add competing motion callers/report consumers.
 
-The temporary controller now lives in `app_program/controller/`, outside Buddy
-3's sensing modules. It consumes Buddy 2's command-ID report queue exclusively;
-the future Vehicle Controller replaces this owner and forwards motion odometry
-to Buddy 3. Buddy 1's old draft is not integrated. Upstream Buddy 2 `a29f973` uses
-PIO0 SM0/SM1 for encoders and retains its measured settings. The local additions
-retain source timestamps/reset epochs, accumulate wrap-safe centre displacement,
-expose report loss and preserve the opt-in navigation lease. Review these API
-extensions with Buddy 2; its packed status format is unchanged. See
-`app_program/controller/README.md` for the handoff.
+Upstream Buddy 2 `a29f973` uses PIO0 SM0/SM1 for encoders and retains its
+measured settings. Imported `71193e2` adds timestamp/epoch feedback, wrap-safe
+centre displacement, report loss and the opt-in navigation lease. Buddy 1's
+v2 telemetry range is narrower; the adapter invalidates out-of-range speeds.
+See `app_program/controller/README.md` for the current handoff.
 
-Week 6 assigns GP26/27/28 to L/C/R. Buddy 3 currently proposes offset barcode/front
-left/front right on those pins instead. Team agreement is still required. The
+Week 6 assigns GP26/27/28 to L/C/R and the car is wired that way: GP26 front-left,
+GP27 the right-offset barcode sensor (formerly "C"), GP28 front-right. The code
+follows the wiring via `S3_ADC_CHANNEL_*` in `ir_acquisition.h` (2026-10-26). The
 bench's 10 ms target also differs from Week 6's 5 ms Line+Barcode schedule; no
 shared tick or priority changes are made here. See the handoff traceability table
 for scheduling, mapping delivery, distance tuning and fault-to-brake decisions.
@@ -206,12 +215,12 @@ does not create another flag. The kernel has its own usage.
 
 | Object | Limit | S1 | S2 | S3 | S4 | S5 |
 |---|---|---|---|---|---|---|
-| Task | 32 | 0 | 1 | 2 in either opt-in S3 profile | 0 | 0 |
+| Task | 32 | 1 | 1 | 2 in either opt-in S3 profile | 0 | 0 |
 | Semaphore | 16 | 0 | 0 | 0 | 0 | 0 |
 | Event flag | 16 | 0 | 0 | 0 | 0 | 0 |
 | Mailbox | 12 | 0 | 0 | 0 | 0 | 0 |
-| Mutex | 12 | 0 | 1 | 1 in either opt-in S3 profile | 0 | 0 |
-| Message buffer | 12 | 0 | 1 (8 packed completion reports) | 0 | 0 | 0 |
+| Mutex | 12 | 1 | 1 | 1 in either opt-in S3 profile | 0 | 0 |
+| Message buffer | 12 | 2 (4 outbox / 2 commands) | 1 (8 packed completion reports) | 0 | 0 | 0 |
 | Fixed memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
 | Variable memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
 | Cyclic handler | 12 | 0 | 1 | 1 in either opt-in S3 profile | 0 | 0 |

@@ -20,11 +20,21 @@ typedef struct
     uint16_t black_limit; /* Enter BLACK at/above this; must exceed white_limit. */
 } ir_calibration_t;
 
+/* Validated retained values only. The public input above stays wide so an
+ * invalid 4096 cannot truncate into an apparently valid ADC zero. */
+typedef struct __attribute__((packed))
+{
+    uint32_t white_raw : 12;
+    uint32_t black_raw : 12;
+    uint32_t white_limit : 10;
+    uint32_t black_limit : 10;
+} ir_stored_calibration_t;
+
 typedef struct
 {
-    ir_calibration_t calibration;
-    ir_surface_t surface;
-    bool configured;
+    ir_stored_calibration_t calibration;
+    uint8_t surface : 2;
+    uint8_t configured : 1;
 } ir_reflectance_t;
 
 /* One state object per sensor, owned by the sampling task. Either ADC polarity

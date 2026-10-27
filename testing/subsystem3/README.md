@@ -1,5 +1,12 @@
 # Buddy 3 stationary diagnostics and software tests
 
+25 October team integration: `S3_MOTION=1` now also starts Buddy 1 and mirrors
+telemetry through a taskless facade, while preserving this runtime's single
+motion/report owner. Mac/Linux: `make -C testing/subsystem3 test codec drive
+feedback regression sizes`; `make sanitize` adds memory/undefined-behaviour
+checks. [Current review](../../docs/INTEGRATION_2026-10-25.md) supersedes older
+two-buddy-only and representation-size descriptions below.
+
 The core software is implemented and host-tested. The new firmware has **not**
 been flashed or validated on the car. Use the isolated bench UF2 for stationary
 checks; the normal firmware retains Buddy 2's existing motion startup.

@@ -4,7 +4,7 @@
 #include <sys/sysdef.h>
 #include "../monotonic_clock.h"
 static ID g_h_adc;
-static s3_acquisition_config_t g_config;
+static s3_acquisition_stored_config_t g_config;
 int32_t ir_sensor_init(const s3_acquisition_config_t *config)
 {
     unsigned int i;
@@ -32,7 +32,8 @@ int32_t ir_sensor_init(const s3_acquisition_config_t *config)
             clr_w(GPIO(pin), GPIO_IE | GPIO_PUE | GPIO_PDE);
         }
     }
-    g_config = *config;
+    g_config = (s3_acquisition_stored_config_t){config->channel[0], config->channel[1],
+        config->channel[2], config->enabled_mask};
     g_h_adc = handle;
     return (int32_t)E_OK;
 }
@@ -70,7 +71,8 @@ int32_t ir_sensor_read_frame(s3_sensor_frame_t *frame)
     {
         return (int32_t)E_OBJ;
     }
-    return s3_acquisition_capture(&g_config, read_channel, clock_us, 0, frame)
+    const s3_acquisition_config_t config = s3_acquisition_expand(&g_config);
+    return s3_acquisition_capture(&config, read_channel, clock_us, 0, frame)
                ? (int32_t)E_OK
                : (int32_t)E_PAR;
 }

@@ -1,0 +1,70 @@
+Protocol v2 host checks, 2026-10-23. No hardware or broker connection.
+Command: make -C testing/subsystem1 test
+
+mkdir -p ../../build/buddy1
+cc -DAPP_H -DAPP_TEST=1 -DTM_MQTT=1 -include host_kernel.h -I. -Ifakes -I../../app_program/subsystem1 -I../../lib/liblwip/sysdepend/pico_rp2040 -std=c11 -Wall -Wextra -Werror -O2 -g -pthread host_test.c ../../app_program/subsystem1/telemetry_codec.c ../../app_program/subsystem1/subsystem1.c ../../app_program/subsystem1/command.c ../../app_program/subsystem1/mqtt_bridge.c ../../app_program/subsystem1/subsystem1_test.c ../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c -o ../../build/buddy1/host_test
+python3 test_laptop_codec.py
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.139s
+
+OK
+[TEST] S1-B01 PASS  outgoing slot is 17 bytes; command slot is 5 bytes
+[TEST] S1-B02 PASS  signed wheel values enter and leave the copied FIFO
+[TEST] S1-B03 PASS  motion binary payload keeps wheel direction
+[TEST] S1-B04 PASS  protected packed cache returns the reported values
+[TEST] S1-B05 PASS  overflow rejected before cache update
+[TEST] S1-B06 PASS  2 mm/s steps round away from zero at half steps
+[TEST] S1-B07 PASS  embedded zero bytes survive queue copy
+[TEST] S1-B08 PASS  truncated and oversized binary packets rejected
+[TEST] S1-B09 PASS  unknown protocol version rejected
+[TEST] S1-B10 PASS  nonzero padding bits rejected
+[TEST] S1-B11 PASS  20-bit pre-run mapping is parsed and applied
+[TEST] S1-B12 PASS  duplicate letters rejected without changing active map
+[TEST] S1-B13 PASS  lowercase mapping rejected
+[TEST] S1-B14 PASS  barcode and action share eight body bits
+[TEST] S1-B15 PASS  invalid barcode rejected
+[TEST] S1-B16 PASS  valid zero height differs from unavailable height
+[TEST] S1-B17 PASS  unconfirmed Buddy 4 range retains existing integer precision
+[TEST] S1-B18 PASS  heading uses nine bits and checks limits
+[TEST] S1-B19 PASS  obstacle fields preserve existing range
+[TEST] S1-B20 PASS  reserved obstacle route rejected
+[TEST] S1-B21 PASS  eight valid robot states use three bits
+[TEST] S1-B22 PASS  separate fault updates preserve both bits
+[TEST] S1-B23 PASS  Wi-Fi recovery clears only its owned fault bit
+[TEST] S1-B24 PASS  invalid fault-mask updates rejected
+[TEST] S1-B35 PASS  IR fault uses bit five without erasing the motor fault
+[TEST] S1-B36 PASS  IR recovery clears only its owned bit
+[TEST] S1-B37 PASS  six-bit mask rejects the first reserved bit
+[TEST] S1-B25 PASS  all seven sections fit a 16-byte snapshot
+[TEST] S1-B26 PASS  invalidation preserves neighbouring packed fields
+[TEST] S1-B27 PASS  full four-slot outbox rejects live message but retains latest value
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B29 PASS  only four messages remained after overflow
+[TEST] S1-B30 PASS  incoming command buffer is bounded to two messages
+[TEST] S1-B31 PASS  bad command lengths and remote movement rejected
+[TEST] S1-B32 PASS  snapshot command produces the binary summary
+[TEST] S1-B33 PASS  valid setup command produces a compact success reply
+[TEST] S1-B34 PASS  configuration freezes before run; existing map remains usable
+[TEST] subsystem1-binary SUMMARY 40 passed, 0 failed
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: RX [car/cmd/barcode_map] 4 binary bytes
+mqtt: RX [car/cmd/snapshot] 1 binary bytes
+mqtt: RX [car/cmd/snapshot] 1 binary bytes (rejected)
+mqtt: RX [car/cmd/barcode_map] 4 binary bytes (rejected)
+mqtt: RX [car/cmd/snapshot/this/topic/is/intentionally/far/too/long/to/be] 1 binary bytes (rejected)
+VECTOR car/telemetry/motion 023c7602
+VECTOR car/telemetry/barcode 0256
+VECTOR car/telemetry/hump 0202002d00
+VECTOR car/telemetry/heading 026701
+VECTOR car/telemetry/obstacle 02b4008c0001
+VECTOR car/telemetry/state 0201
+VECTOR car/telemetry/faults 0231
+VECTOR car/reply/snapshot 027f1e3bad04005a00ced20230029418
+VECTOR car/status 02c7
+HOST PASS: binary FIFO, full speed range, 64 fault masks, eight concurrent producers, real MQTT callbacks and bridge

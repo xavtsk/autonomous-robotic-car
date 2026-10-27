@@ -13,6 +13,10 @@ static bool feedback_fresh(const s3_drive_t *d, uint32_t now)
 static void halt(s3_drive_t *d, s3_drive_state_t state,
                  s3_drive_reason_t reason)
 {
+    if (d->reset_result == S3_RESET_PENDING)
+    {
+        d->reset_result = S3_RESET_FAILED;
+    }
     d->port.stop();
     d->port.heartbeat(false);
     (void)s3_navigation_end_run(
@@ -81,32 +85,57 @@ void s3_drive_stop(s3_drive_t *d)
 }
 bool s3_drive_reset(s3_drive_t *d, uint32_t now)
 {
-    if ((d == 0) || !d->configured || (d->state != S3_DRIVE_FAULT))
+    if ((d == 0) || !d->configured || (d->state != S3_DRIVE_FAULT) ||
+        (d->reset_result == S3_RESET_PENDING))
     {
         return false;
     }
     d->port.stop();
     d->port.heartbeat(false);
-    if (!d->port.reset() || !feedback_fresh(d, now) ||
+    d->reset_result = S3_RESET_FAILED;
+    if (!d->port.reset())
+    {
+        return false;
+    }
+    /* Buddy 2 resets its controller synchronously but publishes feedback on
+     * its next control tick. The cached snapshot is therefore pre-reset;
+     * checking it here incorrectly required a second button press. */
+    d->reset_us = now;
+    d->reset_result = S3_RESET_PENDING;
+    return true;
+}
+s3_reset_result_t s3_drive_reset_result(const s3_drive_t *d)
+{
+    return d ? (s3_reset_result_t)d->reset_result : S3_RESET_FAILED;
+}
+static void finish_reset(s3_drive_t *d, uint32_t now)
+{
+    if ((uint32_t)(now - d->reset_us) >= S3_RESET_WAIT_US)
+    {
+        d->reset_result = S3_RESET_FAILED;
+        return;
+    }
+    if (!feedback_fresh(d, now) ||
+        ((int32_t)(d->feedback.timestamp_us - d->reset_us) <= 0) ||
         (d->feedback.state != MOTION_IDLE) ||
         (d->feedback.fault != MOTION_FAULT_NONE) || !d->feedback.braked)
     {
-        return false;
+        return;
     }
-    if (d->navigation.lifecycle == S3_RUN_FAULT_LATCHED)
+    if ((d->navigation.lifecycle == S3_RUN_FAULT_LATCHED) &&
+        !s3_navigation_reset_fault(&d->navigation, now))
     {
-        if (!s3_navigation_reset_fault(&d->navigation, now))
-        {
-            return false;
-        }
+        return;
     }
     if (s3_navigation_readiness(&d->navigation, now) != 0U)
     {
-        return false;
+        return;
     }
     d->state = S3_DRIVE_OFF;
     d->reason = S3_DRIVE_OK;
-    return true;
+    d->output.lifecycle = d->navigation.lifecycle;
+    d->output.stop_requested = false;
+    d->reset_result = S3_RESET_OK;
 }
 static bool request_turn(s3_drive_t *d)
 {
@@ -314,6 +343,13 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
     {
         halt(d, S3_DRIVE_FAULT, S3_DRIVE_BAD_INPUT);
         return false;
+    }
+    if (d->reset_result == S3_RESET_PENDING)
+    {
+        finish_reset(d, now);
+        /* Still disarmed whether the reset completed, is waiting, or timed
+         * out. Never let a fault reset fall through to a driving action. */
+        return true;
     }
     running = (d->state >= S3_DRIVE_FOLLOW) && (d->state <= S3_DRIVE_REACQUIRE);
     if (d->output.stop_requested)

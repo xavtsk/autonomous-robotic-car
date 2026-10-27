@@ -1,0 +1,15 @@
+mkdir -p ../../build/network_wifi
+cc -Ifakes -I../../lib/libwifi/sysdepend/pico_rp2040 -DCNF_SMP=1 -DTM_NET_LWIP=1 -DTM_MQTT=1 -std=c11 -Wall -Wextra -Werror -O2 -g policy_test.c -o ../../build/network_wifi/policy_test
+../../build/network_wifi/policy_test
+PASS: Wi-Fi policy: 20 s deadline, transition stability, failure/backoff cap, recovery/reset, 64-bit wrap
+cc -Ifakes -I../../lib/libwifi/sysdepend/pico_rp2040 -DCNF_SMP=1 -DTM_NET_LWIP=1 -DTM_MQTT=1 -std=c11 -Wall -Wextra -Werror -O2 -g runtime_test.c ../../lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c -o ../../build/network_wifi/runtime_test
+../../build/network_wifi/runtime_test
+PASS: production Wi-Fi task: success, stuck JOIN/NOIP, rejected join/leave, DOWN recovery, backoff, late UP, bus failure, owner lock and nonblocking polling
+/Applications/Xcode.app/Contents/Developer/usr/bin/make test CFLAGS='-std=c11 -Wall -Wextra -Werror -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'
+mkdir -p ../../build/network_wifi
+cc -Ifakes -I../../lib/libwifi/sysdepend/pico_rp2040 -DCNF_SMP=1 -DTM_NET_LWIP=1 -DTM_MQTT=1 -std=c11 -Wall -Wextra -Werror -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer policy_test.c -o ../../build/network_wifi/policy_test
+../../build/network_wifi/policy_test
+PASS: Wi-Fi policy: 20 s deadline, transition stability, failure/backoff cap, recovery/reset, 64-bit wrap
+cc -Ifakes -I../../lib/libwifi/sysdepend/pico_rp2040 -DCNF_SMP=1 -DTM_NET_LWIP=1 -DTM_MQTT=1 -std=c11 -Wall -Wextra -Werror -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer runtime_test.c ../../lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c -o ../../build/network_wifi/runtime_test
+../../build/network_wifi/runtime_test
+PASS: production Wi-Fi task: success, stuck JOIN/NOIP, rejected join/leave, DOWN recovery, backoff, late UP, bus failure, owner lock and nonblocking polling

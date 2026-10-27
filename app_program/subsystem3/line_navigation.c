@@ -4,7 +4,8 @@ s3_navigation_config_t s3_navigation_defaults(void)
 {
     s3_navigation_config_t cfg = {0};
     unsigned int i;
-    cfg.acquisition = (s3_acquisition_config_t){{0U, 1U, 2U}, 1U};
+    cfg.acquisition = (s3_acquisition_config_t){
+        {S3_ADC_CHANNEL_BARCODE, S3_ADC_CHANNEL_LEFT, S3_ADC_CHANNEL_RIGHT}, 1U};
     for (i = 0U; i < S3_SENSOR_COUNT; i++)
     {
         cfg.calibration[i] = (ir_calibration_t){150U, 280U, 400U, 600U};

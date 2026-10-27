@@ -29,7 +29,9 @@ bool ir_reflectance_init(ir_reflectance_t *p_sensor,
     {
         return false;
     }
-    p_sensor->calibration = *p_calibration;
+    p_sensor->calibration = (ir_stored_calibration_t){
+        p_calibration->white_raw, p_calibration->black_raw,
+        p_calibration->white_limit, p_calibration->black_limit};
     p_sensor->configured = true;
     return true;
 }

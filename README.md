@@ -1,20 +1,36 @@
 # Autonomous Robotic Car
 
+Latest software update: [27 October robustness fixes and hardware retest checklist](docs/SOFTWARE_FIXES_2026-10-27.md).
+This supersedes older packet sizes/timing labels; no full-course success is claimed.
+
 INF2004 university project for Raspberry Pi Pico W + Cytron Robo Pico, developed
 by five Buddies in C with micro T-Kernel 3.0.
 
 This repository uses the structure and RTOS foundation from
 [sirfonzie/INF2004_ProjectTemplate](https://github.com/sirfonzie/INF2004_ProjectTemplate).
 The original car module scaffolding is preserved inside the subsystem folders.
-This branch includes Buddy 2's motion implementation and Buddy 3's software-tested
-sensor processing, line observations, proportional steering proposals, provisional
-Code 39 decoder and navigation events. The Vehicle Controller integration and
-real-track navigation validation are still pending.
+This integration branch combines Buddy 1's telemetry/MQTT service, Buddy 2's
+motion implementation and Buddy 3's sensor/navigation implementation. A minimal
+Vehicle Controller uses the teammate's single `s3_drive`/`s3_integration` owner
+and reports state through Buddy 1. Navigation requires the explicit
+`S3_MOTION=1` build and accepted calibration/local start controls. The default
+profile does not run navigation. Real-track validation is still pending.
+See [25 October integration review](docs/INTEGRATION_2026-10-25.md) for the imported
+revisions, compatibility decisions, current tests and remaining hardware gaps.
 
 For stationary sensor diagnostics, use the dedicated `IR_BENCH=1` build:
 [Buddy 3 setup](testing/subsystem3/README.md). It starts only Buddy 3's sampling
 and reporting tasks, with GP26 enabled by default, and skips motor startup.
 See the [team-interface handoff](app_program/subsystem3/INTEGRATION.md).
+
+For the first hardware session, start with the
+[test-session guide](testing/diagnostics/ROBOT_TEST_SESSION.md). It covers safe
+firmware selection, laptop USB log capture and a fill-in notes template.
+`DIAGNOSTICS=1 TEST=0 IR_BENCH=0` enables optional low-rate motion/IR timing and
+encoder observations in a separately named `_diag` image. It does not start
+driving or change motion algorithms, periods or existing motion/sensor/network
+priorities. The reused initial task becomes the optional reporter at priority 23. Default
+`DIAGNOSTICS=0` builds retain no diagnostic state or code.
 
 ## Subsystem ownership
 
@@ -35,6 +51,7 @@ in [TEAM.md](TEAM.md) before implementing each subsystem.
 app_program/
   app_main.c             # usermain(): initialize all subsystems, then start them
   app.h                  # Shared RTOS definitions and lifecycle declarations
+  controller/            # Robot-level FSM and cross-subsystem coordination
   system_config.h        # Original shared configuration placeholder
   subsystem1/            # Buddy 1 sources, headers and lifecycle hooks
   subsystem2/            # Buddy 2 sources, headers and lifecycle hooks
@@ -81,9 +98,15 @@ application tests off. Output:
 build_make/mtk3pico_smp1_usb_cdc_wifi.uf2
 ```
 
-The radio driver is platform infrastructure; Buddy 1's application communication
-logic is still unimplemented. TCP/IP and MQTT are optional upstream features,
-not enabled by the default build. Never commit `config/wifi_secrets.h`.
+The radio driver is platform infrastructure. Buddy 1 adds its application outbox,
+snapshot, commands and MQTT bridge on top of that service. TCP/IP and MQTT are
+not enabled by the default build and need a private `config/wifi_secrets.h`.
+Never commit that file.
+
+Buddy 1's Tribunal 1 update uses compact binary telemetry and commands.
+See its [learning/read order](app_program/subsystem1/README.md),
+[binary MQTT contract](app_program/subsystem1/MQTT_PROTOCOL.md), and
+[tests and memory evidence](testing/subsystem1/EVIDENCE.md).
 
 To compile the test hooks:
 
@@ -105,8 +128,10 @@ not been flashed or verified on hardware as part of this structure migration.
 - Keep each Buddy's implementation and drivers inside its subsystem folder.
 - `subsystemN_init()` creates kernel objects; `subsystemN_start()` starts tasks
   only after every subsystem has completed initialization.
-- Buddy 2 owns motion startup and processing. Buddy 3's normal navigation
-  lifecycle declarations remain proposals; only its IR bench task is implemented.
+- Buddy 2 owns motion hardware and processing. The Vehicle Controller is the only
+  application component that requests motion. In `S3_MOTION=1`, Buddy 3's ADC,
+  navigation processing and controller run in one 10 ms owner task. The
+  `vehicle_controller` facade adds no second task or completion consumer.
 - Use the RTOS/BSP APIs provided by the template. Standalone Pico SDK `main()`,
   runtime initialization and CMake code are not drop-in replacements here.
 - Follow Barr C style for new application code; preserve upstream notices.

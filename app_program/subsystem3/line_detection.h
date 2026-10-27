@@ -14,7 +14,7 @@ typedef struct
 } s3_line_config_t;
 typedef struct
 {
-    bool active;
+    uint8_t active : 1;
     uint32_t since_us;
 } s3_persistence_t;
 typedef struct
@@ -33,7 +33,11 @@ typedef struct
     s3_line_config_t config;
     s3_persistence_t lost, acquired, junction, clear;
     uint32_t last_us;
-    bool configured, seen_sample, present, junction_latched, loss_reported;
+    uint8_t configured : 1;
+    uint8_t seen_sample : 1;
+    uint8_t present : 1;
+    uint8_t junction_latched : 1;
+    uint8_t loss_reported : 1;
 } s3_line_detector_t;
 s3_line_config_t s3_line_defaults(void);
 bool s3_line_init(s3_line_detector_t *detector, const s3_line_config_t *config);

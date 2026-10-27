@@ -110,21 +110,29 @@ typedef struct
     s3_line_detector_t line;
     s3_barcode_decoder_t barcode;
     uint32_t last_us, sensor_last_us[S3_SENSOR_COUNT];
-    uint8_t seen_sensors;
-    s3_processing_mode_t mode;
-    bool configured, seen_frame;
-    s3_run_state_t lifecycle;
-    uint8_t accepted_calibration, valid_sensors;
-    uint32_t current_faults, latched_faults;
+    uint16_t seen_sensors : 3;
+    uint16_t mode : 1;
+    uint16_t configured : 1;
+    uint16_t seen_frame : 1;
+    uint16_t lifecycle : 2;
+    uint16_t accepted_calibration : 3;
+    uint16_t valid_sensors : 3;
+    uint8_t current_faults : 4;
+    uint8_t latched_faults : 4;
     s3_odometry_sample_t odometry;
-    bool odometry_available, seen_odometry, healthy_tracking;
+    uint8_t odometry_available : 1;
+    uint8_t seen_odometry : 1;
+    uint8_t healthy_tracking : 1;
     uint32_t healthy_since_us;
-    bool rearming, rearm_anchor_valid, rearm_stable;
+    uint8_t rearming : 1;
+    uint8_t rearm_anchor_valid : 1;
+    uint8_t rearm_stable : 1;
     double rearm_anchor_m;
     uint32_t rearm_epoch, rearm_since_us;
     s3_capture_distance_t capture_distance;
 } s3_navigation_t;
-/* GP26 barcode enabled only. Left GP27/right GP28 require explicit enablement.
+/* Barcode input only enabled (pins: S3_ADC_CHANNEL_* in ir_acquisition.h).
+ * Left/right require explicit enablement.
  * References and algorithm settings are development defaults, not validation.
  */
 s3_navigation_config_t s3_navigation_defaults(void);

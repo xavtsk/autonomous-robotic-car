@@ -123,6 +123,41 @@ endif
 S3_MOTION_SUFFIX := _s3_motion
 endif
 
+# Optional observation only: no motion requests or automatic run start.
+# Existing initial task becomes a low-priority 1 Hz reporter. Keep separate
+# from self-tests/calibration and the already-isolated IR bench profile.
+DIAGNOSTICS ?= 0
+ifneq ($(filter $(DIAGNOSTICS),0 1),$(DIAGNOSTICS))
+$(error Unknown DIAGNOSTICS '$(DIAGNOSTICS)'; use 0 or 1)
+endif
+ifeq ($(DIAGNOSTICS),1)
+ifneq ($(TEST),0)
+$(error DIAGNOSTICS=1 requires TEST=0; self-tests/calibration are a separate profile)
+endif
+ifneq ($(IR_BENCH),0)
+$(error DIAGNOSTICS=1 requires IR_BENCH=0; use the existing IR bench reporter instead)
+endif
+DIAGNOSTICS_SUFFIX := _diag
+endif
+
+# Explicitly armed, one-shot Buddy 2 hardware check; never a normal startup.
+MOTION_SMOKE ?= 0
+ifneq ($(filter $(MOTION_SMOKE),0 1),$(MOTION_SMOKE))
+$(error Unknown MOTION_SMOKE '$(MOTION_SMOKE)'; use 0 or 1)
+endif
+ifeq ($(MOTION_SMOKE),1)
+ifneq ($(S3_MOTION),0)
+$(error MOTION_SMOKE=1 requires S3_MOTION=0; only one motion owner is permitted)
+endif
+ifneq ($(TEST)$(IR_BENCH)$(DIAGNOSTICS),000)
+$(error MOTION_SMOKE=1 requires TEST=0 IR_BENCH=0 DIAGNOSTICS=0)
+endif
+ifneq ($(WIFI)$(NET)$(MQTT),nonenone0)
+$(error MOTION_SMOKE=1 requires WIFI=none NET=none MQTT=0)
+endif
+MOTION_SMOKE_SUFFIX := _motion_smoke
+endif
+
 # CRASH_REPORT=1 also copies every console line to UART0 on GP0 (TX) /
 # GP1 (RX), 115200 8N1.  UART output is sent immediately, so it still shows
 # the last messages and the kernel's crash report after a crash, when the
@@ -148,7 +183,7 @@ endif
 # a live hazard: an SMP=1 build was once flashed in place of an SMP=0 one and
 # only the banner in the log revealed it.
 #
-EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)
+EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)
 
 GCC := arm-none-eabi-gcc
 AS := arm-none-eabi-gcc
@@ -210,6 +245,8 @@ ASFLAGS += -DCNF_SMP=1
 endif
 CFLAGS  += -DAPP_TEST=$(TEST)
 CFLAGS  += -DAPP_IR_BENCH=$(IR_BENCH) -DAPP_S3_MOTION=$(S3_MOTION) -DAPP_IR_CHANNELS=$(IR_CHANNELS)
+CFLAGS  += -DAPP_DIAGNOSTICS=$(DIAGNOSTICS)
+CFLAGS  += -DAPP_MOTION_SMOKE=$(MOTION_SMOKE)
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)
 CFLAGS  += -DBOARD_UART0_FREE=1
@@ -242,7 +279,7 @@ endif
 # before any recipe executes.
 ################################################################################
 
-PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)
+PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)
 PROFILE_FILE := .build_profile
 
 ifneq ($(strip $(shell cat $(PROFILE_FILE) 2>/dev/null)),$(PROFILE_ID))

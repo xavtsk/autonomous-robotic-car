@@ -1,11 +1,11 @@
 #ifndef BUDDY3_IR_CALIBRATION_H
 #define BUDDY3_IR_CALIBRATION_H
 #include "ir_reflectance.h"
-typedef struct {
-    uint32_t count;
-    uint32_t sum; /* Bounded to 65535 samples; 12-bit sums fit. */
-    uint16_t minimum;
-    uint16_t maximum;
+typedef struct __attribute__((packed)) {
+    uint32_t count : 16;
+    uint32_t sum : 28; /* max 65535 * 4095 = 268365825 */
+    uint32_t minimum : 12;
+    uint32_t maximum : 12;
 } s3_calibration_range_t;
 typedef struct {
     s3_calibration_range_t white;

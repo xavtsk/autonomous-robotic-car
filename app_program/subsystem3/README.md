@@ -23,7 +23,9 @@ stationary `IR_BENCH` remains separate. Full-team arbitration is not implemented
 
 ## Development configuration
 
-Default roles are barcode=GP26/ADC0, left=GP27/ADC1, right=GP28/ADC2. Only
+Roles follow the car's wiring (Week 6 L/C/R layout): left=GP26/ADC0,
+barcode=GP27/ADC1, right=GP28/ADC2, set once by `S3_ADC_CHANNEL_*` in
+`ir_acquisition.h`. Only
 barcode is enabled in the default bench. Build with `tools/build-ir-bench.ps1
 -Sensors 3` (or Make `IR_CHANNELS=3`) for three connected sensors. GP28's Robo Pico battery-sensing jumper must be checked before connecting
 that input. Do not read GP29, which belongs to the Pico W radio.

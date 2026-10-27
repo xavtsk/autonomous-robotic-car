@@ -1,8 +1,9 @@
 #ifndef S3_INTEGRATION_H
 #define S3_INTEGRATION_H
-/* Temporary controller runtime. A future controller must replace this sole
- * motion/report owner, not run alongside it. */
+/* Sole controller runtime for the explicit Buddies 1-3 integration profile.
+ * Future integration must replace/extend this owner, not run alongside it. */
 #include "s3_drive.h"
+#include "run_timing.h"
 typedef enum
 {
     S3_CONTROL_WHITE,
@@ -25,7 +26,8 @@ typedef struct
     motion_feedback_t motion;
     s3_drive_state_t state;
     s3_drive_reason_t reason;
-    uint32_t samples, max_gap_us, over_5ms, command_sequence;
+    uint32_t samples, max_gap_us, above_target, command_sequence;
+    s3_run_timing_t run_timing; /* resets at accepted START; freezes at STOP/halt */
     bool command_ok, collecting;
     s3_sensor_id_t calibration_sensor;
     s3_calibration_summary_t white, black;

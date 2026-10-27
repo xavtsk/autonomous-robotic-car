@@ -8,7 +8,7 @@
 #include <assert.h>
 #include <stdio.h>
 static uint32_t now, lease_stamp, epoch = 1U;
-static bool lease, reject_velocity, reject_turn;
+static bool lease, reject_velocity, reject_turn, reject_reset;
 static unsigned int polls, turns, velocities, stops;
 static uint32_t report_losses;
 static manoeuvre_t last_turn;
@@ -95,7 +95,10 @@ static bool receive(motion_report_t *report)
     }
     return true;
 }
-static bool reset(void) { return motion_controller_reset(); }
+static bool reset(void)
+{
+    return !reject_reset && motion_controller_reset();
+}
 static void heartbeat(bool enabled)
 {
     lease = enabled;
@@ -159,6 +162,7 @@ static void init(bool calibrated)
     epoch = 1U;
     reject_velocity = false;
     reject_turn = false;
+    reject_reset = false;
     turns = polls = velocities = stops = 0U;
     counts[0] = counts[1] = 0;
     duty[0] = duty[1] = 0;
@@ -272,10 +276,11 @@ static void test_faults_and_stops(void)
     assert(drive.state == S3_DRIVE_FAULT && !lease && stops > 0U);
     tick(150U, 202U, 202U, true);
     assert(duty[0] == 0.0f && duty[1] == 0.0f);
-    assert(!s3_drive_reset(&drive, now));
-    hold(30U, 150U, 202U, 202U);
     assert(s3_drive_reset(&drive, now));
-    assert(drive.state == S3_DRIVE_OFF);
+    assert(s3_drive_reset_result(&drive) == S3_RESET_PENDING);
+    hold(30U, 150U, 202U, 202U);
+    assert(s3_drive_reset_result(&drive) == S3_RESET_OK &&
+           drive.state == S3_DRIVE_OFF);
     start();
     epoch++;
     tick(150U, 202U, 202U, true);
@@ -323,12 +328,108 @@ static void test_faults_and_stops(void)
     {
         tick(150U, 202U, 202U, true);
     }
-    assert(!s3_drive_reset(&drive,
-                           now)); /* Snapshot still faulted; B2 reset first. */
-    tick(150U, 202U, 202U, true);
+    /* Exactly one RESET: Buddy 2 changes state now, but the controller keeps
+     * its cached fault until the next published feedback. No second press. */
+    assert(drive.feedback.fault != MOTION_FAULT_NONE);
     assert(s3_drive_reset(&drive, now));
+    assert(motion_controller_state() == MOTION_IDLE);
+    assert(drive.state == S3_DRIVE_FAULT &&
+           s3_drive_reset_result(&drive) == S3_RESET_PENDING);
+    tick(150U, 202U, 202U, true);
+    assert(drive.state == S3_DRIVE_OFF &&
+           s3_drive_reset_result(&drive) == S3_RESET_OK);
+    assert(!lease && duty[0] == 0.0f && duty[1] == 0.0f);
     assert(!motion_lease_expired(true, 0x10U, 0xfffffff0U));
     assert(motion_lease_expired(true, 40000U, 0xfffffff0U));
+}
+/* Deliver a synthetic feedback snapshot without advancing the motion owner.
+ * This specifically tests slow/stale publication and unhealthy replies; the
+ * normal tick() above exercises the REAL Buddy 2 controller reset path. */
+static void reset_observation(motion_feedback_t feedback)
+{
+    s3_sensor_frame_t frame = {0};
+    now += 10000U;
+    frame.timestamp_us = now;
+    for (unsigned int i = 0; i < S3_SENSOR_COUNT; i++)
+    {
+        frame.sensor[i] = (s3_raw_sample_t){now, i ? 202U : 150U,
+                                           0, true, true};
+    }
+    assert(s3_drive_process(&drive, &frame, &feedback));
+}
+static void test_reset_acknowledgement(void)
+{
+    motion_feedback_t feedback;
+    unsigned int before;
+    /* Stale, unbraked, still-faulted and invalid snapshots cannot acknowledge
+     * a reset. Each attempt terminates within the bounded 500 ms wait. */
+    for (unsigned int scenario = 0U; scenario < 4U; scenario++)
+    {
+        init(true);
+        drive.state = S3_DRIVE_FAULT;
+        assert(s3_drive_reset(&drive, now));
+        assert(!s3_drive_reset(&drive, now)); /* no second reset in flight */
+        assert(!s3_drive_start(&drive, now));
+        feedback = drive.feedback;
+        before = velocities;
+        for (unsigned int i = 0U; i < S3_RESET_WAIT_US / 10000U; i++)
+        {
+            if (scenario != 0U)
+            {
+                feedback.timestamp_us = now + 10000U;
+            }
+            if (scenario == 1U)
+            {
+                feedback.braked = false;
+            }
+            else if (scenario == 2U)
+            {
+                feedback.state = MOTION_FAULT;
+                feedback.fault = MOTION_FAULT_STALL;
+            }
+            else if (scenario == 3U)
+            {
+                feedback.valid = false;
+            }
+            reset_observation(feedback);
+            assert(drive.state == S3_DRIVE_FAULT);
+        }
+        assert(s3_drive_reset_result(&drive) == S3_RESET_FAILED && !lease);
+        assert(velocities == before && turns == 0U);
+    }
+    /* A port rejection stays faulted and is reported immediately. */
+    init(true);
+    drive.state = S3_DRIVE_FAULT;
+    reject_reset = true;
+    assert(!s3_drive_reset(&drive, now));
+    assert(s3_drive_reset_result(&drive) == S3_RESET_FAILED);
+    assert(drive.state == S3_DRIVE_FAULT && !lease);
+    /* STOP wins over a reset awaiting new feedback; a later healthy snapshot
+     * cannot finish the cancelled attempt or start either motor. */
+    reject_reset = false;
+    assert(s3_drive_reset(&drive, now));
+    s3_drive_stop(&drive);
+    assert(s3_drive_reset_result(&drive) == S3_RESET_FAILED);
+    hold(30U, 150U, 202U, 202U);
+    assert(drive.state == S3_DRIVE_FAULT && velocities == 0U && !lease);
+    /* It is safe to explicitly request RESET again after cancellation. */
+    assert(s3_drive_reset(&drive, now));
+    tick(150U, 202U, 202U, true);
+    assert(s3_drive_reset_result(&drive) == S3_RESET_OK &&
+           drive.state == S3_DRIVE_OFF && velocities == 0U && !lease);
+    /* Persistent sensor failure may not be cleared by a healthy motor reset. */
+    init(true);
+    start();
+    tick(150U, 202U, 202U, false);
+    assert(s3_drive_reset(&drive, now));
+    before = velocities;
+    for (unsigned int i = 0U; i < S3_RESET_WAIT_US / 10000U; i++)
+    {
+        tick(150U, 202U, 202U, false);
+    }
+    assert(s3_drive_reset_result(&drive) == S3_RESET_FAILED &&
+           drive.state == S3_DRIVE_FAULT && velocities == before && !lease);
+    assert(s3_drive_reset_result(0) == S3_RESET_FAILED);
 }
 static void test_mapping_and_expiry(void)
 {
@@ -462,6 +563,7 @@ int main(void)
 {
     test_turn_cycle();
     test_faults_and_stops();
+    test_reset_acknowledgement();
     test_mapping_and_expiry();
     test_new_motion_contract();
     puts("PASS: real Buddy 2 controller/PID + Buddy 3 navigation bridge; "

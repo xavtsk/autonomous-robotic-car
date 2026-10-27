@@ -10,6 +10,7 @@
 
 #include "subsystem2.h"
 #include "motion.h"
+#include "../diagnostics/robot_diagnostics.h"
 
 static ID g_task_id = 0;
 static ID g_cycle_id = 0;
@@ -32,7 +33,14 @@ static void subsystem2_task(INT stacd, void *p_exinf)
     for (;;)
     {
         (void)tk_slp_tsk(TMO_FEVR);
+#if APP_DIAGNOSTICS
+        uint32_t started_us = robot_diagnostics_now_us();
+#endif
         motion_process();
+#if APP_DIAGNOSTICS
+        robot_diagnostics_record(ROBOT_DIAG_MOTION, started_us,
+                                 robot_diagnostics_now_us());
+#endif
     }
 }
 

@@ -3,20 +3,21 @@
 #include "ir_sensor.h"
 #include "line_navigation.h"
 #include "ir_bench_config.h"
+#include "navigation_codec.h"
 #include "../controller/s3_integration.h"
 
 #if APP_IR_BENCH
 typedef struct
 {
-    s3_sensor_frame_t frame;
-    s3_navigation_output_t output;
+    s3_raw_frame_packet_t frame;
+    s3_navigation_packet_t output;
     uint32_t samples, max_gap_us, over_5ms, diagnostic_barcodes, adc_errors,
         rejects, timing_errors, overflows;
     uint32_t event_count[5];
-    s3_barcode_result_t last_barcode;
-    s3_nav_action_t last_action;
+    s3_barcode_packet_t last_barcode;
+    unsigned int last_action : 3;
     int32_t status;
-    bool ready;
+    unsigned int ready : 1;
 } s3_bench_snapshot_t;
 static ID g_sample_task, g_report_task, g_cycle, g_mutex;
 static s3_navigation_config_t g_config;
@@ -36,6 +37,9 @@ static void ir_sample_task(INT stacd, void *unused)
     /* Static working buffers keep the sampling task's stack bounded. */
     static s3_sensor_frame_t frame;
     static s3_navigation_output_t output;
+    static s3_navigation_packet_t packed_output;
+    static s3_raw_frame_packet_t packed_frame;
+    static s3_barcode_packet_t packed_barcode;
     int32_t status;
     unsigned int i;
     (void)stacd;
@@ -57,6 +61,12 @@ static void ir_sample_task(INT stacd, void *unused)
             if (read_status == E_OK)
             {
                 (void)s3_navigation_process(&g_navigation, &frame, 0, &output);
+                if (!s3_navigation_pack(&output, &packed_output) ||
+                    !s3_raw_frame_pack(&frame, &packed_frame) ||
+                    !s3_barcode_pack(&output.barcode, &packed_barcode))
+                {
+                    read_status = E_PAR; /* Never publish truncated sensor data. */
+                }
             }
             /* No ADC read, processing or console output while holding lock. */
             if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
@@ -64,8 +74,8 @@ static void ir_sample_task(INT stacd, void *unused)
                 g_published.status = read_status;
                 if (read_status == E_OK)
                 {
-                    g_published.frame = frame;
-                    g_published.output = output;
+                    g_published.frame = packed_frame;
+                    g_published.output = packed_output;
                     g_published.samples++;
                     if (output.sample_gap_us > 5000U)
                     {
@@ -95,7 +105,7 @@ static void ir_sample_task(INT stacd, void *unused)
                         {
                             g_published.diagnostic_barcodes++;
                         }
-                        g_published.last_barcode = output.barcode;
+                        g_published.last_barcode = packed_barcode;
                         g_published.last_action = output.action;
                     }
                     if (output.barcode_status == S3_BARCODE_REJECTED)
@@ -127,6 +137,9 @@ static void ir_sample_task(INT stacd, void *unused)
 static void ir_report_task(INT stacd, void *unused)
 {
     static s3_bench_snapshot_t snapshot; /* Reporter owns its private copy. */
+    static s3_sensor_frame_t frame;
+    static s3_navigation_output_t output;
+    static s3_barcode_result_t last_barcode;
     static const char *const names[S3_SENSOR_COUNT] = {"barcode", "left",
                                                        "right"};
     unsigned int i;
@@ -141,7 +154,10 @@ static void ir_report_task(INT stacd, void *unused)
         }
         snapshot = g_published;
         (void)tk_unl_mtx(g_mutex);
-        if (!snapshot.ready)
+        if (!snapshot.ready ||
+            !s3_navigation_unpack(&snapshot.output, &output) ||
+            !s3_raw_frame_unpack(&snapshot.frame, &frame) ||
+            !s3_barcode_unpack(&snapshot.last_barcode, &last_barcode))
         {
             continue;
         }
@@ -149,27 +165,27 @@ static void ir_report_task(INT stacd, void *unused)
                         "samples=%u gap=%uus max=%uus target=%ums\n",
                   (unsigned)g_config.acquisition.enabled_mask,
                   (int)snapshot.status, (unsigned)snapshot.samples,
-                  (unsigned)snapshot.output.sample_gap_us,
+                  (unsigned)output.sample_gap_us,
                   (unsigned)snapshot.max_gap_us, (unsigned)IR_BENCH_SAMPLE_MS);
         tm_printf((UB *)"  run=%s readiness=0x%x accepted_cal=0x%x odometry=%u "
                         "rearming=%u stop_requested=%u faults=0x%x\n",
-                  snapshot.output.lifecycle == S3_RUN_ACTIVE
+                  output.lifecycle == S3_RUN_ACTIVE
                       ? "ACTIVE"
-                      : (snapshot.output.lifecycle == S3_RUN_FAULT_LATCHED
+                      : (output.lifecycle == S3_RUN_FAULT_LATCHED
                              ? "FAULT-LATCHED"
                              : "INACTIVE"),
-                  (unsigned)snapshot.output.readiness_blockers,
-                  (unsigned)snapshot.output.accepted_calibration,
-                  (unsigned)snapshot.output.odometry_available,
-                  (unsigned)snapshot.output.rearming,
-                  (unsigned)snapshot.output.stop_requested,
-                  (unsigned)snapshot.output.latched_faults);
+                  (unsigned)output.readiness_blockers,
+                  (unsigned)output.accepted_calibration,
+                  (unsigned)output.odometry_available,
+                  (unsigned)output.rearming,
+                  (unsigned)output.stop_requested,
+                  (unsigned)output.latched_faults);
         tm_printf((UB *)"  readiness bits: 1=channels 2=calibration 4=sensors "
                         "8=odometry 16=fault; gaps>5ms=%u "
                         "diagnostic_letters=%u actionable_steering=%u\n",
                   (unsigned)snapshot.over_5ms,
                   (unsigned)snapshot.diagnostic_barcodes,
-                  (unsigned)snapshot.output.steering.valid);
+                  (unsigned)output.steering.valid);
         for (i = 0U; i < S3_SENSOR_COUNT; i++)
         {
             if ((g_config.acquisition.enabled_mask & S3_SENSOR_BIT(i)) == 0U)
@@ -183,26 +199,26 @@ static void ir_report_task(INT stacd, void *unused)
                                 "%s white=%u black=%u adc_error=%d\n",
                           names[i],
                           (unsigned)(26U + g_config.acquisition.channel[i]),
-                          (unsigned)snapshot.output.sensor[i].valid,
-                          (unsigned)snapshot.frame.sensor[i].raw,
-                          (unsigned)snapshot.output.sensor[i].darkness,
-                          s3_surface_name(snapshot.output.sensor[i].surface),
+                          (unsigned)output.sensor[i].valid,
+                          (unsigned)frame.sensor[i].raw,
+                          (unsigned)output.sensor[i].darkness,
+                          s3_surface_name(output.sensor[i].surface),
                           (unsigned)g_config.calibration[i].white_raw,
                           (unsigned)g_config.calibration[i].black_raw,
-                          (int)snapshot.frame.sensor[i].error);
+                          (int)frame.sensor[i].error);
             }
         }
         /* Integer mm/s formatting avoids printf float support; API uses m/s. */
         tm_printf(
             (UB *)"  line valid=%u present=%u error=%d junction_candidate=%u "
                   "preview_valid=%u L=%d R=%d mm/s DIAGNOSTIC PREVIEW ONLY\n",
-            (unsigned)snapshot.output.line.valid,
-            (unsigned)snapshot.output.line.present,
-            (int)snapshot.output.line.error,
-            (unsigned)snapshot.output.line.junction_candidate,
-            (unsigned)snapshot.output.steering_preview.valid,
-            (int)(snapshot.output.steering_preview.left_mps * 1000.0f),
-            (int)(snapshot.output.steering_preview.right_mps * 1000.0f));
+            (unsigned)output.line.valid,
+            (unsigned)output.line.present,
+            (int)output.line.error,
+            (unsigned)output.line.junction_candidate,
+            (unsigned)output.steering_preview.valid,
+            (int)(output.steering_preview.left_mps * 1000.0f),
+            (int)(output.steering_preview.right_mps * 1000.0f));
         tm_printf((UB *)"  events(total) barcode=%u junction=%u lost=%u "
                         "reacquired=%u fault=%u; last=%c %s action=%s\n",
                   (unsigned)snapshot.event_count[0],
@@ -210,16 +226,16 @@ static void ir_report_task(INT stacd, void *unused)
                   (unsigned)snapshot.event_count[2],
                   (unsigned)snapshot.event_count[3],
                   (unsigned)snapshot.event_count[4],
-                  snapshot.last_barcode.letter ? snapshot.last_barcode.letter
+                  last_barcode.letter ? last_barcode.letter
                                                : '-',
-                  snapshot.last_barcode.reversed ? "reverse" : "forward",
+                  last_barcode.reversed ? "reverse" : "forward",
                   s3_action_name(snapshot.last_action));
         tm_printf((UB *)"  ADC errors=%u barcode rejects=%u timing=%u "
                         "overflow=%u fault_mask=%u\n",
                   (unsigned)snapshot.adc_errors, (unsigned)snapshot.rejects,
                   (unsigned)snapshot.timing_errors,
                   (unsigned)snapshot.overflows,
-                  (unsigned)snapshot.output.fault_mask);
+                  (unsigned)output.fault_mask);
     }
 }
 static void bench_cleanup(void)
@@ -282,6 +298,17 @@ ER subsystem3_init(void)
         return E_PAR;
     }
     g_published = (s3_bench_snapshot_t){0};
+    {
+        const s3_navigation_output_t initial = {0};
+        const s3_sensor_frame_t initial_frame = {0};
+        const s3_barcode_result_t initial_barcode = {0};
+        if (!s3_navigation_pack(&initial, &g_published.output) ||
+            !s3_raw_frame_pack(&initial_frame, &g_published.frame) ||
+            !s3_barcode_pack(&initial_barcode, &g_published.last_barcode))
+        {
+            return E_PAR;
+        }
+    }
     mutex.mtxatr = TA_INHERIT;
     g_mutex = tk_cre_mtx(&mutex);
     if (g_mutex < E_OK)

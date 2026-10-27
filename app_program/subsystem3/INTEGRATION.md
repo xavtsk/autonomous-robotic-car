@@ -197,13 +197,13 @@ The submitted PDF is unchanged.
 | CALIBRATE then TRACK/start gate | Implemented within Buddy 3 | All three accepted calibrations and fresh odometry required; calibration UI/storage not supplied |
 | Encoder-distance capture input and REARM | Implemented within Buddy 3 | Distance metadata and net-clearance gate; element widths still use time; tune 30 ms/20 mm physically |
 | Line-loss / manoeuvre suppression | Implemented within Buddy 3 | Independent front-line events; controller still owns recovery and turns |
-| FR11 pre-run mapping | Receiving interface implemented within Buddy 3 | MQTT transport, parsing and remote validation await Buddy 1/controller integration |
+| FR11 pre-run mapping | Connected in the team S3_MOTION profile | Buddy 1 validates four distinct letters; controller atomically freezes/copies map at explicit start; broker/hardware validation outstanding |
 | SENSOR FAULT / explicit reset | Implemented within Buddy 3 | Persistent request only; adapter now forwards stop and adds a motion-owner lease; physical latency unmeasured |
 | NFR6 safe braking within control period | Awaiting integration | Adapter calls stop; detection, command acceptance and physical stop latency unmeasured |
 | NFR3 Line+Barcode 5 ms | Awaiting scheduling/integration | Bench target remains 10 ms; unchanged kernel tick; diagnostics count actual gaps over 5 ms |
 | NFR2 priorities / full-system concurrency | Awaiting integration | Bench sampler 16, reporter 17; existing kernel Wi-Fi priority 4; validate full-system priority/timing with team |
 | NFR4 C conventions | Applied to touched code | Explicit braces, four-space indentation, bounded storage and namespaced APIs; no repository-wide Barr compliance claim |
-| Shared Vehicle Controller, network non-blocking behaviour | Awaiting integration | Two-buddy controller slice only; no MQTT/obstacle/full-team controller |
+| Shared Vehicle Controller, network non-blocking behaviour | Buddies 1-3 connected in opt-in profile | Single sampling/controller owner and Buddy 1 bounded outbox; no obstacle/full-team arbitration; on-car timing outstanding |
 
 Default normal firmware does not acquire new sensors or start navigation.
 The separate S3_MOTION profile starts sensing and motion tasks but stays disarmed. The bench keeps
