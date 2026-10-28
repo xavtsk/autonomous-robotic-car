@@ -32,6 +32,9 @@ IMPORT ER buddy1_report_barcode(UB decoded_letter);
 IMPORT ER buddy1_report_hump(UH hump_count, UH height_mm);
 IMPORT ER buddy1_report_heading(H heading_deg);
 IMPORT ER buddy1_report_obstacle(UH distance_mm, UH width_mm, BUDDY1_OBSTACLE_ROUTE route);
+/* Live route pose: distance since START modulo 4096 cm, heading 0-359 deg
+ * since START (+ anticlockwise). Not cached in the snapshot. */
+IMPORT ER buddy1_report_pose(UH distance_cm_mod, H heading_deg);
 IMPORT ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state);
 /* Central protected telemetry fault mirror. Each caller updates only its
  * owned bits; active is a subset of changed. Task context only. Controller

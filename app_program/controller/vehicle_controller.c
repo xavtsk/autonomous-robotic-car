@@ -11,6 +11,14 @@
 #endif
 
 static unsigned telemetry_divider;
+/* Route pose (car/telemetry/pose): Buddy 2's encoder distance/heading relative
+ * to the start of the current run. Only the sampling owner touches it. */
+#define POSE_PERIOD_CYCLES 20U /* 10 ms cycles -> 5 Hz, same as motion */
+static struct {
+    bool running;
+    float start_distance_m, start_heading_deg;
+    unsigned divider;
+} pose;
 static BUDDY1_ROBOT_STATE last_state;
 static BUDDY1_BARCODE_ACTION last_action;
 static unsigned last_faults;
@@ -52,9 +60,51 @@ static BUDDY1_ROBOT_STATE wire_state(s3_drive_state_t state)
     }
     return BUDDY1_STATE_LINE_FOLLOWING;
 }
+static bool run_active(s3_drive_state_t state)
+{
+    return state == S3_DRIVE_FOLLOW || state == S3_DRIVE_BRAKING ||
+           state == S3_DRIVE_MANOEUVRE || state == S3_DRIVE_REACQUIRE;
+}
+static int32_t round_to_int(float x) { return (int32_t)(x >= 0.0f ? x + 0.5f : x - 0.5f); }
+static void send_pose(const motion_status_t *m)
+{
+    int32_t cm = round_to_int((m->distance_m - pose.start_distance_m) * 100.0f);
+    int32_t deg = round_to_int(m->heading_deg - pose.start_heading_deg);
+    cm %= (int32_t)BUDDY1_POSE_DISTANCE_MOD;
+    if (cm < 0) cm += (int32_t)BUDDY1_POSE_DISTANCE_MOD;
+    deg %= 360;
+    if (deg < 0) deg += 360;
+    /* QoS 0 live data: a full outbox drops this sample; the next one,
+     * 200 ms later, carries the current pose (the laptop unwraps distance). */
+    (void)buddy1_report_pose((UH)cm, (H)deg);
+}
+/* One pose at START (0, 0), then every 200 ms while the run is active, and a
+ * final one when it ends. Skipped while Buddy 2's estimate is unusable. */
+static void pose_report(const s3_integration_status_t *status)
+{
+    motion_status_t m;
+    const bool active = run_active(status->state);
+    const bool usable = motion_get_status(&m) && m.b_valid && !m.b_busy &&
+                        m.distance_m == m.distance_m && m.heading_deg == m.heading_deg;
+    if (active && !pose.running) {
+        if (!usable) return; /* start reference needs a valid estimate */
+        pose.running = true; pose.divider = 0U;
+        pose.start_distance_m = m.distance_m; pose.start_heading_deg = m.heading_deg;
+        send_pose(&m);
+    } else if (active) {
+        if (++pose.divider >= POSE_PERIOD_CYCLES) {
+            pose.divider = 0U;
+            if (usable) send_pose(&m);
+        }
+    } else if (pose.running) {
+        pose.running = false;
+        if (usable) send_pose(&m);
+    }
+}
 ER vehicle_controller_init(void)
 {
     terrain_control_init();
+    pose.running = false; pose.divider = 0U;
     telemetry_divider = 0U; last_state = BUDDY1_STATE_UNKNOWN;
     last_action = BUDDY1_ACTION_UNKNOWN; last_faults = 0U; faults_seen = false;
     start_claimed_map = false;
@@ -163,6 +213,7 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
         if (error==E_OK || error==E_TMOUT) { last_faults=active; faults_seen=true; }
     }
     state=wire_state(status->state);
+    pose_report(status);
 #if APP_S5
     {
         s5_observation_t obstacle;

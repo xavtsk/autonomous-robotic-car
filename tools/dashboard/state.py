@@ -10,6 +10,9 @@ from buddy1_mqtt_codec import NAMES, WIDTHS, VERSION, decode, encode_map
 from .ir_protocol import IRBuffer, IR_TOPIC, decode_ir, encode_ir
 from .control_protocol import TOPIC as CONTROL_TOPIC, decode_control, encode_control
 from .debug_history import DebugHistory
+from .route import RouteTracker
+
+POSE_TOPIC = "car/telemetry/pose"
 
 HEARTBEAT_TOPIC = "mtk3smp-pico/heartbeat"
 COMMAND_TIMEOUT = 8.0
@@ -52,6 +55,9 @@ class DashboardState:
         self._demo_encoders = [0,0]
         self._demo_epoch = self.clock()
         self._demo_sequence = 0
+        self.route = RouteTracker(clock)
+        self._demo_pose_t0 = None
+        self._demo_barcode_last = None
 
     @staticmethod
     def _idle():
@@ -165,6 +171,21 @@ class DashboardState:
                 except (ValueError, OSError, UnicodeError) as exc:
                     self.add_event(3, "warning", f"Trace ignored: {exc}")
                 return
+            if topic == POSE_TOPIC:
+                try:
+                    decoded = decode(topic, payload)
+                except (ValueError, TypeError) as exc:
+                    self.counters["malformed"] += 1
+                    self.add_event(1, "warning", f"Rejected {topic}: {exc}")
+                    return
+                self.last_car = self.clock()
+                self.counters["received"] += 1
+                self.counters["bytes_received"] += len(payload)
+                self.debug.receive(len(payload))
+                self.history.appendleft(dict(time=timestamp(), topic=topic,
+                                              hex=payload.hex(), decoded=decoded))
+                self.route.pose(decoded["distance_cm_mod"], decoded["heading_deg"], timestamp())
+                return
             is_heartbeat = topic in ("car/status", self.heartbeat_topic)
             if not is_heartbeat and topic not in {"car/reply/snapshot", "car/reply/barcode_map"} and not (
                     topic.startswith("car/telemetry/") and topic.rsplit("/", 1)[-1] in NAMES):
@@ -200,7 +221,9 @@ class DashboardState:
                                  source="snapshot", valid=value["valid"])
                 self._reply("snapshot", "accepted", "Snapshot received. Values are cached; sensor sample ages are unknown.")
             else:
-                self._update(topic.rsplit("/", 1)[-1], decoded)
+                name = topic.rsplit("/", 1)[-1]
+                self._update(name, decoded)
+                self.route.telemetry(name, decoded, timestamp())
 
     def _expire(self):
         for kind in ("map", "snapshot"):
@@ -269,7 +292,7 @@ class DashboardState:
                         traces=self.traces.list(), diagnostics={"raw_messages": list(self.history),
                             "ir": self.ir.snapshot(self.connection["status"] == "connected", False),
                             "controller": self.debug.controller.snapshot(self.connection["status"] == "connected",False)},
-                        demo_scenario=self.demo_scenario)
+                        demo_scenario=self.demo_scenario, route=self.route.snapshot())
 
     def demo_select(self, scenario):
         if self.mode != "demo":
@@ -289,6 +312,9 @@ class DashboardState:
                 self._last_control_event = None
                 self._demo_control_last = -1
                 self._demo_encoders = [0,0]
+                self.route = RouteTracker(self.clock)
+                self._demo_pose_t0 = None
+                self._demo_barcode_last = None
             self.add_event("all", "info", "SIMULATION: " + scenario.replace("_", " "))
             if scenario == "wifi_loss":
                 self.set_connection("disconnected", error="Simulated Wi-Fi/broker loss")
@@ -324,6 +350,7 @@ class DashboardState:
             self.ingest(IR_TOPIC, payload)
             if t-self._demo_control_last >= 0.2:
                 self._demo_control_last = t
+                self._demo_pose(t, active)
                 following = self.demo_scenario in {"following","barcode"}
                 fault = self.demo_scenario == "fault"
                 v = dict(timestamp_us=int(t*1e6)&0xffffffff,motion_timestamp_us=int(t*1e6)&0xffffffff,
@@ -346,6 +373,29 @@ class DashboardState:
                     v["encoder_"+c]=self._demo_encoders[i]
                 self.ingest(CONTROL_TOPIC,encode_control(**v))
 
+    def _demo_pose(self, t, active):
+        """Simulated pose on an oval: 60 cm straights, 15 cm radius ends, 4 cm/s."""
+        if not active:
+            self._demo_pose_t0 = None
+            return
+        if self._demo_pose_t0 is None:
+            self._demo_pose_t0 = t
+        straight, radius = 60.0, 15.0
+        arc = math.pi * radius
+        lap = 2 * (straight + arc)
+        d = (t - self._demo_pose_t0) * 4.0
+        s = d % lap
+        if s < straight:
+            heading = 0.0
+        elif s < straight + arc:
+            heading = (s - straight) / arc * 180.0
+        elif s < 2 * straight + arc:
+            heading = 180.0
+        else:
+            heading = 180.0 + (s - 2 * straight - arc) / arc * 180.0
+        bits = (int(round(d)) % 4096) | ((int(round(heading)) % 360) << 12)
+        self.ingest(POSE_TOPIC, bytes([VERSION]) + bits.to_bytes(3, "little"))
+
     def demo_tick(self):
         with self.lock:
             if self.mode != "demo" or self.demo_scenario == "wifi_loss":
@@ -357,7 +407,10 @@ class DashboardState:
             self.ingest("car/telemetry/motion", bytes([VERSION]) + bits.to_bytes(3, "little"))
             self.ingest("car/telemetry/state", bytes([VERSION, state]))
             self.ingest("car/status", bytes([VERSION, 3 | (1 << 2 if scenario == "fault" else 0)]))
-            if scenario == "barcode":
+            if scenario == "barcode" and (self._demo_barcode_last is None or
+                                          self.clock() - self._demo_barcode_last >= 12.0):
+                # One simulated decode every 12 s: each real report is one event.
+                self._demo_barcode_last = self.clock()
                 self.ingest("car/telemetry/barcode", bytes([VERSION, 25 | 2 << 5]))
             if self._demo_pending and self.clock() >= self._demo_pending[0]:
                 _, kind, letters = self._demo_pending

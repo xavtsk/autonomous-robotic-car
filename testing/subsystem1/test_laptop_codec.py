@@ -36,6 +36,20 @@ class LaptopCodecTests(unittest.TestCase):
                 self.assertEqual(codec.decode(topic, self.vectors[topic]), value)
                 self.assertEqual(snapshot[name], dict(valid=True, **value))
         self.assertTrue(codec.decode("car/status", self.vectors["car/status"])["alive"])
+        # Pose is live-only (no snapshot section).
+        self.assertEqual(codec.decode("car/telemetry/pose", self.vectors["car/telemetry/pose"]),
+                         dict(distance_cm_mod=2049, heading_deg=90))
+        self.assertNotIn("pose", snapshot)
+
+    def test_pose_wire_and_unwrap(self):
+        self.assertEqual(codec.decode("car/telemetry/pose", bytes.fromhex("02ff7f16")),
+                         dict(distance_cm_mod=4095, heading_deg=359))
+        # Forward across the wrap, reverse, and reverse across zero.
+        self.assertEqual(codec.unwrap_distance(4090, 5), 4101)
+        self.assertEqual(codec.unwrap_distance(4101, 4095 & 4095), 4095)
+        self.assertEqual(codec.unwrap_distance(3, 4094), -2)
+        self.assertEqual(codec.unwrap_distance(0, 2047), 2047)
+        self.assertEqual(codec.unwrap_distance(0, 2048), -2048)
 
     def test_known_wire_examples(self):
         self.assertEqual(codec.decode("car/telemetry/motion", bytes.fromhex("023c7602")),
@@ -57,6 +71,9 @@ class LaptopCodecTests(unittest.TestCase):
             ("car/telemetry/barcode", "021f"),
             ("car/telemetry/barcode", "02e0"),
             ("car/telemetry/heading", "026801"),
+            ("car/telemetry/pose", "02008016"),
+            ("car/telemetry/pose", "02000020"),
+            ("car/telemetry/pose", "020000"),
             ("car/telemetry/obstacle", "020000000003"),
             ("car/telemetry/faults", "0240"),
             ("car/status", "0200"),

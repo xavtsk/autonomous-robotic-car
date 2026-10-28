@@ -78,6 +78,14 @@ Motion becomes stale after 3 seconds without a report. Robot traffic becomes
 stale after 15 seconds. State, faults and barcode are event/last-report values,
 not periodic sensor measurements. Ages are laptop receive ages.
 
+**Route** (Overview) draws the run from `car/telemetry/pose`: distance and
+heading since START from Buddy 2's wheel encoders, every 200 ms. Barcode, hump,
+obstacle, turn and run-end events are placed at the latest pose when they arrive
+and listed with their distance from START. The last five runs can be selected.
+The drawing is dead reckoning: wheel slip during spins and on humps bends it, so
+it is a route sketch, not a surveyed map. Needs firmware from 28 Oct 2026 or
+later; older firmware leaves the section empty. Demo mode draws a simulated oval.
+
 Snapshot values are firmware-cached values without source timestamps. A newly
 received snapshot is labelled Cached / age unknown, including valid zeroes.
 Invalid values remain unavailable. No reported fault bits does not establish
@@ -96,8 +104,8 @@ MQTT framing and do not measure the Pico's RAM or network bandwidth.
 | 1 | Broker connection, heartbeat, decoded packet count/errors, map and snapshot replies | Actual MCU queue usage, RAM and Wi-Fi association/DHCP/retry diagnostics |
 | 2 | Wheel speeds/fault bits; updated optional diagnostics add ramped PID setpoints, measured speed, signed motor duty, encoder counts, motion state and brake acknowledgement | PID component terms, measured stop latency |
 | 3 | Barcode/action, state, IR fault, recorded captures and 20 Hz IR preview; updated diagnostics add calibration references/ranges, line error, pending action, event counts and controller reason | Exact per-event timestamps, original-line identity after recovery |
-| 4 | Dashboard understands heading/hump packets when supplied | Current S3_MOTION firmware has no reporting adapter; raw IMU/terrain diagnostics are USB-only |
-| 5 | Dashboard understands obstacle packets when supplied | Current subsystem is a placeholder; scanning, avoidance and original-line recovery must be implemented |
+| 4 | With `S4=1`: hump count, run peak height, IMU fault bit. The heading topic stays reserved (empty) | Tilt, raw IMU and motion events are USB-only |
+| 5 | With `S5=1 S5_HARDWARE_CONFIRMED=1`: closest distance, width and route per completed scan, no-echo fault, "avoiding obstacle" state | Servo angles, scan samples and left/right clearance are not published |
 
 The debug pages include rolling histories, graph pause/window selection and
 **Save debug evidence**, which exports bounded JSON with source/validity metadata.
@@ -227,6 +235,7 @@ python3 -m unittest discover -s testing/dashboard -v
 node --check tools/dashboard/static/app.js
 node --check tools/dashboard/static/sensor_graphs.js
 node --check tools/dashboard/static/buddy_graphs.js
+node --check tools/dashboard/static/route_map.js
 ```
 
 The service tests bind loopback ports and launch a disposable Mosquitto broker on

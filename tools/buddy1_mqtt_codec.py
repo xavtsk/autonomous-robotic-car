@@ -15,6 +15,20 @@ STATES = ("stopped", "line_following", "turning_left", "turning_right", "uturn",
           "avoiding_obstacle", "complete", "error")
 ACTIONS = ("unknown", "forward", "left", "right", "uturn")
 FAULTS = ("motor_stall", "encoder_fault", "imu_fault", "no_echo", "wifi_loss", "ir_sensor_fault")
+POSE_DISTANCE_BITS = 12
+POSE_DISTANCE_MOD = 1 << POSE_DISTANCE_BITS
+
+
+def unwrap_distance(previous_cm, wrapped_cm):
+    """Continue a run's distance from a pose packet's wrapped 12-bit value.
+
+    previous_cm is the last unwrapped distance (0 at START). The step is taken
+    as the nearest value in -2048..+2047 cm, so reversing gives a negative step.
+    """
+    step = (wrapped_cm - previous_cm) % POSE_DISTANCE_MOD
+    if step >= POSE_DISTANCE_MOD // 2:
+        step -= POSE_DISTANCE_MOD
+    return previous_cm + step
 
 
 def _check(payload, bits):
@@ -104,6 +118,12 @@ def decode(topic, payload):
             raise ValueError("invalid heartbeat status")
         return dict(alive=True, faults_valid=bool(value & 2),
                     faults=_section("faults", value >> 2) if value & 2 else None)
+    if topic == "car/telemetry/pose":
+        value = _check(payload, POSE_DISTANCE_BITS + 9)
+        heading = value >> POSE_DISTANCE_BITS
+        if heading > 359:
+            raise ValueError("invalid heading")
+        return dict(distance_cm_mod=value & (POSE_DISTANCE_MOD - 1), heading_deg=heading)
     if topic.startswith("car/telemetry/") and name in NAMES:
         return _section(name, _check(payload, WIDTHS[NAMES.index(name)]))
     raise ValueError("unknown topic; use car/status when decoding a custom heartbeat topic")

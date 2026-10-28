@@ -345,6 +345,43 @@ static void test_publish_backpressure(void)
     puts("HOST PASS: MQTT retained FIFO retry, exact binary/QoS, bounded pacing/logging, deferred completion, disconnect recovery, permanent error, clock rollover");
 }
 
+/* Route pose: live-only, exact 4-byte layout, strict ranges, never touches the
+ * snapshot cache, published on its own topic at QoS 0. */
+static void test_pose(void)
+{
+    BUDDY1_SNAPSHOT v = {0}, d, before, after;
+    UB p[16];
+    v.pose_distance_cm = 4095; v.pose_heading_deg = 359;
+    assert(buddy1_encode(BUDDY1_TOPIC_POSE, &v, p, sizeof p) == 4U);
+    assert(p[0] == 2U && p[1] == 0xffU && p[2] == 0x7fU && p[3] == 0x16U);
+    assert(buddy1_decode(BUDDY1_TOPIC_POSE, p, 4U, &d) && d.pose_valid &&
+           d.pose_distance_cm == 4095U && d.pose_heading_deg == 359);
+    v.pose_distance_cm = 0; v.pose_heading_deg = 0;
+    assert(buddy1_encode(BUDDY1_TOPIC_POSE, &v, p, sizeof p) == 4U &&
+           p[1] == 0U && p[2] == 0U && p[3] == 0U);
+    v.pose_distance_cm = 4096; assert(buddy1_encode(BUDDY1_TOPIC_POSE, &v, p, sizeof p) == 0U);
+    v.pose_distance_cm = 1; v.pose_heading_deg = 360;
+    assert(buddy1_encode(BUDDY1_TOPIC_POSE, &v, p, sizeof p) == 0U);
+    v.pose_heading_deg = -1; assert(buddy1_encode(BUDDY1_TOPIC_POSE, &v, p, sizeof p) == 0U);
+    p[0] = 2; p[1] = 0; p[2] = 0x80; p[3] = 0x16;              /* heading 360 */
+    assert(!buddy1_decode(BUDDY1_TOPIC_POSE, p, 4U, &d));
+    p[2] = 0; p[3] = 0x20;                                     /* padding bit */
+    assert(!buddy1_decode(BUDDY1_TOPIC_POSE, p, 4U, &d));
+    p[3] = 0; assert(!buddy1_decode(BUDDY1_TOPIC_POSE, p, 3U, &d)); /* length */
+    assert(buddy1_payload_size(BUDDY1_TOPIC_POSE) == 4U &&
+           buddy1_payload_bits(BUDDY1_TOPIC_POSE) == 21U);
+    assert(buddy1_invalidate(BUDDY1_TOPIC_POSE) == E_PAR); /* no snapshot section */
+    empty_outbox();
+    assert(buddy1_snapshot(&before));
+    assert(buddy1_report_pose(4096, 0) == E_PAR && buddy1_report_pose(0, 360) == E_PAR);
+    assert(buddy1_report_pose(1234, 270) == E_OK);
+    assert(buddy1_snapshot(&after) && memcmp(&before, &after, sizeof before) == 0);
+    poll_after(20);
+    assert(strcmp(published_topic, "car/telemetry/pose") == 0 && published_len == 4U &&
+           buddy1_decode(BUDDY1_TOPIC_POSE, published, published_len, &d) &&
+           d.pose_distance_cm == 1234U && d.pose_heading_deg == 270);
+    puts("HOST PASS: route pose 21 bits/4 bytes, 4095/359 limits, padding/length rejection, live-only (snapshot unchanged), own topic");
+}
 static void *producer(void *which)
 {
     unsigned i, n = (unsigned)(uintptr_t)which;
@@ -367,6 +404,7 @@ static void emit_vectors(void)
     v.hump_count = 2; v.hump_height_mm = 45; v.heading_deg = 359;
     v.obstacle_distance_mm = 180; v.obstacle_width_mm = 140; v.obstacle_route = BUDDY1_ROUTE_LEFT;
     v.robot_state = BUDDY1_STATE_LINE_FOLLOWING; v.faults = 0x31;
+    v.pose_distance_cm = 2049; v.pose_heading_deg = 90;
     for (topic = 0; topic < BUDDY1_TOPIC_COUNT; ++topic) {
         if (topic == BUDDY1_TOPIC_MAP_REPLY) continue;
         len = buddy1_encode((UB)topic, &v, packet, sizeof(packet)); assert(len);
@@ -477,6 +515,7 @@ int main(void)
         buddy1_decode(BUDDY1_TOPIC_STATUS, published, published_len, &decoded));
     test_publish_backpressure();
     test_debug_lines();
+    test_pose();
 #if APP_IR_DEBUG
     test_ir_preview();
     test_control_preview();

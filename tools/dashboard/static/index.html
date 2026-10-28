@@ -10,6 +10,7 @@
   <script src="/app.js" defer></script>
   <script src="/sensor_graphs.js" defer></script>
   <script src="/buddy_graphs.js" defer></script>
+  <script src="/route_map.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to readings</a>
@@ -78,6 +79,16 @@
             <p id="map-lock-note" class="table-note">Firmware locks the map after the first accepted START. Lock status has not been confirmed.</p>
           </aside>
         </div>
+        <section class="route-section" aria-labelledby="route-title">
+          <div class="section-heading">
+            <div><h3 id="route-title">Route</h3><p class="muted" id="route-summary" role="status">Waiting for car/telemetry/pose. The route starts at the next START.</p></div>
+            <label class="inline-label" for="route-run">Run<select id="route-run" disabled><option>None yet</option></select></label>
+          </div>
+          <div class="route-plot"><canvas id="route-canvas" role="img" aria-label="Route map: no route received"></canvas><p id="route-empty">No route received. Needs firmware with route telemetry (car/telemetry/pose).</p></div>
+          <div class="sensor-legend route-legend"><span><b class="route-key barcode"></b>Barcode</span><span><b class="route-key hump"></b>Hump</span><span><b class="route-key obstacle"></b>Obstacle</span><span><b class="route-key turn"></b>Turn / avoidance</span><span><b class="route-key end"></b>Run end</span></div>
+          <div class="table-wrap"><table class="readings-table route-table"><thead><tr><th scope="col">Event</th><th scope="col">Distance</th><th scope="col">Time</th></tr></thead><tbody id="route-events"></tbody></table></div>
+          <p class="table-note">Drawn from Buddy 2's wheel encoders (distance and heading since START). It is a sketch: wheel slip in spins and on humps bends it. Events are placed at the latest pose when they arrive (within 200 ms).</p>
+        </section>
         <section class="event-section" aria-labelledby="overview-events-title"><div class="section-heading"><h3 id="overview-events-title">Recent activity</h3><button type="button" class="text-button" id="view-debug-button">Open debug →</button></div><ol class="event-list" id="overview-events"><li class="empty-line">No messages received.</li></ol></section>
       </section>
 

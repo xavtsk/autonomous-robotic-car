@@ -31,6 +31,7 @@ ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state)
 {states++;last_state=state;return E_OK;}
 ER buddy1_report_barcode(UB letter)
 {assert(letter=='B');barcodes++;return E_OK;}
+ER buddy1_report_pose(UH cm,H deg) { (void)cm;(void)deg;return E_OK; }
 ER buddy1_report_motion(H left,H right)
 {reports++;left_report=left;right_report=right;return E_OK;}
 ER buddy1_invalidate(UB type)

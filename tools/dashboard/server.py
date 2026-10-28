@@ -74,12 +74,12 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(200, text.encode("utf-8"), "text/plain; charset=utf-8", name)
                 else:
                     self._send(404, {"error": "Not found"})
-            elif path in ("/", "/index.html", "/app.css", "/app.js", "/sensor_graphs.js", "/buddy_graphs.js"):
+            elif path in ("/", "/index.html", "/app.css", "/app.js", "/sensor_graphs.js", "/buddy_graphs.js", "/route_map.js"):
                 name = "index.html" if path == "/" else path[1:]
                 data = (STATIC / name).read_bytes()
                 if name == "index.html":
                     data = data.replace(b"__DASHBOARD_TOKEN__", self.server.token.encode("ascii"))
-                self._send(200, data, {"index.html": "text/html", "app.css": "text/css", "app.js": "text/javascript", "sensor_graphs.js": "text/javascript", "buddy_graphs.js":"text/javascript"}[name] + "; charset=utf-8")
+                self._send(200, data, {"index.html": "text/html", "app.css": "text/css", "app.js": "text/javascript", "sensor_graphs.js": "text/javascript", "buddy_graphs.js":"text/javascript", "route_map.js": "text/javascript"}[name] + "; charset=utf-8")
             else:
                 self._send(404, {"error": "Not found"})
         except (KeyError, FileNotFoundError, ValueError):

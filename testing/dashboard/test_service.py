@@ -51,7 +51,7 @@ class ServiceTests(unittest.TestCase):
         return result
 
     def test_page_assets_and_no_secret_read_access(self):
-        for path in ("/", "/app.css", "/app.js", "/sensor_graphs.js", "/buddy_graphs.js", "/api/state", "/api/sensors", "/api/debug"):
+        for path in ("/", "/app.css", "/app.js", "/sensor_graphs.js", "/buddy_graphs.js", "/route_map.js", "/api/state", "/api/sensors", "/api/debug"):
             status, data, headers = self.request(path)
             self.assertEqual(status, 200)
             self.assertEqual(headers["Cache-Control"], "no-store")

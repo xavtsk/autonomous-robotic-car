@@ -17,6 +17,8 @@ values only: their compiler-dependent representation is never the wire format.
 | Hump count | 0–65535 | one hump | 16 provisional | full existing API range preserved; Buddy 4 must supply physical/run maximum |
 | Hump height | 0–65535 mm | 1 mm | 16 provisional | Buddy 4 must validate actual range and required error before narrowing |
 | Heading | 0–359 degrees | 1 degree | 9 | 360–511 rejected |
+| Pose distance since START | 0–4095 cm, modulo (wrapping counter) | 1 cm | 12 | width set by the largest step between samples plus a loss margin, not the run length; laptop unwraps |
+| Pose heading since START | 0–359 degrees | 1 degree | 9 | 360–511 rejected; live-only packet |
 | Obstacle distance | 0–65535 mm | 1 mm | 16 provisional | Buddy 5 must supply validated sensor/operating range |
 | Obstacle width | 0–65535 mm | 1 mm | 16 provisional | Buddy 5 must supply maximum profile width and clearance precision |
 | Obstacle route | unknown/left/right (0–2) | one route | 2 | code 3 rejected |
@@ -28,7 +30,7 @@ values only: their compiler-dependent representation is never the wire format.
 | Mapping reply result | OK/invalid/closed/internal | one result | 2 | exact two-byte packet including version |
 | Heartbeat alive | true | Boolean | 1 | versioned status packet; not proof every task is healthy |
 | Heartbeat fault validity | unknown / update received | Boolean | 1 | faults occupy six adjacent bits |
-| Outbox topic selector | 10 topics (0–9) | one topic | 4 | explicit one-byte envelope; high nibble zero; replaces 64-byte text topic |
+| Outbox topic selector | 11 topics (0–10) | one topic | 4 | explicit one-byte envelope; high nibble zero; replaces 64-byte text topic; compile-time check that topics fit 4 bits |
 | Incoming command selector | unknown/snapshot/map (0–2) | one kind | 2 | one-byte envelope; upper six bits zero |
 
 The physical storage unit is a byte. Fields are packed across byte boundaries;

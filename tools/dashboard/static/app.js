@@ -305,17 +305,17 @@
         unavailable: 'The updated diagnostic firmware adds line position, pending action, controller reason, calibration and event counts at up to 5 Hz. A sampled candidate is not a junction event; use the cumulative count. Both front sensors may read white when the line runs between them. These observations cannot prove original-line identity after avoidance. Use Sensors for 20 Hz IR curves and Runs for high-rate recorded barcode evidence.'
       },
       '4': {
-        title: 'Buddy 4 · IMU / terrain', description: 'View heading and terrain summaries when a publishing firmware supplies them.',
+        title: 'Buddy 4 · IMU / terrain', description: 'Hump count, run peak height and the IMU fault bit, published by firmware built with S4=1.',
         rows: [
           ['Heading', valueUnit('heading', 'heading_deg', '°'), source('heading'), 'heading'],
           ['Hump count', shown(field('hump', 'count')), source('hump'), 'hump'],
           ['Reported hump height', valueUnit('hump', 'height_mm', 'mm'), source('hump'), 'hump'],
           ['IMU fault bit', faultGroup(['imu_fault']), source('faults'), 'faults']
         ],
-        unavailable: 'Heading and hump graphs use actual telemetry reports when received, not a simulated continuous IMU signal. Current S3_MOTION firmware has no Buddy 4 publishing adapter. Pitch/roll, raw accelerometer/gyro and calibration validity are not available. Empty graphs do not mean zero height or a healthy IMU.'
+        unavailable: 'Firmware built with S4=1 publishes the hump count, the highest hump peak of the current run and the IMU fault bit; default builds (S4=0) publish none of them. The heading topic stays empty and reserved for Buddy 4: the encoder heading used for the route map is in car/telemetry/pose. Pitch/roll, raw accelerometer/gyro, motion events and calibration validity are not published. Empty graphs do not mean zero height or a healthy IMU.'
       },
       '5': {
-        title: 'Buddy 5 · Obstacle / recovery', description: 'View obstacle summaries when an implemented scanning subsystem publishes them.',
+        title: 'Buddy 5 · Obstacle / recovery', description: 'Obstacle summary, no-echo fault and avoidance state, published by firmware built with S5=1.',
         rows: [
           ['Reported distance', valueUnit('obstacle', 'distance_mm', 'mm'), source('obstacle'), 'obstacle'],
           ['Reported width', valueUnit('obstacle', 'width_mm', 'mm'), source('obstacle'), 'obstacle'],
@@ -323,7 +323,7 @@
           ['No-echo fault bit', faultGroup(['no_echo']), source('faults'), 'faults'],
           commonState
         ],
-        unavailable: 'Distance/width graphs use real obstacle summary reports when received. Servo angle, paired scan samples, clearance decisions and avoidance/recovery state are not published by the current integrated firmware. No scan profile is invented from one summary distance. Detecting a line alone does not prove it is the original line.'
+        unavailable: 'Firmware built with S5=1 (and S5_HARDWARE_CONFIRMED=1) publishes the closest distance, width and chosen route of each completed scan, the no-echo fault bit and the "avoiding obstacle" state; default builds (S5=0) publish none of them. Servo angles, individual scan samples and left/right clearance are not published. No scan profile is invented from one summary distance. Detecting a line alone does not prove it is the original line.'
       }
     };
     return definitions[buddy];

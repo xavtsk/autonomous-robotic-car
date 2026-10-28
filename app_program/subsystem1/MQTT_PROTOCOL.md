@@ -39,6 +39,7 @@ Bit positions below are relative to the body, excluding the version byte.
 | `car/telemetry/obstacle` | distance bits 0–15; width bits 16–31; route bits 32–33 | 6 |
 | `car/telemetry/state` | state bits 0–2 | 2 |
 | `car/telemetry/faults` | shared fault mask bits 0–5 | 2 |
+| `car/telemetry/pose` | distance since START, cm modulo 4096, bits 0–11; heading since START bits 12–20 | 4 |
 | `car/reply/snapshot` | validity and all seven sections, described below | 16 |
 | `car/reply/barcode_map` | result bits 0–1: 0 OK, 1 invalid, 2 configuration closed, 3 internal error | 2 |
 | `car/status` | alive bit 0; faults-valid bit 1; fault mask bits 2–7 | 2 |
@@ -57,6 +58,24 @@ Values outside ±510 are rejected before the cache changes. Negative zero is
 noncanonical and rejected. This quantisation applies to telemetry and its cache,
 not Buddy 2's PID calculations or control requests. Validate the proposed range
 against calibrated speed before freezing the team contract.
+
+### Route pose (`car/telemetry/pose`, added 28 Oct 2026)
+
+Live only: it has no snapshot section and is never cached. The controller
+sends one pose at START (0, 0), one every 200 ms while a run is active
+(following, braking, turning, reacquiring or avoiding) and a final one when the
+run ends. Both values come from Buddy 2's encoder estimate
+(`motion_status_t.distance_m`, `.heading_deg`) relative to their values at START.
+
+- **Distance**: robot-centre distance in cm, rounded, signed, then modulo 4096.
+  Reversing gives a smaller value; spinning on the spot leaves it unchanged.
+  The laptop unwraps it (`unwrap_distance()` in `tools/buddy1_mqtt_codec.py`):
+  each step is taken as the nearest value in -2048..+2047 cm. At most ~18 cm is
+  travelled per sample at 0.884 m/s, so ~23 s of lost samples are tolerated.
+- **Heading**: degrees 0-359, + = anticlockwise, 0 = direction at START. Same
+  9-bit encoding as `car/telemetry/heading`, which stays reserved for Buddy 4.
+- Samples are skipped while Buddy 2's estimate is invalid or calibrating. Encoder
+  dead reckoning drifts with wheel slip; it is a route sketch, not a survey.
 
 Letter is A=0 through Z=25. Action is unknown=0, forward=1, left=2, right=3,
 uturn=4. Route is unknown=0, left=1, right=2. State is stopped=0,
