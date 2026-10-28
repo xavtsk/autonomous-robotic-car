@@ -11,6 +11,8 @@ bool subsystem5_snapshot(s5_observation_t *out)
                               .range_us = now, .range_valid = true};
     return true;
 }
+s5_snapshot_result_t subsystem5_read_snapshot(s5_observation_t *out)
+{ return subsystem5_snapshot(out)?S5_SNAPSHOT_OK:S5_SNAPSHOT_UNAVAILABLE; }
 bool subsystem5_request_scan(uint16_t id)
 {
     (void)id;

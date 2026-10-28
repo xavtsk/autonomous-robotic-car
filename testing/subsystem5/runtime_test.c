@@ -15,11 +15,12 @@ static jmp_buf finish;
 static uint32_t clock_us,trigger_us,last_trigger;
 static unsigned angle=90,loops,locks,scenario,stage,scan_angles;
 static bool hw_started,pinging,stationary_wheels=true,fail_echo;
+static ER snapshot_lock_error;
 static void (*owner)(INT,void *);
 uint32_t fake_read(uint32_t a) { (void)a;return clock_us; }
 void fake_write(uint32_t a,uint32_t v) { (void)a;(void)v; }
 ID tk_cre_mtx(const T_CMTX *m) { assert(m->mtxatr==TA_INHERIT);return 1; }
-ER tk_loc_mtx(ID id,TMO timeout) { (void)timeout;assert(id==1&&!locks);locks++;return E_OK; }
+ER tk_loc_mtx(ID id,TMO timeout) { assert(id==1&&!locks);if(timeout==TMO_POL && snapshot_lock_error) { return snapshot_lock_error; }locks++;return E_OK; }
 ER tk_unl_mtx(ID id) { assert(id==1&&locks);locks--;return E_OK; }
 ID app_start_task(FP f,PRI priority,UW core,const char *name)
 { (void)name;assert(priority==20&&core==TP_PRC1);owner=(void (*)(INT,void *))f;return 2; }
@@ -72,6 +73,20 @@ int main(void)
         clock_us=loops=locks=stage=scan_angles=last_trigger=0;
         angle=90;hw_started=pinging=fail_echo=false;stationary_wheels=true;
         assert(subsystem5_init()==E_OK && subsystem5_start()==E_OK);
+        {
+            s5_observation_t copy={.range_mm=123};
+            assert(subsystem5_read_snapshot(&copy)==S5_SNAPSHOT_OK);
+            snapshot_lock_error=E_TMOUT;
+            assert(subsystem5_read_snapshot(&copy)==S5_SNAPSHOT_BUSY && !locks);
+            assert(!subsystem5_snapshot(&copy));
+            snapshot_lock_error=E_OBJ;
+            assert(subsystem5_read_snapshot(&copy)==S5_SNAPSHOT_UNAVAILABLE);
+            snapshot_lock_error=0;
+            published[S5_PACKET_BYTES-1]|=0x80U;
+            assert(subsystem5_read_snapshot(&copy)==S5_SNAPSHOT_INVALID && !locks);
+            published[S5_PACKET_BYTES-1]&=0x7fU;
+            assert(subsystem5_read_snapshot(&copy)==S5_SNAPSHOT_OK);
+        }
         if(!setjmp(finish)) { owner(0,0); }
     }
     puts("PASS: production sensing task with fake clock/kernel/sensor; stop-gated scan, bounded mailbox, packed snapshots, cancellation/recentering, confirmed no-echo");

@@ -111,13 +111,19 @@ ER subsystem5_start(void)
     task_id=app_start_task((FP)task,S5_PRI_MAIN,TP_PRC1,"obstacle-scan");
     return task_id<0?(ER)task_id:E_OK;
 }
-bool subsystem5_snapshot(s5_observation_t *out)
+s5_snapshot_result_t subsystem5_read_snapshot(s5_observation_t *out)
 {
     uint8_t p[S5_PACKET_BYTES];
-    if(!out || mutex_id<=0 || tk_loc_mtx(mutex_id,TMO_POL)!=E_OK) { return false; }
+    ER er;
+    if(!out || mutex_id<=0) { return S5_SNAPSHOT_UNAVAILABLE; }
+    er=tk_loc_mtx(mutex_id,TMO_POL);
+    if(er!=E_OK) { return er==E_TMOUT?S5_SNAPSHOT_BUSY:S5_SNAPSHOT_UNAVAILABLE; }
     for(unsigned i=0;i<S5_PACKET_BYTES;i++) { p[i]=published[i]; }
-    tk_unl_mtx(mutex_id);return s5_observation_unpack(p,out);
+    tk_unl_mtx(mutex_id);
+    return s5_observation_unpack(p,out)?S5_SNAPSHOT_OK:S5_SNAPSHOT_INVALID;
 }
+bool subsystem5_snapshot(s5_observation_t *out)
+{ return subsystem5_read_snapshot(out)==S5_SNAPSHOT_OK; }
 bool subsystem5_request_scan(uint16_t id)
 {
     bool ok=false;
@@ -147,6 +153,8 @@ uint8_t subsystem5_controller_status(void)
 ER subsystem5_init(void) { return E_OK; }
 ER subsystem5_start(void) { return E_OK; }
 bool subsystem5_snapshot(s5_observation_t *out) { (void)out;return false; }
+s5_snapshot_result_t subsystem5_read_snapshot(s5_observation_t *out)
+{ (void)out;return S5_SNAPSHOT_UNAVAILABLE; }
 bool subsystem5_request_scan(uint16_t id) { (void)id;return false; }
 void subsystem5_cancel_scan(void) { }
 void subsystem5_set_controller_status(unsigned state,unsigned fault,unsigned route) { (void)state;(void)fault;(void)route; }

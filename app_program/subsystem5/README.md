@@ -121,7 +121,14 @@ range, conservative width, route), avoiding-obstacle state, and only the owned
 NO_ECHO fault bit. Other buddies' flags are preserved by Buddy 1's protected
 changed-mask update. Invalid profiles invalidate the cached obstacle section.
 The full clearance/profile details and source timestamps are available through
-`subsystem5_snapshot()`. USB `[S5]` lines show FSM state/fault, route, front range,
+`subsystem5_snapshot()`. The controller uses `subsystem5_read_snapshot()` to
+separate a busy snapshot mutex from unavailable/corrupt data. Only BUSY may reuse
+its owner-local 23-byte packed cache, for at most 250 ms since a successful read.
+Original source timestamps stay unchanged, so moving range data must also pass
+its existing 250 ms source-age check. A fresh invalid/no-echo observation replaces
+the old cache and still stops motion; unavailable/corrupt data never falls back.
+STOP/fault clears the cache, and START requires a successful fresh snapshot read.
+No queue, task, shared lock or sensor-validity threshold was added. USB `[S5]` lines show FSM state/fault, route, front range,
 validity, no-echo, scan ID, width and both clearances. Numeric state/fault meanings
 are in `obstacle_avoidance.h`. Existing MQTT best-effort/drop behaviour and the
 network-priority/timing issue have not been solved by adding Buddy 5.

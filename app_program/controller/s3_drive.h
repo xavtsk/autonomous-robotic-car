@@ -111,6 +111,10 @@ typedef struct
     uint32_t search_us;       /* start of the current sweep leg */
 #if APP_S5
     s5_avoidance_t obstacle;
+    /* Owner-local packed cache; never refresh source times on a BUSY read. */
+    uint8_t obstacle_snapshot[S5_PACKET_BYTES];
+    uint32_t obstacle_snapshot_us;
+    bool obstacle_snapshot_valid;
     uint16_t obstacle_scan_id;
     bool obstacle_active;
 #endif

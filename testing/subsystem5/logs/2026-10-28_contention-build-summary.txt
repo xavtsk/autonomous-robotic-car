@@ -1,0 +1,13 @@
+Snapshot contention fix on xavier/development over main 54c8c17.
+No flash or physical test. Speed configuration unchanged.
+Buddy 5 and Buddy 4 suites pass normally and with ASan/UBSan.
+
+enabled compile-only: PASS, zero compiler warnings.
+text	   data	    bss	    dec	    hex	filename
+ 151376	    616	  42736	 194728	  2f8a8	/private/tmp/aai07-s5-contention-COMPILE_ONLY.elf
+UF2 SHA256=909b062c5747a05d5db35de8178c0e18339c8136293d40d16105bf7958b96271
+
+unconfigured: PASS, zero compiler warnings.
+text	   data	    bss	    dec	    hex	filename
+ 150632	    616	  42724	 193972	  2f5b4	build_make/mtk3pico_smp1_usb_cdc_s3_motion_s4_s5_UNCONFIGURED.elf
+UF2 SHA256=34c4244b7f66df21a57a27924c308ec9d2fbaa45ef60177ead842e084a4f3d67

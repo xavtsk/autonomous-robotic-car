@@ -137,7 +137,15 @@ static s5_observation_t obstacle;
 static bool scanning_requested, range_bad, recovery_tape=true;
 static unsigned scan_calls;
 static int turn_sign=1;
-bool subsystem5_snapshot(s5_observation_t *out) { *out=obstacle; return true; }
+static s5_snapshot_result_t snapshot_result;
+static uint32_t sample_age_us;
+s5_snapshot_result_t subsystem5_read_snapshot(s5_observation_t *out)
+{
+    if(snapshot_result==S5_SNAPSHOT_OK) { *out=obstacle;out->range_us-=sample_age_us; }
+    return snapshot_result;
+}
+bool subsystem5_snapshot(s5_observation_t *out)
+{ return subsystem5_read_snapshot(out)==S5_SNAPSHOT_OK; }
 bool subsystem5_request_scan(uint16_t id) {
     assert(motion_controller_is_stopped());scan_calls++;scanning_requested=true;
     obstacle.scan_id=id;return true;
@@ -213,7 +221,7 @@ static void init(bool calibrated)
         reset,    heartbeat};
     s3_calibration_collector_t collector;
     unsigned int i;
-    now = 0U;
+    now = 0U; snapshot_result=S5_SNAPSHOT_OK; sample_age_us=0U;
 #if APP_S4
     imu_run=0; imu_impact=false; terrain_control_init();
 #endif
@@ -273,15 +281,62 @@ static void simulate(void)
     }
     tick(150,tape?280:202,tape?150:202,true);
 }
+static void snapshot_contention(void)
+{
+    s5_observation_t cached;
+    init(true);start();
+    uint32_t stamp=now;
+    snapshot_result=S5_SNAPSHOT_BUSY;
+    simulate();
+    assert(drive.state==S3_DRIVE_FOLLOW && drive.obstacle_snapshot_us==stamp);
+    assert(s5_observation_unpack(drive.obstacle_snapshot,&cached) && cached.range_us==stamp);
+    snapshot_result=S5_SNAPSHOT_OK;simulate();assert(drive.state==S3_DRIVE_FOLLOW);
+    /* A new valid START sample covers contention on the very first cycle. */
+    init(true);assert(s3_drive_start(&drive,now));
+#if APP_S4
+    assert(terrain_control_begin(now));
+#endif
+    snapshot_result=S5_SNAPSHOT_BUSY;simulate();assert(drive.state==S3_DRIVE_FOLLOW);
+    /* Reusing a cache must never extend the source reading's lifetime. */
+    init(true);start();snapshot_result=S5_SNAPSHOT_BUSY;
+    for(unsigned i=0;i<25;i++) { simulate();assert(drive.state==S3_DRIVE_FOLLOW); }
+    simulate();assert(drive.state==S3_DRIVE_FAULT && drive.obstacle.fault==S5_BAD_RANGE);
+    init(true);start();sample_age_us=240000U;simulate();
+    snapshot_result=S5_SNAPSHOT_BUSY;simulate();assert(drive.state==S3_DRIVE_FOLLOW);
+    simulate();assert(drive.state==S3_DRIVE_FAULT);
+    /* Explicit negative observations and read/codec failures never use old good data. */
+    init(true);start();snapshot_result=S5_SNAPSHOT_BUSY;simulate();
+    snapshot_result=S5_SNAPSHOT_OK;range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT);
+    init(true);start();snapshot_result=S5_SNAPSHOT_INVALID;simulate();assert(drive.state==S3_DRIVE_FAULT);
+    init(true);start();snapshot_result=S5_SNAPSHOT_UNAVAILABLE;simulate();assert(drive.state==S3_DRIVE_FAULT);
+    init(true);start();drive.obstacle_snapshot_valid=false;snapshot_result=S5_SNAPSHOT_BUSY;
+    simulate();assert(drive.state==S3_DRIVE_FAULT);
+    /* Active avoidance gets the same grace, without dropping a DONE event. */
+    init(true);start();obstacle.range_mm=200;simulate();
+    for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
+    assert(drive.obstacle.issued);snapshot_result=S5_SNAPSHOT_BUSY;simulate();
+    assert(drive.obstacle_active && drive.state==S3_DRIVE_MANOEUVRE);
+    s3_drive_stop(&drive);assert(!drive.obstacle_active && !drive.obstacle_snapshot_valid && !lease);
+    init(true);start();obstacle.range_mm=200;simulate();
+    for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
+    snapshot_result=S5_SNAPSHOT_BUSY;
+    for(unsigned i=0;i<30 && drive.state!=S3_DRIVE_FAULT;i++) { simulate(); }
+    assert(drive.state==S3_DRIVE_FAULT && !drive.obstacle_active);
+    puts("PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered");
+}
 int main(void)
 {
+    snapshot_contention();
     init(true);start();obstacle.range_mm=200;
     tick(150,202,202,true);
     assert(drive.obstacle_active && drive.obstacle.state==S5_WAIT_STOP && scan_calls==0);
     /* Actual controller applies STOP and produces its matching cancellation. */
     for(unsigned i=0;i<5000 && drive.state!=S3_DRIVE_FAULT;i++) {
+        /* Exercise scan and all seven movement handoffs under intermittent contention. */
+        snapshot_result=(i%11U==0U)?S5_SNAPSHOT_BUSY:S5_SNAPSHOT_OK;
         simulate();if(!drive.obstacle_active) { break; }
     }
+    snapshot_result=S5_SNAPSHOT_OK;
     assert(drive.state==S3_DRIVE_FOLLOW && !drive.obstacle_active && scan_calls==1);
     assert(drive.obstacle.recovery.confirmed && drive.navigation.mode==S3_MODE_TRACK);
     assert(polls==7 && turns==0); /* seven S5 finite moves, no barcode manoeuvre */

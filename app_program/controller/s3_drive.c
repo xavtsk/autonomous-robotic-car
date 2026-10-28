@@ -29,6 +29,7 @@ static void halt(s3_drive_t *d, s3_drive_state_t state,
     }
 #if APP_S5
     subsystem5_cancel_scan();
+    d->obstacle_snapshot_valid = false;
     if (state == S3_DRIVE_FAULT && d->obstacle_active && d->obstacle.state != S5_FAULT) {
         d->obstacle.state = S5_FAULT;
         d->obstacle.fault = S5_INTERRUPTED;
@@ -126,6 +127,8 @@ bool s3_drive_start(s3_drive_t *d, uint32_t now)
     }
     (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
 #if APP_S5
+    d->obstacle_snapshot_valid=s5_observation_pack(&obstacle,d->obstacle_snapshot);
+    d->obstacle_snapshot_us=now;
     s5_avoidance_abort(&d->obstacle);d->obstacle.fault=S5_OK;
     subsystem5_set_controller_status(S5_IDLE,S5_OK,S5_ROUTE_NONE);
 #endif
@@ -486,10 +489,25 @@ static void follow(s3_drive_t *d, uint32_t now)
 #if APP_S5
 /* Called only by the existing sample/controller task after its one report drain.
  * S5's pure FSM proposes actions; this owner alone authorises Buddy 2 requests. */
+static bool obstacle_snapshot(s3_drive_t *d,uint32_t now,s5_observation_t *out)
+{
+    s5_snapshot_result_t result=subsystem5_read_snapshot(out);
+    if(result==S5_SNAPSHOT_OK) {
+        d->obstacle_snapshot_valid=s5_observation_pack(out,d->obstacle_snapshot);
+        d->obstacle_snapshot_us=now;
+        return d->obstacle_snapshot_valid;
+    }
+    if(result==S5_SNAPSHOT_BUSY && d->obstacle_snapshot_valid &&
+       (uint32_t)(now-d->obstacle_snapshot_us)<=S5_RANGE_FRESH_US) {
+        return s5_observation_unpack(d->obstacle_snapshot,out);
+    }
+    d->obstacle_snapshot_valid=false;
+    return false;
+}
 static bool obstacle_control(s3_drive_t *d,uint32_t now,bool done)
 {
     s5_observation_t observation={0};
-    bool have=subsystem5_snapshot(&observation);
+    bool have=obstacle_snapshot(d,now,&observation);
     if (!d->obstacle_active) {
         if (!have || !s5_range_ready(&observation,now)) {
             d->obstacle.fault=S5_BAD_RANGE;d->obstacle.state=S5_FAULT;
