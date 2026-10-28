@@ -1,0 +1,123 @@
+mkdir -p ../../build/controller
+cc -DAPP_H -DAPP_TEST=0 -include controller_test_kernel.h -I. -std=c11 -Wall -Wextra -Werror -O2 -g -pthread team_adapter_test.c ../../app_program/controller/vehicle_controller.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem2/motion_codec.c -o ../../build/controller/controller_test
+../../build/controller/controller_test
+PASS: one-owner facade, explicit queued start/stop, full fault-bit ownership, unknown-status preservation, map freeze, telemetry and out-of-range invalidation
+cc -std=c11 -Wall -Wextra -Werror -O2 -g -pthread codec_test.c ../../app_program/controller/integration_codec.c ../../app_program/subsystem3/navigation_codec.c -o ../../build/controller/codec_test
+../../build/controller/codec_test
+PASS: full 60-byte nav/146-byte shared status/11-byte control, exact doubles/floats and run timing, boundaries/padding; hostile status packets accepted=31
+cc -std=c11 -Wall -Wextra -Werror -O2 -g -pthread timing_test.c -o ../../build/controller/timing_test
+../../build/controller/timing_test
+PASS: run timing target/safety boundaries, timestamp wrap, saturation and per-run reset
+cc -Ifakes -std=c11 -Wall -Wextra -Werror -O2 -g -pthread runtime_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/runtime_test
+../../build/controller/runtime_test
+PASS: production runtime STOP precedence, packed status, calibration, signed errors, map freeze, per-run timing/fault interval, one-press asynchronous RESET, cancellation and timeout
+cc -Ifakes -DTM_MQTT=1 -I../../lib/liblwip/sysdepend/pico_rp2040 -std=c11 -Wall -Wextra -Werror -O2 -g -pthread runtime_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/runtime_mqtt_test
+../../build/controller/runtime_mqtt_test
+PASS: barcode trace published once over the Wi-Fi debug hook after the run
+PASS: production runtime STOP precedence, packed status, calibration, signed errors, map freeze, per-run timing/fault interval, one-press asynchronous RESET, cancellation and timeout
+cc -Ifakes -std=c11 -Wall -Wextra -Werror -O2 -g -pthread operator_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/operator_logic.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/operator_test
+../../build/controller/operator_test
+PASS: operator buttons -> production runtime: GP21 held at power-on/before/during countdown and both-button release orders block START, power-up GP20 press ignored, full 3-sensor calibration, countdown + STOP cancel, refused START reason, START/line-lost report, restart + STOP, FAULT: long press asks for RESET (no calibration trap) and reset from a calibration prompt, long-press recalibration, overlap rejection, STOP during sampling
+cc -Ifakes -std=c11 -Wall -Wextra -Werror -O2 -g -pthread map_freeze_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem1/telemetry_codec.c ../../app_program/subsystem2/motion_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/map_freeze_test
+../../build/controller/map_freeze_test
+PASS: real map storage + facade + runtime: refused first START reopens, accepted START freezes, duplicate START while driving and refused restart keep the freeze, restart keeps the installed map
+cc -Ifakes -std=c11 -Wall -Wextra -Werror -O2 -g -pthread builtin_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/operator_logic.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/builtin_test
+../../build/controller/builtin_test
+PASS: built-in calibration accepted at boot via normal validation, operator skips walkthrough, START/STOP work, minimum wheel speed floor, long press still recalibrates
+cc -I../../app_program/subsystem2 -I../../app_program/subsystem3 -I../../app_program/controller -std=c11 -Wall -Wextra -Werror -O2 -g -pthread course_test.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/course_test
+../../build/controller/course_test
+PASS: between-sensors detector (centred white, steering sign, touching, junction, no line lost), original mode unchanged, course options and validation
+cc -I../../app_program/controller -std=c11 -Wall -Wextra -Werror -O2 -g -pthread bcap_test.c ../../app_program/controller/barcode_capture.c -o ../../build/controller/bcap_test
+../../build/controller/bcap_test
+PASS: barcode capture episodes, pre-trigger, quiet end, run end, counters, bounded pool/letters and USB dump format
+cc -D_DEFAULT_SOURCE -D_USE_MATH_DEFINES -I../../app_program/subsystem2 -I../../app_program/subsystem3 -I../../app_program/controller -std=c11 -Wall -Wextra -Werror -O2 -g -pthread course_sim.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem2/motion_controller.c ../../app_program/subsystem2/motion_pack.c ../../app_program/subsystem2/motion_estimation.c ../../app_program/subsystem2/speed_pid.c -lm -o ../../build/controller/course_sim
+../../build/controller/course_sim
+Car model: sensor gap 22 mm, sensors 135 mm ahead of the axle, tape 18 mm
+PASS straight 1.5 m, start +0 mm off centre               reached x=1.50 m, worst centre error 0.0 mm, FOLLOW
+PASS straight 1.5 m, start +2 mm off centre               reached x=1.50 m, worst centre error 4.2 mm, FOLLOW
+PASS straight 1.5 m, start -2 mm off centre               reached x=1.50 m, worst centre error 4.1 mm, FOLLOW
+PASS left U-shaped curve, radius 20 cm                    end (-0.00, 0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS right U-shaped curve, radius 20 cm                   end (-0.00, -0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS left U-shaped curve, radius 15 cm                    end (-0.00, 0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS right U-shaped curve, radius 15 cm                   end (-0.00, -0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS left U-shaped curve, radius 14 cm                    end (-0.00, 0.28) m, worst centre error 9.8 mm, FOLLOW
+PASS right U-shaped curve, radius 14 cm                   end (-0.00, -0.28) m, worst centre error 10.1 mm, FOLLOW
+PASS left U-shaped curve, radius 12 cm                    end (-0.00, 0.24) m, worst centre error 10.6 mm, FOLLOW
+PASS right U-shaped curve, radius 12 cm                   end (-0.00, -0.24) m, worst centre error 10.5 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 15 cm         end (1.20, 0.30) m, worst centre error 6.6 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 14 cm         end (1.20, 0.28) m, worst centre error 7.0 mm, FOLLOW
+PASS crossing, no barcode: straight across                end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS crossing, STRAIGHT action: across                    end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS LEFT at crossing, advance 140 mm                     end (0.60, 0.40) m heading 89 deg, FOLLOW ok, advances=1
+PASS RIGHT at crossing, advance 140 mm                    end (0.60, -0.40) m heading 271 deg, FOLLOW ok, advances=1
+PASS U-TURN at crossing, advance 140 mm                   end (-0.10, 0.00) m heading 180 deg, FOLLOW ok, advances=0
+PASS LEFT at crossing, advance 0 mm (expected: halt)      end (0.46, 0.01) m heading 53 deg, HALTED line lost, advances=0
+PASS RIGHT at crossing, advance 0 mm (expected: halt)     end (0.46, -0.01) m heading 307 deg, HALTED line lost, advances=0
+PASS LEFT, spin ends at 63 deg: search finds line         end (0.60, 0.40) m heading 89 deg, FOLLOW ok
+PASS RIGHT, spin ends at 63 deg: search finds line        end (0.60, -0.40) m heading 272 deg, FOLLOW ok
+PASS LEFT, spin ends at 117 deg: search finds line        end (0.60, 0.40) m heading 92 deg, FOLLOW ok
+PASS RIGHT, spin ends at 117 deg: search finds line       end (0.60, -0.40) m heading 269 deg, FOLLOW ok
+PASS tape ends at 0.6 m: keeps driving straight           end (1.20, 0.000) m, FOLLOW (no line-lost stop by design; GP21 stops it)
+COURSE SIM PASS: 0 failure(s)
+/Library/Developer/CommandLineTools/usr/bin/make -f controller_test.mk test CFLAGS='-std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'
+mkdir -p ../../build/controller
+cc -DAPP_H -DAPP_TEST=0 -include controller_test_kernel.h -I. -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer team_adapter_test.c ../../app_program/controller/vehicle_controller.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem2/motion_codec.c -o ../../build/controller/controller_test
+../../build/controller/controller_test
+PASS: one-owner facade, explicit queued start/stop, full fault-bit ownership, unknown-status preservation, map freeze, telemetry and out-of-range invalidation
+cc -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer codec_test.c ../../app_program/controller/integration_codec.c ../../app_program/subsystem3/navigation_codec.c -o ../../build/controller/codec_test
+../../build/controller/codec_test
+PASS: full 60-byte nav/146-byte shared status/11-byte control, exact doubles/floats and run timing, boundaries/padding; hostile status packets accepted=31
+cc -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer timing_test.c -o ../../build/controller/timing_test
+../../build/controller/timing_test
+PASS: run timing target/safety boundaries, timestamp wrap, saturation and per-run reset
+cc -Ifakes -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer runtime_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/runtime_test
+../../build/controller/runtime_test
+PASS: production runtime STOP precedence, packed status, calibration, signed errors, map freeze, per-run timing/fault interval, one-press asynchronous RESET, cancellation and timeout
+cc -Ifakes -DTM_MQTT=1 -I../../lib/liblwip/sysdepend/pico_rp2040 -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer runtime_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/runtime_mqtt_test
+../../build/controller/runtime_mqtt_test
+PASS: barcode trace published once over the Wi-Fi debug hook after the run
+PASS: production runtime STOP precedence, packed status, calibration, signed errors, map freeze, per-run timing/fault interval, one-press asynchronous RESET, cancellation and timeout
+cc -Ifakes -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer operator_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/operator_logic.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/operator_test
+../../build/controller/operator_test
+PASS: operator buttons -> production runtime: GP21 held at power-on/before/during countdown and both-button release orders block START, power-up GP20 press ignored, full 3-sensor calibration, countdown + STOP cancel, refused START reason, START/line-lost report, restart + STOP, FAULT: long press asks for RESET (no calibration trap) and reset from a calibration prompt, long-press recalibration, overlap rejection, STOP during sampling
+cc -Ifakes -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer map_freeze_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem1/telemetry_codec.c ../../app_program/subsystem2/motion_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/map_freeze_test
+../../build/controller/map_freeze_test
+PASS: real map storage + facade + runtime: refused first START reopens, accepted START freezes, duplicate START while driving and refused restart keep the freeze, restart keeps the installed map
+cc -Ifakes -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer builtin_test.c ../../app_program/controller/barcode_capture.c ../../app_program/controller/operator_logic.c ../../app_program/controller/integration_codec.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/navigation_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/builtin_test
+../../build/controller/builtin_test
+PASS: built-in calibration accepted at boot via normal validation, operator skips walkthrough, START/STOP work, minimum wheel speed floor, long press still recalibrates
+cc -I../../app_program/subsystem2 -I../../app_program/subsystem3 -I../../app_program/controller -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer course_test.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/controller/course_test
+../../build/controller/course_test
+PASS: between-sensors detector (centred white, steering sign, touching, junction, no line lost), original mode unchanged, course options and validation
+cc -I../../app_program/controller -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer bcap_test.c ../../app_program/controller/barcode_capture.c -o ../../build/controller/bcap_test
+../../build/controller/bcap_test
+PASS: barcode capture episodes, pre-trigger, quiet end, run end, counters, bounded pool/letters and USB dump format
+cc -D_DEFAULT_SOURCE -D_USE_MATH_DEFINES -I../../app_program/subsystem2 -I../../app_program/subsystem3 -I../../app_program/controller -std=c11 -Wall -Wextra -Werror -O2 -g -pthread -O1 -fsanitize=address,undefined -fno-omit-frame-pointer course_sim.c ../../app_program/controller/s3_drive.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem2/motion_controller.c ../../app_program/subsystem2/motion_pack.c ../../app_program/subsystem2/motion_estimation.c ../../app_program/subsystem2/speed_pid.c -lm -o ../../build/controller/course_sim
+../../build/controller/course_sim
+Car model: sensor gap 22 mm, sensors 135 mm ahead of the axle, tape 18 mm
+PASS straight 1.5 m, start +0 mm off centre               reached x=1.50 m, worst centre error 0.0 mm, FOLLOW
+PASS straight 1.5 m, start +2 mm off centre               reached x=1.50 m, worst centre error 4.2 mm, FOLLOW
+PASS straight 1.5 m, start -2 mm off centre               reached x=1.50 m, worst centre error 4.1 mm, FOLLOW
+PASS left U-shaped curve, radius 20 cm                    end (-0.00, 0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS right U-shaped curve, radius 20 cm                   end (-0.00, -0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS left U-shaped curve, radius 15 cm                    end (-0.00, 0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS right U-shaped curve, radius 15 cm                   end (-0.00, -0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS left U-shaped curve, radius 14 cm                    end (-0.00, 0.28) m, worst centre error 9.8 mm, FOLLOW
+PASS right U-shaped curve, radius 14 cm                   end (-0.00, -0.28) m, worst centre error 10.1 mm, FOLLOW
+PASS left U-shaped curve, radius 12 cm                    end (-0.00, 0.24) m, worst centre error 10.6 mm, FOLLOW
+PASS right U-shaped curve, radius 12 cm                   end (-0.00, -0.24) m, worst centre error 10.5 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 15 cm         end (1.20, 0.30) m, worst centre error 6.6 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 14 cm         end (1.20, 0.28) m, worst centre error 7.0 mm, FOLLOW
+PASS crossing, no barcode: straight across                end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS crossing, STRAIGHT action: across                    end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS LEFT at crossing, advance 140 mm                     end (0.60, 0.40) m heading 89 deg, FOLLOW ok, advances=1
+PASS RIGHT at crossing, advance 140 mm                    end (0.60, -0.40) m heading 271 deg, FOLLOW ok, advances=1
+PASS U-TURN at crossing, advance 140 mm                   end (-0.10, 0.00) m heading 180 deg, FOLLOW ok, advances=0
+PASS LEFT at crossing, advance 0 mm (expected: halt)      end (0.46, 0.01) m heading 53 deg, HALTED line lost, advances=0
+PASS RIGHT at crossing, advance 0 mm (expected: halt)     end (0.46, -0.01) m heading 307 deg, HALTED line lost, advances=0
+PASS LEFT, spin ends at 63 deg: search finds line         end (0.60, 0.40) m heading 89 deg, FOLLOW ok
+PASS RIGHT, spin ends at 63 deg: search finds line        end (0.60, -0.40) m heading 272 deg, FOLLOW ok
+PASS LEFT, spin ends at 117 deg: search finds line        end (0.60, 0.40) m heading 92 deg, FOLLOW ok
+PASS RIGHT, spin ends at 117 deg: search finds line       end (0.60, -0.40) m heading 269 deg, FOLLOW ok
+PASS tape ends at 0.6 m: keeps driving straight           end (1.20, 0.000) m, FOLLOW (no line-lost stop by design; GP21 stops it)
+COURSE SIM PASS: 0 failure(s)

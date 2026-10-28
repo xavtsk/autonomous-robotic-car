@@ -1,14 +1,17 @@
-/*
- * File: obstacle_profile.h
- * Owner: Buddy 5 - Ultrasonic Obstacle Scanning and Avoidance
- * Purpose: Obstacle profile construction.
- */
-
 #ifndef BUDDY5_OBSTACLE_PROFILE_H
 #define BUDDY5_OBSTACLE_PROFILE_H
-
-/* TODO: Agree on scan input representation, profile geometry, units, and validity. */
-
-/* TODO: Define this module's interface before implementation. */
-
-#endif /* BUDDY5_OBSTACLE_PROFILE_H */
+#include "s5_config.h"
+/* 12 distance bits + 5 angle-index bits + validity = 18 bits / 3 bytes.
+ * Angle index 0..24 means 30..150 degrees in 5 degree steps. */
+typedef struct { uint8_t bytes[3]; } s5_sample_t;
+typedef struct {
+    uint16_t closest_mm, width_mm, left_clear_mm, right_clear_mm;
+    int16_t left_edge_mm, right_edge_mm;
+    uint16_t forward_mm;
+    bool valid;
+} s5_profile_t;
+bool s5_sample_pack(unsigned angle, unsigned mm, bool valid, s5_sample_t *out);
+bool s5_sample_unpack(const s5_sample_t *sample, unsigned *angle, unsigned *mm, bool *valid);
+bool s5_profile_build(const s5_sample_t *samples, unsigned count,
+                      const s5_config_t *cfg, s5_profile_t *out);
+#endif

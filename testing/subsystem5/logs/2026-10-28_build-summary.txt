@@ -1,0 +1,18 @@
+Base: 19d02fefd3ef614224cd8485920c4d5978ae5c92 plus local Buddy 5 changes.
+No flash or physical test. Enabled builds are compile-only.
+Network used public example configuration. Final selected profile: unconfigured.
+
+offline-enabled: BUILD PASS; compiler warnings=0
+text	   data	    bss	    dec	    hex	filename
+ 149516	    616	  42632	 192764	  2f0fc	/private/tmp/aai07-main-s5-offline-COMPILE_ONLY.elf
+UF2 SHA256=e604dda810ba9df9a2c6aa403d2c9be8abca80519b40138fc8aa3b66e5aa1a8a
+
+network-enabled: BUILD PASS; compiler warnings=0
+text	   data	    bss	    dec	    hex	filename
+ 419904	    672	 102856	 523432	  7fca8	/private/tmp/aai07-main-s5-network-COMPILE_ONLY.elf
+UF2 SHA256=eb1c6e6852ab167ac02969f18470023bd83e1c1bda6f3444966309c8ab377987
+
+unconfigured: BUILD PASS; compiler warnings=0
+text	   data	    bss	    dec	    hex	filename
+ 148804	    616	  42620	 192040	  2ee28	build_make/mtk3pico_smp1_usb_cdc_s3_motion_s4_s5_UNCONFIGURED.elf
+UF2 SHA256=145ef987fbf148d9de526bafe56e13af8eef795bc36914248cd29dd9ff0e46be

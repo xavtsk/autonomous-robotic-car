@@ -14,6 +14,8 @@
 static ID g_mutex, g_task, g_device;
 static uint8_t g_snapshot[TERRAIN_PACKET_SIZE], g_events[S4_QUEUE_LEN][TERRAIN_PACKET_SIZE];
 static unsigned g_head,g_count;
+static uint16_t g_run,g_published_run,g_humps;
+static bool g_published;
 static bool g_lost,g_reset,g_recalibrate,g_mag_pending;
 static float g_offset[3],g_scale[3];
 static uint32_t now_us(void) { return in_w(TIMER_TIMERAWL); }
@@ -37,11 +39,12 @@ static void publish(const terrain_result_t *r)
     terrain_result_t previous;
     if(g_reset) { tk_unl_mtx(g_mutex); return; }
     terrain_unpack(g_snapshot,&previous);
-    if(r->state!=previous.state || r->flags!=previous.flags || r->hump_completed) {
+    if(r->state!=previous.state || r->flags!=previous.flags || r->hump_completed || r->impact) {
         if(g_count==S4_QUEUE_LEN) { g_head=(g_head+1)%S4_QUEUE_LEN; --g_count; g_lost=true; }
         terrain_pack(r,g_events[(g_head+g_count)%S4_QUEUE_LEN]); ++g_count;
     }
-    terrain_pack(r,g_snapshot);
+    if(r->hump_completed && (r->flags&TERRAIN_PEAK_VALID) && g_humps<UINT16_MAX) { ++g_humps; }
+    terrain_pack(r,g_snapshot); g_published_run=g_run; g_published=true;
     tk_unl_mtx(g_mutex);
 }
 static void task(INT stacd,void *exinf)
@@ -58,7 +61,7 @@ static void task(INT stacd,void *exinf)
             if(g_reset) {
                 terrain_monitor_reset_run(&monitor);
                 if(g_recalibrate) { imu_calibration_reset(&monitor.calibration); }
-                g_reset=false; g_recalibrate=false; g_count=0; g_head=0; g_lost=false;
+                g_reset=false; g_recalibrate=false; g_count=0; g_head=0; g_lost=false; g_humps=0;
             }
             if(g_mag_pending) { terrain_monitor_set_magnetic_calibration(&monitor,g_offset,g_scale); g_mag_pending=false; }
             tk_unl_mtx(g_mutex);
@@ -119,15 +122,22 @@ ER subsystem4_start(void)
     if(er<0) { tk_del_tsk(g_task); g_task=0; }
     return er;
 }
-bool subsystem4_snapshot(terrain_result_t *out)
+bool subsystem4_read(terrain_result_t *out,uint16_t *token,uint16_t *humps)
 {
-    if(!out || g_mutex<=0 || tk_loc_mtx(g_mutex,TMO_POL)!=E_OK) { return false; }
-    terrain_unpack(g_snapshot,out); tk_unl_mtx(g_mutex);
+    if(!out || !token || !humps || g_mutex<=0 || tk_loc_mtx(g_mutex,TMO_POL)!=E_OK) { return false; }
+    if(!g_published || g_reset || g_published_run!=g_run) { tk_unl_mtx(g_mutex); return false; }
+    terrain_unpack(g_snapshot,out); *token=g_published_run; *humps=g_humps;
+    tk_unl_mtx(g_mutex);
     if((uint32_t)(now_us()-out->timestamp_us)>150000U) {
         out->flags=(out->flags & (TERRAIN_PEAK_VALID|TERRAIN_CALIBRATED))|TERRAIN_FAULT;
-        out->state=TERRAIN_UNKNOWN; out->impact=false;
+        out->state=TERRAIN_UNKNOWN; out->impact=false; out->hump_completed=false;
     }
     return true;
+}
+bool subsystem4_snapshot(terrain_result_t *out)
+{
+    uint16_t token,humps;
+    return subsystem4_read(out,&token,&humps);
 }
 bool subsystem4_event(terrain_result_t *out,bool *lost)
 {
@@ -136,13 +146,17 @@ bool subsystem4_event(terrain_result_t *out,bool *lost)
     if(g_count) { terrain_unpack(g_events[g_head],out); g_head=(g_head+1)%S4_QUEUE_LEN; --g_count; *lost=g_lost; g_lost=false; ok=true; }
     tk_unl_mtx(g_mutex); return ok;
 }
-bool subsystem4_reset_run(bool recalibrate)
+static bool request_reset(bool recalibrate,uint16_t *token)
 {
     if(g_mutex<=0 || tk_loc_mtx(g_mutex,TMO_POL)!=E_OK) { return false; }
-    g_reset=true; g_recalibrate|=recalibrate;
-    { unsigned i; for(i=0;i<TERRAIN_PACKET_SIZE;++i) { g_snapshot[i]=0; } } g_head=0; g_count=0;
+    if(g_reset) { tk_unl_mtx(g_mutex); return false; }
+    ++g_run; if(token) { *token=g_run; }
+    g_reset=true; g_recalibrate=recalibrate; g_published=false;
+    g_head=0; g_count=0; g_lost=false;
     tk_unl_mtx(g_mutex); return true;
 }
+bool subsystem4_reset_run(bool recalibrate) { return request_reset(recalibrate,NULL); }
+bool subsystem4_begin_run(uint16_t *token) { return token && request_reset(false,token); }
 bool subsystem4_set_magnetic_calibration(const float offset[3],const float scale[3])
 {
     terrain_monitor_t check;
@@ -157,5 +171,8 @@ ER subsystem4_start(void) { return E_OK; }
 bool subsystem4_snapshot(terrain_result_t *out) { (void)out; return false; }
 bool subsystem4_event(terrain_result_t *out,bool *lost) { (void)out; (void)lost; return false; }
 bool subsystem4_reset_run(bool recalibrate) { (void)recalibrate; return false; }
+bool subsystem4_begin_run(uint16_t *token) { (void)token; return false; }
+bool subsystem4_read(terrain_result_t *out,uint16_t *token,uint16_t *humps)
+{ (void)out; (void)token; (void)humps; return false; }
 bool subsystem4_set_magnetic_calibration(const float o[3],const float s[3]) { (void)o; (void)s; return false; }
 #endif

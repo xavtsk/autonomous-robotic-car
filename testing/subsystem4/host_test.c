@@ -46,10 +46,22 @@ int main(void)
  }
  t.result=(terrain_result_t){.timestamp_us=123,.pitch_deg=-12.3f,.roll_deg=45.6f,.turn_dps=-30,.peak_m=0.123f,.flags=15,.state=TERRAIN_CLIMBING};
  terrain_pack(&t.result,packed);assert(bits(packed,0,32)==123 && bits(packed,32,3)==TERRAIN_CLIMBING);
- assert(bits(packed,40,12)==(4096-123) && bits(packed,52,12)==456 && bits(packed,64,12)==4096-30 && bits(packed,76,9)==123);
+ assert(bits(packed,40,11)==(2048-123) && bits(packed,51,11)==456 && bits(packed,62,10)==1024-30 && bits(packed,72,9)==123);
  t.result.peak_m=0.501f;terrain_pack(&t.result,packed);assert(!(bits(packed,35,5)&TERRAIN_PEAK_VALID));
  t.result.pitch_deg=NAN;terrain_pack(&t.result,packed);assert(!(bits(packed,35,5)&TERRAIN_TILT_VALID));
  t.hump.highest_valid=true;t.hump.highest_m=0.1f;terrain_monitor_reset_run(&t);assert(!t.hump.highest_valid && t.calibration.ready);
+ { terrain_result_t decoded;
+  for(int angle=-900;angle<=900;angle++) {
+   t.result=(terrain_result_t){.pitch_deg=angle/10.0f,.roll_deg=-angle/10.0f,
+       .flags=TERRAIN_TILT_VALID|TERRAIN_TURN_VALID|TERRAIN_PEAK_VALID,
+       .turn_dps=(float)(angle%361),.peak_m=0.5f,.hump_completed=true,.impact=true};
+   terrain_pack(&t.result,packed);terrain_unpack(packed,&decoded);
+   assert(fabsf(decoded.pitch_deg-t.result.pitch_deg)<0.001f);
+   assert(fabsf(decoded.roll_deg-t.result.roll_deg)<0.001f);
+   assert(decoded.turn_dps==t.result.turn_dps && decoded.peak_m==0.5f);
+   assert(decoded.hump_completed && decoded.impact && (packed[10]&0xf8U)==0);
+  }
+ }
  puts("Buddy 4 host tests PASS: driver, axes, signed data, saturation, calibration, tilt, gaps, hump, packing, reset");
  return 0;
 }
