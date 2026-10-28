@@ -1,8 +1,8 @@
 # Team and subsystems
 
-Subsystem numbers correspond to Buddy numbers. Resource claims below are still
-incomplete for Buddy 2's motion implementation; check its code as well. Buddy 3's
-one-sensor bench claims are recorded here. Fill in owners and remaining interfaces.
+Subsystem numbers correspond to Buddy numbers. Motor/encoder and Buddy 5 resource
+claims were reconciled with code on 27 October 2026. Physical validation and
+remaining owner/interface sign-offs are still required.
 
 Fill this in at the start of the project and keep it up to date. It is the
 single place that says **who owns what**, so that five people can work in
@@ -49,24 +49,24 @@ fixed.
 | Pin | Owner | Used for |
 |---|---|---|
 | GP23, GP24, GP25, GP29 | *reserved* | Pico W radio |
-| GP0 | | (taken whenever the team builds with `CRASH_REPORT=1`) |
-| GP1 | | (taken whenever the team builds with `CRASH_REPORT=1`) |
+| GP0 | 5 | HC-SR04 ECHO, user-confirmed 2026-10-27; verify 3.3 V-compatible signal conditioning; conflicts with UART/crash console |
+| GP1 | 5 | HC-SR04 TRIG, user-confirmed 2026-10-27; S5 requires USB console, CRASH_REPORT=0 |
 | GP2 | 4 | Grove 2 IMU SDA, I2C1 |
 | GP3 | 4 | Grove 2 IMU SCL, I2C1 |
-| GP4 | | |
-| GP5 | | |
+| GP4 | 2 | Right encoder A; existing Buddy 2 implementation |
+| GP5 | 2 | Right encoder B; existing Buddy 2 implementation |
 | GP6 | | |
 | GP7 | | |
-| GP8 | | |
-| GP9 | | |
-| GP10 | | |
-| GP11 | | |
-| GP12 | | |
+| GP8 | 2 | Left motor A; existing Buddy 2 implementation |
+| GP9 | 2 | Left motor B; existing Buddy 2 implementation |
+| GP10 | 2 | Right motor A; existing Buddy 2 implementation |
+| GP11 | 2 | Right motor B; existing Buddy 2 implementation |
+| GP12 | 5 | Servo signal, PWM6A; user-confirmed 2026-10-27; pulse/travel calibration pending |
 | GP13 | | |
 | GP14 | | |
 | GP15 | | |
-| GP16 | | |
-| GP17 | | |
+| GP16 | 2 | Left encoder A; existing Buddy 2 implementation |
+| GP17 | 2 | Left encoder B; existing Buddy 2 implementation |
 | GP18 | | |
 | GP19 | | |
 | GP20 | MOTION_SMOKE and S3_MOTION operator panel | Next calibration step / START (3 s countdown); hold 2 s = recalibrate; no automatic start |
@@ -112,7 +112,11 @@ the drivers have no locking to stop it.
 | SPI0 | | | |
 | SPI1 | | | |
 | ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP28 barcode only in default bench; GP27 left/GP26 right enabled with IR_CHANNELS=3 or the integrated profile. Mapping: `S3_ADC_CHANNEL_*` in `ir_acquisition.h` |
-| PWM slices (list) | | | |
+| PWM4/5 | 2 | motion task | GP8–11; 10 kHz motor PWM |
+| PWM6A | 5 | obstacle-scan task | GP12; 50 Hz servo, never reset other slices |
+| PIO0 SM0/SM1, words 0–23 | 2 | motion task | GP16/17, GP4/5 encoders; initialises before S5 |
+| PIO0 SM2, words 24–31 | 5 | obstacle-scan task | GP0 ECHO; 1 MHz pulse counter; atomic per-SM control |
+| PIO1 | kernel | CYW43 owner | Wi-Fi; Buddy 5 does not touch it |
 | WiFi radio, TCP/IP, MQTT | *kernel* | `cyw43_utk_task` (built in) | GP23–25, GP29 |
 
 ### WiFi and MQTT are special
@@ -150,8 +154,8 @@ change it only by team agreement. Write down every task you create.
 | 1 | Command service 22 | `buddy1-cmd` - 22 - core 0; radio/lwIP/MQTT remain on kernel task 4 |
 | 2 | 14–15 | motion task - 14 - core 0; 10 ms cyclic; sole motor writer |
 | 3 | 16–17 | `ir-sample` - 16 - core 0; `ir-report` - 17 - core 0; bench with `IR_BENCH=1`; alternatively `s3-motion`/`s3-status` at the same priorities/core with `S3_MOTION=1` |
-| 4 | 18–19 | No tasks yet |
-| 5 | 20–21 | No tasks yet |
+| 4 | 18–19 | IMU sensing - 18 - core 0, when S4=1 |
+| 5 | 20–21 | obstacle-scan - 20 - core 0, when S5=1 and hardware configuration enabled |
 | Controller operator panel | 24 | `operator` - 24 - core 0; `S3_MOTION=1` only; polls GP20/GP21 every 10 ms; talks only to `s3_integration` |
 
 Core: `TP_PRC1` = core 0, `TP_PRC2` = core 1, or "any".
@@ -172,7 +176,7 @@ start. The standalone sensor default mapping below is not authoritative at
 team start. Runtime requests/status use 11/146-byte explicit packets under
 the existing snapshot mutex. The older two-buddy-only description below is
 the imported handoff history; see `docs/INTEGRATION_2026-10-25.md` for current
-ownership, tests and open issues. No Buddy 4/5 arbitration is enabled.
+ownership, tests and open issues. Buddy 5 arbitration now extends this same owner when S5=1; Buddy 4 run/event/fault arbitration is also connected through this owner when S4=1.
 
 Every arrow between two subsystems is listed here. The **provider** creates
 the kernel object and publishes its ID in its own `subsystemN.h`; the **user** only
@@ -180,13 +184,21 @@ sends to it or waits on it. Agree on the data format before coding.
 
 | ID | From → To | Mechanism | Object ID name | Data / meaning | Agreed by |
 |---|---|---|---|---|---|
+| S4-I1 | S4 sensing → controller | 11-byte packet + 16-bit run/count metadata, protected snapshot; eight-event queue | existing S4 mutex | Terrain/tilt/rate, peak/count, validity, impact and loss | Integration policy 28 Oct; physical validation pending |
+| S4-I2 | Controller → S4 | Bounded reset request with 16-bit generation | existing S4 mutex | Clear run statistics; wait for matching publication before driving | Same |
+| S4-I3 | Controller → Buddy 1 | Existing hump telemetry and masked IMU fault API | existing Buddy 1 mutex/outbox | Count/highest peak; update only IMU fault bit | Binary MQTT v2 unchanged |
+| S5-I1 | S5 sensing → controller | 23-byte protected snapshot | private S5 mutex | Source-timed forward range, validity/no-echo, identified scan result and profile | Implementation in Xavier branch; physical validation pending |
+| S5-I2 | Controller → S5 sensing | Bounded 16-bit scan token + cancel flag | same S5 mutex | Request scan only after stopped ACK; sensing owner independently checks stopped feedback | Same |
+| S5-I3 | Controller → Buddy 2 | Existing Motion API and identified reports | existing motion objects | One requester/report consumer; S5 task never commands motors | Existing ownership preserved |
+| S5-I4 | Buddy 3 → controller recovery | Existing fresh line observations | same controller context | Tape evidence near predicted original corridor; suppress barcode/junction actions during detour | Physical original-line identity still needs proof |
+| S5-I5 | Controller → Buddy 1 | Existing telemetry API | Buddy 1 mutex/outbox | Closest distance, conservative width, chosen route, state; only owned NO_ECHO bit modified | Binary v2 unchanged |
 
 Buddy 3's pure context API in `app_program/subsystem3/line_navigation.h` emits
 observations, steering proposals in m/s and edge events. The controller supplies
 source-timestamped signed centre distance and reset epochs, serialises accepted
 calibration/start controls and turns persistent stop requests into Buddy 2
-braking. The sensing core calls no motors. Future Buddy 4/5 arbitration must
-extend this same owner, not add competing motion callers/report consumers.
+braking. The sensing core calls no motors. Buddy 5 now extends this owner under S5=1. Buddy 4 uses the same owner for reset acknowledgement and fault handling; no
+competing motion callers/report consumers are added.
 
 Upstream Buddy 2 `a29f973` uses PIO0 SM0/SM1 for encoders and retains its
 measured settings. Imported `71193e2` adds timestamp/epoch feedback, wrap-safe
@@ -234,11 +246,11 @@ does not create another flag. The kernel has its own usage.
 
 | Object | Limit | S1 | S2 | S3 | S4 | S5 |
 |---|---|---|---|---|---|---|
-| Task | 32 | 1 | 1 | 2 in either opt-in S3 profile | 0 | 0 |
+| Task | 32 | 1 | 1 | 2 in either opt-in S3 profile | 1 when S4=1 | 1 when S5=1 |
 | Semaphore | 16 | 0 | 0 | 0 | 0 | 0 |
 | Event flag | 16 | 0 | 0 | 0 | 0 | 0 |
 | Mailbox | 12 | 0 | 0 | 0 | 0 | 0 |
-| Mutex | 12 | 1 | 1 | 1 in either opt-in S3 profile | 0 | 0 |
+| Mutex | 12 | 1 | 1 | 1 in either opt-in S3 profile | 1 when S4=1 | 1 when S5=1 |
 | Message buffer | 12 | 2 (4 outbox / 2 commands) | 1 (8 packed completion reports) | 0 | 0 | 0 |
 | Fixed memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
 | Variable memory pool | 12 | 0 | 0 | 0 | 0 | 0 |
@@ -253,5 +265,24 @@ S4=1 enables the priority-18, core-0 sensing task (4096-byte stack) and one
 priority-inheritance mutex. S4_BENCH=1 is the isolated stationary sensor build.
 The task exclusively owns iicb. Shared snapshot and eight event slots use explicit
 11-byte packets; overflow drops the oldest event and reports loss.
-Controller run-reset, event handling, safety response and WiFi adapters remain
-integration work. No automatic motor action is taken by Buddy 4.
+Integrated 28 October: the existing sampling/controller owner consumes S4 events,
+waits for a post-reset run token before motion, and faults/stops on stale data,
+IMU fault, impact candidate or queue loss. S4 itself never commands motors.
+Buddy 1 receives cumulative completed-hump count/highest valid peak and masked IMU
+fault updates. USB reports terrain/tilt/turn rate. Internal packets now use 83
+meaningful bits in 11 bytes; run/count are protected 16-bit metadata. No new task
+or mutex was added for the controller adapter. See the Buddy 4 integration guide.
+Calibration, magnetic interference, impact sensitivity, height accuracy and
+full-load timing remain physical validation work.
+
+## Buddy 5 implementation, 27 October 2026
+
+Pins confirmed by Xavier: HC-SR04 ECHO GP0, TRIG GP1, servo signal GP12.
+`S5=1` requires `S3_MOTION=1`, USB console and `CRASH_REPORT=0`.
+Hardware activation remains separately opt-in (`S5_HARDWARE_CONFIRMED=1`) after
+checking level protection, servo pulse/travel calibration and route geometry.
+`S5=0` is the default. No firmware was flashed in this implementation session.
+The S5 task waits for valid Buddy 2 feedback before initialising PIO0 SM2; do not
+reinitialise the whole PIO0 block after either owner starts. Buddy 2 source is
+unchanged; its historical “PIO0 ours alone” comment predates this allocation.
+See `app_program/subsystem5/README.md` and `DATA_FORMAT.md` for limits and tests.

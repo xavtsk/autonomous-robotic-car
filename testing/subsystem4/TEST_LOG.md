@@ -27,3 +27,16 @@ pending. Compilation results are recorded separately from runtime tests.
   mag byte order, calibration, sample gaps, synthetic hump integration and reset.
 - Hardware: sensor ID, axes, disconnect/reconnect, known-height accuracy,
   magnetic calibration/interference, impact false positives, timing and stack pending.
+
+## 28 October 2026 — controller integration
+
+Implemented acknowledged per-run reset, cumulative hump count/peak telemetry,
+IMU-only fault updates, bounded event consumption and latched safety response in
+the existing controller. Internal packet fields now use minimum widths for the
+declared ranges (83 bits in 11 bytes). No extra task or mutex was added.
+
+Processing, production task/transport and controller-runtime tests pass normally
+and with ASan/UBSan. Combined S4/S5/motion tests and existing controller regression
+also pass. See `logs/2026-10-28_*` and
+`docs/BUDDY4_INTEGRATION_2026-10-28.md` for results and physical work still required.
+No IMU/car test, flash or Week 13 demonstration was performed in this session.

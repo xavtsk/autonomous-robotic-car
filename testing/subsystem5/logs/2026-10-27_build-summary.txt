@@ -1,0 +1,21 @@
+offline-enabled: BUILD PASS; zero compiler warnings
+   text	   data	    bss	    dec	    hex	filename
+ 144548	    616	  25064	 170228	  298f4	/private/tmp/aai07_s5_offline_COMPILE_ONLY.elf
+UF2 bytes=290816; SHA256=0ac22b48b9c672e9beff253baddc20cde27058b434973a88aecdf23453a97831
+
+network: BUILD PASS; zero compiler warnings
+   text	   data	    bss	    dec	    hex	filename
+ 414536	    672	  85088	 500296	  7a248	/private/tmp/aai07_s5_network_COMPILE_ONLY.elf
+UF2 bytes=830464; SHA256=609f23d4fcfb29860fd20c2423be444fabb9a6f6ac4ae5764d6b5b89572e81fd
+
+unconfigured: BUILD PASS; zero compiler warnings
+   text	   data	    bss	    dec	    hex	filename
+ 143836	    616	  25052	 169504	  29620	/Users/xavtsk/Documents/SIT Y2T1/Embedded Systems/INF2004 Project/autonomous-robotic-car/build_make/mtk3pico_smp1_usb_cdc_s3_motion_s4_s5_UNCONFIGURED.elf
+UF2 bytes=289280; SHA256=de39decda7044eab5090086fe0fc818e65f2948a043553846b5c4cc39901441c
+
+Base commit: 6225b04984e329179fe15c2b39f4946f4c2bfeb6 plus uncommitted Buddy 5 changes.
+
+S3_MOTION=1 S4=1 S5=1 CONSOLE=usb_cdc CRASH_REPORT=0. TEST/IR_BENCH/S4_BENCH/DIAGNOSTICS/MOTION_SMOKE=0.
+Enabled-path builds use S5_HARDWARE_CONFIRMED=1; final selected local profile uses =0. Network build uses public placeholders only. No flash or physical test.
+
+PIO instruction image checked against official Pico SDK pioasm output, relocated to origin 24: PASS.

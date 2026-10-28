@@ -1,13 +1,10 @@
-/*
- * File: line_recovery.c
- * Owner: Buddy 5 - Ultrasonic Obstacle Scanning and Avoidance
- * Purpose: Line recovery after obstacle avoidance.
- */
-
 #include "line_recovery.h"
-
-/*
- * TODO: Agree on line observations, recovery criteria, and navigation requests through the integration layer.
- * TODO: Implement this module after its interface and requirements are agreed.
- * No functionality is implemented in this starter file.
- */
+void s5_recovery_reset(s5_recovery_t *r) { *r=(s5_recovery_t){0}; }
+bool s5_recovery_observe(s5_recovery_t *r,uint32_t now,bool healthy,
+                         bool tape,bool junction,bool corridor)
+{
+    if(!healthy || !tape || junction || !corridor) { r->touching=false; return r->confirmed; }
+    if(!r->touching) { r->touching=true; r->since_us=now; }
+    if((uint32_t)(now-r->since_us)>=30000U) { r->confirmed=true; }
+    return r->confirmed;
+}

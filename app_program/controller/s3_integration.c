@@ -11,6 +11,13 @@
 #include "barcode_capture.h"
 #include "ir_debug.h"
 #include "control_debug.h"
+#include "terrain_integration.h"
+#if APP_S4
+#include "../subsystem4/subsystem4.h"
+#endif
+#if APP_S5
+#include "../subsystem5/s5_api.h"
+#endif
 #include <sys/sysdef.h>
 #if APP_S3_MOTION
 #ifndef S3_BARCODE_CAPTURE
@@ -115,13 +122,15 @@ static bool execute(const s3_control_request_t *c, uint32_t now)
     }
     if (c->kind == S3_CONTROL_RESET)
     {
-        return s3_drive_reset(&g_drive, now);
+        if (!terrain_control_reset_ready(now) || !s3_drive_reset(&g_drive, now)) { return false; }
+        terrain_control_clear_fault();
+        return true;
     }
     if (c->kind == S3_CONTROL_START)
     {
         /* Ineligible STARTs (already driving, FAULT, active lifecycle,
          * collecting, not ready) are refused BEFORE touching the map. */
-        if (g_collecting ||
+        if (!terrain_control_ready(now) || g_collecting ||
             ((g_drive.state != S3_DRIVE_OFF) &&
              (g_drive.state != S3_DRIVE_HALTED)) ||
             (g_drive.navigation.lifecycle != S3_RUN_INACTIVE) ||
@@ -134,6 +143,11 @@ static bool execute(const s3_control_request_t *c, uint32_t now)
          * If it refuses, undo only a map freeze this attempt newly took. */
         if (!s3_drive_start(&g_drive, now))
         {
+            vehicle_controller_cancel_start();
+            return false;
+        }
+        if (!terrain_control_begin(now)) {
+            s3_drive_stop(&g_drive);
             vehicle_controller_cancel_start();
             return false;
         }
@@ -327,6 +341,8 @@ static void sample(INT code, void *unused)
             frame = (s3_sensor_frame_t){0};
             frame.timestamp_us = now_us();
         }
+        /* ADC waits may allow a newer IMU publication than the frame start. */
+        terrain_control_poll(&g_drive, now_us());
         (void)s3_drive_process(&g_drive, &frame, &feedback);
         /* A reset request is not a reset acknowledgement. The drive owner
          * waits for a newer safe feedback publication, or its 500 ms timeout.
@@ -615,6 +631,27 @@ static void report(INT code, void *unused)
         {
             continue;
         }
+#if APP_S5
+        s5_observation_t obstacle;
+        if (subsystem5_snapshot(&obstacle)) {
+            unsigned status=subsystem5_controller_status();
+            tm_printf((UB *)"[S5] state=%u fault=%u route=%u range_mm=%u valid=%u no_echo=%u scan=%u profile=%u width_mm=%u left_mm=%u right_mm=%u\n",
+                status&7U,(status>>3)&7U,status>>6,(unsigned)obstacle.range_mm,
+                (unsigned)obstacle.range_valid,(unsigned)obstacle.no_echo,(unsigned)obstacle.scan_id,
+                (unsigned)obstacle.profile.valid,(unsigned)obstacle.profile.width_mm,
+                (unsigned)obstacle.profile.left_clear_mm,(unsigned)obstacle.profile.right_clear_mm);
+        }
+#endif
+#if APP_S4
+        terrain_result_t terrain;
+        uint16_t terrain_run, terrain_humps;
+        if (subsystem4_read(&terrain, &terrain_run, &terrain_humps)) {
+            tm_printf((UB *)"[S4] run=%u state=%u flags=%u pitch_x10=%d roll_x10=%d turn_dps=%d humps=%u peak_mm=%u impact=%u\n",
+                (unsigned)terrain_run, (unsigned)terrain.state, (unsigned)terrain.flags,
+                (int)(terrain.pitch_deg*10), (int)(terrain.roll_deg*10), (int)terrain.turn_dps,
+                (unsigned)terrain_humps, (unsigned)(terrain.peak_m*1000), (unsigned)terrain.impact);
+        } else { tm_printf((UB *)"[S4] waiting for sample/reset acknowledgement\n"); }
+#endif
         tm_printf(
             (UB *)"[S3+S2] state=%u reason=%u ready=0x%x cal=0x%x motion=%s "
                   "odom_valid=%u adc=%d gap=%u boot_max=%u above10ms=%u "

@@ -1,0 +1,15 @@
+.program s5_echo
+.origin 24
+.wrap_target
+    wait 1 pin 0
+    mov x, ~null
+loop:
+    jmp pin count
+    jmp finish
+count:
+    jmp x-- loop
+    jmp finish
+finish:
+    mov isr, ~x
+    push block
+.wrap

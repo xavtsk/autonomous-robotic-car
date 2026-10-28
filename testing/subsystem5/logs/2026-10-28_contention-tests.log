@@ -1,0 +1,111 @@
+mkdir -p ../../build/buddy5
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller host_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c ../../app_program/subsystem5/ultrasonic_sensor.c -o ../../build/buddy5/host_test
+../../build/buddy5/host_test
+PASS: range/codec exhaustive boundaries, hostile packets, coarse/fine scans, invalid echo, route clearance, bounded FSM, faults and line evidence
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -DAPP_S5=1 controller_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem2/motion_controller.c ../../app_program/subsystem2/motion_pack.c ../../app_program/subsystem2/motion_estimation.c ../../app_program/subsystem2/speed_pid.c ../../app_program/controller/s3_drive.c -o ../../build/buddy5/controller_test
+../../build/buddy5/controller_test
+PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered
+PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, seven-leg bypass, real tape gate, STOP, stale range and report loss
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -DAPP_S5=1 -DAPP_S4=1 -DAPP_H -DAPP_TEST=0 -include ../integration/controller_test_kernel.h controller_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem2/motion_controller.c ../../app_program/subsystem2/motion_pack.c ../../app_program/subsystem2/motion_estimation.c ../../app_program/subsystem2/speed_pid.c ../../app_program/controller/s3_drive.c ../../app_program/controller/terrain_integration.c -o ../../build/buddy5/terrain_controller_test
+../../build/buddy5/terrain_controller_test
+PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered
+PASS: IMU impact cancels an active S5 bypass through the sole controller and brakes Buddy 2
+PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, seven-leg bypass, real tape gate, STOP, stale range and report loss
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -DAPP_S5=1 -D_DEFAULT_SOURCE -D_USE_MATH_DEFINES course_clear_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem2/motion_controller.c ../../app_program/subsystem2/motion_pack.c ../../app_program/subsystem2/motion_estimation.c ../../app_program/subsystem2/speed_pid.c ../../app_program/controller/s3_drive.c -lm -o ../../build/buddy5/course_clear_test
+../../build/buddy5/course_clear_test
+Car model: sensor gap 22 mm, sensors 135 mm ahead of the axle, tape 18 mm
+PASS straight 1.5 m, start +0 mm off centre               reached x=1.50 m, worst centre error 0.0 mm, FOLLOW
+PASS straight 1.5 m, start +2 mm off centre               reached x=1.50 m, worst centre error 4.2 mm, FOLLOW
+PASS straight 1.5 m, start -2 mm off centre               reached x=1.50 m, worst centre error 4.1 mm, FOLLOW
+PASS left U-shaped curve, radius 20 cm                    end (-0.00, 0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS right U-shaped curve, radius 20 cm                   end (-0.00, -0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS left U-shaped curve, radius 15 cm                    end (-0.00, 0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS right U-shaped curve, radius 15 cm                   end (-0.00, -0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS left U-shaped curve, radius 14 cm                    end (-0.00, 0.28) m, worst centre error 9.8 mm, FOLLOW
+PASS right U-shaped curve, radius 14 cm                   end (-0.00, -0.28) m, worst centre error 10.1 mm, FOLLOW
+PASS left U-shaped curve, radius 12 cm                    end (-0.00, 0.24) m, worst centre error 10.6 mm, FOLLOW
+PASS right U-shaped curve, radius 12 cm                   end (-0.00, -0.24) m, worst centre error 10.5 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 15 cm         end (1.20, 0.30) m, worst centre error 6.6 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 14 cm         end (1.20, 0.28) m, worst centre error 7.0 mm, FOLLOW
+PASS crossing, no barcode: straight across                end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS crossing, STRAIGHT action: across                    end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS LEFT at crossing, advance 140 mm                     end (0.60, 0.40) m heading 89 deg, FOLLOW ok, advances=1
+PASS RIGHT at crossing, advance 140 mm                    end (0.60, -0.40) m heading 271 deg, FOLLOW ok, advances=1
+PASS U-TURN at crossing, advance 140 mm                   end (-0.10, 0.00) m heading 180 deg, FOLLOW ok, advances=0
+PASS LEFT at crossing, advance 0 mm (expected: halt)      end (0.46, 0.01) m heading 53 deg, HALTED line lost, advances=0
+PASS RIGHT at crossing, advance 0 mm (expected: halt)     end (0.46, -0.01) m heading 307 deg, HALTED line lost, advances=0
+PASS LEFT, spin ends at 63 deg: search finds line         end (0.60, 0.40) m heading 89 deg, FOLLOW ok
+PASS RIGHT, spin ends at 63 deg: search finds line        end (0.60, -0.40) m heading 272 deg, FOLLOW ok
+PASS LEFT, spin ends at 117 deg: search finds line        end (0.60, 0.40) m heading 92 deg, FOLLOW ok
+PASS RIGHT, spin ends at 117 deg: search finds line       end (0.60, -0.40) m heading 269 deg, FOLLOW ok
+PASS tape ends at 0.6 m: keeps driving straight           end (1.20, 0.000) m, FOLLOW (no line-lost stop by design; GP21 stops it)
+COURSE SIM PASS: 0 failure(s)
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -Ifakes hardware_test.c -o ../../build/buddy5/hardware_test
+../../build/buddy5/hardware_test
+PASS: production PIO/PWM drivers with fake registers; confirmed pins, echo/timeout/stuck-high, servo limits, encoder SM ownership
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -Ifakes runtime_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c -o ../../build/buddy5/runtime_test
+../../build/buddy5/runtime_test
+PASS: production sensing task with fake clock/kernel/sensor; stop-gated scan, bounded mailbox, packed snapshots, cancellation/recentering, confirmed no-echo
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -Ifakes -DS5_HARDWARE_CONFIRMED=0 runtime_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c -o ../../build/buddy5/activation_gate_test
+../../build/buddy5/activation_gate_test
+PASS: unconfirmed hardware cannot initialise or start Buddy 5
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -DAPP_S5=1 -DAPP_H -DAPP_TEST=0 -include ../integration/controller_test_kernel.h telemetry_test.c ../../app_program/controller/vehicle_controller.c -o ../../build/buddy5/telemetry_test
+../../build/buddy5/telemetry_test
+PASS: one-owner facade, explicit queued start/stop, full fault-bit ownership, unknown-status preservation, map freeze, telemetry and out-of-range invalidation
+PASS: production telemetry adapter preserves Wi-Fi/motor faults, owns only no-echo, publishes obstacle profile and avoidance/error state
+/Library/Developer/CommandLineTools/usr/bin/make test CFLAGS='-std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'
+mkdir -p ../../build/buddy5
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller host_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c ../../app_program/subsystem5/ultrasonic_sensor.c -o ../../build/buddy5/host_test
+../../build/buddy5/host_test
+PASS: range/codec exhaustive boundaries, hostile packets, coarse/fine scans, invalid echo, route clearance, bounded FSM, faults and line evidence
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -DAPP_S5=1 controller_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem2/motion_controller.c ../../app_program/subsystem2/motion_pack.c ../../app_program/subsystem2/motion_estimation.c ../../app_program/subsystem2/speed_pid.c ../../app_program/controller/s3_drive.c -o ../../build/buddy5/controller_test
+../../build/buddy5/controller_test
+PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered
+PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, seven-leg bypass, real tape gate, STOP, stale range and report loss
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -DAPP_S5=1 -DAPP_S4=1 -DAPP_H -DAPP_TEST=0 -include ../integration/controller_test_kernel.h controller_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem2/motion_controller.c ../../app_program/subsystem2/motion_pack.c ../../app_program/subsystem2/motion_estimation.c ../../app_program/subsystem2/speed_pid.c ../../app_program/controller/s3_drive.c ../../app_program/controller/terrain_integration.c -o ../../build/buddy5/terrain_controller_test
+../../build/buddy5/terrain_controller_test
+PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered
+PASS: IMU impact cancels an active S5 bypass through the sole controller and brakes Buddy 2
+PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, seven-leg bypass, real tape gate, STOP, stale range and report loss
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -DAPP_S5=1 -D_DEFAULT_SOURCE -D_USE_MATH_DEFINES course_clear_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem2/motion_controller.c ../../app_program/subsystem2/motion_pack.c ../../app_program/subsystem2/motion_estimation.c ../../app_program/subsystem2/speed_pid.c ../../app_program/controller/s3_drive.c -lm -o ../../build/buddy5/course_clear_test
+../../build/buddy5/course_clear_test
+Car model: sensor gap 22 mm, sensors 135 mm ahead of the axle, tape 18 mm
+PASS straight 1.5 m, start +0 mm off centre               reached x=1.50 m, worst centre error 0.0 mm, FOLLOW
+PASS straight 1.5 m, start +2 mm off centre               reached x=1.50 m, worst centre error 4.2 mm, FOLLOW
+PASS straight 1.5 m, start -2 mm off centre               reached x=1.50 m, worst centre error 4.1 mm, FOLLOW
+PASS left U-shaped curve, radius 20 cm                    end (-0.00, 0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS right U-shaped curve, radius 20 cm                   end (-0.00, -0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS left U-shaped curve, radius 15 cm                    end (-0.00, 0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS right U-shaped curve, radius 15 cm                   end (-0.00, -0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS left U-shaped curve, radius 14 cm                    end (-0.00, 0.28) m, worst centre error 9.8 mm, FOLLOW
+PASS right U-shaped curve, radius 14 cm                   end (-0.00, -0.28) m, worst centre error 10.1 mm, FOLLOW
+PASS left U-shaped curve, radius 12 cm                    end (-0.00, 0.24) m, worst centre error 10.6 mm, FOLLOW
+PASS right U-shaped curve, radius 12 cm                   end (-0.00, -0.24) m, worst centre error 10.5 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 15 cm         end (1.20, 0.30) m, worst centre error 6.6 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 14 cm         end (1.20, 0.28) m, worst centre error 7.0 mm, FOLLOW
+PASS crossing, no barcode: straight across                end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS crossing, STRAIGHT action: across                    end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS LEFT at crossing, advance 140 mm                     end (0.60, 0.40) m heading 89 deg, FOLLOW ok, advances=1
+PASS RIGHT at crossing, advance 140 mm                    end (0.60, -0.40) m heading 271 deg, FOLLOW ok, advances=1
+PASS U-TURN at crossing, advance 140 mm                   end (-0.10, 0.00) m heading 180 deg, FOLLOW ok, advances=0
+PASS LEFT at crossing, advance 0 mm (expected: halt)      end (0.46, 0.01) m heading 53 deg, HALTED line lost, advances=0
+PASS RIGHT at crossing, advance 0 mm (expected: halt)     end (0.46, -0.01) m heading 307 deg, HALTED line lost, advances=0
+PASS LEFT, spin ends at 63 deg: search finds line         end (0.60, 0.40) m heading 89 deg, FOLLOW ok
+PASS RIGHT, spin ends at 63 deg: search finds line        end (0.60, -0.40) m heading 272 deg, FOLLOW ok
+PASS LEFT, spin ends at 117 deg: search finds line        end (0.60, 0.40) m heading 92 deg, FOLLOW ok
+PASS RIGHT, spin ends at 117 deg: search finds line       end (0.60, -0.40) m heading 269 deg, FOLLOW ok
+PASS tape ends at 0.6 m: keeps driving straight           end (1.20, 0.000) m, FOLLOW (no line-lost stop by design; GP21 stops it)
+COURSE SIM PASS: 0 failure(s)
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -Ifakes hardware_test.c -o ../../build/buddy5/hardware_test
+../../build/buddy5/hardware_test
+PASS: production PIO/PWM drivers with fake registers; confirmed pins, echo/timeout/stuck-high, servo limits, encoder SM ownership
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -Ifakes runtime_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c -o ../../build/buddy5/runtime_test
+../../build/buddy5/runtime_test
+PASS: production sensing task with fake clock/kernel/sensor; stop-gated scan, bounded mailbox, packed snapshots, cancellation/recentering, confirmed no-echo
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -Ifakes -DS5_HARDWARE_CONFIRMED=0 runtime_test.c ../../app_program/subsystem5/obstacle_profile.c ../../app_program/subsystem5/obstacle_scan.c ../../app_program/subsystem5/avoidance_planner.c ../../app_program/subsystem5/line_recovery.c ../../app_program/subsystem5/obstacle_avoidance.c ../../app_program/subsystem5/s5_codec.c -o ../../build/buddy5/activation_gate_test
+../../build/buddy5/activation_gate_test
+PASS: unconfirmed hardware cannot initialise or start Buddy 5
+cc -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -I../../app_program/subsystem5 -I../../app_program/subsystem3 -I../../app_program/subsystem2 -I../../app_program/controller -DAPP_S5=1 -DAPP_H -DAPP_TEST=0 -include ../integration/controller_test_kernel.h telemetry_test.c ../../app_program/controller/vehicle_controller.c -o ../../build/buddy5/telemetry_test
+../../build/buddy5/telemetry_test
+PASS: one-owner facade, explicit queued start/stop, full fault-bit ownership, unknown-status preservation, map freeze, telemetry and out-of-range invalidation
+PASS: production telemetry adapter preserves Wi-Fi/motor faults, owns only no-echo, publishes obstacle profile and avoidance/error state

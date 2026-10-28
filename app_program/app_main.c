@@ -126,6 +126,12 @@ EXPORT INT usermain(void)
             er = subsystem3_init();
             CHECK(er, "integration init");
         }
+#if APP_S4
+        if (er == E_OK) { er = subsystem4_init(); CHECK(er, "IMU init"); }
+#endif
+#if APP_S5
+        if (er == E_OK) { er = subsystem5_init(); CHECK(er, "obstacle init (confirm hardware configuration)"); }
+#endif
         if (er == E_OK)
         {
             er = subsystem1_start();
@@ -141,12 +147,18 @@ EXPORT INT usermain(void)
             er = subsystem3_start();
             CHECK(er, "integration start");
         }
+#if APP_S4
+        if (er == E_OK) { er = subsystem4_start(); CHECK(er, "IMU start"); }
+#endif
+#if APP_S5
+        if (er == E_OK) { er = subsystem5_start(); CHECK(er, "obstacle start"); }
+#endif
         if (er == E_OK)
         {
             er = operator_panel_start();
             CHECK(er, "operator panel start");
         }
-        tm_printf((UB *)"Buddies 1-3 integration: DISARMED; calibrate with GP20, "
+        tm_printf((UB *)"Integrated controller: DISARMED; calibrate with GP20, "
                         "then GP20 = START, GP21 = STOP. status=%d\n", (int)er);
     }
 #else

@@ -51,7 +51,7 @@ static void get_summary(const uint8_t *p,unsigned *bit,s3_calibration_summary_t 
 bool s3_status_pack(const s3_integration_status_t *v,s3_status_packet_t *out)
 {
     s3_status_packet_t p={0};unsigned bit=0;
-    if(!v||!out||(unsigned)v->state>S3_DRIVE_FAULT||(unsigned)v->reason>S3_DRIVE_BAD_INPUT||
+    if(!v||!out||(unsigned)v->state>S3_DRIVE_FAULT||(unsigned)v->reason>S3_DRIVE_TERRAIN_FAULT||
        (unsigned)v->motion.state>MOTION_FAULT||(unsigned)v->motion.fault>MOTION_FAULT_TIMEOUT||
        (unsigned)v->calibration_sensor>=S3_SENSOR_COUNT||!summary_valid(&v->white)||!summary_valid(&v->black)||
        !s3_navigation_pack(&v->navigation,&p.navigation))return false;
@@ -82,7 +82,7 @@ bool s3_status_unpack(const s3_status_packet_t *p,s3_integration_status_t *out)
     v.motion.command_id=(uint8_t)get(p->feedback,&bit,8);v.motion.report_loss_count=get(p->feedback,&bit,32);
     if(v.motion.state>MOTION_FAULT||v.motion.fault>MOTION_FAULT_TIMEOUT)return false;
     bit=0;v.state=(s3_drive_state_t)get(p->metadata,&bit,3);v.reason=(s3_drive_reason_t)get(p->metadata,&bit,4);
-    if(v.state>S3_DRIVE_FAULT||v.reason>S3_DRIVE_BAD_INPUT)return false;
+    if(v.state>S3_DRIVE_FAULT||v.reason>S3_DRIVE_TERRAIN_FAULT)return false;
     v.samples=get(p->metadata,&bit,32);v.max_gap_us=get(p->metadata,&bit,32);
     v.above_target=get(p->metadata,&bit,32);v.command_sequence=get(p->metadata,&bit,32);
     v.command_ok=get(p->metadata,&bit,1)!=0;v.collecting=get(p->metadata,&bit,1)!=0;

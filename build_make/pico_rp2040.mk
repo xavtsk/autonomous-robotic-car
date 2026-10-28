@@ -219,7 +219,30 @@ ifneq ($(TEST)$(IR_BENCH)$(S3_MOTION)$(MOTION_SMOKE)$(DIAGNOSTICS),00000)
 $(error S4_BENCH=1 requires TEST=0 IR_BENCH=0 S3_MOTION=0 MOTION_SMOKE=0 DIAGNOSTICS=0)
 endif
 endif
-EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)$(S4_SUFFIX)$(IR_DEBUG_SUFFIX)
+S5 ?= 0
+S5_HARDWARE_CONFIRMED ?= 0
+ifneq ($(filter $(S5),0 1),$(S5))
+$(error S5 must be 0 or 1)
+endif
+ifneq ($(filter $(S5_HARDWARE_CONFIRMED),0 1),$(S5_HARDWARE_CONFIRMED))
+$(error S5_HARDWARE_CONFIRMED must be 0 or 1)
+endif
+ifeq ($(S5),1)
+ifneq ($(CRASH_REPORT),0)
+$(error S5 uses GP0/GP1: select CONSOLE=usb_cdc CRASH_REPORT=0)
+endif
+ifneq ($(S3_MOTION),1)
+$(error S5=1 requires S3_MOTION=1; the existing controller remains the sole motor owner)
+endif
+ifneq ($(S4_BENCH),0)
+$(error S5=1 cannot run in S4_BENCH)
+endif
+S5_SUFFIX := _s5
+ifeq ($(S5_HARDWARE_CONFIRMED),0)
+S5_SUFFIX := _s5_UNCONFIGURED
+endif
+endif
+EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)$(S4_SUFFIX)$(S5_SUFFIX)$(IR_DEBUG_SUFFIX)
 
 GCC := arm-none-eabi-gcc
 AS := arm-none-eabi-gcc
@@ -271,6 +294,10 @@ LFLAGS := -mcpu=cortex-m0plus -mthumb -ffreestanding \
     -O2 -g3 \
     -mfloat-abi=soft \
 
+# Discard unreachable newlib stdio/syscall sections pulled in by libm errno.
+# Network builds already use section GC; offline IMU builds need it as well.
+LFLAGS += -Wl,--gc-sections
+
 LNKFILE := "../etc/linker/pico_rp2040/tkernel_map.ld"
 
 # Applied here, after CFLAGS/ASFLAGS are assigned with ':=', which would
@@ -279,7 +306,7 @@ ifeq ($(SMP),1)
 CFLAGS  += -DCNF_SMP=1
 ASFLAGS += -DCNF_SMP=1
 endif
-CFLAGS += -DAPP_S4=$(S4) -DAPP_S4_BENCH=$(S4_BENCH)
+CFLAGS += -DAPP_S4=$(S4) -DAPP_S4_BENCH=$(S4_BENCH) -DAPP_S5=$(S5) -DS5_HARDWARE_CONFIRMED=$(S5_HARDWARE_CONFIRMED)
 CFLAGS  += -DAPP_TEST=$(TEST)
 CFLAGS  += -DAPP_IR_BENCH=$(IR_BENCH) -DAPP_S3_MOTION=$(S3_MOTION) -DAPP_IR_CHANNELS=$(IR_CHANNELS)
 CFLAGS  += -DAPP_DIAGNOSTICS=$(DIAGNOSTICS)
@@ -317,7 +344,7 @@ endif
 # before any recipe executes.
 ################################################################################
 
-PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)-s4$(S4)-s4bench$(S4_BENCH)-irdebug$(IR_DEBUG)
+PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)-s4$(S4)-s4bench$(S4_BENCH)-s5$(S5)-s5confirmed$(S5_HARDWARE_CONFIRMED)-irdebug$(IR_DEBUG)
 PROFILE_FILE := .build_profile
 
 ifneq ($(strip $(shell cat $(PROFILE_FILE) 2>/dev/null)),$(PROFILE_ID))
