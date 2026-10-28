@@ -2,6 +2,10 @@
 #define S3_DRIVE_H
 #include "../subsystem2/motion.h"
 #include "../subsystem3/line_navigation.h"
+#include "../subsystem5/s5_config.h"
+#if APP_S5
+#include "../subsystem5/obstacle_avoidance.h"
+#endif
 typedef enum
 {
     S3_DRIVE_OFF,
@@ -23,7 +27,8 @@ typedef enum
     S3_DRIVE_UNMAPPED,
     S3_DRIVE_TIMEOUT,
     S3_DRIVE_REPORT_FAULT,
-    S3_DRIVE_BAD_INPUT
+    S3_DRIVE_BAD_INPUT,
+    S3_DRIVE_TERRAIN_FAULT
 } s3_drive_reason_t;
 typedef enum
 {
@@ -82,6 +87,7 @@ typedef struct
 s3_drive_options_t s3_drive_default_options(void);
 typedef struct
 {
+    bool external_hold; /* Controller run-reset handshake: sample but do not move. */
     s3_navigation_t navigation;
     s3_navigation_output_t output;
     s3_drive_port_t port;
@@ -103,7 +109,14 @@ typedef struct
     int8_t search_sign;       /* +1 anticlockwise, -1 clockwise */
     uint8_t search_leg;       /* 0 = first sweep, 1 = back across */
     uint32_t search_us;       /* start of the current sweep leg */
+#if APP_S5
+    s5_avoidance_t obstacle;
+    uint16_t obstacle_scan_id;
+    bool obstacle_active;
+#endif
 } s3_drive_t;
+/* External sensor fault, called only by the same controller owner. */
+void s3_drive_terrain_fault(s3_drive_t *drive);
 bool s3_drive_init(s3_drive_t *drive, const s3_navigation_config_t *config,
                    const s3_drive_port_t *port);
 /* Only while OFF/HALTED/FAULT. Rejects a nonzero advance without a drive

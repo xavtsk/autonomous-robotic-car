@@ -10,6 +10,11 @@ ER subsystem4_start(void);
 bool subsystem4_snapshot(terrain_result_t *out);
 bool subsystem4_event(terrain_result_t *out, bool *lost);
 bool subsystem4_reset_run(bool recalibrate);
+/* Sole controller reset; token is acknowledged only by a post-reset sample.
+ * Read returns a coherent packet/run/count tuple, false while reset is pending.
+ * Count saturates at UINT16_MAX and includes completed valid humps only. */
+bool subsystem4_begin_run(uint16_t *token);
+bool subsystem4_read(terrain_result_t *out, uint16_t *token, uint16_t *humps);
 bool subsystem4_set_magnetic_calibration(const float offset[3], const float scale[3]);
 #if APP_TEST
 void subsystem4_test(void);

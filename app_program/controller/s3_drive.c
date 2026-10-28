@@ -1,6 +1,9 @@
 /* Temporary controller for Buddy 2 + Buddy 3; replace with the team controller.
  * This is orchestration, not Buddy 3 sensing. No GPIO/RTOS in this file. */
 #include "s3_drive.h"
+#if APP_S5
+#include "../subsystem5/s5_api.h"
+#endif
 #define S3_BRAKE_WAIT_US (500000U)
 #define S3_MANOEUVRE_WAIT_US (10000000U)
 #define S3_REACQUIRE_WAIT_US (1000000U)
@@ -24,6 +27,17 @@ static void halt(s3_drive_t *d, s3_drive_state_t state,
     {
         d->reset_result = S3_RESET_FAILED;
     }
+#if APP_S5
+    subsystem5_cancel_scan();
+    if (state == S3_DRIVE_FAULT && d->obstacle_active && d->obstacle.state != S5_FAULT) {
+        d->obstacle.state = S5_FAULT;
+        d->obstacle.fault = S5_INTERRUPTED;
+    }
+    d->obstacle_active = false;
+    if (state != S3_DRIVE_FAULT) { s5_avoidance_abort(&d->obstacle); }
+    subsystem5_set_controller_status(d->obstacle.state, d->obstacle.fault, d->obstacle.plan.route);
+#endif
+    d->external_hold = false;
     d->port.stop();
     d->port.heartbeat(false);
     (void)s3_navigation_end_run(
@@ -45,6 +59,10 @@ static void halt(s3_drive_t *d, s3_drive_state_t state,
     d->state = state;
     d->reason = reason;
 }
+void s3_drive_terrain_fault(s3_drive_t *d)
+{
+    if (d && d->configured) { halt(d, S3_DRIVE_FAULT, S3_DRIVE_TERRAIN_FAULT); }
+}
 bool s3_drive_init(s3_drive_t *d, const s3_navigation_config_t *cfg,
                    const s3_drive_port_t *port)
 {
@@ -62,6 +80,10 @@ bool s3_drive_init(s3_drive_t *d, const s3_navigation_config_t *cfg,
     d->port = *port;
     d->options = s3_drive_default_options();
     d->configured = true;
+#if APP_S5
+    const s5_config_t obstacle_config = s5_defaults();
+    s5_avoidance_init(&d->obstacle, &obstacle_config);
+#endif
     return true;
 }
 bool s3_drive_set_options(s3_drive_t *d, const s3_drive_options_t *o)
@@ -90,6 +112,10 @@ bool s3_drive_set_options(s3_drive_t *d, const s3_drive_options_t *o)
 }
 bool s3_drive_start(s3_drive_t *d, uint32_t now)
 {
+#if APP_S5
+    s5_observation_t obstacle;
+    if (!subsystem5_snapshot(&obstacle) || !s5_range_ready(&obstacle, now)) { return false; }
+#endif
     if ((d == 0) || !d->configured ||
         ((d->state != S3_DRIVE_OFF) && (d->state != S3_DRIVE_HALTED)) ||
         !feedback_fresh(d, now) || (d->feedback.state != MOTION_IDLE) ||
@@ -99,6 +125,10 @@ bool s3_drive_start(s3_drive_t *d, uint32_t now)
         return false;
     }
     (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
+#if APP_S5
+    s5_avoidance_abort(&d->obstacle);d->obstacle.fault=S5_OK;
+    subsystem5_set_controller_status(S5_IDLE,S5_OK,S5_ROUTE_NONE);
+#endif
     d->state = S3_DRIVE_FOLLOW;
     d->reason = S3_DRIVE_OK;
     d->pending = S3_NAV_NONE;
@@ -452,6 +482,91 @@ static void follow(s3_drive_t *d, uint32_t now)
         }
     }
 }
+
+#if APP_S5
+/* Called only by the existing sample/controller task after its one report drain.
+ * S5's pure FSM proposes actions; this owner alone authorises Buddy 2 requests. */
+static bool obstacle_control(s3_drive_t *d,uint32_t now,bool done)
+{
+    s5_observation_t observation={0};
+    bool have=subsystem5_snapshot(&observation);
+    if (!d->obstacle_active) {
+        if (!have || !s5_range_ready(&observation,now)) {
+            d->obstacle.fault=S5_BAD_RANGE;d->obstacle.state=S5_FAULT;
+            halt(d,S3_DRIVE_FAULT,S3_DRIVE_BAD_INPUT);return true;
+        }
+        if (d->state!=S3_DRIVE_FOLLOW) {
+            if (observation.range_mm<=d->obstacle.config.emergency_mm) {
+                d->obstacle.fault=S5_NO_PATH;d->obstacle.state=S5_FAULT;
+                halt(d,S3_DRIVE_FAULT,S3_DRIVE_BAD_INPUT);return true;
+            }
+            return false;
+        }
+        if (observation.range_mm>d->obstacle.config.detect_mm) { return false; }
+        if (d->output.events&S3_EVENT_LINE_LOST) {
+            halt(d,S3_DRIVE_HALTED,S3_DRIVE_LINE_LOST);return true;
+        }
+        /* Do not lose a barcode decoded on the same cycle as obstacle detection.
+         * Its pending lifetime is paused for the detour, never executed off-line. */
+        if (d->output.events&S3_EVENT_BARCODE) {
+            if (d->pending!=S3_NAV_NONE || d->output.action==S3_NAV_NONE) {
+                halt(d,S3_DRIVE_HALTED,S3_DRIVE_UNMAPPED);return true;
+            }
+            d->pending=d->output.action;d->pending_us=now;
+        }
+        s5_avoidance_begin(&d->obstacle,now);d->obstacle_active=true;
+        request_stop(d,now);d->state=S3_DRIVE_MANOEUVRE;
+        (void)s3_navigation_set_mode(&d->navigation,S3_MODE_SUPPRESSED);
+    }
+    if (done) { d->command_id=0U; }
+    if (observation.scan_id!=d->obstacle_scan_id) { observation.scan_done=false; }
+    const s5_input_t input={
+        .now_us=now,.centre_m=d->feedback.centre_m,
+        .stopped=stopped_after_request(d),.motion_done=done,
+        .healthy=have && d->output.line.valid,
+        .tape=d->navigation.config.line.between?d->output.line.touching:d->output.line.present,
+        .junction=d->output.line.junction_candidate,
+        .line_ready=d->output.steering_preview.valid,
+        .observation=observation};
+    s5_action_t request=s5_avoidance_step(&d->obstacle,&input);
+    motion_result_t result=MOTION_OK;
+    if (d->obstacle.state==S5_FAULT) {
+        halt(d,S3_DRIVE_FAULT,S3_DRIVE_BAD_INPUT);return true;
+    }
+    switch(request.kind) {
+    case S5_ACT_STOP:
+        d->port.stop();d->phase_us=now;d->command_id=0U;break;
+    case S5_ACT_SCAN:
+        d->waiting_stop=false;
+        if (++d->obstacle_scan_id==0U) { d->obstacle_scan_id=1U; }
+        if (!subsystem5_request_scan(d->obstacle_scan_id)) { result=MOTION_ERR_BUSY; }
+        break;
+    case S5_ACT_DRIVE:
+        result=motion_request_drive((float)request.value/1000.0f,(float)request.speed_mms/1000.0f);
+        break;
+    case S5_ACT_TURN:
+        result=motion_request_turn((float)request.value,(float)request.speed_mms/1000.0f);
+        break;
+    case S5_ACT_RESUME:
+        d->obstacle_active=false;d->waiting_stop=false;d->command_id=d->cancel_id=0U;
+        if (d->pending!=S3_NAV_NONE) { d->pending_us+=now-d->obstacle.started_us; }
+        (void)s3_navigation_set_mode(&d->navigation,S3_MODE_TRACK);
+        d->state=S3_DRIVE_FOLLOW;break;
+    default: break;
+    }
+    if (result==MOTION_OK && (request.kind==S5_ACT_DRIVE || request.kind==S5_ACT_TURN)) {
+        d->command_id=d->port.command_id();d->phase_us=now;
+        if (!d->command_id) { result=MOTION_ERR_BUSY; }
+    }
+    if (result!=MOTION_OK) {
+        d->obstacle.state=S5_FAULT;d->obstacle.fault=S5_MOTION_ERROR;
+        halt(d,S3_DRIVE_FAULT,S3_DRIVE_REJECTED);
+    }
+    subsystem5_set_controller_status(d->obstacle.state,d->obstacle.fault,d->obstacle.plan.route);
+    return true;
+}
+#endif
+
 bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
                       const motion_feedback_t *feedback)
 {
@@ -514,7 +629,11 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
         halt(d, S3_DRIVE_FAULT, S3_DRIVE_REPORT_FAULT);
         return true;
     }
+    if (d->external_hold) { request_stop(d, now); d->port.heartbeat(false); return true; }
     d->port.heartbeat(true);
+#if APP_S5
+    if (obstacle_control(d, now, done)) { return true; }
+#endif
     if (d->state == S3_DRIVE_FOLLOW)
     {
         follow(d, now);

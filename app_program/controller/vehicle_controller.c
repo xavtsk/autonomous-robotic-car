@@ -2,8 +2,13 @@
  * navigation, motion-request and report-consumer owner. No second task here. */
 #include "vehicle_controller.h"
 #include "s3_integration.h"
+#include "terrain_integration.h"
 #include "../subsystem1/subsystem1.h"
 #include "../subsystem2/motion_pack.h"
+#if APP_S5
+#include "../subsystem5/s5_api.h"
+#include "../subsystem5/obstacle_avoidance.h"
+#endif
 
 static unsigned telemetry_divider;
 static BUDDY1_ROBOT_STATE last_state;
@@ -49,6 +54,7 @@ static BUDDY1_ROBOT_STATE wire_state(s3_drive_state_t state)
 }
 ER vehicle_controller_init(void)
 {
+    terrain_control_init();
     telemetry_divider = 0U; last_state = BUDDY1_STATE_UNKNOWN;
     last_action = BUDDY1_ACTION_UNKNOWN; last_faults = 0U; faults_seen = false;
     start_claimed_map = false;
@@ -139,6 +145,7 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
     unsigned changed=BUDDY1_FAULT_IR;
     BUDDY1_ROBOT_STATE state;
     if (!status || mtx_buddy1_state <= 0) return;
+    terrain_control_report();
     if (status->navigation.events & S3_EVENT_BARCODE) {
         last_action=action_for(status->navigation.action);
         (void)buddy1_report_barcode((UB)status->navigation.barcode.letter);
@@ -156,6 +163,30 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
         if (error==E_OK || error==E_TMOUT) { last_faults=active; faults_seen=true; }
     }
     state=wire_state(status->state);
+#if APP_S5
+    {
+        s5_observation_t obstacle;
+        static uint16_t reported_scan;
+        static unsigned reported_route;
+        static int reported_echo=-1;
+        unsigned control=subsystem5_controller_status();
+        unsigned obstacle_state=control&7U,route=control>>6;
+        if (status->state==S3_DRIVE_MANOEUVRE && obstacle_state>=S5_WAIT_STOP && obstacle_state<=S5_FINISH)
+            state=BUDDY1_STATE_AVOIDING_OBSTACLE;
+        if (subsystem5_snapshot(&obstacle)) {
+            if (reported_echo!=(int)obstacle.no_echo) {
+                ER er=buddy1_update_faults(BUDDY1_FAULT_NO_ECHO,obstacle.no_echo?BUDDY1_FAULT_NO_ECHO:0U);
+                if(er==E_OK || er==E_TMOUT) { reported_echo=(int)obstacle.no_echo; }
+            }
+            if (obstacle.scan_done && obstacle.profile.valid &&
+                (reported_scan!=obstacle.scan_id || reported_route!=route)) {
+                ER er=buddy1_report_obstacle(obstacle.profile.closest_mm,obstacle.profile.width_mm,
+                    (BUDDY1_OBSTACLE_ROUTE)route);
+                if(er==E_OK || er==E_TMOUT) { reported_scan=obstacle.scan_id;reported_route=route; }
+            } else if (!obstacle.profile.valid) { (void)buddy1_invalidate(BUDDY1_TOPIC_OBSTACLE); }
+        }
+    }
+#endif
     if (state!=last_state) {
         ER error=buddy1_report_robot_state(state);
         if (error==E_OK || error==E_TMOUT) last_state=state;

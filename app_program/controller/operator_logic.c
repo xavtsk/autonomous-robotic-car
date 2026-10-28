@@ -47,6 +47,7 @@ const char *op_drive_reason_name(s3_drive_reason_t reason)
     case S3_DRIVE_TIMEOUT: return "timeout (barcode->junction 5 s, brake or turn)";
     case S3_DRIVE_REPORT_FAULT: return "motion report fault";
     case S3_DRIVE_BAD_INPUT: return "bad input";
+    case S3_DRIVE_TERRAIN_FAULT: return "IMU/event fault";
     default: return "?";
     }
 }

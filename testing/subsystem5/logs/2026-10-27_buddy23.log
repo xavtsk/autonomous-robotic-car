@@ -1,0 +1,26 @@
+/Library/Developer/CommandLineTools/usr/bin/make test codec drive feedback CFLAGS='-std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'
+mkdir -p ../../build/buddy3
+cc -I../../app_program/subsystem3 -I. -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer test_core.c test_navigation.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/buddy3/test_core
+../../build/buddy3/test_core
+PASS: acquisition, calibration, line detection, steering, Code 39 and simulated navigation
+cc -I../../app_program/subsystem3 -I. -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer test_mapping.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c -o ../../build/buddy3/test_mapping
+../../build/buddy3/test_mapping
+PASS: physical GP27 left, GP26 right, GP28 barcode routing and barcode-independent line observations
+cc -I../../app_program/subsystem3 -I. -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer test_ir_reflectance.c ../../app_program/subsystem3/ir_reflectance.c -o ../../build/buddy3/test_ir_reflectance
+../../build/buddy3/test_ir_reflectance
+PASS: provisional thresholds, hysteresis, polarity, clamping, invalid inputs and recovery
+mkdir -p ../../build/buddy3
+cc -I../../app_program/subsystem3 -I. -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer test_codec.c ../../app_program/subsystem3/navigation_codec.c -o ../../build/buddy3/test_codec
+../../build/buddy3/test_codec
+PASS: 20000 hostile packets checked; 1154 valid packets re-encode identically
+PASS: raw-frame 12-bit boundaries, all sensor flags, full signed errors, independent 266-bit layout and failure non-mutation
+PASS: 20000 hostile raw frames checked; 10167 valid frames re-encode identically
+PASS: 51456 error/event/fault combinations, all darkness values, A-Z/none/direction/actions, exact float bits and malformed packet rejection
+mkdir -p ../../build/buddy3
+cc -I../../app_program/subsystem3 -I. -I../../app_program/subsystem3/../subsystem2 -I../../app_program/subsystem3/../controller -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer test_drive.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem3/../controller/s3_drive.c ../../app_program/subsystem3/../subsystem2/motion_controller.c ../../app_program/subsystem3/../subsystem2/motion_pack.c ../../app_program/subsystem3/../subsystem2/motion_estimation.c ../../app_program/subsystem3/../subsystem2/speed_pid.c -o ../../build/buddy3/test_drive
+../../build/buddy3/test_drive
+PASS: real Buddy 2 controller/PID + Buddy 3 navigation bridge; mocked hardware
+mkdir -p ../../build/buddy3
+cc -I../../app_program/subsystem3 -I. -I../../app_program/subsystem3/../subsystem2 -include motion_kernel_stub.h -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer test_motion_feedback.c ../../app_program/subsystem3/../subsystem2/motion.c ../../app_program/subsystem3/../subsystem2/motion_controller.c ../../app_program/subsystem3/../subsystem2/motion_pack.c ../../app_program/subsystem3/../subsystem2/motion_estimation.c ../../app_program/subsystem3/../subsystem2/speed_pid.c -o ../../build/buddy3/test_motion_feedback
+../../build/buddy3/test_motion_feedback
+PASS: production motion feedback timestamps, epochs, calibration exclusion and manoeuvre watchdog

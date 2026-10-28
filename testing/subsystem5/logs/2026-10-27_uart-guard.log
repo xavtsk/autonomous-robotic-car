@@ -1,0 +1,1 @@
+pico_rp2040.mk:219: *** S5 uses GP0/GP1: select CONSOLE=usb_cdc CRASH_REPORT=0.  Stop.

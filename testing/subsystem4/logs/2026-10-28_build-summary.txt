@@ -1,0 +1,19 @@
+Base: main 19d02fefd3ef614224cd8485920c4d5978ae5c92 plus uncommitted Buddy 4/5 integration.
+Date: 28 October 2026 (Asia/Singapore). No flash or physical tests.
+S3_MOTION=1 S4=1 S5=1 CONSOLE=usb_cdc CRASH_REPORT=0; other bench/test profiles off.
+Network build uses public example credentials. Final local profile: S5_HARDWARE_CONFIRMED=0.
+
+offline enabled: PASS, zero compiler warnings.
+text	   data	    bss	    dec	    hex	filename
+ 151200	    616	  42704	 194520	  2f7d8	/private/tmp/aai07-all5-offline-COMPILE_ONLY.elf
+UF2 SHA256=56f057956413a5ea4756edc85fb1478626aa1248f4343c92a78366e287563f37
+
+MQTT enabled: PASS, zero compiler warnings.
+text	   data	    bss	    dec	    hex	filename
+ 421904	    672	 102924	 525500	  804bc	/private/tmp/aai07-all5-network-COMPILE_ONLY.elf
+UF2 SHA256=7bb277a120bd51ca660fdbb9dc06465ed551c795f24404c1e2905d56e5311a15
+
+unconfigured: PASS, zero compiler warnings.
+text	   data	    bss	    dec	    hex	filename
+ 150488	    616	  42692	 193796	  2f504	build_make/mtk3pico_smp1_usb_cdc_s3_motion_s4_s5_UNCONFIGURED.elf
+UF2 SHA256=f60e4a5c3703d86946fee676b52c3e93a77774bdf1b398acf3202949150f1d46
