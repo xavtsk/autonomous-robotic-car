@@ -21,6 +21,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from buddy1_mqtt_codec import decode  # noqa: E402  (same folder, standard library only)
+from dashboard.ir_protocol import decode_ir
+from dashboard.control_protocol import TOPIC as CONTROL_TOPIC, decode_control, DRIVE_STATES, REASONS, ACTIONS
 
 SPEED_STEP_MMS = 10  # fold speed reports that changed less than this
 
@@ -147,6 +149,29 @@ def handle(line, folder, out, trace=None):
         return
     topic, _, hexpart = line.partition(" ")
     stamp = time.strftime("%H:%M:%S")
+    if topic == CONTROL_TOPIC:
+        try:
+            d = decode_control(bytes.fromhex(hexpart.strip()))["data"]
+        except ValueError as error:
+            print(f"{stamp}  CONTROL DEBUG REJECTED  {error}", file=out, flush=True)
+            return
+        now = time.monotonic()
+        if folder.show_all or now - getattr(folder,"last_control",-10) >= 1:
+            folder.last_control = now
+            print(f"{stamp}  CONTROLLER  {DRIVE_STATES[d['drive_state']]} | {REASONS[d['reason']]} | pending={ACTIONS[d['pending']]}",file=out,flush=True)
+        return
+    if topic == "car/debug/ir":
+        try:
+            frame = decode_ir(bytes.fromhex(hexpart.strip()))
+        except ValueError as error:
+            print(f"{stamp}  IR DEBUG REJECTED  {error}", file=out, flush=True)
+            return
+        now = time.monotonic()
+        if folder.show_all or now - getattr(folder, "last_ir", -10) >= 1:
+            folder.last_ir = now
+            values = " ".join(f"{name}={sensor['darkness'] if sensor['valid'] else 'invalid'}" for name, sensor in frame['sensors'].items())
+            print(f"{stamp}  IR /1000  {values} (20 Hz preview)", file=out, flush=True)
+        return
     if topic.startswith("car/debug/"):
         try:
             text = bytes.fromhex(hexpart.strip()).decode("ascii", "replace")

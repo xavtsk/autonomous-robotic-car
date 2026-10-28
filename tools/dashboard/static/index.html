@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="dashboard-token" content="__DASHBOARD_TOKEN__">
+  <meta name="color-scheme" content="light dark">
+  <title>Robot monitor</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+  <script src="/sensor_graphs.js" defer></script>
+  <script src="/buddy_graphs.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to readings</a>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="wordmark"><span class="eyebrow">BUDDIES 1–5</span><h1>Robot monitor</h1></div>
+      <div class="header-tools">
+        <div class="header-status" aria-label="Connection status">
+          <div><span class="status-dot" id="broker-dot"></span><span id="broker-status">Broker unknown</span></div>
+          <div><span class="status-dot" id="car-dot"></span><span id="car-status">Car status unknown</span></div>
+        </div>
+        <div class="appearance-control"><label for="appearance">Appearance</label><select id="appearance"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
+      </div>
+    </header>
+
+    <div class="demo-banner" id="demo-banner" hidden>
+      <div><strong>SIMULATED ROBOT</strong><span>Local demonstration data. No commands are sent to a car.</span></div>
+      <form id="demo-form"><label for="demo-scenario">Scenario</label><select id="demo-scenario"><option value="ready">Ready</option><option value="following">Following line</option><option value="barcode">Barcode decoded</option><option value="line_lost">Line lost</option><option value="wifi_loss">Connection lost</option><option value="fault">Motor fault</option></select><button type="submit">Load</button></form>
+    </div>
+    <p class="server-alert" id="server-alert" role="alert" hidden></p>
+
+    <nav class="main-tabs" aria-label="Dashboard" role="tablist">
+      <button id="tab-overview" type="button" role="tab" aria-selected="true" aria-controls="page-overview" data-page="overview">Overview</button>
+      <button id="tab-sensors" type="button" role="tab" aria-selected="false" aria-controls="page-sensors" tabindex="-1" data-page="sensors">Sensors</button>
+      <button id="tab-debug" type="button" role="tab" aria-selected="false" aria-controls="page-debug" tabindex="-1" data-page="debug">Debug</button>
+      <button id="tab-runs" type="button" role="tab" aria-selected="false" aria-controls="page-runs" tabindex="-1" data-page="runs">Runs <span class="tab-count" id="run-count">0</span></button>
+      <span class="nav-context" id="nav-context">Waiting for local service</span>
+    </nav>
+
+    <details class="connection-panel" id="connection-panel" open>
+      <summary>Broker connection <span id="connection-detail">Connect to the MQTT broker on your laptop</span></summary>
+      <form id="connection-form">
+        <label>Host<input id="broker-host" type="text" name="host" value="127.0.0.1" autocomplete="off" spellcheck="false" maxlength="253" required></label>
+        <label class="port-field">Port<input id="broker-port" type="number" name="port" value="1883" min="1" max="65535" required></label>
+        <button type="submit" id="connect-button">Connect</button>
+        <button type="button" id="disconnect-button" disabled>Disconnect</button>
+        <p class="form-note" id="connection-note">Use the broker address, not the Pico’s address.</p>
+      </form>
+    </details>
+
+    <main id="main-content">
+      <section id="page-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+        <div class="state-heading">
+          <div><span class="eyebrow">REPORTED ROBOT STATE</span><h2 id="robot-state">Waiting for data</h2><p class="muted" id="robot-state-detail">No state message received yet.</p></div>
+          <div class="physical-controls"><span>On the car</span><strong>GP20 · Start &nbsp; GP21 · Stop</strong><span>Power switch · independent cutoff</span></div>
+        </div>
+        <div class="overview-grid">
+          <section class="readings-section" aria-labelledby="readings-title">
+            <div class="section-heading"><h3 id="readings-title">Live readings</h3><span class="muted">Units and last update</span></div>
+            <div class="table-wrap"><table class="readings-table"><thead><tr><th scope="col">Signal</th><th scope="col">Value</th><th scope="col">Unit</th><th scope="col">Updated</th></tr></thead><tbody id="readings-body"></tbody></table></div>
+            <p class="table-note">Ages show when the laptop received a message. Cached snapshots do not prove a fresh sensor sample. Missing or invalid data is never shown as zero.</p>
+            <div class="snapshot-row"><button type="button" id="snapshot-button" disabled>Request snapshot</button><p id="snapshot-feedback" class="command-feedback" role="status">Connect to request the latest available readings.</p></div>
+          </section>
+          <aside class="map-panel" aria-labelledby="map-title">
+            <div class="section-heading"><h3 id="map-title">Barcode letter map</h3><span class="muted" id="map-status-label">Local draft</span></div>
+            <p class="muted">One different letter for each action.</p>
+            <form id="map-form">
+              <div class="map-row"><label for="map-forward">Forward</label><input id="map-forward" name="forward" pattern="[A-Za-z]" maxlength="1" autocomplete="off" autocapitalize="characters" spellcheck="false" required aria-describedby="map-guidance"></div>
+              <div class="map-row"><label for="map-left">Left</label><input id="map-left" name="left" pattern="[A-Za-z]" maxlength="1" autocomplete="off" autocapitalize="characters" spellcheck="false" required aria-describedby="map-guidance"></div>
+              <div class="map-row"><label for="map-right">Right</label><input id="map-right" name="right" pattern="[A-Za-z]" maxlength="1" autocomplete="off" autocapitalize="characters" spellcheck="false" required aria-describedby="map-guidance"></div>
+              <div class="map-row"><label for="map-uturn">U-turn</label><input id="map-uturn" name="uturn" pattern="[A-Za-z]" maxlength="1" autocomplete="off" autocapitalize="characters" spellcheck="false" required aria-describedby="map-guidance"></div>
+              <p id="map-guidance" class="form-note">Enter four different letters, A–Z.</p>
+              <button type="submit" id="map-button" disabled>Send map</button>
+            </form>
+            <p id="map-feedback" class="command-feedback" role="status">No map sent from this dashboard.</p>
+            <p id="map-lock-note" class="table-note">Firmware locks the map after the first accepted START. Lock status has not been confirmed.</p>
+          </aside>
+        </div>
+        <section class="event-section" aria-labelledby="overview-events-title"><div class="section-heading"><h3 id="overview-events-title">Recent activity</h3><button type="button" class="text-button" id="view-debug-button">Open debug →</button></div><ol class="event-list" id="overview-events"><li class="empty-line">No messages received.</li></ol></section>
+      </section>
+
+      <section id="page-sensors" role="tabpanel" aria-labelledby="tab-sensors" tabindex="0" hidden>
+        <div class="section-heading"><div><h2>IR sensor graphs</h2><p class="muted" id="sensor-stream-status" role="status">Waiting for sensor stream…</p></div><button type="button" id="sensor-pause" aria-pressed="false">Pause graphs</button></div>
+        <div class="sensor-controls">
+          <div class="inline-label"><label for="sensor-signal">Signal</label><select id="sensor-signal"><option value="darkness">Normalised darkness · 0–1000</option><option value="raw">Raw ADC · 0–4095</option></select></div>
+          <div class="inline-label"><label for="sensor-window">Window</label><select id="sensor-window"><option value="5">5 seconds</option><option value="15" selected>15 seconds</option><option value="30">30 seconds</option><option value="60">60 seconds</option></select></div>
+          <button type="button" id="sensor-save" disabled>Save visible samples</button>
+        </div>
+        <div class="sensor-legend"><span><i class="surface-white"></i>Firmware reports white</span><span><i class="surface-black"></i>Firmware reports black</span><span>Empty strip = unknown / unavailable</span></div>
+        <section class="sensor-plot-section" aria-labelledby="sensor-left-title"><div class="section-heading"><h3 id="sensor-left-title">Front-left · GP27</h3><span class="sensor-reading" id="sensor-left-reading">—</span></div><div class="sensor-plot"><canvas id="sensor-left-canvas" role="img" aria-label="Front-left IR sensor over time"></canvas><p id="sensor-left-empty">No sensor samples received.</p></div></section>
+        <section class="sensor-plot-section" aria-labelledby="sensor-right-title"><div class="section-heading"><h3 id="sensor-right-title">Front-right · GP26</h3><span class="sensor-reading" id="sensor-right-reading">—</span></div><div class="sensor-plot"><canvas id="sensor-right-canvas" role="img" aria-label="Front-right IR sensor over time"></canvas><p id="sensor-right-empty">No sensor samples received.</p></div></section>
+        <section class="sensor-plot-section" aria-labelledby="sensor-barcode-title"><div class="section-heading"><h3 id="sensor-barcode-title">Right-side barcode · GP28</h3><span class="sensor-reading" id="sensor-barcode-reading">—</span></div><div class="sensor-plot"><canvas id="sensor-barcode-canvas" role="img" aria-label="Barcode IR sensor over time"></canvas><p id="sensor-barcode-empty">No sensor samples received.</p></div></section>
+        <p id="sensor-barcode-result" class="table-note">Last decoded letter: not received</p>
+        <p class="availability-note">Live preview is limited to 20 Hz. Line and barcode processing still run at 100 Hz. Short transitions can be absent from this preview; use the higher-rate recorded barcode capture in Runs for detailed scanning checks. Graph gaps mark missing data.</p>
+        <p class="table-note" id="sensor-buffer-note">Up to one minute of preview samples is retained on the laptop. Pause freezes the view while reception continues.</p>
+      </section>
+
+      <section id="page-debug" role="tabpanel" aria-labelledby="tab-debug" tabindex="0" hidden>
+        <div class="debug-layout">
+          <nav class="buddy-nav" aria-label="Buddy diagnostics">
+            <button type="button" data-buddy="1" aria-pressed="true">Buddy 1<span>Wi-Fi / MQTT</span></button>
+            <button type="button" data-buddy="2" aria-pressed="false">Buddy 2<span>Motion control</span></button>
+            <button type="button" data-buddy="3" aria-pressed="false">Buddy 3<span>Line / barcode</span></button>
+            <button type="button" data-buddy="4" aria-pressed="false">Buddy 4<span>IMU / terrain</span></button>
+            <button type="button" data-buddy="5" aria-pressed="false">Buddy 5<span>Obstacle / recovery</span></button>
+          </nav>
+          <div class="debug-content">
+            <div class="section-heading"><h2 id="debug-title">Buddy 1 · Wi-Fi / MQTT</h2><button type="button" id="save-log-button">Save received log</button></div>
+            <p class="muted" id="debug-description">Check whether messages and command replies are reaching the laptop.</p>
+            <div class="table-wrap"><table class="debug-table"><thead><tr><th scope="col">Signal</th><th scope="col">Value</th><th scope="col">Source / update</th></tr></thead><tbody id="debug-body"></tbody></table></div>
+            <section id="buddy-plots" class="buddy-plots" aria-label="Buddy graphs">
+              <div class="section-heading"><h3>Recent measurements</h3><button id="buddy-pause" type="button" aria-pressed="false">Pause graphs</button></div>
+              <div class="buddy-chart-toolbar"><div class="inline-label"><label for="buddy-window">Window</label><select id="buddy-window"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60" selected>60 seconds</option></select></div><button id="buddy-save" type="button">Save debug evidence</button></div>
+              <p id="buddy-graph-status" class="table-note">Waiting for measurements.</p>
+              <div id="buddy-chart-list"></div>
+              <div id="buddy-extra"></div>
+            </section>
+            <p class="availability-note" id="debug-availability"></p>
+            <div id="debug-trace-link" hidden><button type="button" id="inspect-latest-button">Inspect latest barcode capture →</button></div>
+            <div id="debug-sensor-link" hidden><button type="button" id="open-sensors-button">Open live sensor graphs →</button></div>
+            <details class="diagnostic-detail"><summary>Controller, timing &amp; shared resources</summary><p>The optional IR_DEBUG firmware reports controller decisions, wheel feedback, brake status and observed IR sampling gaps. It does not measure stop latency, task execution time, stack/heap usage or queue occupancy. USB diagnostics and real-car timing tests are still needed. Empty or stale graphs are not evidence that a subsystem is healthy.</p></details>
+            <details class="packet-inspector" id="packet-inspector"><summary>Received MQTT packets</summary><div class="packet-toolbar"><span class="muted">Latest 8 valid packets · original payload + decoded fields</span><button type="button" id="packet-pause" aria-pressed="false">Pause packet view</button></div><ol class="packet-list" id="packet-list"><li class="muted">No packets received.</li></ol></details>
+            <section class="event-section"><div class="section-heading"><h3>Related activity</h3><label class="inline-label">Show<select id="event-level"><option value="all">All events</option><option value="warning">Warnings &amp; errors</option></select></label></div><ol class="event-list" id="debug-events"><li class="empty-line">No messages received.</li></ol></section>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-runs" role="tabpanel" aria-labelledby="tab-runs" tabindex="0" hidden>
+        <div class="runs-heading"><div><h2>Barcode captures</h2><p class="muted">Inspect incoming captures or open a saved barcode_trace text file.</p></div><div class="import-control"><label class="file-label" for="trace-file">Import trace…</label><input id="trace-file" type="file" accept=".txt,.log,text/plain" aria-label="Import barcode trace"></div></div>
+        <p id="import-feedback" role="status" class="command-feedback"></p>
+        <div class="table-wrap"><table class="runs-table"><thead><tr><th scope="col">Capture</th><th scope="col">Letters</th><th scope="col">Decoded</th><th scope="col">Rejected</th><th scope="col">Capture status</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead><tbody id="runs-body"><tr><td colspan="6" class="empty-line">No captures yet. Import a saved trace, or wait for the car to upload one after a run.</td></tr></tbody></table></div>
+        <section id="trace-detail" class="trace-detail" hidden aria-labelledby="trace-title">
+          <div class="section-heading"><h3 id="trace-title"></h3><a id="trace-download" class="button-link" download>Save original trace</a></div>
+          <p id="trace-summary" class="muted"></p>
+          <p id="trace-warning" class="availability-note" hidden></p>
+          <div class="plot-toolbar"><label class="inline-label">Episode<select id="trace-episode"></select></label><label class="inline-label">Signal<select id="trace-signal"><option value="raw">Raw ADC · 0–4095</option><option value="darkness">Normalised darkness · 0–1000</option></select></label><span class="muted" id="trace-plot-note"></span></div>
+          <div class="plot-container"><canvas id="trace-canvas" height="270" role="img" aria-label="Barcode sensor readings over time"></canvas><p id="trace-plot-empty" hidden>No sensor samples in this capture.</p></div>
+          <p id="trace-range" class="table-note"></p>
+          <details class="diagnostic-detail"><summary>How to read this capture</summary><p>Transitions between light and dark form the barcode. This plot shows what the sensor recorded; it does not re-decode the barcode or prove that a turn happened. “Complete” means an end marker was received, not that every episode fitted in the robot’s capture buffer. Check “not stored” and overflow counts as well.</p></details>
+        </section>
+      </section>
+    </main>
+    <footer class="app-footer"><span id="footer-received">0 messages received · 0 malformed</span><span>Telemetry monitor · physical motor controls stay on the car</span></footer>
+  </div>
+</body>
+</html>

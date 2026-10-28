@@ -16,10 +16,16 @@ test:
 	$(BUILD)/codec_test
 	$(CC) $(CFLAGS) timing_test.c -o $(BUILD)/timing_test
 	$(BUILD)/timing_test
+	$(CC) $(CFLAGS) ir_debug_test.c $(APP)/controller/ir_debug.c -o $(BUILD)/ir_debug_test
+	$(BUILD)/ir_debug_test
+	$(CC) $(CFLAGS) control_debug_test.c $(APP)/controller/control_debug.c -o $(BUILD)/control_debug_test
+	$(BUILD)/control_debug_test
 	$(CC) -Ifakes $(CFLAGS) runtime_test.c $(APP)/controller/barcode_capture.c $(APP)/controller/integration_codec.c $(APP)/controller/s3_drive.c $(APP)/subsystem3/navigation_codec.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/runtime_test
 	$(BUILD)/runtime_test
 	$(CC) -Ifakes -DTM_MQTT=1 -I$(ROOT)/lib/liblwip/sysdepend/pico_rp2040 $(CFLAGS) runtime_test.c $(APP)/controller/barcode_capture.c $(APP)/controller/integration_codec.c $(APP)/controller/s3_drive.c $(APP)/subsystem3/navigation_codec.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/runtime_mqtt_test
 	$(BUILD)/runtime_mqtt_test
+	$(CC) -Ifakes -DAPP_IR_DEBUG=1 -DTM_MQTT=1 -I$(ROOT)/lib/liblwip/sysdepend/pico_rp2040 $(CFLAGS) runtime_test.c $(APP)/controller/ir_debug.c $(APP)/controller/control_debug.c $(APP)/controller/barcode_capture.c $(APP)/controller/integration_codec.c $(APP)/controller/s3_drive.c $(APP)/subsystem3/navigation_codec.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/runtime_ir_debug_test
+	$(BUILD)/runtime_ir_debug_test
 	$(CC) -Ifakes $(CFLAGS) operator_test.c $(APP)/controller/barcode_capture.c $(APP)/controller/operator_logic.c $(APP)/controller/integration_codec.c $(APP)/controller/s3_drive.c $(APP)/subsystem3/navigation_codec.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/operator_test
 	$(BUILD)/operator_test
 	$(CC) -Ifakes $(CFLAGS) map_freeze_test.c $(APP)/controller/barcode_capture.c $(APP)/controller/integration_codec.c $(APP)/controller/s3_drive.c $(APP)/subsystem3/navigation_codec.c $(APP)/subsystem1/telemetry_codec.c $(APP)/subsystem2/motion_codec.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/map_freeze_test
@@ -34,4 +40,5 @@ test:
 	$(BUILD)/course_sim
 
 sanitize:
-	$(MAKE) -f controller_test.mk test CFLAGS='$(CFLAGS) -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'
+	# Apple Clang 21 crashes on this codec with -O1 + sanitizers; -O2 passes.
+	$(MAKE) -f controller_test.mk test CFLAGS='$(CFLAGS) -O2 -fsanitize=address,undefined -fno-omit-frame-pointer'

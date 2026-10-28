@@ -53,3 +53,6 @@ __pycache__/
 # macOS
 .DS_Store
 barcode_trace_*.txt
+
+# Laptop dashboard captures (including simulated test sessions)
+.dashboard-data/

@@ -48,6 +48,16 @@ int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out);
 #define MQTT_UTK_DEBUG_PAYLOAD_MAX 192
 unsigned int mqtt_utk_debug_take(char *line, unsigned int size);
 
+/* Optional IR_DEBUG=1 preview, after ordinary telemetry and barcode uploads.
+ * Latest-only binary diagnostics; stale/rejected previews are dropped, never
+ * retried ahead of application messages. No new incoming robot command. */
+#define MQTT_UTK_IR_DEBUG_TOPIC "car/debug/ir"
+#define MQTT_UTK_IR_DEBUG_MAX 16U
+unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size);
+#define MQTT_UTK_CONTROL_DEBUG_TOPIC "car/debug/controller"
+#define MQTT_UTK_CONTROL_DEBUG_MAX 70U
+unsigned int mqtt_utk_control_debug_take(unsigned char *bytes, unsigned int size);
+
 /* Called after a complete inbound MQTT payload has arrived. The weak default
  * ignores it; Buddy 1 overrides it and copies permitted commands into its
  * RTOS message buffer. */

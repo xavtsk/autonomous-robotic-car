@@ -113,6 +113,26 @@ __attribute__((weak)) unsigned int mqtt_utk_debug_take(char *line, unsigned int 
 	return 0;
 }
 
+__attribute__((weak)) unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size)
+{
+	(void)bytes;
+	(void)size;
+	return 0U;
+}
+__attribute__((weak)) unsigned int mqtt_utk_control_debug_take(unsigned char *bytes, unsigned int size)
+{
+	(void)bytes; (void)size; return 0U;
+}
+
+#if APP_IR_DEBUG
+static void ir_debug_publish_done_cb(void *arg, err_t result)
+{
+	(void)arg;
+	(void)result;
+	pending_inflight = 0; /* best effort: never retry an old preview */
+}
+#endif
+
 __attribute__((weak)) int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out)
 {
 	(void)out;
@@ -351,7 +371,26 @@ void mqtt_utk_poll(void)
 			/* Nothing for telemetry: send one diagnostic line, if any. */
 			if(!debug_valid) {
 				unsigned int n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
-				if(n == 0U || n > sizeof debug_line) return;
+				if(n == 0U) {
+#if APP_IR_DEBUG
+					const char *topic = MQTT_UTK_CONTROL_DEBUG_TOPIC;
+					n = mqtt_utk_control_debug_take((unsigned char *)debug_line, MQTT_UTK_CONTROL_DEBUG_MAX);
+					if(n > MQTT_UTK_CONTROL_DEBUG_MAX) return;
+					if(n == 0U) {
+						topic = MQTT_UTK_IR_DEBUG_TOPIC;
+						n = mqtt_utk_ir_debug_take((unsigned char *)debug_line, MQTT_UTK_IR_DEBUG_MAX);
+						if(n > MQTT_UTK_IR_DEBUG_MAX) return;
+					}
+					if(n == 0U) return;
+					pending_inflight = 1;
+					pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+					err = mqtt_publish(client, topic, debug_line,
+					                  (u16_t)n, 0, 0, ir_debug_publish_done_cb, NULL);
+					if(err != ERR_OK) pending_inflight = 0;
+#endif
+					return;
+				}
+				if(n > sizeof debug_line) return;
 				debug_len = (u16_t)n;
 				debug_valid = 1;
 			}

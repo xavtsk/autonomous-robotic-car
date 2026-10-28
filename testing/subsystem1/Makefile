@@ -9,10 +9,16 @@ CFLAGS = -std=c11 -Wall -Wextra -Werror -O2 -g -pthread
 SOURCES = host_test.c $(APP)/telemetry_codec.c $(APP)/subsystem1.c \
           $(APP)/command.c $(APP)/mqtt_bridge.c $(APP)/subsystem1_test.c $(MQTT)/mqtt_utk.c
 
-.PHONY: test sanitize sizes
+.PHONY: test sanitize sizes ir-debug
 test: $(BUILD)/host_test
 	$(BUILD)/host_test
 	$(PYTHON) test_laptop_codec.py
+	$(MAKE) ir-debug
+
+ir-debug:
+	mkdir -p $(BUILD)
+	$(CC) $(CPPFLAGS) -DAPP_IR_DEBUG=1 $(CFLAGS) $(SOURCES) -o $(BUILD)/host_ir_debug
+	$(BUILD)/host_ir_debug
 
 $(BUILD)/host_test: $(SOURCES) $(APP)/telemetry_codec.h $(APP)/subsystem1.h $(MQTT)/mqtt_utk.h host_kernel.h
 	mkdir -p $(BUILD)

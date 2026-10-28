@@ -21,6 +21,7 @@ typedef struct { unsigned mtxatr; } T_CMTX;
 #define E_NOSPT (-9)
 #define TA_INHERIT 1U
 #define TMO_FEVR (-1)
+#define TMO_POL 0
 #define TP_PRC1 1U
 ID tk_cre_mtx(const T_CMTX *value);
 ER tk_loc_mtx(ID id, TMO timeout);

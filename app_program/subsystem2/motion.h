@@ -264,6 +264,21 @@ typedef struct
     uint32_t report_loss_count; /* monotonically increases on queue overflow */
 } motion_feedback_t;
 bool motion_get_feedback(motion_feedback_t *feedback);
+/* Observation only: try the existing mutex without waiting. No report is
+ * consumed and no controller/PID state is modified. Values belong to the last
+ * completed control update, except state/brake which are current under lock.
+ * Setpoints are the actual ramped PID setpoints, not the raw requested speed.
+ * Diagnostic readers must check valid and timestamp freshness. */
+typedef struct
+{
+    uint32_t timestamp_us;
+    float setpoint_mps[2], measured_mps[2], duty[2];
+    int32_t encoder[2];
+    motion_state_t state;
+    motion_fault_t fault;
+    bool valid, braked, busy;
+} motion_debug_snapshot_t;
+bool motion_try_debug_snapshot(motion_debug_snapshot_t *snapshot);
 /* Exclusive navigation-owner lease. Refresh each healthy integration cycle.
  * Expiry faults/brakes even during a DRIVE/TURN; disabled by default. */
 void motion_navigation_heartbeat(bool enabled);

@@ -676,6 +676,12 @@ float motion_controller_speed_cap(void)
     return SPEED_LIMIT_FRACTION * g_max_speed_mps;
 }
 
+float motion_controller_debug_setpoint(unsigned int wheel)
+{
+    return wheel < (unsigned int)WHEEL_COUNT
+        ? speed_pid_setpoint(&g_wheel[wheel].pid) : 0.0f;
+}
+
 void motion_controller_set_busy(bool b_busy)
 {
     g_ctl.b_busy = b_busy ? 1U : 0U;

@@ -204,6 +204,25 @@ for scheduling, mapping delivery, distance tuning and fault-to-brake decisions.
 Each interface is tested by at least one integration test
 (`testing/integration/TEST_LOG.md`).
 
+Optional wireless IR preview (28 October 2026): `IR_DEBUG=1` with `S3_MOTION=1`
+and `MQTT=1` adds `car/debug/ir`, a 16-byte latest-only binary frame capped at
+20 Hz. The existing sampling owner copies left GP27/right GP26/barcode GP28
+readings after normal processing, using the existing status mutex; the network
+owner takes them with `TMO_POL`. No new task, kernel object, ADC read or motor
+caller is introduced. Normal telemetry and recorded BCAP uploads have priority;
+congested/stale previews are discarded. The line/motion algorithms and 10 ms
+schedule are unchanged, but added work still needs on-car timing validation.
+See `docs/IR_DEBUG_PROTOCOL.md` and `docs/DASHBOARD.md` for format and operation.
+
+The same opt-in build now adds `car/debug/controller`: 70 bytes at up to 5 Hz,
+one separate latest-only mailbox under the same status mutex. The sampling
+owner tries Buddy 2's existing mutex with `TMO_POL` for a read-only snapshot of
+ramped PID setpoints, measured speeds, last motor duty and encoder counts.
+It consumes no motion report and cannot issue a command. Controller/calibration
+decisions are copied by their existing sole owner. Normal telemetry/BCAP remain
+first, controller diagnostics next and IR preview last. No extra RTOS objects,
+peripheral owners, control equations or state transitions are introduced.
+
 ## 6. Kernel object budget
 
 Limits are set in `config/config.h`. If the team needs more, raise the

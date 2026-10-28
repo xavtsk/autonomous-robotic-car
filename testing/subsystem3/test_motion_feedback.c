@@ -9,6 +9,7 @@ static uint32_t clock_us;
 static int32_t count[2];
 static float duty[2];
 static bool locked;
+static bool debug_lock_busy;
 static unsigned int wakes;
 static bool abort_on_delay;
 ID tk_cre_mtx(const T_CMTX *c)
@@ -19,7 +20,7 @@ ID tk_cre_mtx(const T_CMTX *c)
 ER tk_loc_mtx(ID id, int timeout)
 {
     (void)id;
-    (void)timeout;
+    if(debug_lock_busy){assert(timeout==TMO_POL);return -1;}
     assert(!locked);
     locked = true;
     return E_OK;
@@ -246,6 +247,8 @@ static void test_reports_and_wrap(void)
 }
 int main(void)
 {
+    motion_debug_snapshot_t debug;
+    assert(!motion_try_debug_snapshot(NULL));
     motion_feedback_t first, second;
     unsigned int i;
     assert(!motion_get_feedback(&first));
@@ -265,6 +268,13 @@ int main(void)
     count[1] = 100;
     clock_us += 5000U;
     assert(motion_get_feedback(&second));
+    {
+        const float before_l=duty[0],before_r=duty[1];
+        for(unsigned i=0;i<100;++i)assert(motion_try_debug_snapshot(&debug));
+        assert(debug.timestamp_us==second.timestamp_us && debug.valid==second.valid);
+        assert(duty[0]==before_l && duty[1]==before_r && !locked);
+        debug_lock_busy=true;assert(!motion_try_debug_snapshot(&debug));debug_lock_busy=false;
+    }
     assert(second.timestamp_us == first.timestamp_us &&
            second.centre_m == first.centre_m);
     clock_us += 5000U;
@@ -277,6 +287,14 @@ int main(void)
     clock_us += 10000U;
     motion_process();
     assert(motion_get_feedback(&first) && first.state == MOTION_TURN);
+    {
+        const float before_l=duty[0],before_r=duty[1];
+        for(unsigned j=0;j<100;++j)assert(motion_try_debug_snapshot(&debug));
+        assert(debug.state==MOTION_TURN && debug.valid && debug.timestamp_us==first.timestamp_us);
+        assert(debug.setpoint_mps[0]<=0.0f && debug.setpoint_mps[1]>=0.0f);
+        assert(duty[0]==before_l && duty[1]==before_r && !locked);
+        assert(motion_get_feedback(&second) && second.timestamp_us==first.timestamp_us && second.state==first.state);
+    }
     clock_us += 40000U;
     motion_process();
     assert(motion_get_feedback(&first));

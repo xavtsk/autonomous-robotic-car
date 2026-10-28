@@ -175,6 +175,72 @@ static void test_debug_lines(void)
     puts("HOST PASS: diagnostic text lines only after telemetry, own topic, paced, retried, bounded");
 }
 
+#if APP_IR_DEBUG
+static unsigned ir_frames;
+static unsigned control_frames;
+unsigned int mqtt_utk_control_debug_take(unsigned char *bytes, unsigned int size)
+{
+    if (!control_frames) return 0U;
+    assert(size>=70U); memset(bytes,0,70U);bytes[0]=1U;bytes[69]=0x3fU;
+    --control_frames;return 70U;
+}
+unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size)
+{
+    if (!ir_frames) return 0U;
+    assert(size>=16U);
+    memset(bytes,0,16U);bytes[0]=1U;bytes[15]=0x3fU;
+    ir_frames--;
+    return 16U;
+}
+static void test_ir_preview(void)
+{
+    unsigned count;
+    empty_outbox();
+    debug_head=0;debug_count=1;debug_queue[0]="[BCAP] end";
+    ir_frames=1;
+    assert(buddy1_report_heading(40)==E_OK);
+    count=publish_count;
+    poll_after(20);
+    assert(publish_count==count+1&&ir_frames==1&&strcmp(published_topic,MQTT_UTK_IR_DEBUG_TOPIC)!=0);
+    poll_after(20);
+    assert(publish_count==count+2&&ir_frames==1&&strcmp(published_topic,MQTT_UTK_DEBUG_TOPIC)==0);
+    poll_after(20);
+    assert(publish_count==count+3&&ir_frames==0&&strcmp(published_topic,MQTT_UTK_IR_DEBUG_TOPIC)==0);
+    assert(published_len==16&&published[0]==1&&published[1]==0&&published_qos==0&&published_retain==0);
+    ir_frames=1;publish_result=ERR_MEM;poll_after(20);
+    assert(publish_count==count+3&&ir_frames==0);
+    publish_result=ERR_OK;poll_after(100);
+    assert(publish_count==count+3); /* rejected preview is not retried */
+    ir_frames=1;defer_completion=1;poll_after(20);
+    assert(publish_count==count+4);
+    assert(buddy1_report_heading(41)==E_OK);
+    poll_after(20);assert(publish_count==count+4);
+    defer_completion=0;complete_publish(ERR_OK);poll_after(20);
+    assert(publish_count==count+5&&strcmp(published_topic,"car/telemetry/heading")==0);
+    debug_head=debug_count=0;
+    puts("HOST PASS: IR preview below telemetry/capture priority, binary length, QoS0, pacing, drop-on-backpressure and one in-flight slot");
+}
+static void test_control_preview(void)
+{
+    empty_outbox();debug_head=0;debug_count=1;debug_queue[0]="[BCAP] end";
+    control_frames=ir_frames=1;
+    assert(buddy1_report_heading(42)==E_OK);
+    poll_after(20);assert(!strcmp(published_topic,"car/telemetry/heading")&&control_frames==1);
+    poll_after(20);assert(!strcmp(published_topic,MQTT_UTK_DEBUG_TOPIC)&&control_frames==1);
+    poll_after(20);assert(!strcmp(published_topic,MQTT_UTK_CONTROL_DEBUG_TOPIC)&&control_frames==0&&ir_frames==1);
+    assert(published_len==70&&published_qos==0&&published_retain==0);
+    poll_after(20);assert(!strcmp(published_topic,MQTT_UTK_IR_DEBUG_TOPIC)&&ir_frames==0);
+    unsigned count=publish_count;
+    control_frames=1;publish_result=ERR_MEM;poll_after(20);assert(control_frames==0&&publish_count==count);
+    publish_result=ERR_OK;poll_after(100);assert(publish_count==count);
+    control_frames=1;defer_completion=1;poll_after(20);
+    assert(publish_count==count+1&&published_len==70);
+    ir_frames=1;poll_after(20);assert(publish_count==count+1&&ir_frames==1);
+    defer_completion=0;complete_publish(ERR_OK);poll_after(20);assert(ir_frames==0&&publish_count==count+2);
+    debug_head=debug_count=0;
+    puts("HOST PASS: control diagnostics below telemetry/BCAP, before IR, exact 70 bytes, drop-on-reject and stable in-flight buffer");
+}
+#endif
 static void test_publish_backpressure(void)
 {
     BUDDY1_COMMAND_MSG command = {.kind = BUDDY1_COMMAND_SNAPSHOT,
@@ -411,6 +477,10 @@ int main(void)
         buddy1_decode(BUDDY1_TOPIC_STATUS, published, published_len, &decoded));
     test_publish_backpressure();
     test_debug_lines();
+#if APP_IR_DEBUG
+    test_ir_preview();
+    test_control_preview();
+#endif
     emit_vectors();
     puts("HOST PASS: binary FIFO, full speed range, 64 fault masks, eight concurrent producers, real MQTT callbacks and bridge");
     return 0;
