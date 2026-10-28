@@ -63,7 +63,8 @@ bool motion_try_debug_snapshot(motion_debug_snapshot_t *m)
 { assert(!locked);clock_value+=debug_motion_advance;
   *m=(motion_debug_snapshot_t){.timestamp_us=clock_value-debug_motion_age,.valid=true,.braked=fb_braked,
     .setpoint_mps={0.04f,-0.05f},.measured_mps={0.035f,-0.042f},.encoder={-123,456},.duty={0.2f,-0.3f}};
-  if(debug_motion_out_of_range)m->measured_mps[0]=10.0f;return true; }
+  if(debug_motion_out_of_range){m->measured_mps[0]=10.0f;}
+  return true; }
 motion_result_t motion_request_velocity(float l,float r)
 { (void)l;(void)r;assert(!locked);fb_command_id=1;return MOTION_OK; }
 motion_result_t motion_request_drive(float m,float v) { (void)m;(void)v;return MOTION_OK; }
@@ -254,7 +255,8 @@ int main(void)
             for(unsigned k=0;k<20;k++)cycle();
             test_mutex_busy=true;assert(mqtt_utk_control_debug_take(control,sizeof control)==0);test_mutex_busy=false;
             assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
-            for(unsigned k=0;k<20;k++)cycle();clock_value+=400001;
+            for(unsigned k=0;k<20;k++){cycle();}
+            clock_value+=400001;
             assert(mqtt_utk_control_debug_take(control,sizeof control)==0&&!g_control_ready);
             /* A newer motion tick after the ADC stamp is fresh, not wrapped
              * negative age. Old or out-of-range feedback remains invalid. */
