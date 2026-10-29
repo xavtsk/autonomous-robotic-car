@@ -9,7 +9,7 @@ static motion_status_t status;
 static s3_integration_status_t runtime;
 static s3_control_kind_t queued;
 static bool queue_ok=true, status_ok=true, frozen;
-static unsigned mask=BUDDY1_FAULT_WIFI, updates, invalidations, reports, states, barcodes;
+static unsigned mask=BUDDY1_FAULT_WIFI, updates, invalidations, reports, states, barcodes, motion_reads;
 static ER mirror_result=E_OK;
 static BUDDY1_ROBOT_STATE last_state;
 static int left_report,right_report;
@@ -18,7 +18,7 @@ bool s3_integration_submit(const s3_control_request_t *r)
 bool s3_integration_status(s3_integration_status_t *out)
 {*out=runtime;return true;}
 bool motion_get_status(motion_status_t *out)
-{*out=status;return status_ok;}
+{motion_reads++;*out=status;return status_ok;}
 ER buddy1_update_faults(UB changed,UB active)
 {
     assert(!(changed & BUDDY1_FAULT_WIFI));updates++;
@@ -31,6 +31,9 @@ ER buddy1_report_barcode(UB letter)
 {assert(letter=='B');barcodes++;return E_OK;}
 ER buddy1_report_motion(H left,H right)
 {reports++;left_report=left;right_report=right;return E_OK;}
+static unsigned poses; static int pose_cm=-1, pose_deg=-1;
+ER buddy1_report_pose(UH cm,H deg)
+{assert(cm<BUDDY1_POSE_DISTANCE_MOD&&deg>=0&&deg<360);poses++;pose_cm=cm;pose_deg=deg;return E_OK;}
 ER buddy1_invalidate(UB type)
 {assert(type==BUDDY1_TOPIC_MOTION);invalidations++;return E_OK;}
 ER buddy1_configuration_claim(BUDDY1_BARCODE_MAP *map,BOOL *newly)
@@ -56,6 +59,7 @@ int main(void)
     runtime.state=S3_DRIVE_FOLLOW;status.b_valid=true;
     status.speed_left_mps=0.12f;status.speed_right_mps=-0.12f;
     cycles(20);assert(reports==1&&left_report==120&&right_report==-120);
+    assert(motion_reads==20); /* one read/cycle, shared by faults/pose/speed */
     assert(last_state==BUDDY1_STATE_LINE_FOLLOWING&&mask==BUDDY1_FAULT_WIFI);
     status.fault_bits=MOTION_FAULT_BIT(MOTION_FAULT_STALL)|MOTION_FAULT_BIT(MOTION_FAULT_ENCODER);
     runtime.navigation.fault_mask=2;cycles(1);
@@ -90,5 +94,21 @@ int main(void)
     vehicle_controller_cancel_start();assert(frozen&&reopens==1);
     assert(!vehicle_controller_apply_mapping(map));
     assert(vehicle_controller_submit_navigation(&runtime.navigation)==E_NOSPT);
-    puts("PASS: one-owner facade, explicit queued start/stop, full fault-bit ownership, unknown-status preservation, map freeze, telemetry and out-of-range invalidation");
+    /* Route pose: relative to START, 5 Hz while running, final one at the end. */
+    runtime=(s3_integration_status_t){0};status=(motion_status_t){0};status.b_valid=true;
+    assert(vehicle_controller_init()==E_OK);poses=0;
+    status.distance_m=1.00f;status.heading_deg=350.0f;cycles(5);assert(poses==0); /* not running */
+    status.b_valid=false;runtime.state=S3_DRIVE_FOLLOW;cycles(3);assert(poses==0);  /* no reference yet */
+    status.b_valid=true;cycles(1);assert(poses==1&&pose_cm==0&&pose_deg==0);      /* START */
+    status.distance_m=1.25f;status.heading_deg=10.0f;cycles(19);assert(poses==1);
+    cycles(1);assert(poses==2&&pose_cm==25&&pose_deg==20);                        /* heading wraps */
+    runtime.state=S3_DRIVE_MANOEUVRE;status.distance_m=0.90f;status.heading_deg=260.0f;cycles(20);
+    assert(poses==3&&pose_cm==4096-10&&pose_deg==270);                            /* reverse past START */
+    status.distance_m=42.004f;cycles(20);assert(poses==4&&pose_cm==(4100%4096));  /* 41 m: wraps */
+    status.b_valid=false;cycles(40);assert(poses==4);                              /* unusable: skipped */
+    status.b_valid=true;runtime.state=S3_DRIVE_HALTED;cycles(1);assert(poses==5);  /* final pose */
+    cycles(40);assert(poses==5);                                                   /* stopped: silent */
+    status.distance_m=5.0f;status.heading_deg=90.0f;runtime.state=S3_DRIVE_FOLLOW;cycles(1);
+    assert(poses==6&&pose_cm==0&&pose_deg==0);                                    /* new run, new START */
+    puts("PASS: one-owner facade, explicit queued start/stop, full fault-bit ownership, unknown-status preservation, map freeze, telemetry and out-of-range invalidation, route pose relative to START (wrap, reverse, final, new run)");
 }

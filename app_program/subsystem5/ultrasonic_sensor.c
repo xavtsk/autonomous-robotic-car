@@ -8,6 +8,14 @@ bool ultrasonic_pulse_mm(uint32_t us,uint16_t *mm)
     if(value<S5_RANGE_MIN_MM || value>S5_RANGE_MAX_MM) { return false; }
     *mm=(uint16_t)value;return true;
 }
+bool ultrasonic_echo_mm(uint32_t us,uint16_t *mm)
+{
+    if(!mm) { return false; }
+    if(ultrasonic_pulse_mm(us,mm)) { return true; }
+    /* Nothing reflected within range: report clear, not a fault. */
+    if(us>24000U || (us*343U+1000U)/2000U>S5_RANGE_MAX_MM) { *mm=S5_RANGE_MAX_MM;return true; }
+    *mm=0;return false;
+}
 #if APP_S5
 #include "../app.h"
 #include <sys/sysdef.h>
@@ -58,10 +66,14 @@ bool ultrasonic_sensor_poll(uint32_t now,uint16_t *mm,bool *valid)
     if(!active || !mm || !valid) { return false; }
     if((in_w(S5_PIO+4U)&(1U<<(8U+2U)))==0U) {
         cycles=in_w(S5_PIO+0x20U+2U*4U);ultrasonic_sensor_cancel();
-        *mm=0;*valid=cycles<=12000U && ultrasonic_pulse_mm(cycles*2U,mm);return true;
+        *mm=0;*valid=ultrasonic_echo_mm(cycles>12000U?24001U:cycles*2U,mm);return true;
     }
     if((uint32_t)(now-started)>=S5_ECHO_TIMEOUT_US) {
-        ultrasonic_sensor_cancel();*mm=0;*valid=false;return true;
+        /* ECHO still high: the pulse started and is longer than the range
+         * window, i.e. nothing within range (clear). ECHO low: no pulse ever
+         * started - unpowered, unplugged or miswired sensor (invalid). */
+        bool pulse=gpio_get_val(S5_ECHO_GPIO)!=0U;
+        ultrasonic_sensor_cancel();*mm=pulse?(uint16_t)S5_RANGE_MAX_MM:0U;*valid=pulse;return true;
     }
     return false;
 }

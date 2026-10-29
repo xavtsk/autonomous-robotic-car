@@ -1,6 +1,6 @@
 # Buddy 1 Wi-Fi commands and telemetry
 
-Buddy 1 now uses compact binary application data for Tribunal 1 (protocol v2).
+Buddy 1 now uses compact binary application data for Tribunal 1 (protocol v3).
 Robot and laptop must be updated together: v1 packets/commands are rejected.
 The shared fault mask now includes aggregate IR fault at bit 5; Buddy 3 keeps
 its separate per-sensor fault mask. Snapshot/heartbeat byte lengths are unchanged. Other buddies
@@ -31,7 +31,7 @@ simultaneous sample of every sensor.
 8. `subsystem1_test.c`: portable checks also compiled into `TEST=1` firmware.
 
 The existing platform files `lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c/.h`
-preserve binary input, bound staging to 16 bytes and publish explicit lengths.
+preserve binary input, bound staging to 14 bytes and publish explicit lengths.
 The small CYW43 hook reports Wi-Fi link transitions after releasing the radio
 lock. The networking task continues to own lwIP and MQTT. The Vehicle Controller
 freezes barcode configuration before requesting the first run.
@@ -55,10 +55,12 @@ See `testing/subsystem1/README.md` for target and hardware checks.
 
 - Motion telemetry uses the proposed ±510 mm/s range in 2 mm/s steps. Odd input
   rounds by at most 1 mm/s. Buddy 2 control calculations are unaffected.
-- Buddy 4/5 ranges are provisional; their placeholder modules have no hardware
-  evidence yet. Existing unsigned precision is preserved until owners agree.
+- Buddy 4/5 software ranges are adopted in protocol v3 (height 0–500 mm,
+  distance 30–4000 mm, width 0–4095 mm). Physical accuracy/range validation is
+  still pending; later contract changes require coordinated protocol updates.
 - Wi-Fi, motor and IR fault reporting use their owner adapters. Buddy 4/5
-  fault sources still need integration. A cleared aggregate IR bit does not
+  fault sources require physical validation. Buddy 4/5 adapters are integrated.
+  A cleared aggregate IR bit does not
   identify individual channels or certify physical wiring.
 - Network outage and full buffers can lose live reports; a snapshot is latest
   state, not a retry/event history. Safety decisions must not depend on MQTT.

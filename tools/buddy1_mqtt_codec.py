@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Laptop decoder and setup-command encoder for Buddy 1 binary protocol v2.
+"""Laptop decoder and setup-command encoder for Buddy 1 binary protocol v3.
 
 Standard library only. Feed the original MQTT payload bytes to decode(); JSON
 is produced on the laptop for display, never sent as robot application data.
@@ -8,13 +8,29 @@ import argparse
 import json
 from pathlib import Path
 
-VERSION = 2
+VERSION = 3
 NAMES = ("motion", "barcode", "hump", "heading", "obstacle", "state", "faults")
-WIDTHS = (18, 8, 32, 9, 34, 3, 6)
+WIDTHS = (18, 8, 25, 9, 26, 3, 6)
+SNAPSHOT_BITS = 7 + sum(WIDTHS)
+SNAPSHOT_BYTES = 1 + (SNAPSHOT_BITS + 7) // 8
 STATES = ("stopped", "line_following", "turning_left", "turning_right", "uturn",
           "avoiding_obstacle", "complete", "error")
 ACTIONS = ("unknown", "forward", "left", "right", "uturn")
 FAULTS = ("motor_stall", "encoder_fault", "imu_fault", "no_echo", "wifi_loss", "ir_sensor_fault")
+POSE_DISTANCE_BITS = 12
+POSE_DISTANCE_MOD = 1 << POSE_DISTANCE_BITS
+
+
+def unwrap_distance(previous_cm, wrapped_cm):
+    """Continue a run's distance from a pose packet's wrapped 12-bit value.
+
+    previous_cm is the last unwrapped distance (0 at START). The step is taken
+    as the nearest value in -2048..+2047 cm, so reversing gives a negative step.
+    """
+    step = (wrapped_cm - previous_cm) % POSE_DISTANCE_MOD
+    if step >= POSE_DISTANCE_MOD // 2:
+        step -= POSE_DISTANCE_MOD
+    return previous_cm + step
 
 
 def _check(payload, bits):
@@ -44,16 +60,19 @@ def _section(name, value):
             raise ValueError("reserved barcode/action")
         return dict(letter=chr(65 + letter), action=ACTIONS[action])
     if name == "hump":
+        if value >> 16 > 500:
+            raise ValueError("hump height outside 0..500 mm")
         return dict(count=value & 65535, height_mm=value >> 16)
     if name == "heading":
         if value > 359:
             raise ValueError("invalid heading")
         return dict(heading_deg=value)
     if name == "obstacle":
-        route = value >> 32
-        if route > 2:
+        route = value >> 24
+        distance = value & 4095
+        if route > 2 or not 30 <= distance <= 4000:
             raise ValueError("reserved route")
-        return dict(distance_mm=value & 65535, width_mm=(value >> 16) & 65535,
+        return dict(distance_mm=distance, width_mm=(value >> 12) & 4095,
                     route=("unknown", "left", "right")[route])
     if name == "state":
         return dict(state=STATES[value])
@@ -88,7 +107,7 @@ def decode(topic, payload):
         value = _check(payload, 2)
         return dict(ok=value == 0, result=("ok", "invalid", "busy", "internal")[value])
     if topic == "car/reply/snapshot":
-        value = _check(payload, 117)
+        value = _check(payload, SNAPSHOT_BITS)
         flags, offset, result = value & 127, 7, {}
         for i, (section, width) in enumerate(zip(NAMES, WIDTHS)):
             raw = (value >> offset) & ((1 << width) - 1)
@@ -104,6 +123,12 @@ def decode(topic, payload):
             raise ValueError("invalid heartbeat status")
         return dict(alive=True, faults_valid=bool(value & 2),
                     faults=_section("faults", value >> 2) if value & 2 else None)
+    if topic == "car/telemetry/pose":
+        value = _check(payload, POSE_DISTANCE_BITS + 9)
+        heading = value >> POSE_DISTANCE_BITS
+        if heading > 359:
+            raise ValueError("invalid heading")
+        return dict(distance_cm_mod=value & (POSE_DISTANCE_MOD - 1), heading_deg=heading)
     if topic.startswith("car/telemetry/") and name in NAMES:
         return _section(name, _check(payload, WIDTHS[NAMES.index(name)]))
     raise ValueError("unknown topic; use car/status when decoding a custom heartbeat topic")

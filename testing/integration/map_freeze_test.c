@@ -81,6 +81,7 @@ ER buddy1_update_faults(UB c,UB a) { (void)c;(void)a;return E_OK; }
 ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE s) { (void)s;return E_OK; }
 ER buddy1_invalidate(UB t) { (void)t;return E_OK; }
 ER buddy1_report_motion(H l,H r) { (void)l;(void)r;return E_OK; }
+ER buddy1_report_pose(UH d,H h) { (void)d;(void)h;return E_OK; }
 ER buddy1_queue_publish(UB t,const UB *p,UH n) { (void)t;(void)p;(void)n;return E_OK; }
 BOOL buddy1_snapshot_packet(UB p[BUDDY1_PAYLOAD_MAX]) { (void)p;return TRUE; }
 

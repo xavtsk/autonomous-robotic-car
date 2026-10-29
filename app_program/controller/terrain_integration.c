@@ -10,7 +10,7 @@ typedef struct {
     terrain_result_t sample;
     uint32_t now, reset_us;
     uint16_t run, expected_run, humps, sent_humps, sent_height, sent_run;
-    bool have, waiting, latched, run_owned, fault_sent, hump_sent;
+    unsigned have:1, waiting:1, latched:1, run_owned:1, fault_sent:1, hump_sent:1, hump_invalidated:1;
     int sent_fault;
 } terrain_control_t;
 static terrain_control_t control;
@@ -35,7 +35,7 @@ bool terrain_control_begin(uint32_t now)
     control.expected_run=token; control.reset_us=now;
     control.waiting=true; control.have=false; control.run_owned=true;
     control.hump_sent=false;
-    (void)buddy1_invalidate(BUDDY1_TOPIC_HUMP);
+    control.hump_invalidated=buddy1_invalidate(BUDDY1_TOPIC_HUMP)==E_OK;
     return true;
 }
 void terrain_control_poll(s3_drive_t *drive,uint32_t now)
@@ -88,12 +88,14 @@ void terrain_control_report(void)
            control.sent_humps!=control.humps || control.sent_height!=height) {
             ER er=buddy1_report_hump(control.humps,height);
             if(er==E_OK || er==E_TMOUT) {
-                control.hump_sent=true; control.sent_humps=control.humps;
+                control.hump_sent=true; control.hump_invalidated=false; control.sent_humps=control.humps;
                 control.sent_height=height; control.sent_run=control.run;
             }
         }
     } else {
-        (void)buddy1_invalidate(BUDDY1_TOPIC_HUMP); control.hump_sent=false;
+        if (!control.hump_invalidated)
+            control.hump_invalidated=buddy1_invalidate(BUDDY1_TOPIC_HUMP)==E_OK;
+        control.hump_sent=false;
     }
     /* S4 exports compass-derived turn RATE, not absolute heading. Never feed
      * degrees/second into Buddy 1's heading-degrees packet. */

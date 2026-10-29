@@ -29,8 +29,11 @@ static bool fb_fault, reset_clears_fault=true;
 static uint8_t fb_command_id;
 static unsigned reset_calls;
 static unsigned cancel_calls;
+static bool test_mutex_busy;
+static uint32_t debug_motion_advance, debug_motion_age;
+static bool debug_motion_out_of_range;
 ID tk_cre_mtx(const T_CMTX *m) { assert(m->mtxatr==TA_INHERIT); return 1; }
-ER tk_loc_mtx(ID id,TMO t) { (void)t;assert(id==1&&!locked);locked=1;return E_OK; }
+ER tk_loc_mtx(ID id,TMO t) { if(test_mutex_busy){assert(t==TMO_POL);return E_TMOUT;}assert(id==1&&!locked);locked=1;return E_OK; }
 ER tk_unl_mtx(ID id) { assert(id==1&&locked);locked=0;return E_OK; }
 ID tk_cre_cyc(const T_CCYC *c) { assert(c->cyctim==10&&c->cychdr); return 2; }
 ER tk_stp_cyc(ID id) { (void)id;return E_OK; }
@@ -56,6 +59,12 @@ int32_t ir_sensor_read_frame(s3_sensor_frame_t *f)
 bool motion_get_feedback(motion_feedback_t *f)
 { assert(!locked);*f=(motion_feedback_t){.timestamp_us=clock_value,.epoch=1,.valid=true,.braked=fb_braked,.command_id=fb_command_id,
     .state=fb_fault?MOTION_FAULT:MOTION_IDLE,.fault=fb_fault?MOTION_FAULT_STALL:MOTION_FAULT_NONE};return true; }
+bool motion_try_debug_snapshot(motion_debug_snapshot_t *m)
+{ assert(!locked);clock_value+=debug_motion_advance;
+  *m=(motion_debug_snapshot_t){.timestamp_us=clock_value-debug_motion_age,.valid=true,.braked=fb_braked,
+    .setpoint_mps={0.04f,-0.05f},.measured_mps={0.035f,-0.042f},.encoder={-123,456},.duty={0.2f,-0.3f}};
+  if(debug_motion_out_of_range){m->measured_mps[0]=10.0f;}
+  return true; }
 motion_result_t motion_request_velocity(float l,float r)
 { (void)l;(void)r;assert(!locked);fb_command_id=1;return MOTION_OK; }
 motion_result_t motion_request_drive(float m,float v) { (void)m;(void)v;return MOTION_OK; }
@@ -194,20 +203,83 @@ int main(void)
     assert(status.command_sequence==sequence+1&&!g_reset_waiting&&!g_shared.reset_pending);
 #if defined(TM_MQTT) && TM_MQTT
     {   /* After the run ended, the barcode trace goes out over Wi-Fi once,
-         * summary first and "[BCAP] end" last; then nothing more. */
-        char line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+         * binary summary first and binary end last; then nothing more. */
+        unsigned char line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
         unsigned n, lines = 0U;
-        char first[MQTT_UTK_DEBUG_PAYLOAD_MAX] = "", last[MQTT_UTK_DEBUG_PAYLOAD_MAX] = "";
+        unsigned first_kind=99,last_kind=99;
+        /* A busy capture lock must skip, not wait or abandon the capture. */
+        test_mutex_busy=true;assert(mqtt_utk_debug_take(line,sizeof line)==0U);
+        test_mutex_busy=false;assert(g_bcap_net_pending);
         while ((n = mqtt_utk_debug_take(line, sizeof line)) != 0U)
         {
-            assert(n < sizeof line && line[n] == '\0');
-            if (lines++ == 0U) { memcpy(first, line, n + 1U); }
-            memcpy(last, line, n + 1U);
+            assert(n <= BCAP_WIRE_MAX && n>=6U && line[0]==BCAP_WIRE_VERSION);
+            if (lines++ == 0U) first_kind=line[5]&3U;
+            last_kind=line[5]&3U;
         }
-        assert(lines >= 2U && strncmp(first, "[BCAP] run summary", 18) == 0 &&
-               strcmp(last, "[BCAP] end") == 0);
+        assert(lines >= 2U && first_kind==0U && last_kind==3U);
         assert(mqtt_utk_debug_take(line, sizeof line) == 0U);
         puts("PASS: barcode trace published once over the Wi-Fi debug hook after the run");
+    }
+#endif
+#if APP_IR_DEBUG && defined(TM_MQTT) && TM_MQTT
+    {
+        unsigned char bytes[IR_DEBUG_PACKET_SIZE];
+        ir_debug_packet_t preview;
+        ir_debug_sample_t decoded;
+        for(unsigned k=0;k<5;k++)cycle();
+        assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes-1U)==0U);
+        assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==16U);
+        memcpy(preview.bytes,bytes,sizeof bytes);
+        assert(ir_debug_unpack(&preview,&decoded)&&decoded.raw_valid==7U);
+        assert(decoded.raw[0]==raw&&decoded.raw[1]==raw&&decoded.raw[2]==raw);
+        assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==0U);
+        for(unsigned k=0;k<5;k++)cycle();
+        test_mutex_busy=true;
+        assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==0U);
+        test_mutex_busy=false;
+        assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==16U);
+        for(unsigned k=0;k<5;k++)cycle();
+        clock_value+=100001U;
+        assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==0U&&!g_ir_ready);
+        puts("PASS: production IR preview latest-only mailbox, physical channel mapping, bounded age and nonblocking network access");
+        {
+            unsigned char control[CONTROL_DEBUG_PACKET_SIZE];
+            control_debug_packet_t cp;
+            control_debug_sample_t cd;
+            for(unsigned k=0;k<20;k++)cycle();
+            assert(mqtt_utk_control_debug_take(control,sizeof control-1)==0);
+            assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
+            memcpy(cp.bytes,control,sizeof control);
+            assert(control_debug_unpack(&cp,&cd));
+            assert(cd.motion_valid && cd.setpoint_right==-50 && cd.encoder_left==-123 && cd.measured_right==-42);
+            assert(cd.accepted_calibration==7 && cd.left_white_limit<=1000);
+            assert(mqtt_utk_control_debug_take(control,sizeof control)==0);
+            for(unsigned k=0;k<20;k++)cycle();
+            test_mutex_busy=true;assert(mqtt_utk_control_debug_take(control,sizeof control)==0);test_mutex_busy=false;
+            assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
+            for(unsigned k=0;k<20;k++){cycle();}
+            clock_value+=400001;
+            assert(mqtt_utk_control_debug_take(control,sizeof control)==0&&!g_control_ready);
+            /* A newer motion tick after the ADC stamp is fresh, not wrapped
+             * negative age. Old or out-of-range feedback remains invalid. */
+            debug_motion_advance=100;
+            for(unsigned k=0;k<20;k++)cycle();
+            assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
+            memcpy(cp.bytes,control,sizeof control);assert(control_debug_unpack(&cp,&cd));
+            assert(cd.motion_valid && (int32_t)(cd.motion_timestamp_us-cd.timestamp_us)>0);
+            debug_motion_advance=0;debug_motion_age=60000;
+            for(unsigned k=0;k<20;k++)cycle();
+            assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
+            memcpy(cp.bytes,control,sizeof control);assert(control_debug_unpack(&cp,&cd));
+            assert(cd.motion_available&&!cd.motion_valid&&cd.measured_left==0&&cd.encoder_left==0);
+            debug_motion_age=0;debug_motion_out_of_range=true;
+            for(unsigned k=0;k<20;k++)cycle();
+            assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
+            memcpy(cp.bytes,control,sizeof control);assert(control_debug_unpack(&cp,&cd));
+            assert(!cd.motion_valid&&cd.setpoint_left==0&&cd.duty_left==0);
+            debug_motion_out_of_range=false;
+            puts("PASS: controller debug real runtime, signed motion/calibration fields, latest-only nonblocking mailbox and stale drop");
+        }
     }
 #endif
     puts("PASS: production runtime STOP precedence, packed status, calibration, signed errors, map freeze, per-run timing/fault interval, one-press asynchronous RESET, cancellation and timeout");

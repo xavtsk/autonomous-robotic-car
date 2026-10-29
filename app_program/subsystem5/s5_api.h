@@ -9,6 +9,9 @@ typedef enum {
 s5_snapshot_result_t subsystem5_read_snapshot(s5_observation_t *out);
 bool subsystem5_snapshot(s5_observation_t *out);
 bool subsystem5_request_scan(uint16_t id);
+/* One reading at a side angle (30..60 or 120..150) while stopped; the result
+ * arrives as scan_done with this id and that side's clearance updated. */
+bool subsystem5_request_peek(uint16_t id,unsigned angle);
 void subsystem5_cancel_scan(void);
 void subsystem5_set_controller_status(unsigned state,unsigned fault,unsigned route);
 uint8_t subsystem5_controller_status(void);

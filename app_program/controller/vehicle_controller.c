@@ -10,11 +10,26 @@
 #include "../subsystem5/obstacle_avoidance.h"
 #endif
 
-static unsigned telemetry_divider;
+static struct { unsigned divider:5; } telemetry;
+/* Route pose (car/telemetry/pose): Buddy 2's encoder distance/heading relative
+ * to the start of the current run. Only the sampling owner touches it. */
+#define POSE_PERIOD_CYCLES 20U /* 10 ms cycles -> 5 Hz, same as motion */
+static struct {
+    unsigned running : 1;
+    unsigned divider : 5;
+    float start_distance_m, start_heading_deg;
+} pose;
 static BUDDY1_ROBOT_STATE last_state;
 static BUDDY1_BARCODE_ACTION last_action;
 static unsigned last_faults;
 static bool faults_seen;
+#if APP_S5
+static struct {
+    uint16_t scan;
+    unsigned route:2, invalidated:1;
+    signed echo:2; /* -1 unknown, 0 healthy, 1 no echo */
+} obstacle_report;
+#endif
 /* True only between a prepare_start() that newly froze the Buddy 1 map and
  * the end of that same START attempt. Only the sampling owner touches it. */
 static bool start_claimed_map;
@@ -52,12 +67,58 @@ static BUDDY1_ROBOT_STATE wire_state(s3_drive_state_t state)
     }
     return BUDDY1_STATE_LINE_FOLLOWING;
 }
+static bool run_active(s3_drive_state_t state)
+{
+    return state == S3_DRIVE_FOLLOW || state == S3_DRIVE_BRAKING ||
+           state == S3_DRIVE_MANOEUVRE || state == S3_DRIVE_REACQUIRE;
+}
+static int32_t round_to_int(float x) { return (int32_t)(x >= 0.0f ? x + 0.5f : x - 0.5f); }
+static void send_pose(const motion_status_t *m)
+{
+    int32_t cm = round_to_int((m->distance_m - pose.start_distance_m) * 100.0f);
+    int32_t deg = round_to_int(m->heading_deg - pose.start_heading_deg);
+    cm %= (int32_t)BUDDY1_POSE_DISTANCE_MOD;
+    if (cm < 0) cm += (int32_t)BUDDY1_POSE_DISTANCE_MOD;
+    deg %= 360;
+    if (deg < 0) deg += 360;
+    /* QoS 0 live data: a full outbox drops this sample; the next one,
+     * 200 ms later, carries the current pose (the laptop unwraps distance). */
+    (void)buddy1_report_pose((UH)cm, (H)deg);
+}
+/* One pose at START (0, 0), then every 200 ms while the run is active, and a
+ * final one when it ends. Skipped while Buddy 2's estimate is unusable. */
+static void pose_report(const s3_integration_status_t *status,
+                        const motion_status_t *m, bool available)
+{
+    const bool active = run_active(status->state);
+    const bool usable = available && m->b_valid && !m->b_busy &&
+                        m->distance_m == m->distance_m && m->heading_deg == m->heading_deg;
+    if (active && !pose.running) {
+        if (!usable) return; /* start reference needs a valid estimate */
+        pose.running = true; pose.divider = 0U;
+        pose.start_distance_m = m->distance_m; pose.start_heading_deg = m->heading_deg;
+        send_pose(m);
+    } else if (active) {
+        if (++pose.divider >= POSE_PERIOD_CYCLES) {
+            pose.divider = 0U;
+            if (usable) send_pose(m);
+        }
+    } else if (pose.running) {
+        pose.running = false;
+        if (usable) send_pose(m);
+    }
+}
 ER vehicle_controller_init(void)
 {
     terrain_control_init();
-    telemetry_divider = 0U; last_state = BUDDY1_STATE_UNKNOWN;
+    pose.running = false; pose.divider = 0U;
+    telemetry.divider = 0U; last_state = BUDDY1_STATE_UNKNOWN;
     last_action = BUDDY1_ACTION_UNKNOWN; last_faults = 0U; faults_seen = false;
     start_claimed_map = false;
+#if APP_S5
+    obstacle_report.scan=0; obstacle_report.route=0;
+    obstacle_report.echo=-1; obstacle_report.invalidated=false;
+#endif
     return E_OK;
 }
 ER vehicle_controller_start(void) { return E_OK; }
@@ -141,6 +202,7 @@ bool vehicle_controller_apply_mapping(const s3_nav_action_t map[26])
 void vehicle_controller_observe(const s3_integration_status_t *status)
 {
     motion_status_t motion;
+    bool motion_available;
     unsigned active=last_faults & (BUDDY1_FAULT_STALL|BUDDY1_FAULT_ENCODER);
     unsigned changed=BUDDY1_FAULT_IR;
     BUDDY1_ROBOT_STATE state;
@@ -150,7 +212,10 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
         last_action=action_for(status->navigation.action);
         (void)buddy1_report_barcode((UB)status->navigation.barcode.letter);
     }
-    if (motion_get_status(&motion)) {
+    /* One coherent read for faults, route and speed. Do not reacquire Buddy 2's
+     * mutex or repeat encoder/heading arithmetic for each telemetry consumer. */
+    motion_available=motion_get_status(&motion);
+    if (motion_available) {
         active=0U;
         changed|=BUDDY1_FAULT_STALL|BUDDY1_FAULT_ENCODER;
         if (motion.fault_bits & MOTION_FAULT_BIT(MOTION_FAULT_STALL)) active|=BUDDY1_FAULT_STALL;
@@ -163,27 +228,30 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
         if (error==E_OK || error==E_TMOUT) { last_faults=active; faults_seen=true; }
     }
     state=wire_state(status->state);
+    pose_report(status, &motion, motion_available);
 #if APP_S5
     {
         s5_observation_t obstacle;
-        static uint16_t reported_scan;
-        static unsigned reported_route;
-        static int reported_echo=-1;
         unsigned control=subsystem5_controller_status();
         unsigned obstacle_state=control&7U,route=control>>6;
         if (status->state==S3_DRIVE_MANOEUVRE && obstacle_state>=S5_WAIT_STOP && obstacle_state<=S5_FINISH)
             state=BUDDY1_STATE_AVOIDING_OBSTACLE;
         if (subsystem5_snapshot(&obstacle)) {
-            if (reported_echo!=(int)obstacle.no_echo) {
+            if (obstacle_report.echo!=(int)obstacle.no_echo) {
                 ER er=buddy1_update_faults(BUDDY1_FAULT_NO_ECHO,obstacle.no_echo?BUDDY1_FAULT_NO_ECHO:0U);
-                if(er==E_OK || er==E_TMOUT) { reported_echo=(int)obstacle.no_echo; }
+                if(er==E_OK || er==E_TMOUT) { obstacle_report.echo=(int)obstacle.no_echo; }
             }
             if (obstacle.scan_done && obstacle.profile.valid &&
-                (reported_scan!=obstacle.scan_id || reported_route!=route)) {
+                (obstacle_report.scan!=obstacle.scan_id || obstacle_report.route!=route)) {
                 ER er=buddy1_report_obstacle(obstacle.profile.closest_mm,obstacle.profile.width_mm,
                     (BUDDY1_OBSTACLE_ROUTE)route);
-                if(er==E_OK || er==E_TMOUT) { reported_scan=obstacle.scan_id;reported_route=route; }
-            } else if (!obstacle.profile.valid) { (void)buddy1_invalidate(BUDDY1_TOPIC_OBSTACLE); }
+                if(er==E_OK || er==E_TMOUT) {
+                    obstacle_report.scan=obstacle.scan_id;obstacle_report.route=route;
+                    obstacle_report.invalidated=false;
+                }
+            } else if (!obstacle.profile.valid && !obstacle_report.invalidated) {
+                if (buddy1_invalidate(BUDDY1_TOPIC_OBSTACLE)==E_OK) obstacle_report.invalidated=true;
+            }
         }
     }
 #endif
@@ -191,14 +259,14 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
         ER error=buddy1_report_robot_state(state);
         if (error==E_OK || error==E_TMOUT) last_state=state;
     }
-    if (++telemetry_divider>=20U) {
+    if (++telemetry.divider>=20U) {
         float left, right;
-        telemetry_divider=0U;
-        if (!motion_get_status(&motion) || !motion.b_valid || motion.b_busy) {
+        telemetry.divider=0U;
+        if (!motion_available || !motion.b_valid || motion.b_busy) {
             (void)buddy1_invalidate(BUDDY1_TOPIC_MOTION); return;
         }
         left=motion.speed_left_mps*1000.0f; right=motion.speed_right_mps*1000.0f;
-        /* Keep protocol v2 unchanged. New upstream calibrated top speed exceeds
+        /* Keep the agreed wheel range unchanged. Calibrated top speed exceeds
          * +/-510 mm/s: mark unavailable, NEVER clip or silently widen the wire. */
         if (left!=left || right!=right || left < -BUDDY1_SPEED_MAX_MMS ||
             left > BUDDY1_SPEED_MAX_MMS || right < -BUDDY1_SPEED_MAX_MMS ||

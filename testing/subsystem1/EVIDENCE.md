@@ -1,5 +1,14 @@
 # Buddy 1 Tribunal 1 implementation evidence
 
+## Current protocol v3 — 28 October 2026
+
+Current format, combined firmware sizes and reproducible tests are recorded in
+[`docs/BUDDY1_PROTOCOL_V3_2026-10-28.md`](../../docs/BUDDY1_PROTOCOL_V3_2026-10-28.md).
+Height is now 9 bits; obstacle distance/width 12 bits each; snapshot 14 bytes;
+outbox slot 15 bytes. Recorded wireless barcode traces are binary, while local
+text exports remain supported. No hardware timing/resource sign-off is claimed.
+The v1/v2 measurements below are historical baselines, not the current format.
+
 ## Protocol v2 IR-fault addendum dated 2026-10-23
 
 The Buddy 3 integration adds aggregate IR fault at bit 5 and leaves bits 0-4

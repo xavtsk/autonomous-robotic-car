@@ -5,7 +5,8 @@ bool imu_calibration_feed(imu_calibration_t *c,const imu_sample_t *s,bool statio
 {
     unsigned i;
     if (c->ready) { return true; }
-    if (!stationary || !imu_sample_is_valid(s) || s->overrun ||
+    /* Overrun only means a sample was skipped; values stay valid (BDU). */
+    if (!stationary || !imu_sample_is_valid(s) ||
         fabsf(s->accel_g[0])>0.15f || fabsf(s->accel_g[1])>0.15f ||
         fabsf(s->accel_g[2]-1.0f)>0.15f) { imu_calibration_reset(c); return false; }
     for (i=0;i<3;++i) {

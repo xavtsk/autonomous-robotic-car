@@ -14,7 +14,7 @@ ER tk_dly_tsk(unsigned ms);
 static jmp_buf finish;
 static uint32_t clock_us,trigger_us,last_trigger;
 static unsigned angle=90,loops,locks,scenario,stage,scan_angles;
-static bool hw_started,pinging,stationary_wheels=true,fail_echo;
+static bool hw_started,pinging,stationary_wheels=true,fail_echo;static unsigned bad_pings;
 static ER snapshot_lock_error;
 static void (*owner)(INT,void *);
 uint32_t fake_read(uint32_t a) { (void)a;return clock_us; }
@@ -36,17 +36,23 @@ bool ultrasonic_sensor_trigger(uint32_t now)
 bool ultrasonic_sensor_poll(uint32_t now,uint16_t *mm,bool *valid)
 {
     assert(!locks);if(!pinging || now-trigger_us<10000) return false;
-    pinging=false;*valid=!fail_echo;*mm=fail_echo?0:(angle==90?250:2000);return true;
+    pinging=false;if(fail_echo) { bad_pings++; }*valid=!fail_echo;*mm=fail_echo?0:(angle==90?250:2000);return true;
 }
 void ultrasonic_sensor_cancel(void) { assert(!locks);pinging=false; }
+#define S5_SCAN_LOG 0
 #include "../../app_program/subsystem5/subsystem5.c"
 ER tk_dly_tsk(unsigned ms)
 {
-    s5_observation_t o;
+    s5_observation_t o={0}; /* GCC 13 -Wmaybe-uninitialized */
     assert(!locks);clock_us+=ms*1000;loops++;
     assert(subsystem5_snapshot(&o));
     if(stage==0 && o.range_valid) {
         if(scenario==2) { fail_echo=true;stage=1; }
+        else if(scenario==4) {
+            /* Side peek: invalid angles refused, then one reading at 30 deg. */
+            assert(!subsystem5_request_peek(77,90) && !subsystem5_request_peek(77,65) && !subsystem5_request_peek(0,30));
+            assert(subsystem5_request_peek(77,30) && !subsystem5_request_scan(78));stage=1;
+        }
         else { if(scenario==3) { stationary_wheels=false; } assert(subsystem5_request_scan(42));assert(!subsystem5_request_scan(43));stage=1; }
     }
     if(scenario==0 && stage==1 && o.scan_done) {
@@ -55,8 +61,15 @@ ER tk_dly_tsk(unsigned ms)
     if(scenario==0 && stage==2 && o.range_valid) { longjmp(finish,1); }
     if(scenario==1 && stage==1 && angle!=90) { subsystem5_cancel_scan();stage=2; }
     if(scenario==1 && stage==2 && angle==90 && o.range_valid) { assert(!o.scan_done);longjmp(finish,1); }
+    if(scenario==4 && stage==1 && o.scan_done && o.scan_id==77) {
+        /* One servo move, that side's clearance reported, the other side untouched. */
+        assert(scan_angles==1 && o.profile.valid && o.profile.right_clear_mm==2000 && o.profile.left_clear_mm==S5_RANGE_MAX_MM);stage=2;
+    }
+    if(scenario==4 && stage==2 && angle==90 && o.range_valid) { assert(o.range_mm==250);longjmp(finish,1); }
     if(scenario==3 && stage==1 && o.scan_done) { assert(!o.profile.valid && scan_angles==0);longjmp(finish,1); }
-    if(scenario==2 && stage==1 && o.no_echo) { assert(!o.range_valid && o.range_mm==0);longjmp(finish,1); }
+    /* One or two bad pings keep the last good reading; three latch no_echo. */
+    if(scenario==2 && stage==1 && bad_pings>=1 && bad_pings<3) { assert(!o.no_echo && o.range_valid && o.range_mm==250); }
+    if(scenario==2 && stage==1 && o.no_echo) { assert(bad_pings>=3 && !o.range_valid && o.range_mm==0);longjmp(finish,1); }
     assert(loops<1500);return E_OK;
 }
 int main(void)
@@ -68,10 +81,10 @@ int main(void)
     puts("PASS: unconfirmed hardware cannot initialise or start Buddy 5");
     return 0;
 #endif
-    for(scenario=0;scenario<4;scenario++) {
-        mutex_id=task_id=0;requested=0;shared.cancel=shared.busy=false;
+    for(scenario=0;scenario<5;scenario++) {
+        mutex_id=task_id=0;requested=0;requested_angle=0;shared.cancel=shared.busy=false;
         clock_us=loops=locks=stage=scan_angles=last_trigger=0;
-        angle=90;hw_started=pinging=fail_echo=false;stationary_wheels=true;
+        angle=90;hw_started=pinging=fail_echo=false;stationary_wheels=true;bad_pings=0;
         assert(subsystem5_init()==E_OK && subsystem5_start()==E_OK);
         {
             s5_observation_t copy={.range_mm=123};
@@ -89,5 +102,5 @@ int main(void)
         }
         if(!setjmp(finish)) { owner(0,0); }
     }
-    puts("PASS: production sensing task with fake clock/kernel/sensor; stop-gated scan, bounded mailbox, packed snapshots, cancellation/recentering, confirmed no-echo");
+    puts("PASS: production sensing task with fake clock/kernel/sensor; stop-gated scan, bounded mailbox, packed snapshots, cancellation/recentering, confirmed no-echo, side peek");
 }

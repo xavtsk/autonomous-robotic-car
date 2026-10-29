@@ -9,6 +9,8 @@
 #include "builtin_calibration.h"
 #include "course_profile.h"
 #include "barcode_capture.h"
+#include "ir_debug.h"
+#include "control_debug.h"
 #include "terrain_integration.h"
 #if APP_S4
 #include "../subsystem4/subsystem4.h"
@@ -46,6 +48,18 @@ static struct { unsigned pending:1, stop:1, status_ready:1, reset_pending:1; } g
 static bool g_reset_waiting; /* sampling-owner-only completion state */
 static s3_calibration_collector_t g_collector[S3_SENSOR_COUNT];
 static bool g_collecting;
+#if APP_IR_DEBUG
+/* One latest-only packet under g_mutex; no queue, task or peripheral owner. */
+static ir_debug_packet_t g_ir_debug;
+static bool g_ir_ready, g_ir_seen;
+static uint32_t g_ir_last;
+static uint8_t g_ir_sequence;
+static control_debug_packet_t g_control_debug;
+static bool g_control_ready, g_control_seen;
+static uint32_t g_control_last;
+static uint8_t g_control_sequence, g_last_barcode_status;
+static uint16_t g_debug_events[3]; /* saturating counts since boot */
+#endif
 static s3_sensor_id_t g_sensor;
 static ir_surface_t g_label;
 static uint32_t g_collect_since;
@@ -198,6 +212,81 @@ static void reset_completed(void)
         (void)tk_unl_mtx(g_mutex);
     }
 }
+#if APP_IR_DEBUG
+static bool debug_scaled(float value, float scale, int32_t limit, int32_t *out)
+{
+    const float v = value * scale;
+    /* Ordered comparisons also reject NaN/infinity, without newlib headers
+     * (whose size_t conflicts with this kernel's freestanding types). */
+    if (!(v >= -(float)limit && v <= (float)limit)) return false;
+    *out = (int32_t)(v >= 0.0f ? v + 0.5f : v - 0.5f);
+    return true;
+}
+static bool capture_control_debug(const s3_integration_status_t *st,
+                                  control_debug_packet_t *packet)
+{
+    /* Owned by the sampling task. Static scratch avoids growing its stack. */
+    static control_debug_sample_t d;
+    static motion_debug_snapshot_t m;
+    const uint32_t now = st->navigation.timestamp_us;
+    static const uint32_t event_bits[3] = {S3_EVENT_BARCODE,S3_EVENT_JUNCTION,S3_EVENT_LINE_LOST};
+    for (unsigned i=0; i<3; ++i)
+        if ((st->navigation.events & event_bits[i]) && g_debug_events[i] != UINT16_MAX)
+            ++g_debug_events[i];
+    if (st->navigation.barcode_status != S3_BARCODE_NONE)
+        g_last_barcode_status = (uint8_t)st->navigation.barcode_status;
+    if (g_control_seen && (uint32_t)(now-g_control_last)<200000U) return false;
+    g_control_seen=true; g_control_last=now;
+    d=(control_debug_sample_t){0};
+    d.timestamp_us=now; d.sequence=g_control_sequence++;
+    if (motion_try_debug_snapshot(&m))
+    {
+        d.motion_available=1; d.motion_timestamp_us=m.timestamp_us;
+        d.motion_state=m.state; d.motion_fault=m.fault; d.braked=m.braked; d.busy=m.busy;
+        /* Motion can preempt this task after the ADC frame was timestamped.
+         * Judge freshness against the current clock, not that older frame. */
+        d.motion_valid=m.valid && (uint32_t)(now_us()-m.timestamp_us)<=50000U;
+        d.motion_valid = d.motion_valid &&
+            debug_scaled(m.setpoint_mps[0],1000,4095,&d.setpoint_left) &&
+            debug_scaled(m.setpoint_mps[1],1000,4095,&d.setpoint_right) &&
+            debug_scaled(m.measured_mps[0],1000,4095,&d.measured_left) &&
+            debug_scaled(m.measured_mps[1],1000,4095,&d.measured_right) &&
+            debug_scaled(m.duty[0],100,100,&d.duty_left) &&
+            debug_scaled(m.duty[1],100,100,&d.duty_right) &&
+            m.encoder[0]>=-524288 && m.encoder[0]<=524287 &&
+            m.encoder[1]>=-524288 && m.encoder[1]<=524287;
+        if (d.motion_valid) { d.encoder_left=m.encoder[0]; d.encoder_right=m.encoder[1]; }
+        else { d.setpoint_left=d.setpoint_right=d.measured_left=d.measured_right=0;
+               d.duty_left=d.duty_right=0; }
+    }
+    d.drive_state=st->state; d.reason=st->reason; d.pending=g_drive.pending;
+    d.line_error=st->navigation.line.valid ? st->navigation.line.error : 0;
+    d.line_flags=st->navigation.line.valid | st->navigation.line.present<<1 |
+        st->navigation.line.junction_candidate<<2 | st->navigation.line.touching<<3 |
+        st->navigation.rearming<<4;
+    d.barcode_status=g_last_barcode_status;
+    d.accepted_calibration=st->navigation.accepted_calibration;
+    d.readiness=st->navigation.readiness_blockers;
+    d.barcode_events=g_debug_events[0]; d.junction_events=g_debug_events[1]; d.lost_events=g_debug_events[2];
+    d.sample_gap_us=st->navigation.sample_gap_us; d.run_max_gap_us=st->run_timing.max_gap_us;
+#define DEBUG_CAL(prefix,id) \
+    d.prefix##_white=g_drive.navigation.config.calibration[id].white_raw; \
+    d.prefix##_black=g_drive.navigation.config.calibration[id].black_raw; \
+    d.prefix##_white_limit=g_drive.navigation.config.calibration[id].white_limit; \
+    d.prefix##_black_limit=g_drive.navigation.config.calibration[id].black_limit;
+    DEBUG_CAL(left,S3_SENSOR_LEFT)
+    DEBUG_CAL(right,S3_SENSOR_RIGHT)
+    DEBUG_CAL(barcode,S3_SENSOR_BARCODE)
+#undef DEBUG_CAL
+    d.cal_sensor=st->calibration_sensor; d.collecting=st->collecting;
+    d.white_min=st->white.count ? st->white.minimum : 0;
+    d.white_max=st->white.count ? st->white.maximum : 0;
+    d.black_min=st->black.count ? st->black.minimum : 0;
+    d.black_max=st->black.count ? st->black.maximum : 0;
+    d.white_count=st->white.count; d.black_count=st->black.count;
+    return control_debug_pack(&d,packet);
+}
+#endif
 static void sample(INT code, void *unused)
 {
     static s3_sensor_frame_t frame;
@@ -370,10 +459,44 @@ static void sample(INT code, void *unused)
         s3_status_packet_t packet;
         bool packed = s3_status_pack(&working, &packet);
         if (!packed) { s3_drive_stop(&g_drive); }
+#if APP_IR_DEBUG
+        ir_debug_packet_t ir_packet;
+        control_debug_packet_t control_packet;
+        const bool control_packed=capture_control_debug(&working,&control_packet);
+        bool ir_packed = false;
+        if (ir_debug_due(frame.timestamp_us, &g_ir_last, &g_ir_seen))
+        {
+            static const s3_sensor_id_t order[3] = {S3_SENSOR_LEFT, S3_SENSOR_RIGHT, S3_SENSOR_BARCODE};
+            ir_debug_sample_t preview = {0};
+            preview.timestamp_us = frame.timestamp_us;
+            preview.sequence = g_ir_sequence++;
+            for (unsigned i = 0U; i < 3U; ++i)
+            {
+                const s3_sensor_id_t id = order[i];
+                const s3_raw_sample_t *raw = &frame.sensor[id];
+                if (raw->enabled && raw->valid && raw->error == 0)
+                {
+                    preview.raw_valid |= (uint8_t)(1U << i);
+                    preview.raw[i] = raw->raw;
+                    if (working.navigation.sensor[id].valid)
+                    {
+                        preview.normalised_valid |= (uint8_t)(1U << i);
+                        preview.darkness[i] = working.navigation.sensor[id].darkness;
+                        preview.surface[i] = (uint8_t)working.navigation.sensor[id].surface;
+                    }
+                }
+            }
+            ir_packed = ir_debug_pack(&preview, &ir_packet);
+        }
+#endif
         if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
         {
             if (packed) { g_status = packet; }
             g_shared.status_ready = packed;
+#if APP_IR_DEBUG
+            if (ir_packed) { g_ir_debug = ir_packet; g_ir_ready = true; }
+            if (control_packed) { g_control_debug=control_packet; g_control_ready=true; }
+#endif
             (void)tk_unl_mtx(g_mutex);
         }
         if (packed) { vehicle_controller_observe(&working); }
@@ -385,30 +508,72 @@ static void sample(INT code, void *unused)
         (void)tk_slp_tsk(TMO_FEVR);
     }
 }
+#if APP_IR_DEBUG && defined(TM_MQTT) && TM_MQTT
+unsigned int mqtt_utk_control_debug_take(unsigned char *bytes, unsigned int size)
+{
+    unsigned int count=0;
+    if (!bytes || size<CONTROL_DEBUG_PACKET_SIZE || g_mutex<=0 ||
+        tk_loc_mtx(g_mutex,TMO_POL)!=E_OK) return 0;
+    if (g_control_ready)
+    {
+        const uint32_t timestamp=(uint32_t)g_control_debug.bytes[1] |
+            (uint32_t)g_control_debug.bytes[2]<<8 | (uint32_t)g_control_debug.bytes[3]<<16 |
+            (uint32_t)g_control_debug.bytes[4]<<24;
+        if ((uint32_t)(now_us()-timestamp)<=400000U)
+        {
+            for (unsigned i=0;i<CONTROL_DEBUG_PACKET_SIZE;++i) bytes[i]=g_control_debug.bytes[i];
+            count=CONTROL_DEBUG_PACKET_SIZE;
+        }
+        g_control_ready=false;
+    }
+    (void)tk_unl_mtx(g_mutex);
+    return count;
+}
+/* Called only by the network owner, with a nonblocking mutex attempt. */
+unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size)
+{
+    unsigned int count = 0U;
+    if (!bytes || size < IR_DEBUG_PACKET_SIZE || g_mutex <= 0 ||
+        tk_loc_mtx(g_mutex, TMO_POL) != E_OK) return 0U;
+    if (g_ir_ready)
+    {
+        const uint32_t timestamp = (uint32_t)g_ir_debug.bytes[1] |
+            (uint32_t)g_ir_debug.bytes[2] << 8 |
+            (uint32_t)g_ir_debug.bytes[3] << 16 |
+            (uint32_t)g_ir_debug.bytes[4] << 24;
+        if ((uint32_t)(now_us() - timestamp) <= 100000U)
+        {
+            for (unsigned i = 0U; i < IR_DEBUG_PACKET_SIZE; ++i) bytes[i] = g_ir_debug.bytes[i];
+            count = IR_DEBUG_PACKET_SIZE;
+        }
+        g_ir_ready = false;
+    }
+    (void)tk_unl_mtx(g_mutex);
+    return count;
+}
+#endif
 #if S3_BARCODE_CAPTURE
 #if defined(TM_MQTT) && TM_MQTT
 #include "mqtt_utk.h"
-/* Network task: next trace line for Wi-Fi, or 0. */
-unsigned int mqtt_utk_debug_take(char *line, unsigned int size)
+/* Network task: next binary capture packet; never wait on the control owner. */
+unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size)
 {
-    bool more = false;
     unsigned int n = 0U;
-    if (!g_bcap_net_pending || (g_mutex <= 0))
+    if (!bytes || size<BCAP_WIRE_MAX || !g_bcap_net_pending || (g_mutex <= 0))
     {
         return 0U;
     }
-    if (tk_loc_mtx(g_mutex, TMO_FEVR) != E_OK)
+    if (tk_loc_mtx(g_mutex, TMO_POL) != E_OK)
     {
         return 0U;
     }
     if (g_bcap_net_pending)
     {
-        more = bcap_format_next(&g_bcap, &g_bcap_net_cursor, line, size);
-        if (!more) { g_bcap_net_pending = false; }
+        n = bcap_binary_next(&g_bcap, &g_bcap_net_cursor, bytes, size);
+        if (!n) { g_bcap_net_pending = false; }
     }
     (void)tk_unl_mtx(g_mutex);
-    while (more && (n < size) && (line[n] != '\0')) { n++; }
-    return more ? n : 0U;
+    return n;
 }
 #endif
 /* After a run, print the barcode trace over USB, a bounded number of lines

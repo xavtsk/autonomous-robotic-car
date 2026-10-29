@@ -671,6 +671,29 @@ uint64_t motion_get_status_packed(void)
     return motion_pack_status(&status);
 }
 
+bool motion_try_debug_snapshot(motion_debug_snapshot_t *out)
+{
+    if (out == NULL || g_mutex_id <= 0 || tk_loc_mtx(g_mutex_id, TMO_POL) != E_OK)
+    {
+        return false;
+    }
+    out->timestamp_us = g_feedback.timestamp_us;
+    out->state = motion_controller_state();
+    out->fault = motion_controller_fault();
+    out->busy = motion_controller_is_busy();
+    out->valid = g_feedback_ready && g_feedback.valid && !out->busy;
+    out->braked = motion_controller_is_stopped();
+    for (unsigned int i = 0U; i < 2U; ++i)
+    {
+        out->setpoint_mps[i] = motion_controller_debug_setpoint(i);
+        out->measured_mps[i] = motion_estimation_wheel_speed((wheel_id_t)i);
+        out->duty[i] = motor_control_duty((wheel_id_t)i);
+        out->encoder[i] = wheel_encoder_count((wheel_id_t)i);
+    }
+    (void)tk_unl_mtx(g_mutex_id);
+    return true;
+}
+
 motion_fault_t motion_get_fault(void)
 {
     motion_fault_t f;

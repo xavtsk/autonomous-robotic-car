@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live, human-readable view of the car's MQTT traffic (Buddy 1 protocol v2).
+"""Live, human-readable view of the car's MQTT traffic (Buddy 1 protocol v3).
 
 The car sends compact binary messages (see app_program/subsystem1/MQTT_PROTOCOL.md).
 This laptop-side viewer decodes them as they arrive. It changes nothing on the
@@ -21,6 +21,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from buddy1_mqtt_codec import decode  # noqa: E402  (same folder, standard library only)
+from dashboard.ir_protocol import decode_ir
+from dashboard.barcode_protocol import decode_barcode
+from dashboard.control_protocol import TOPIC as CONTROL_TOPIC, decode_control, DRIVE_STATES, REASONS, ACTIONS
 
 SPEED_STEP_MMS = 10  # fold speed reports that changed less than this
 
@@ -120,12 +123,29 @@ class TraceFile:
         self.folder = Path(folder)
         self.handle = None
         self.path = None
+        self.capture_id = None
+        self.seen_packets = set()
+
+    def packet(self, payload, out):
+        frame = decode_barcode(payload)
+        if frame["capture_id"] != self.capture_id:
+            self.close()
+            self.capture_id = frame["capture_id"]
+            self.seen_packets.clear()
+        if payload in self.seen_packets:
+            return None
+        # The fixed pool emits at most 426 packets; bound laptop de-dup state.
+        if len(self.seen_packets)<512:
+            self.seen_packets.add(payload)
+        self.line(frame["text"], out)
+        return frame["text"]
 
     def line(self, text, out):
         if text.startswith("[BCAP] run summary"):
             self.close()
-            self.path = self.folder / time.strftime("barcode_trace_%Y%m%d_%H%M%S.txt")
-            self.handle = open(self.path, "w", encoding="ascii", errors="replace")
+            suffix = f"_{self.capture_id:08x}" if self.capture_id is not None else ""
+            self.path = self.folder / (time.strftime("barcode_trace_%Y%m%d_%H%M%S") + suffix + ".txt")
+            self.handle = open(self.path, "x", encoding="ascii", errors="replace")
             print(f"--- saving barcode trace to {self.path}", file=out, flush=True)
         if self.handle:
             self.handle.write(text + "\n")
@@ -147,13 +167,38 @@ def handle(line, folder, out, trace=None):
         return
     topic, _, hexpart = line.partition(" ")
     stamp = time.strftime("%H:%M:%S")
-    if topic.startswith("car/debug/"):
+    if topic == CONTROL_TOPIC:
         try:
-            text = bytes.fromhex(hexpart.strip()).decode("ascii", "replace")
-        except ValueError:
-            text = hexpart.strip()
-        if trace is not None:
-            trace.line(text, out)
+            d = decode_control(bytes.fromhex(hexpart.strip()))["data"]
+        except ValueError as error:
+            print(f"{stamp}  CONTROL DEBUG REJECTED  {error}", file=out, flush=True)
+            return
+        now = time.monotonic()
+        if folder.show_all or now - getattr(folder,"last_control",-10) >= 1:
+            folder.last_control = now
+            print(f"{stamp}  CONTROLLER  {DRIVE_STATES[d['drive_state']]} | {REASONS[d['reason']]} | pending={ACTIONS[d['pending']]}",file=out,flush=True)
+        return
+    if topic == "car/debug/ir":
+        try:
+            frame = decode_ir(bytes.fromhex(hexpart.strip()))
+        except ValueError as error:
+            print(f"{stamp}  IR DEBUG REJECTED  {error}", file=out, flush=True)
+            return
+        now = time.monotonic()
+        if folder.show_all or now - getattr(folder, "last_ir", -10) >= 1:
+            folder.last_ir = now
+            values = " ".join(f"{name}={sensor['darkness'] if sensor['valid'] else 'invalid'}" for name, sensor in frame['sensors'].items())
+            print(f"{stamp}  IR /1000  {values} (20 Hz preview)", file=out, flush=True)
+        return
+    if topic == "car/debug/barcode":
+        try:
+            payload = bytes.fromhex(hexpart.strip())
+            text = trace.packet(payload, out) if trace is not None else decode_barcode(payload)["text"]
+            if text is None:
+                return
+        except (ValueError, OSError) as error:
+            print(f"{stamp}  BARCODE TRACE REJECTED  {error}", file=out, flush=True)
+            return
         # Sample lines are long and many: show headers, keep samples in the file.
         if not text.startswith("BC") or trace is None:
             print(f"{stamp}  DEBUG  {text}", file=out, flush=True)

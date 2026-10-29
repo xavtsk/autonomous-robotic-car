@@ -52,8 +52,18 @@ int main(void)
     empty=true;assert(ultrasonic_sensor_trigger(70000));
     assert(ultrasonic_sensor_poll(95000,&mm,&valid) && !valid);
     echo=true;assert(!ultrasonic_sensor_trigger(140000));echo=false;
+    /* Path clear: pulse started (ECHO high) but nothing returned within 25 ms. */
+    assert(ultrasonic_sensor_trigger(210000));echo=true;
+    assert(!ultrasonic_sensor_poll(220000,&mm,&valid));
+    assert(ultrasonic_sensor_poll(236000,&mm,&valid) && valid && mm==S5_RANGE_MAX_MM && !(control&4U));echo=false;
+    /* Completed pulse longer than the range window is also clear. */
+    assert(ultrasonic_sensor_trigger(280000));empty=false;fifo=13000U;
+    assert(ultrasonic_sensor_poll(283000,&mm,&valid) && valid && mm==S5_RANGE_MAX_MM);
+    /* Too-short pulse (<30 mm) stays invalid. */
+    empty=true;assert(ultrasonic_sensor_trigger(350000));empty=false;fifo=5U;
+    assert(ultrasonic_sensor_poll(353000,&mm,&valid) && !valid && mm==0);empty=true;fifo=1000U;
     assert(scan_servo_init() && pwm_on && wrap==19999 && cc==1500);
     assert(!scan_servo_position(0) && !scan_servo_position(180));assert(scan_servo_position(30) && cc==1166);
     scan_servo_disable();assert(!pwm_on);
-    puts("PASS: production PIO/PWM drivers with fake registers; confirmed pins, echo/timeout/stuck-high, servo limits, encoder SM ownership");
+    puts("PASS: production PIO/PWM drivers with fake registers; confirmed pins, echo/timeout/stuck-high, clear-path vs no-pulse, servo limits, encoder SM ownership");
 }

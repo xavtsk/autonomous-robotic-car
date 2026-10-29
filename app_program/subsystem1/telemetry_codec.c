@@ -5,14 +5,17 @@
 _Static_assert(BUDDY1_FAULT_MASK == (1U << BUDDY1_FAULT_BITS) - 1U,
                "fault mask and declared width must agree");
 static const uint8_t body_bits[BUDDY1_TOPIC_COUNT] = {
-    18, 8, 32, 9, 34, 3, BUDDY1_FAULT_BITS,
-    111U + BUDDY1_FAULT_BITS, 2, 2U + BUDDY1_FAULT_BITS
+    18, 8, 25, 9, 26, 3, BUDDY1_FAULT_BITS,
+    96U + BUDDY1_FAULT_BITS, 2, 2U + BUDDY1_FAULT_BITS,
+    BUDDY1_POSE_DISTANCE_BITS + 9U
 };
 static const char *const topics[BUDDY1_TOPIC_COUNT] = {
     "car/telemetry/motion", "car/telemetry/barcode", "car/telemetry/hump",
     "car/telemetry/heading", "car/telemetry/obstacle", "car/telemetry/state",
-    "car/telemetry/faults", "car/reply/snapshot", "car/reply/barcode_map", "car/status"
+    "car/telemetry/faults", "car/reply/snapshot", "car/reply/barcode_map", "car/status",
+    "car/telemetry/pose"
 };
+_Static_assert(BUDDY1_TOPIC_COUNT <= 16U, "outbox topic selector is four bits");
 
 static void put(uint8_t *bytes, unsigned *bit, uint32_t value, unsigned width)
 {
@@ -81,17 +84,21 @@ static int write_fields(uint8_t topic, const BUDDY1_SNAPSHOT *v,
         put(p, bit, (uint32_t)v->barcode_action, 3);
         return 1;
     case BUDDY1_TOPIC_HUMP:
-        put(p, bit, v->hump_count, 16); put(p, bit, v->hump_height_mm, 16);
+        if (v->hump_height_mm > BUDDY1_HUMP_HEIGHT_MAX_MM) return 0;
+        put(p, bit, v->hump_count, 16); put(p, bit, v->hump_height_mm, 9);
         return 1;
     case BUDDY1_TOPIC_HEADING:
         if (v->heading_deg < 0 || v->heading_deg > 359) return 0;
         put(p, bit, (uint32_t)v->heading_deg, 9);
         return 1;
     case BUDDY1_TOPIC_OBSTACLE:
-        if (v->obstacle_route < BUDDY1_ROUTE_UNKNOWN ||
+        if (v->obstacle_distance_mm < BUDDY1_OBSTACLE_MIN_MM ||
+            v->obstacle_distance_mm > BUDDY1_OBSTACLE_MAX_MM ||
+            v->obstacle_width_mm > BUDDY1_OBSTACLE_WIDTH_MAX_MM ||
+            v->obstacle_route < BUDDY1_ROUTE_UNKNOWN ||
             v->obstacle_route > BUDDY1_ROUTE_RIGHT) return 0;
-        put(p, bit, v->obstacle_distance_mm, 16);
-        put(p, bit, v->obstacle_width_mm, 16);
+        put(p, bit, v->obstacle_distance_mm, 12);
+        put(p, bit, v->obstacle_width_mm, 12);
         put(p, bit, (uint32_t)v->obstacle_route, 2);
         return 1;
     case BUDDY1_TOPIC_STATE:
@@ -102,6 +109,12 @@ static int write_fields(uint8_t topic, const BUDDY1_SNAPSHOT *v,
     case BUDDY1_TOPIC_FAULTS:
         if ((v->faults & ~BUDDY1_FAULT_MASK) != 0U) return 0;
         put(p, bit, v->faults, BUDDY1_FAULT_BITS);
+        return 1;
+    case BUDDY1_TOPIC_POSE:
+        if (v->pose_distance_cm >= BUDDY1_POSE_DISTANCE_MOD ||
+            v->pose_heading_deg < 0 || v->pose_heading_deg > 359) return 0;
+        put(p, bit, v->pose_distance_cm, BUDDY1_POSE_DISTANCE_BITS);
+        put(p, bit, (uint32_t)v->pose_heading_deg, 9);
         return 1;
     default: return 0;
     }
@@ -127,22 +140,29 @@ static int read_fields(uint8_t topic, const uint8_t *p, unsigned *bit,
         return v->barcode_letter <= 'Z' && v->barcode_action <= BUDDY1_ACTION_UTURN;
     case BUDDY1_TOPIC_HUMP:
         v->hump_count = (uint16_t)get(p, bit, 16);
-        v->hump_height_mm = (uint16_t)get(p, bit, 16);
-        v->hump_valid = 1; return 1;
+        v->hump_height_mm = (uint16_t)get(p, bit, 9);
+        v->hump_valid = 1; return v->hump_height_mm <= BUDDY1_HUMP_HEIGHT_MAX_MM;
     case BUDDY1_TOPIC_HEADING:
         v->heading_deg = (int16_t)get(p, bit, 9);
         v->heading_valid = 1; return v->heading_deg <= 359;
     case BUDDY1_TOPIC_OBSTACLE:
-        v->obstacle_distance_mm = (uint16_t)get(p, bit, 16);
-        v->obstacle_width_mm = (uint16_t)get(p, bit, 16);
+        v->obstacle_distance_mm = (uint16_t)get(p, bit, 12);
+        v->obstacle_width_mm = (uint16_t)get(p, bit, 12);
         v->obstacle_route = (BUDDY1_OBSTACLE_ROUTE)get(p, bit, 2);
-        v->obstacle_valid = 1; return v->obstacle_route <= BUDDY1_ROUTE_RIGHT;
+        v->obstacle_valid = 1;
+        return v->obstacle_distance_mm >= BUDDY1_OBSTACLE_MIN_MM &&
+               v->obstacle_distance_mm <= BUDDY1_OBSTACLE_MAX_MM &&
+               v->obstacle_route <= BUDDY1_ROUTE_RIGHT;
     case BUDDY1_TOPIC_STATE:
         v->robot_state = (BUDDY1_ROBOT_STATE)(get(p, bit, 3) + BUDDY1_STATE_STOPPED);
         v->robot_state_valid = 1; return 1;
     case BUDDY1_TOPIC_FAULTS:
         v->faults = (uint8_t)get(p, bit, BUDDY1_FAULT_BITS);
         v->faults_valid = 1; return 1;
+    case BUDDY1_TOPIC_POSE:
+        v->pose_distance_cm = (uint16_t)get(p, bit, BUDDY1_POSE_DISTANCE_BITS);
+        v->pose_heading_deg = (int16_t)get(p, bit, 9);
+        v->pose_valid = 1; return v->pose_heading_deg <= 359;
     default: return 0;
     }
 }

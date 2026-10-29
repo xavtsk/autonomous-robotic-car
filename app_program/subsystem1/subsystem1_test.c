@@ -20,8 +20,8 @@ EXPORT void subsystem1_test(void)
     H left, right;
     TEST_INIT();
     drain();
-    TEST_CHECK("S1-B01", sizeof(message) == 17 && sizeof(command) == 5,
-               "outgoing slot is 17 bytes; command slot is 5 bytes");
+    TEST_CHECK("S1-B01", sizeof(message) == 15 && sizeof(command) == 5,
+               "outgoing slot is 15 bytes; command slot is 5 bytes");
     TEST_CHECK("S1-B02", buddy1_report_motion(120, -118) == E_OK && buddy1_outbox_take(&message),
                "signed wheel values enter and leave the copied FIFO");
     TEST_CHECK("S1-B03", message.type == BUDDY1_TOPIC_MOTION &&
@@ -73,18 +73,22 @@ EXPORT void subsystem1_test(void)
     TEST_CHECK("S1-B16", buddy1_report_hump(0, 0) == E_OK && buddy1_outbox_take(&message) &&
                buddy1_snapshot(&decoded) && decoded.hump_valid && decoded.hump_height_mm == 0,
                "valid zero height differs from unavailable height");
-    TEST_CHECK("S1-B17", buddy1_report_hump(65535, 65535) == E_OK && buddy1_outbox_take(&message) &&
+    TEST_CHECK("S1-B17", buddy1_report_hump(65535, 500) == E_OK && buddy1_outbox_take(&message) &&
                buddy1_decode(message.type, message.payload, 5, &decoded) &&
-               decoded.hump_count == 65535 && decoded.hump_height_mm == 65535,
-               "unconfirmed Buddy 4 range retains existing integer precision");
+               decoded.hump_count == 65535 && decoded.hump_height_mm == 500 &&
+               buddy1_report_hump(0, 501) == E_PAR,
+               "hump height uses nine bits, rejects above 500 mm without clipping");
     TEST_CHECK("S1-B18", buddy1_report_heading(359) == E_OK && buddy1_outbox_take(&message) &&
                buddy1_decode(message.type, message.payload, 3, &decoded) && decoded.heading_deg == 359 &&
                buddy1_report_heading(360) == E_PAR && buddy1_report_heading(-1) == E_PAR,
                "heading uses nine bits and checks limits");
-    TEST_CHECK("S1-B19", buddy1_report_obstacle(65535, 65535, BUDDY1_ROUTE_RIGHT) == E_OK &&
-               buddy1_outbox_take(&message) && buddy1_decode(message.type, message.payload, 6, &decoded) &&
-               decoded.obstacle_distance_mm == 65535 && decoded.obstacle_route == BUDDY1_ROUTE_RIGHT,
-               "obstacle fields preserve existing range");
+    TEST_CHECK("S1-B19", buddy1_report_obstacle(4000, 4095, BUDDY1_ROUTE_RIGHT) == E_OK &&
+               buddy1_outbox_take(&message) && buddy1_decode(message.type, message.payload, 5, &decoded) &&
+               decoded.obstacle_distance_mm == 4000 && decoded.obstacle_width_mm == 4095 &&
+               decoded.obstacle_route == BUDDY1_ROUTE_RIGHT &&
+               buddy1_report_obstacle(4001, 0, BUDDY1_ROUTE_UNKNOWN) == E_PAR &&
+               buddy1_report_obstacle(30, 4096, BUDDY1_ROUTE_UNKNOWN) == E_PAR,
+               "obstacle fields use twelve bits and reject out-of-range values");
     TEST_CHECK("S1-B20", buddy1_report_obstacle(0, 0, (BUDDY1_OBSTACLE_ROUTE)3) == E_PAR,
                "reserved obstacle route rejected");
     TEST_CHECK("S1-B21", buddy1_report_robot_state(BUDDY1_STATE_ERROR) == E_OK &&
@@ -119,7 +123,7 @@ EXPORT void subsystem1_test(void)
                buddy1_decode(BUDDY1_TOPIC_SNAPSHOT, p, sizeof(p), &decoded) &&
                decoded.motion_valid && decoded.barcode_valid && decoded.hump_valid &&
                decoded.heading_valid && decoded.obstacle_valid && decoded.robot_state_valid && decoded.faults_valid,
-               "all seven sections fit a 16-byte snapshot");
+               "all seven sections fit a 14-byte snapshot");
     TEST_CHECK("S1-B26", buddy1_invalidate(BUDDY1_TOPIC_HUMP) == E_OK &&
                buddy1_snapshot(&decoded) && !decoded.hump_valid && decoded.heading_valid,
                "invalidation preserves neighbouring packed fields");

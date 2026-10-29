@@ -142,6 +142,19 @@ S3_MOTION_SUFFIX := _s3_motion
 endif
 
 # Optional observation only: no motion requests or automatic run start.
+# IR_DEBUG=1 adds a 20 Hz, latest-only binary preview of the existing IR scan.
+IR_DEBUG ?= 0
+ifneq ($(filter $(IR_DEBUG),0 1),$(IR_DEBUG))
+$(error IR_DEBUG must be 0 or 1)
+endif
+ifeq ($(IR_DEBUG),1)
+ifneq ($(S3_MOTION)$(MQTT),11)
+$(error IR_DEBUG=1 requires S3_MOTION=1 MQTT=1)
+endif
+IR_DEBUG_SUFFIX := _ir_debug
+endif
+
+# Optional observation only: no motion requests or automatic run start.
 # Existing initial task becomes a low-priority 1 Hz reporter. Keep separate
 # from self-tests/calibration and the already-isolated IR bench profile.
 DIAGNOSTICS ?= 0
@@ -229,7 +242,7 @@ ifeq ($(S5_HARDWARE_CONFIRMED),0)
 S5_SUFFIX := _s5_UNCONFIGURED
 endif
 endif
-EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)$(S4_SUFFIX)$(S5_SUFFIX)
+EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)$(S4_SUFFIX)$(S5_SUFFIX)$(IR_DEBUG_SUFFIX)
 
 GCC := arm-none-eabi-gcc
 AS := arm-none-eabi-gcc
@@ -298,6 +311,7 @@ CFLAGS  += -DAPP_TEST=$(TEST)
 CFLAGS  += -DAPP_IR_BENCH=$(IR_BENCH) -DAPP_S3_MOTION=$(S3_MOTION) -DAPP_IR_CHANNELS=$(IR_CHANNELS)
 CFLAGS  += -DAPP_DIAGNOSTICS=$(DIAGNOSTICS)
 CFLAGS  += -DAPP_MOTION_SMOKE=$(MOTION_SMOKE)
+CFLAGS  += -DAPP_IR_DEBUG=$(IR_DEBUG)
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)
 CFLAGS  += -DBOARD_UART0_FREE=1
@@ -330,7 +344,7 @@ endif
 # before any recipe executes.
 ################################################################################
 
-PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)-s4$(S4)-s4bench$(S4_BENCH)-s5$(S5)-s5confirmed$(S5_HARDWARE_CONFIRMED)
+PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)-s4$(S4)-s4bench$(S4_BENCH)-s5$(S5)-s5confirmed$(S5_HARDWARE_CONFIRMED)-irdebug$(IR_DEBUG)
 PROFILE_FILE := .build_profile
 
 ifneq ($(strip $(shell cat $(PROFILE_FILE) 2>/dev/null)),$(PROFILE_ID))

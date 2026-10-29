@@ -1,4 +1,4 @@
-# Buddy 1 binary MQTT protocol version 2
+# Buddy 1 binary MQTT protocol version 3
 
 Tribunal 1 replaces JSON application payloads with explicit binary fields.
 Topics remain readable. Robot tasks call the existing `buddy1_report_*()` APIs;
@@ -6,14 +6,15 @@ Buddy 1 packs the values, copies a complete message into its RTOS outbox, and
 the existing network task publishes the bytes. The laptop decodes them with
 `tools/buddy1_mqtt_codec.py`.
 
-This is a coordinated protocol change: the robot and laptop must both use version 2.
-Version 1 and old JSON payloads/commands are rejected rather than silently
-interpreted using the new fault layout. Packet byte lengths are unchanged;
-IR uses the former snapshot padding bit and the heartbeat body's top bit. No raw C struct, enum or C bit-field layout is sent over MQTT.
+Robot and laptop must both use version 3. Versions 1/2 and JSON are rejected,
+not guessed by packet length. Version 3 adopts Buddy 4's 0–500 mm peak range
+and Buddy 5's 30–4000 mm distance / 0–4095 mm width ranges. Hump count remains
+16 bits for the sensor owner's saturating 0–65535 count. Wheel/control precision
+and all navigation algorithms are unchanged. No raw C struct/enum layout is sent.
 
 ## Common encoding
 
-- Byte 0 is protocol version `0x02`. It is framing metadata.
+- Byte 0 is protocol version `0x03`. It is framing metadata.
 - The body starts at byte 1. Bit 0 is its least significant bit; bits continue
   through successive bytes. Multi-byte fields are little endian.
 - Unused high bits in the last byte must be zero. Unknown versions, invalid
@@ -34,12 +35,13 @@ Bit positions below are relative to the body, excluding the version byte.
 |---|---|---:|
 | `car/telemetry/motion` | left magnitude bits 0–7; left reverse bit 8; right magnitude bits 9–16; right reverse bit 17 | 4 |
 | `car/telemetry/barcode` | letter bits 0–4; action bits 5–7 | 2 |
-| `car/telemetry/hump` | count bits 0–15; height bits 16–31 | 5 |
+| `car/telemetry/hump` | count bits 0–15; height bits 16–24 (0–500 mm); seven zero padding bits | 5 |
 | `car/telemetry/heading` | heading bits 0–8 | 3 |
-| `car/telemetry/obstacle` | distance bits 0–15; width bits 16–31; route bits 32–33 | 6 |
+| `car/telemetry/obstacle` | distance bits 0–11 (30–4000 mm); width bits 12–23 (0–4095 mm); route bits 24–25 | 5 |
 | `car/telemetry/state` | state bits 0–2 | 2 |
 | `car/telemetry/faults` | shared fault mask bits 0–5 | 2 |
-| `car/reply/snapshot` | validity and all seven sections, described below | 16 |
+| `car/telemetry/pose` | distance since START, cm modulo 4096, bits 0–11; heading since START bits 12–20 | 4 |
+| `car/reply/snapshot` | validity and all seven sections, described below | 14 |
 | `car/reply/barcode_map` | result bits 0–1: 0 OK, 1 invalid, 2 configuration closed, 3 internal error | 2 |
 | `car/status` | alive bit 0; faults-valid bit 1; fault mask bits 2–7 | 2 |
 
@@ -58,6 +60,24 @@ noncanonical and rejected. This quantisation applies to telemetry and its cache,
 not Buddy 2's PID calculations or control requests. Validate the proposed range
 against calibrated speed before freezing the team contract.
 
+### Route pose (`car/telemetry/pose`, added 28 Oct 2026)
+
+Live only: it has no snapshot section and is never cached. The controller
+sends one pose at START (0, 0), one every 200 ms while a run is active
+(following, braking, turning, reacquiring or avoiding) and a final one when the
+run ends. Both values come from Buddy 2's encoder estimate
+(`motion_status_t.distance_m`, `.heading_deg`) relative to their values at START.
+
+- **Distance**: robot-centre distance in cm, rounded, signed, then modulo 4096.
+  Reversing gives a smaller value; spinning on the spot leaves it unchanged.
+  The laptop unwraps it (`unwrap_distance()` in `tools/buddy1_mqtt_codec.py`):
+  each step is taken as the nearest value in -2048..+2047 cm. At most ~18 cm is
+  travelled per sample at 0.884 m/s, so ~23 s of lost samples are tolerated.
+- **Heading**: degrees 0-359, + = anticlockwise, 0 = direction at START. Same
+  9-bit encoding as `car/telemetry/heading`, which stays reserved for Buddy 4.
+- Samples are skipped while Buddy 2's estimate is invalid or calibrating. Encoder
+  dead reckoning drifts with wheel slip; it is a route sketch, not a survey.
+
 Letter is A=0 through Z=25. Action is unknown=0, forward=1, left=2, right=3,
 uturn=4. Route is unknown=0, left=1, right=2. State is stopped=0,
 line_following=1, turning_left=2, turning_right=3, uturn=4, avoiding_obstacle=5,
@@ -71,12 +91,12 @@ ninth transmitted state. Snapshot validity represents an unavailable state.
 | 0–6 | validity bits: motion, barcode, hump, heading, obstacle, state, faults |
 | 7–24 | motion: same 18 bits as live motion |
 | 25–32 | barcode: same 8 bits as live barcode |
-| 33–64 | hump: same 32 bits as live hump |
-| 65–73 | heading: same 9 bits as live heading |
-| 74–107 | obstacle: same 34 bits as live obstacle |
-| 108–110 | state: same 3 bits as live state |
-| 111–116 | fault mask: same 6 bits as live faults |
-| 117–119 | zero padding |
+| 33–57 | hump: same 25 bits as live hump |
+| 58–66 | heading: same 9 bits as live heading |
+| 67–92 | obstacle: same 26 bits as live obstacle |
+| 93–95 | state: same 3 bits as live state |
+| 96–101 | fault mask: same 6 bits as live faults |
+| 102–103 | zero padding |
 
 An invalid section has its validity bit clear and canonical zero data bits.
 A valid zero height is different from an invalid height. The snapshot holds
@@ -103,7 +123,7 @@ are independent copies. Do not call this API from an ISR.
 
 This is a protected telemetry mirror, not the controller's authoritative safety
 state. The radio hook is connected; the controller owns the motor/IR reporting
-adapters. Buddy 4/5 adapters still require integration. The aggregate IR bit does
+adapters, including Buddy 4/5. The aggregate IR bit does
 not identify the failed channel: Buddy 3 retains its own three-channel mask.
 Zero bits do not prove unconnected sensors passed.
 `faults_valid` means at least one source supplied a fault update. It is not a
@@ -114,10 +134,10 @@ does not set the Wi-Fi link bit; heartbeat absence and network logs show it.
 
 | Topic | Exact binary payload | Behaviour |
 |---|---|---|
-| `car/cmd/snapshot` | `02` (version only) | enqueue a protected snapshot reply |
+| `car/cmd/snapshot` | `03` (version only) | enqueue a protected snapshot reply |
 | `car/cmd/barcode_map` | version + four 5-bit letters: forward at 0–4, left at 5–9, right at 10–14, uturn at 15–19; 4 bytes total | validate and atomically replace the map before first run |
 
-All four letters must be different uppercase A–Z. `02 20 88 01` maps A/B/C/D.
+All four letters must be different uppercase A–Z. `03 20 88 01` maps A/B/C/D.
 The high four body padding bits are zero. Old JSON, malformed packets, unknown
 topics and unsupported commands are rejected before enqueueing. Those packets
 receive no reply. A valid queued mapping receives an OK/closed/internal result
@@ -131,8 +151,8 @@ motor-driving commands are unsupported.
 
 ## Buffering and task behaviour
 
-- Outbox: four fixed 17-byte slots, each containing a one-byte topic ID and a
-  16-byte maximum payload. Topic IDs 0–9 use four bits; the rest of the byte is
+- Outbox: four fixed 15-byte slots, each containing a one-byte topic ID and a
+  14-byte maximum payload. Topic IDs 0–10 use four bits; the rest of the byte is
   zero. The slot's unused payload tail is zero and is not published.
 - Incoming commands: two fixed 5-byte slots, each containing a two-bit command
   kind in one byte and four payload bytes. Length is implicit in the kind.
@@ -142,8 +162,9 @@ motor-driving commands are unsupported.
 - Message-buffer send/receive uses `TMO_POL` for the producer and network task.
   Producers can briefly wait for the cache mutex; they never wait for network
   transmission. The command task blocks on its incoming buffer with `TMO_FEVR`.
-- Network service drains at most four messages per round. A publish rejection
-  currently drops that popped message; no retransmission history is added.
+- Network service attempts at most one packet per 20 ms paced slot. A fixed
+  in-flight/retry slot retains transiently rejected packets; later FIFO entries
+  remain queued. Retries can duplicate a packet; QoS 0 is not guaranteed delivery.
 - Suggested periodic telemetry rate remains at most 5 Hz per source. Events
   should be reported once per event/change, not every control iteration.
 - A burst may drop an important event. Safety actions must use the controller
@@ -161,7 +182,7 @@ they are solved by compact packets.
 From the repository root:
 
 ```sh
-python3 tools/buddy1_mqtt_codec.py decode --topic car/telemetry/motion --hex 023c7602
+python3 tools/buddy1_mqtt_codec.py decode --topic car/telemetry/motion --hex 033c7602
 python3 tools/buddy1_mqtt_codec.py encode-map --forward A --left W --right F --uturn Z
 python3 tools/buddy1_mqtt_codec.py encode-snapshot
 ```
@@ -170,7 +191,17 @@ python3 tools/buddy1_mqtt_codec.py encode-snapshot
 `decode(message.topic, message.payload)`. `--file` reads a raw payload file.
 The encoder commands above PRINT HEX FOR INSPECTION. The MQTT sender must send
 `bytes.fromhex(hex_output)` (or the bytes from `encode_map()`), not the printable
-hex characters. A snapshot request is one byte `0x02`, not the text `"02"`.
+hex characters. A snapshot request is one byte `0x03`, not the text `"03"`.
+
+## Optional recorded barcode diagnostics
+
+`car/debug/barcode` now carries binary BCAP v1 packets, **not ASCII**. This is
+a separate diagnostic version, not telemetry version 3. See
+`docs/BARCODE_WIRE_PROTOCOL.md`. USB dumps and laptop `.txt` imports/exports stay
+readable and unchanged. The source owner packs capture data under its existing
+mutex; the network side uses `TMO_POL` and never waits on the capture lock.
+Core telemetry remains ahead of capture uploads; optional controller/IR live
+previews remain latest-only, lower priority and disabled unless `IR_DEBUG=1`.
 
 For a heartbeat configured on a different topic, decode it with the `car/status`
 layout. The tool is a codec; broker connection/subscription is handled by the

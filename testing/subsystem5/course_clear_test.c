@@ -19,6 +19,12 @@ bool subsystem5_request_scan(uint16_t id)
     assert(!"Clear course must not request an obstacle scan");
     return false;
 }
+bool subsystem5_request_peek(uint16_t id, unsigned angle)
+{
+    (void)id; (void)angle;
+    assert(!"Clear course must not request an obstacle peek");
+    return false;
+}
 void subsystem5_cancel_scan(void) {}
 void subsystem5_set_controller_status(unsigned state, unsigned fault, unsigned route)
 { (void)state; (void)fault; (void)route; }

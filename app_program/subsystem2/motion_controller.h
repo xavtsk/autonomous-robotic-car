@@ -54,6 +54,8 @@ uint8_t         motion_controller_command_id(void);
 void            motion_controller_ack_complete(uint8_t command_id);
 bool            motion_controller_is_stopped(void);
 float           motion_controller_speed_cap(void);
+/* Read-only; caller holds the Buddy 2 mutex. wheel: 0 left, 1 right. */
+float           motion_controller_debug_setpoint(unsigned int wheel);
 
 /* While busy (calibration), requests are rejected and the step does nothing */
 void            motion_controller_set_busy(bool b_busy);

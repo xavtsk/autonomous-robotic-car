@@ -93,11 +93,14 @@ LOCAL ER report(UB type, const BUDDY1_SNAPSHOT *v)
     unsigned length = buddy1_encode(type, v, payload, sizeof(payload));
     ER er;
     if (!length) return E_PAR;
-    er = tk_loc_mtx(mtx_buddy1_state, TMO_FEVR);
-    if (er < E_OK) return er;
-    er = store_section(type, v);
-    (void)tk_unl_mtx(mtx_buddy1_state);
-    if (er < E_OK) return er;
+    /* Pose is live-only: it has no snapshot section, so skip the cache. */
+    if (type != BUDDY1_TOPIC_POSE) {
+        er = tk_loc_mtx(mtx_buddy1_state, TMO_FEVR);
+        if (er < E_OK) return er;
+        er = store_section(type, v);
+        (void)tk_unl_mtx(mtx_buddy1_state);
+        if (er < E_OK) return er;
+    }
     return buddy1_queue_publish(type, payload, (UH)length);
 }
 
@@ -127,6 +130,12 @@ EXPORT ER buddy1_report_obstacle(UH distance_mm, UH width_mm, BUDDY1_OBSTACLE_RO
     BUDDY1_SNAPSHOT v = {0}; v.obstacle_distance_mm = distance_mm;
     v.obstacle_width_mm = width_mm; v.obstacle_route = route;
     return report(BUDDY1_TOPIC_OBSTACLE, &v);
+}
+EXPORT ER buddy1_report_pose(UH distance_cm_mod, H heading_deg)
+{
+    BUDDY1_SNAPSHOT v = {0};
+    v.pose_distance_cm = distance_cm_mod; v.pose_heading_deg = heading_deg;
+    return report(BUDDY1_TOPIC_POSE, &v);
 }
 EXPORT ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state)
 {

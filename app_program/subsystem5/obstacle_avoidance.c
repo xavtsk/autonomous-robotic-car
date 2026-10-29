@@ -11,9 +11,37 @@ void s5_avoidance_begin(s5_avoidance_t *a,uint32_t now)
 {
     a->state=S5_WAIT_STOP;a->fault=S5_OK;a->phase_us=a->started_us=now;
     a->leg=0;a->issued=false;a->plan=(s5_plan_t){0};s5_recovery_reset(&a->recovery);
+    a->pass=S5_PASS_APPROACH;a->searched_mm=0;a->swapped=0;
 }
 void s5_avoidance_abort(s5_avoidance_t *a)
 { a->state=S5_IDLE;a->issued=false;s5_recovery_reset(&a->recovery); }
+/* Distance still needed after the side peek reads clear. On a ray S5_PEEK_DEG
+ * from straight ahead, a return at lateral distance d lies d*tan(90-60) =
+ * 0.577*d ahead of the sensor, so "clear" means the rear corner is at most
+ * 0.577*offset ahead. Then put the axle half a car width + margin past it. */
+static unsigned pass_extra_mm(const s5_avoidance_t *a)
+{
+    return (a->plan.offset_mm*577U+999U)/1000U+S5_SONAR_AXLE_MM+a->config.half_width_mm+a->config.margin_mm;
+}
+static s5_action_t peek_result(s5_avoidance_t *a,const s5_input_t *in,unsigned elapsed)
+{
+    const s5_profile_t *p=&in->observation.profile;
+    unsigned side,limit;
+    if(elapsed>S5_SCAN_TIMEOUT_US) { return fail(a,S5_DEADLINE); }
+    if(!in->observation.scan_done || (int32_t)(in->observation.scan_us-a->phase_us)<=0) { return action(S5_ACT_NONE,0,0); }
+    if(!p->valid) { return fail(a,S5_SCAN_FAILED); }
+    /* Obstacle on the car's right after a LEFT bypass, so look right (30 deg). */
+    side=a->plan.route==S5_ROUTE_LEFT?p->right_clear_mm:p->left_clear_mm;
+    /* Anything nearer than the original line (+margin) along the 60 deg ray:
+     * range = lateral / sin(60 deg), 1/sin(60) = 1.155. */
+    limit=((a->plan.offset_mm+a->config.margin_mm)*1155U+999U)/1000U;
+    a->phase_us=in->now_us;
+    if(side<=limit) {
+        if(a->searched_mm+S5_PEEK_STEP_MM>a->config.max_depth_mm) { return fail(a,S5_NO_PATH); }
+        a->pass=S5_PASS_STEP;
+    } else { a->pass=S5_PASS_EXTRA; }
+    return action(S5_ACT_NONE,0,0);
+}
 s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
 {
     unsigned elapsed; int sign;
@@ -35,6 +63,8 @@ s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
     } else if(a->state==S5_MOVING) {
         bool straight=(a->leg==1U || a->leg==3U || a->leg==5U);
         if(elapsed>20000000U) { return fail(a,S5_DEADLINE); }
+        /* Servo faces sideways during a peek: no forward range until it ends. */
+        if(a->leg==3U && a->pass==S5_PASS_PEEKING) { return peek_result(a,in,elapsed); }
         /* Each straight leg requires a new forward reading after its turn.
          * During movement, loss of valid ranging or a close return brakes. */
         if(a->issued && (!s5_range_ready(&in->observation,in->now_us) ||
@@ -49,7 +79,10 @@ s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
         }
         if(a->issued) {
             if(in->motion_done) {
-                a->issued=false;a->leg++;a->phase_us=in->now_us;
+                a->issued=false;a->phase_us=in->now_us;
+                /* Leg 3 ends only after the final clearance move. */
+                if(a->leg==3U && a->pass!=S5_PASS_EXTRA) { a->pass=S5_PASS_PEEK;return action(S5_ACT_NONE,0,0); }
+                a->leg++;
                 if(a->leg==7U && a->recovery.confirmed) { a->state=S5_FINISH;return action(S5_ACT_STOP,0,0); }
                 if(a->leg==10U) {
                     if(!a->recovery.confirmed) { return fail(a,S5_NO_LINE); }
@@ -65,14 +98,39 @@ s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
         }
         if(in->observation.range_mm<=a->config.emergency_mm) { return fail(a,S5_NO_PATH); }
         sign=a->plan.route==S5_ROUTE_LEFT?1:-1;
+        if(a->leg==3U && a->pass==S5_PASS_PEEK) {
+            a->pass=S5_PASS_PEEKING;a->phase_us=in->now_us;
+            return action(S5_ACT_PEEK,(int)(a->plan.route==S5_ROUTE_LEFT?90U-S5_PEEK_DEG:90U+S5_PEEK_DEG),0);
+        }
         if(straight) {
-            unsigned mm=a->leg==3U?a->plan.forward_mm:a->plan.offset_mm;
+            unsigned mm=a->plan.offset_mm;
+            if(a->leg==3U) {
+                mm=a->pass==S5_PASS_APPROACH?a->plan.forward_mm:
+                   (a->pass==S5_PASS_STEP?S5_PEEK_STEP_MM:pass_extra_mm(a));
+            }
             if(!s5_range_ready(&in->observation,in->now_us) ||
                (int32_t)(in->observation.range_us-a->phase_us)<=0) {
                 return elapsed>1000000U?fail(a,S5_BAD_RANGE):action(S5_ACT_NONE,0,0);
             }
-            if(in->observation.range_mm<=a->config.detect_mm) { return fail(a,S5_NO_PATH); }
+            {   /* Leg 1 faces the sideways path itself: it must be clear for
+                 * the whole offset + margin, measured, not guessed diagonally. */
+                unsigned need=a->config.detect_mm;
+                if(a->leg==1U && (unsigned)a->plan.offset_mm+a->config.margin_mm>need) { need=(unsigned)a->plan.offset_mm+a->config.margin_mm; }
+                if(in->observation.range_mm<=need) {
+                    /* First side blocked: turn 180 deg to face the other side and
+                     * re-check it as leg 1 (once). */
+                    if(a->leg==1U && !a->swapped && a->plan.alt_ok) {
+                        unsigned other=a->plan.alt_offset_mm;
+                        a->swapped=1;a->plan.alt_offset_mm=a->plan.offset_mm;a->plan.offset_mm=other;
+                        a->plan.route=a->plan.route==S5_ROUTE_LEFT?S5_ROUTE_RIGHT:S5_ROUTE_LEFT;
+                        a->leg=0;a->issued=true;
+                        return action(S5_ACT_TURN,a->plan.route==S5_ROUTE_LEFT?180:-180,a->config.speed_mms);
+                    }
+                    return fail(a,S5_NO_PATH);
+                }
+            }
             a->issued=true;a->leg_start_m=in->centre_m;
+            if(a->leg==3U && a->pass==S5_PASS_STEP) { a->searched_mm=(uint16_t)(a->searched_mm+mm); }
             return action(S5_ACT_DRIVE,(int)mm,a->config.speed_mms);
         }
         a->issued=true;

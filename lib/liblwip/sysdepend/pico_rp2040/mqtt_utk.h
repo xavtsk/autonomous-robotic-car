@@ -6,9 +6,9 @@
 #ifndef MQTT_UTK_H
 #define MQTT_UTK_H
 
-#define MQTT_UTK_APP_WIRE_VERSION 2U /* binary fallback heartbeat contract */
+#define MQTT_UTK_APP_WIRE_VERSION 3U /* binary fallback heartbeat contract */
 #define MQTT_UTK_APP_TOPIC_MAX    64
-#define MQTT_UTK_APP_PAYLOAD_MAX 16
+#define MQTT_UTK_APP_PAYLOAD_MAX 14
 
 typedef struct {
 	char		topic[MQTT_UTK_APP_TOPIC_MAX];
@@ -39,14 +39,28 @@ void mqtt_utk_poll(void);
  * it in app_program/subsystem1/mqtt_bridge.c. */
 int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out);
 
-/* Optional low-priority diagnostic text (e.g. the barcode-sensor trace on
- * MQTT_UTK_DEBUG_TOPIC). Asked for one line only when no application message
+/* Optional low-priority binary barcode capture packets on
+ * MQTT_UTK_DEBUG_TOPIC. Asked for one packet only when no application message
  * is waiting, so telemetry always goes first; same single in-flight slot and
- * pacing. Return the line length, or 0 when there is nothing to send. The
+ * pacing. Return the packet length, or 0 when there is nothing to send. The
  * weak default sends nothing. Called from the network task. */
 #define MQTT_UTK_DEBUG_TOPIC       "car/debug/barcode"
-#define MQTT_UTK_DEBUG_PAYLOAD_MAX 192
-unsigned int mqtt_utk_debug_take(char *line, unsigned int size);
+#if APP_IR_DEBUG
+#define MQTT_UTK_DEBUG_PAYLOAD_MAX 70 /* shared with controller preview */
+#else
+#define MQTT_UTK_DEBUG_PAYLOAD_MAX 47 /* maximum binary capture packet */
+#endif
+unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size);
+
+/* Optional IR_DEBUG=1 preview, after ordinary telemetry and barcode uploads.
+ * Latest-only binary diagnostics; stale/rejected previews are dropped, never
+ * retried ahead of application messages. No new incoming robot command. */
+#define MQTT_UTK_IR_DEBUG_TOPIC "car/debug/ir"
+#define MQTT_UTK_IR_DEBUG_MAX 16U
+unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size);
+#define MQTT_UTK_CONTROL_DEBUG_TOPIC "car/debug/controller"
+#define MQTT_UTK_CONTROL_DEBUG_MAX 70U
+unsigned int mqtt_utk_control_debug_take(unsigned char *bytes, unsigned int size);
 
 /* Called after a complete inbound MQTT payload has arrived. The weak default
  * ignores it; Buddy 1 overrides it and copies permitted commands into its
