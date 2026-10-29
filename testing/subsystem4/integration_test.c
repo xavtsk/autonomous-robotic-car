@@ -96,6 +96,9 @@ int main(void)
     command(S3_CONTROL_START); assert(g_drive.state==S3_DRIVE_FAULT);
     reset_fault(); begin(); ack();
     assert(invalidations>0 && !(faults&BUDDY1_FAULT_IMU));
+    { unsigned before=invalidations;
+      for(unsigned i=0;i<100;++i) terrain_control_report();
+      assert(invalidations==before); /* already unavailable: no repeated lock/write */ }
     assert(faults==(BUDDY1_FAULT_WIFI|BUDDY1_FAULT_STALL|BUDDY1_FAULT_NO_ECHO));
     /* One missed nonblocking read uses a still-fresh cached sample. */
     readable=false; cycle(); assert(g_drive.state==S3_DRIVE_FOLLOW);

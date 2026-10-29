@@ -9,7 +9,7 @@ static motion_status_t status;
 static s3_integration_status_t runtime;
 static s3_control_kind_t queued;
 static bool queue_ok=true, status_ok=true, frozen;
-static unsigned mask=BUDDY1_FAULT_WIFI, updates, invalidations, reports, states, barcodes;
+static unsigned mask=BUDDY1_FAULT_WIFI, updates, invalidations, reports, states, barcodes, motion_reads;
 static ER mirror_result=E_OK;
 static BUDDY1_ROBOT_STATE last_state;
 static int left_report,right_report;
@@ -18,7 +18,7 @@ bool s3_integration_submit(const s3_control_request_t *r)
 bool s3_integration_status(s3_integration_status_t *out)
 {*out=runtime;return true;}
 bool motion_get_status(motion_status_t *out)
-{*out=status;return status_ok;}
+{motion_reads++;*out=status;return status_ok;}
 ER buddy1_update_faults(UB changed,UB active)
 {
     assert(!(changed & BUDDY1_FAULT_WIFI));updates++;
@@ -59,6 +59,7 @@ int main(void)
     runtime.state=S3_DRIVE_FOLLOW;status.b_valid=true;
     status.speed_left_mps=0.12f;status.speed_right_mps=-0.12f;
     cycles(20);assert(reports==1&&left_report==120&&right_report==-120);
+    assert(motion_reads==20); /* one read/cycle, shared by faults/pose/speed */
     assert(last_state==BUDDY1_STATE_LINE_FOLLOWING&&mask==BUDDY1_FAULT_WIFI);
     status.fault_bits=MOTION_FAULT_BIT(MOTION_FAULT_STALL)|MOTION_FAULT_BIT(MOTION_FAULT_ENCODER);
     runtime.navigation.fault_mask=2;cycles(1);

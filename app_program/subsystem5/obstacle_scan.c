@@ -4,6 +4,13 @@ void s5_scan_begin(s5_scan_t *s,uint32_t now)
     *s=(s5_scan_t){0}; s->angle=30U; s->nearest=90U;
     s->nearest_mm=S5_RANGE_MAX_MM; s->started_us=now;
 }
+bool s5_peek_angle_valid(unsigned angle)
+{ return angle%5U==0U && ((angle>=30U && angle<=60U) || (angle>=120U && angle<=150U)); }
+bool s5_scan_begin_at(s5_scan_t *s,uint32_t now,unsigned angle)
+{
+    if(!s || !s5_peek_angle_valid(angle)) { return false; }
+    s5_scan_begin(s,now); s->angle=(uint8_t)angle; s->single=1U; return true;
+}
 void s5_scan_accept(s5_scan_t *s,uint32_t now,bool valid,unsigned mm)
 {
     if(!s || s->done) { return; }
@@ -20,6 +27,7 @@ void s5_scan_accept(s5_scan_t *s,uint32_t now,bool valid,unsigned mm)
         s->failed=s->done=true; return;
     }
     s->count++;
+    if(s->single) { s->done=true; return; }
     if(!s->fine && mm<s->nearest_mm) { s->nearest_mm=(uint16_t)mm; s->nearest=s->angle; }
     if(!s->fine) {
         if(s->angle<150U) { s->angle+=30U; }

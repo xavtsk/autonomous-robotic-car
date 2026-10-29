@@ -203,18 +203,20 @@ int main(void)
     assert(status.command_sequence==sequence+1&&!g_reset_waiting&&!g_shared.reset_pending);
 #if defined(TM_MQTT) && TM_MQTT
     {   /* After the run ended, the barcode trace goes out over Wi-Fi once,
-         * summary first and "[BCAP] end" last; then nothing more. */
-        char line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+         * binary summary first and binary end last; then nothing more. */
+        unsigned char line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
         unsigned n, lines = 0U;
-        char first[MQTT_UTK_DEBUG_PAYLOAD_MAX] = "", last[MQTT_UTK_DEBUG_PAYLOAD_MAX] = "";
+        unsigned first_kind=99,last_kind=99;
+        /* A busy capture lock must skip, not wait or abandon the capture. */
+        test_mutex_busy=true;assert(mqtt_utk_debug_take(line,sizeof line)==0U);
+        test_mutex_busy=false;assert(g_bcap_net_pending);
         while ((n = mqtt_utk_debug_take(line, sizeof line)) != 0U)
         {
-            assert(n < sizeof line && line[n] == '\0');
-            if (lines++ == 0U) { memcpy(first, line, n + 1U); }
-            memcpy(last, line, n + 1U);
+            assert(n <= BCAP_WIRE_MAX && n>=6U && line[0]==BCAP_WIRE_VERSION);
+            if (lines++ == 0U) first_kind=line[5]&3U;
+            last_kind=line[5]&3U;
         }
-        assert(lines >= 2U && strncmp(first, "[BCAP] run summary", 18) == 0 &&
-               strcmp(last, "[BCAP] end") == 0);
+        assert(lines >= 2U && first_kind==0U && last_kind==3U);
         assert(mqtt_utk_debug_take(line, sizeof line) == 0U);
         puts("PASS: barcode trace published once over the Wi-Fi debug hook after the run");
     }

@@ -5,8 +5,12 @@
 
 #include <stdint.h>
 
-#define BUDDY1_WIRE_VERSION       2U
-#define BUDDY1_PAYLOAD_MAX       16U /* largest packet: version + snapshot */
+#define BUDDY1_WIRE_VERSION       3U
+#define BUDDY1_PAYLOAD_MAX       14U /* version + 102-bit snapshot */
+#define BUDDY1_HUMP_HEIGHT_MAX_MM 500U
+#define BUDDY1_OBSTACLE_MIN_MM    30U
+#define BUDDY1_OBSTACLE_MAX_MM    4000U
+#define BUDDY1_OBSTACLE_WIDTH_MAX_MM 4095U
 #define BUDDY1_MAP_BYTES          4U
 #define BUDDY1_SPEED_MAX_MMS    510
 #define BUDDY1_FAULT_STALL       (1U << 0)
@@ -50,7 +54,7 @@ typedef struct {
 } BUDDY1_BARCODE_MAP;
 
 /* Temporary decoded view for callers/calculations. The shared cache is a
- * packed 16-byte packet, protected by the Buddy 1 mutex. */
+ * packed 14-byte packet, protected by the Buddy 1 mutex. */
 typedef struct {
     uint8_t motion_valid;
     int16_t left_mms, right_mms;
@@ -66,7 +70,7 @@ typedef struct {
     uint8_t robot_state_valid;
     BUDDY1_ROBOT_STATE robot_state;
     uint8_t faults_valid, faults;
-    /* Live-only pose; never part of the 16-byte snapshot packet. */
+    /* Live-only pose; never part of the snapshot packet. */
     uint8_t pose_valid;
     uint16_t pose_distance_cm;  /* 0..4095, distance since START modulo 4096 */
     int16_t pose_heading_deg;   /* 0..359, + = anticlockwise since START */

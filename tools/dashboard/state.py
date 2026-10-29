@@ -6,7 +6,7 @@ import threading
 import time
 import math
 
-from buddy1_mqtt_codec import NAMES, WIDTHS, VERSION, decode, encode_map
+from buddy1_mqtt_codec import NAMES, WIDTHS, VERSION, SNAPSHOT_BYTES, decode, encode_map
 from .ir_protocol import IRBuffer, IR_TOPIC, decode_ir, encode_ir
 from .control_protocol import TOPIC as CONTROL_TOPIC, decode_control, encode_control
 from .debug_history import DebugHistory
@@ -160,8 +160,8 @@ class DashboardState:
                 return
             if topic == "car/debug/barcode":
                 try:
-                    text = payload.decode("ascii")
-                    self.traces.ingest(text)
+                    frame = self.traces.ingest_binary(payload)
+                    text = frame["text"]
                     self.last_car = self.clock()
                     self.counters["received"] += 1
                     self.counters["bytes_received"] += len(payload)
@@ -169,6 +169,7 @@ class DashboardState:
                     if text.startswith("[BCAP] run summary") or text.strip() == "[BCAP] end":
                         self.add_event(3, "info", text)
                 except (ValueError, OSError, UnicodeError) as exc:
+                    self.counters["malformed"] += 1
                     self.add_event(3, "warning", f"Trace ignored: {exc}")
                 return
             if topic == POSE_TOPIC:
@@ -432,4 +433,4 @@ class DashboardState:
                                    "barcode": 25 | 2 << 5}[name]
                         value |= raw << offset
                         offset += width
-                    self.ingest("car/reply/snapshot", bytes([VERSION]) + value.to_bytes(15, "little"))
+                    self.ingest("car/reply/snapshot", bytes([VERSION]) + value.to_bytes(SNAPSHOT_BYTES-1, "little"))

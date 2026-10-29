@@ -127,28 +127,33 @@ static void complete_publish(err_t result)
     assert(cb); deferred_done = NULL; deferred_arg = NULL; cb(arg, result);
 }
 
-/* Diagnostic text hook: a strong override of mqtt_utk_debug_take(). */
-static const char *debug_queue[4];
+/* Binary diagnostic hook: payloads contain embedded zero bytes, not strings. */
+static const unsigned char *debug_queue[4];
+static unsigned debug_size[4];
+static const unsigned char debug_summary[16]={1};
+#if APP_IR_DEBUG
+static const unsigned char debug_end[6]={1,0,0,0,0,3};
+#endif
 static unsigned debug_head, debug_count, debug_asks;
-unsigned int mqtt_utk_debug_take(char *line, unsigned int size)
+unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size)
 {
     unsigned n;
     ++debug_asks;
     if (debug_head >= debug_count) return 0;
-    n = (unsigned)strlen(debug_queue[debug_head]);
-    assert(n < size);
-    memcpy(line, debug_queue[debug_head++], n);
+    n = debug_size[debug_head];
+    assert(n <= size);
+    memcpy(bytes, debug_queue[debug_head++], n);
     return n;
 }
 static void test_debug_lines(void)
 {
-    static char longest[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+    static unsigned char longest[47];
     unsigned count;
-    memset(longest, 'x', sizeof longest - 1U);
+    memset(longest, 0xa5, sizeof longest); longest[10]=0;
     empty_outbox();
     poll_after(1000);
-    debug_queue[0] = "[BCAP] run summary: episodes=1";
-    debug_queue[1] = longest;
+    debug_queue[0] = debug_summary; debug_size[0]=sizeof debug_summary;
+    debug_queue[1] = longest; debug_size[1]=sizeof longest;
     debug_head = 0; debug_count = 2;
     /* Telemetry first: a queued report goes out before any debug line. */
     assert(buddy1_report_heading(12) == E_OK);
@@ -159,7 +164,7 @@ static void test_debug_lines(void)
     poll_after(20);
     assert(publish_count == count + 2 && strcmp(published_topic, MQTT_UTK_DEBUG_TOPIC) == 0 &&
            published_qos == 0 && published_retain == 0 &&
-           published_len == strlen(debug_queue[0]) &&
+           published_len == debug_size[0] &&
            memcmp(published, debug_queue[0], published_len) == 0);
     /* A transient rejection keeps the same line and retries it later. */
     publish_result = ERR_MEM;
@@ -167,12 +172,12 @@ static void test_debug_lines(void)
     assert(publish_count == count + 2 && debug_head == 2);
     publish_result = ERR_OK;
     poll_after(100);
-    assert(publish_count == count + 3 && published_len == sizeof longest - 1U);
+    assert(publish_count == count + 3 && published_len == sizeof longest && published[10]==0);
     /* Nothing left: no more publishes. */
     poll_after(100); poll_after(100);
     assert(publish_count == count + 3);
     debug_count = 0; debug_head = 0;
-    puts("HOST PASS: diagnostic text lines only after telemetry, own topic, paced, retried, bounded");
+    puts("HOST PASS: binary capture packets only after telemetry, zero bytes preserved, paced, retried, bounded");
 }
 
 #if APP_IR_DEBUG
@@ -196,7 +201,7 @@ static void test_ir_preview(void)
 {
     unsigned count;
     empty_outbox();
-    debug_head=0;debug_count=1;debug_queue[0]="[BCAP] end";
+    debug_head=0;debug_count=1;debug_queue[0]=debug_end;debug_size[0]=sizeof debug_end;
     ir_frames=1;
     assert(buddy1_report_heading(40)==E_OK);
     count=publish_count;
@@ -222,7 +227,7 @@ static void test_ir_preview(void)
 }
 static void test_control_preview(void)
 {
-    empty_outbox();debug_head=0;debug_count=1;debug_queue[0]="[BCAP] end";
+    empty_outbox();debug_head=0;debug_count=1;debug_queue[0]=debug_end;debug_size[0]=sizeof debug_end;
     control_frames=ir_frames=1;
     assert(buddy1_report_heading(42)==E_OK);
     poll_after(20);assert(!strcmp(published_topic,"car/telemetry/heading")&&control_frames==1);
@@ -246,7 +251,7 @@ static void test_publish_backpressure(void)
     BUDDY1_COMMAND_MSG command = {.kind = BUDDY1_COMMAND_SNAPSHOT,
                                   .payload = {BUDDY1_WIRE_VERSION}};
     BUDDY1_SNAPSHOT decoded;
-    UB expected[16];
+    UB expected[BUDDY1_PAYLOAD_MAX];
     unsigned count, attempts, logs, i;
 
     /* ERR_MEM keeps the exact QoS 1 reply, rather than popping and losing it.
@@ -353,7 +358,7 @@ static void test_pose(void)
     UB p[16];
     v.pose_distance_cm = 4095; v.pose_heading_deg = 359;
     assert(buddy1_encode(BUDDY1_TOPIC_POSE, &v, p, sizeof p) == 4U);
-    assert(p[0] == 2U && p[1] == 0xffU && p[2] == 0x7fU && p[3] == 0x16U);
+    assert(p[0] == BUDDY1_WIRE_VERSION && p[1] == 0xffU && p[2] == 0x7fU && p[3] == 0x16U);
     assert(buddy1_decode(BUDDY1_TOPIC_POSE, p, 4U, &d) && d.pose_valid &&
            d.pose_distance_cm == 4095U && d.pose_heading_deg == 359);
     v.pose_distance_cm = 0; v.pose_heading_deg = 0;
@@ -363,7 +368,7 @@ static void test_pose(void)
     v.pose_distance_cm = 1; v.pose_heading_deg = 360;
     assert(buddy1_encode(BUDDY1_TOPIC_POSE, &v, p, sizeof p) == 0U);
     v.pose_heading_deg = -1; assert(buddy1_encode(BUDDY1_TOPIC_POSE, &v, p, sizeof p) == 0U);
-    p[0] = 2; p[1] = 0; p[2] = 0x80; p[3] = 0x16;              /* heading 360 */
+    p[0] = BUDDY1_WIRE_VERSION; p[1] = 0; p[2] = 0x80; p[3] = 0x16; /* heading 360 */
     assert(!buddy1_decode(BUDDY1_TOPIC_POSE, p, 4U, &d));
     p[2] = 0; p[3] = 0x20;                                     /* padding bit */
     assert(!buddy1_decode(BUDDY1_TOPIC_POSE, p, 4U, &d));
@@ -414,6 +419,39 @@ static void emit_vectors(void)
     }
 }
 
+static void test_terrain_widths(void)
+{
+    BUDDY1_SNAPSHOT v={0},d,before;
+    UB p[BUDDY1_PAYLOAD_MAX];
+    assert(BUDDY1_PAYLOAD_MAX==14 && buddy1_payload_bits(BUDDY1_TOPIC_HUMP)==25 &&
+           buddy1_payload_bits(BUDDY1_TOPIC_OBSTACLE)==26);
+    for(unsigned height=0;height<512;++height) {
+        v.hump_count=65535;v.hump_height_mm=(UH)height;
+        unsigned n=buddy1_encode(BUDDY1_TOPIC_HUMP,&v,p,sizeof p);
+        assert((n!=0)==(height<=500));
+        p[0]=BUDDY1_WIRE_VERSION;p[1]=255;p[2]=255;
+        p[3]=(UB)height;p[4]=(UB)(height>>8);
+        assert((buddy1_decode(BUDDY1_TOPIC_HUMP,p,5,&d)!=0)==(height<=500));
+        if(height<=500)assert(d.hump_height_mm==height&&d.hump_count==65535);
+    }
+    static const unsigned distances[]={0,29,30,4000,4001,4095};
+    v.obstacle_width_mm=4095;v.obstacle_route=BUDDY1_ROUTE_RIGHT;
+    for(unsigned i=0;i<sizeof distances/sizeof distances[0];++i) {
+        unsigned distance=distances[i];v.obstacle_distance_mm=(UH)distance;
+        assert((buddy1_encode(BUDDY1_TOPIC_OBSTACLE,&v,p,sizeof p)!=0)==(distance>=30&&distance<=4000));
+        uint32_t body=distance|(4095U<<12)|(2U<<24);
+        p[0]=BUDDY1_WIRE_VERSION;
+        for(unsigned b=0;b<4;++b)p[1+b]=(UB)(body>>(8*b));
+        assert((buddy1_decode(BUDDY1_TOPIC_OBSTACLE,p,5,&d)!=0)==(distance>=30&&distance<=4000));
+    }
+    assert(buddy1_snapshot(&before));
+    assert(buddy1_report_hump(0,501)==E_PAR&&buddy1_snapshot(&d)&&
+           d.hump_height_mm==before.hump_height_mm);
+    /* A same-length v2 packet must never be reinterpreted as v3. */
+    v.hump_height_mm=1;assert(buddy1_encode(BUDDY1_TOPIC_HUMP,&v,p,sizeof p)==5);
+    p[0]=2;assert(!buddy1_decode(BUDDY1_TOPIC_HUMP,p,5,&d));
+    puts("HOST PASS: v3 9/12-bit terrain fields, exhaustive height codes, sensor boundaries, no clipping/cache corruption, v2 rejection");
+}
 int main(void)
 {
     BUDDY1_SNAPSHOT v = {0}, decoded;
@@ -495,7 +533,7 @@ int main(void)
     assert(tk_rcv_mbf(mbf_buddy1_commands, &command, TMO_POL) == (INT)sizeof(command));
     assert(buddy1_command_process(&command) == E_OK);
     before = publish_count; mqtt_utk_poll(); assert(publish_count == before + 1);
-    assert(published_len == 16 && strcmp(published_topic, "car/reply/snapshot") == 0 &&
+    assert(published_len == BUDDY1_PAYLOAD_MAX && strcmp(published_topic, "car/reply/snapshot") == 0 &&
            buddy1_decode(BUDDY1_TOPIC_SNAPSHOT, published, published_len, &decoded));
     incoming(NULL, "car/cmd/snapshot", 2); fragment(NULL, packet, 1, MQTT_DATA_FLAG_LAST);
     assert(tk_rcv_mbf(mbf_buddy1_commands, &command, TMO_POL) == E_TMOUT);
@@ -516,6 +554,7 @@ int main(void)
     test_publish_backpressure();
     test_debug_lines();
     test_pose();
+    test_terrain_widths();
 #if APP_IR_DEBUG
     test_ir_preview();
     test_control_preview();

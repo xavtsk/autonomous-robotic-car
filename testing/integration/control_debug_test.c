@@ -18,6 +18,10 @@ int main(void)
     assert(d.measured_right==-42 && d.encoder_left==-524288 && d.encoder_right==524287);
     assert(control_debug_pack(&d,&q) && !memcmp(&p,&q,sizeof p));
     printf("CONTROL_VECTOR ");for(unsigned i=0;i<sizeof p;++i)printf("%02x",p.bytes[i]);puts("");
+    s.reason=10;s.drive_state=6;
+    assert(control_debug_pack(&s,&q)&&control_debug_unpack(&q,&d)&&d.reason==10);
+    printf("TERRAIN_VECTOR ");for(unsigned i=0;i<sizeof q;++i)printf("%02x",q.bytes[i]);puts("");
+    s.reason=11;assert(!control_debug_pack(&s,&q));s.reason=0;s.drive_state=1;
     for(int i=-100;i<=100;++i){s.line_error=i;s.duty_left=i;assert(control_debug_pack(&s,&q)&&control_debug_unpack(&q,&d)&&d.duty_left==i&&d.line_error==i);}
     s.line_error=-101;assert(!control_debug_pack(&s,&q));s.line_error=0;
     s.encoder_left=-524289;assert(!control_debug_pack(&s,&q));s.encoder_left=0;

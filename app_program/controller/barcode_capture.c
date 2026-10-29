@@ -216,3 +216,79 @@ bool bcap_format_next(const bcap_t *c, bcap_cursor_t *cur, char *out, unsigned i
     }
     return false;
 }
+
+static void binary_put(unsigned char *out, unsigned *bit, uint32_t v, unsigned width)
+{
+    for (unsigned i=0; i<width; ++i, ++*bit)
+        out[*bit/8U] |= (unsigned char)(((v>>i)&1U)<<(*bit%8U));
+}
+unsigned bcap_binary_next(const bcap_t *c, bcap_cursor_t *cur,
+                          unsigned char *out, unsigned size)
+{
+    bcap_cursor_t next;
+    unsigned bit=0, kind, count=0, bits;
+    const bcap_episode_t *e=0;
+    if (!c || !cur || !out || c->episodes>BCAP_MAX_EPISODES ||
+        c->letter_count>8U || cur->episode>c->episodes) return 0;
+    next=*cur;
+    if (!next.summary_done) {
+        kind=0; bits=122U+5U*c->letter_count;
+        for (unsigned i=0;i<c->letter_count;++i)
+            if (c->letters[i]<'A' || c->letters[i]>'Z') return 0;
+    } else {
+        while (next.episode<c->episodes) {
+            e=&c->episode[next.episode];
+            if (e->count>BCAP_POOL || (unsigned)e->first+e->count>c->used ||
+                c->used>BCAP_POOL || e->start_ms>4294967U) return 0;
+            if (!next.header_done || next.sample<e->count) break;
+            next.episode++; next.header_done=false;
+        }
+        if (next.episode<c->episodes) {
+            e=&c->episode[next.episode];
+            if (!next.header_done) { kind=1; bits=81U; }
+            else {
+                kind=2; count=e->count-next.sample;
+                if (count>BCAP_PER_LINE) count=BCAP_PER_LINE;
+                bits=61U+52U*count;
+                for (unsigned i=0;i<count;++i) {
+                    const bcap_sample_t *s=&c->pool[e->first+next.sample+i];
+                    if (s->raw>4095U || s->dark4>250U ||
+                        (s->flags&3U)>2U || ((s->flags>>2)&7U)>4U) return 0;
+                }
+            }
+        } else {
+            if (next.end_done) return 0;
+            kind=3; bits=42U;
+        }
+    }
+    const unsigned length=(bits+7U)/8U;
+    if (size<length) return 0;
+    for (unsigned i=0;i<length;++i) out[i]=0;
+    binary_put(out,&bit,BCAP_WIRE_VERSION,8);
+    binary_put(out,&bit,c->run_start_us,32);
+    binary_put(out,&bit,kind,2);
+    if (kind==0U) {
+        binary_put(out,&bit,c->episodes,4); binary_put(out,&bit,c->dropped,8);
+        binary_put(out,&bit,c->decoded,16); binary_put(out,&bit,c->rejected,16);
+        binary_put(out,&bit,c->timing,16); binary_put(out,&bit,c->overflow,16);
+        binary_put(out,&bit,c->letter_count,4);
+        for (unsigned i=0;i<c->letter_count;++i) binary_put(out,&bit,c->letters[i]-'A',5);
+        next.summary_done=true;
+    } else if (kind==1U) {
+        binary_put(out,&bit,next.episode,4);
+        binary_put(out,&bit,e->start_ms,23); binary_put(out,&bit,e->count,12);
+        next.header_done=true; next.sample=0;
+    } else if (kind==2U) {
+        binary_put(out,&bit,next.episode,4); binary_put(out,&bit,next.sample,12);
+        binary_put(out,&bit,count-1U,3);
+        for (unsigned i=0;i<count;++i) {
+            const bcap_sample_t *s=&c->pool[e->first+next.sample+i];
+            binary_put(out,&bit,s->raw,12); binary_put(out,&bit,s->dark4,8);
+            binary_put(out,&bit,s->flags,8); binary_put(out,&bit,s->mm,16);
+            binary_put(out,&bit,s->dt_ms,8);
+        }
+        next.sample+=count;
+    } else { next.end_done=true; }
+    *cur=next;
+    return length;
+}

@@ -11,7 +11,7 @@ from dashboard.traces import TraceStore
 
 
 def pose_bytes(cm, heading):
-    return bytes([2]) + ((cm % 4096) | (heading << 12)).to_bytes(3, "little")
+    return bytes([3]) + ((cm % 4096) | (heading << 12)).to_bytes(3, "little")
 
 
 class RouteTrackerTests(unittest.TestCase):
@@ -135,7 +135,7 @@ class DashboardRouteTests(unittest.TestCase):
     def test_pose_and_barcode_reach_the_route(self):
         self.state.ingest(POSE_TOPIC, pose_bytes(0, 0))
         self.state.ingest(POSE_TOPIC, pose_bytes(25, 0))
-        self.state.ingest("car/telemetry/barcode", bytes.fromhex("0259"))  # Z, left
+        self.state.ingest("car/telemetry/barcode", bytes.fromhex("0359"))  # Z, left
         snapshot = self.state.snapshot()
         run = snapshot["route"]["runs"][0]
         self.assertEqual(run["distance_m"], 0.25)
@@ -145,8 +145,8 @@ class DashboardRouteTests(unittest.TestCase):
 
     def test_malformed_pose_rejected(self):
         before = self.state.snapshot()["counters"]["malformed"]
-        self.state.ingest(POSE_TOPIC, bytes.fromhex("02008016"))           # heading 360
-        self.state.ingest(POSE_TOPIC, bytes.fromhex("020000"))             # wrong length
+        self.state.ingest(POSE_TOPIC, bytes.fromhex("03008016"))           # heading 360
+        self.state.ingest(POSE_TOPIC, bytes.fromhex("030000"))             # wrong length
         snapshot = self.state.snapshot()
         self.assertEqual(snapshot["counters"]["malformed"], before + 2)
         self.assertEqual(snapshot["route"]["runs"], [])

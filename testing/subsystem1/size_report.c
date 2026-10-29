@@ -23,9 +23,9 @@ _Static_assert(sizeof(BEFORE_TX) == 452, "baseline outgoing layout");
 _Static_assert(sizeof(BEFORE_RX) == 450, "baseline command layout");
 _Static_assert(sizeof(BUDDY1_BARCODE_ACTION) == 1, "match Arm minimal-enum ABI for sizes");
 _Static_assert(sizeof(BEFORE_SNAPSHOT) == 52, "baseline snapshot layout");
-_Static_assert(sizeof(BUDDY1_TELEMETRY_MSG) == 17, "binary outgoing layout");
+_Static_assert(sizeof(BUDDY1_TELEMETRY_MSG) == 15, "binary outgoing layout");
 _Static_assert(sizeof(BUDDY1_COMMAND_MSG) == 5, "binary command layout");
-_Static_assert(sizeof(T_MQTT_UTK_APP_MSG) == 84, "network staging layout");
+_Static_assert(sizeof(T_MQTT_UTK_APP_MSG) == 82, "network staging layout");
 
 int main(void)
 {

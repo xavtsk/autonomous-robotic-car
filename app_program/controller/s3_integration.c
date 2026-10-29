@@ -555,27 +555,25 @@ unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size)
 #if S3_BARCODE_CAPTURE
 #if defined(TM_MQTT) && TM_MQTT
 #include "mqtt_utk.h"
-/* Network task: next trace line for Wi-Fi, or 0. */
-unsigned int mqtt_utk_debug_take(char *line, unsigned int size)
+/* Network task: next binary capture packet; never wait on the control owner. */
+unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size)
 {
-    bool more = false;
     unsigned int n = 0U;
-    if (!g_bcap_net_pending || (g_mutex <= 0))
+    if (!bytes || size<BCAP_WIRE_MAX || !g_bcap_net_pending || (g_mutex <= 0))
     {
         return 0U;
     }
-    if (tk_loc_mtx(g_mutex, TMO_FEVR) != E_OK)
+    if (tk_loc_mtx(g_mutex, TMO_POL) != E_OK)
     {
         return 0U;
     }
     if (g_bcap_net_pending)
     {
-        more = bcap_format_next(&g_bcap, &g_bcap_net_cursor, line, size);
-        if (!more) { g_bcap_net_pending = false; }
+        n = bcap_binary_next(&g_bcap, &g_bcap_net_cursor, bytes, size);
+        if (!n) { g_bcap_net_pending = false; }
     }
     (void)tk_unl_mtx(g_mutex);
-    while (more && (n < size) && (line[n] != '\0')) { n++; }
-    return more ? n : 0U;
+    return n;
 }
 #endif
 /* After a run, print the barcode trace over USB, a bounded number of lines

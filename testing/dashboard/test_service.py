@@ -18,6 +18,7 @@ from dashboard.traces import TraceStore
 from dashboard.transport import MqttTransport, validate_address
 from dashboard.ir_protocol import encode_ir
 from dashboard.control_protocol import TOPIC as CONTROL_TOPIC, encode_control
+from dashboard.barcode_protocol import encode_barcode
 
 
 class ServiceTests(unittest.TestCase):
@@ -126,7 +127,7 @@ class TransportTests(unittest.TestCase):
                 while state.snapshot()["connection"]["status"] != "connected" and time.monotonic() < deadline:
                     time.sleep(0.05)
                 self.assertEqual(state.snapshot()["connection"]["status"], "connected")
-                subprocess.run(["mosquitto_pub", "-h", "127.0.0.1", "-p", str(port), "-t", "car/telemetry/motion", "-s"], input=bytes.fromhex("023c7602"), timeout=3, check=True)
+                subprocess.run(["mosquitto_pub", "-h", "127.0.0.1", "-p", str(port), "-t", "car/telemetry/motion", "-s"], input=bytes.fromhex("033c7602"), timeout=3, check=True)
                 deadline = time.monotonic() + 3
                 while not state.snapshot()["sections"]["motion"]["valid"] and time.monotonic() < deadline:
                     time.sleep(0.05)
@@ -144,12 +145,25 @@ class TransportTests(unittest.TestCase):
                 while not state.debug_snapshot()["controller"]["received"] and time.monotonic()<deadline:
                     time.sleep(0.05)
                 self.assertEqual(state.debug_snapshot()["controller"]["latest"]["data"]["reason"],4)
+                for payload in (encode_barcode(42,"summary",episodes=1,decoded=1,letters="Z"),
+                                encode_barcode(42,"episode",episode=1,start_ms=10,count=1),
+                                encode_barcode(42,"samples",episode=1,index=0,samples=[(3500,250,34,0,10)]),
+                                encode_barcode(42,"end")):
+                    subprocess.run(["mosquitto_pub","-h","127.0.0.1","-p",str(port),
+                                    "-t","car/debug/barcode","-s"],input=payload,timeout=3,check=True)
+                deadline=time.monotonic()+3
+                while (not state.traces.list() or not state.traces.list()[0]["complete"]) and time.monotonic()<deadline:
+                    time.sleep(0.05)
+                record=state.traces.list()[0]
+                self.assertTrue(record["complete"])
+                self.assertEqual(record["sample_count"],1)
+                self.assertIn("3500:250:34:0:10",state.traces.download(record["id"])[1])
                 capture = subprocess.Popen(["mosquitto_sub", "-h", "127.0.0.1", "-p", str(port), "-t", "car/cmd/barcode_map", "-C", "1", "-W", "3", "-F", "%x"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 time.sleep(0.15)
                 state.request("map", dict(forward="A", left="B", right="C", uturn="D"))
                 output, errors = capture.communicate(timeout=4)
-                self.assertEqual(output.strip(), b"02208801", errors)
-                subprocess.run(["mosquitto_pub", "-h", "127.0.0.1", "-p", str(port), "-t", "car/reply/barcode_map", "-s"], input=b"\x02\x00", timeout=3, check=True)
+                self.assertEqual(output.strip(), b"03208801", errors)
+                subprocess.run(["mosquitto_pub", "-h", "127.0.0.1", "-p", str(port), "-t", "car/reply/barcode_map", "-s"], input=b"\x03\x00", timeout=3, check=True)
                 deadline = time.monotonic() + 3
                 while state.snapshot()["commands"]["map"]["status"] == "pending" and time.monotonic() < deadline:
                     time.sleep(0.05)

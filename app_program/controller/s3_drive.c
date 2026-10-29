@@ -559,6 +559,11 @@ static bool obstacle_control(s3_drive_t *d,uint32_t now,bool done)
         if (++d->obstacle_scan_id==0U) { d->obstacle_scan_id=1U; }
         if (!subsystem5_request_scan(d->obstacle_scan_id)) { result=MOTION_ERR_BUSY; }
         break;
+    case S5_ACT_PEEK: /* one side reading while stopped (bypass leg 3) */
+        d->waiting_stop=false;
+        if (++d->obstacle_scan_id==0U) { d->obstacle_scan_id=1U; }
+        if (!subsystem5_request_peek(d->obstacle_scan_id,(unsigned)request.value)) { result=MOTION_ERR_BUSY; }
+        break;
     case S5_ACT_DRIVE:
         result=motion_request_drive((float)request.value/1000.0f,(float)request.speed_mms/1000.0f);
         break;

@@ -18,7 +18,7 @@ the standard library; override `PYTHON=/path/to/python3` if needed.
   all 256 barcode body codes, all 64 fault masks through live/snapshot/heartbeat,
   eight simultaneous producers, exact topic/length bridge,
   fragmented binary commands, zero bytes, oversized/short fragments, Wi-Fi bit
-  preservation and heartbeat payloads. Version 1 is explicitly rejected. The real `mqtt_utk.c` callbacks run.
+  preservation and heartbeat payloads. Versions 1/2 are explicitly rejected. The real `mqtt_utk.c` callbacks run.
 - `test_laptop_codec.py`: independently decode the C-emitted packets on the
   laptop, plus malformed-packet, valid-zero, IR-bit/padding and all-fault tests.
 - `size_report.c`: before/after slot, buffer and payload measurements. The host
@@ -45,7 +45,7 @@ Compiling the test firmware is not evidence the tests ran on the Pico.
 
 ## Physical checks before Week 13
 
-1. Update robot and laptop to protocol v2 together. Subscribe on the laptop, run each producer and verify decoded values, units,
+1. Update robot and laptop to protocol v3 together. Subscribe on the laptop, run each producer and verify decoded values, units,
    direction and validity against the robot's known inputs.
 2. Send raw binary map and snapshot commands. Confirm map changes are accepted
    before first run and refused afterward; the robot remains autonomous.
@@ -58,7 +58,7 @@ Compiling the test firmware is not evidence the tests ran on the Pico.
    and reconnect activity. Compare with its 10 ms period and agreed jitter limit.
 6. Measure actual stack use/remaining heap under the combined workload. Keep
    runtime buffer allocation distinct from `.data + .bss` linker accounting.
-7. Finalise Buddy 4/5 ranges and confirm the proposed wheel-speed range against
+7. Physically validate the adopted Buddy 4/5 ranges and confirm the wheel-speed range against
    calibration. Update versioned layouts and repeat cross-decoder checks if changed.
 
 Record evidence, not only a pass assertion. Build/host results and pending items

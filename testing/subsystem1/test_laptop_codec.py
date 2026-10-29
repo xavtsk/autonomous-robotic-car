@@ -42,7 +42,7 @@ class LaptopCodecTests(unittest.TestCase):
         self.assertNotIn("pose", snapshot)
 
     def test_pose_wire_and_unwrap(self):
-        self.assertEqual(codec.decode("car/telemetry/pose", bytes.fromhex("02ff7f16")),
+        self.assertEqual(codec.decode("car/telemetry/pose", bytes.fromhex("03ff7f16")),
                          dict(distance_cm_mod=4095, heading_deg=359))
         # Forward across the wrap, reverse, and reverse across zero.
         self.assertEqual(codec.unwrap_distance(4090, 5), 4101)
@@ -52,34 +52,35 @@ class LaptopCodecTests(unittest.TestCase):
         self.assertEqual(codec.unwrap_distance(0, 2048), -2048)
 
     def test_known_wire_examples(self):
-        self.assertEqual(codec.decode("car/telemetry/motion", bytes.fromhex("023c7602")),
+        self.assertEqual(codec.decode("car/telemetry/motion", bytes.fromhex("033c7602")),
                          dict(left_mms=120, right_mms=-118))
-        self.assertEqual(codec.decode("car/telemetry/motion", bytes.fromhex("02000000")),
+        self.assertEqual(codec.decode("car/telemetry/motion", bytes.fromhex("03000000")),
                          dict(left_mms=0, right_mms=0))
-        self.assertEqual(codec.encode_map("A", "B", "C", "D").hex(), "02208801")
-        self.assertEqual(codec.decode("car/cmd/barcode_map", bytes.fromhex("02208801")),
+        self.assertEqual(codec.encode_map("A", "B", "C", "D").hex(), "03208801")
+        self.assertEqual(codec.decode("car/cmd/barcode_map", bytes.fromhex("03208801")),
                          dict(forward="A", left="B", right="C", uturn="D"))
 
     def test_all_invalid_inputs_rejected(self):
         cases = [
-            ("car/telemetry/motion", "020000"),
-            ("car/telemetry/motion", "0200000000"),
+            ("car/telemetry/motion", "030000"),
+            ("car/telemetry/motion", "0300000000"),
             ("car/telemetry/motion", "01000000"),
-            ("car/telemetry/motion", "03000000"),
-            ("car/telemetry/motion", "02000080"),
-            ("car/telemetry/motion", "02000100"),
-            ("car/telemetry/barcode", "021f"),
-            ("car/telemetry/barcode", "02e0"),
-            ("car/telemetry/heading", "026801"),
-            ("car/telemetry/pose", "02008016"),
-            ("car/telemetry/pose", "02000020"),
-            ("car/telemetry/pose", "020000"),
-            ("car/telemetry/obstacle", "020000000003"),
-            ("car/telemetry/faults", "0240"),
-            ("car/status", "0200"),
-            ("car/status", "0205"),
+            ("car/telemetry/motion", "02000000"),
+            ("car/telemetry/motion", "04000000"),
+            ("car/telemetry/motion", "03000080"),
+            ("car/telemetry/motion", "03000100"),
+            ("car/telemetry/barcode", "031f"),
+            ("car/telemetry/barcode", "03e0"),
+            ("car/telemetry/heading", "036801"),
+            ("car/telemetry/pose", "03008016"),
+            ("car/telemetry/pose", "03000020"),
+            ("car/telemetry/pose", "030000"),
+            ("car/telemetry/obstacle", "030000000003"),
+            ("car/telemetry/faults", "0340"),
+            ("car/status", "0300"),
+            ("car/status", "0305"),
             ("car/cmd/snapshot", ""),
-            ("car/cmd/barcode_map", "02000000"),
+            ("car/cmd/barcode_map", "03000000"),
             ("car/cmd/barcode_map", "01208801"),
             ("car/cmd/snapshot", "01"),
         ]
@@ -89,10 +90,29 @@ class LaptopCodecTests(unittest.TestCase):
 
     def test_valid_zero_is_not_invalid(self):
         # Snapshot validity bit 2 = hump; the whole body of the hump is zero.
-        packet = bytes([codec.VERSION, 4]) + bytes(14)
+        packet = bytes([codec.VERSION, 4]) + bytes(12)
         snapshot = codec.decode("car/reply/snapshot", packet)
         self.assertEqual(snapshot["hump"], dict(valid=True, count=0, height_mm=0))
         self.assertEqual(snapshot["motion"], dict(valid=False))
+
+    def test_minimum_width_terrain_ranges_and_padding(self):
+        self.assertEqual(codec.WIDTHS,(18,8,25,9,26,3,6))
+        self.assertEqual(codec.SNAPSHOT_BYTES,14)
+        for height in range(512):
+            packet=bytes([codec.VERSION])+(65535 | height<<16).to_bytes(4,"little")
+            if height<=500:
+                self.assertEqual(codec.decode("car/telemetry/hump",packet),dict(count=65535,height_mm=height))
+            else:
+                with self.assertRaises(ValueError):codec.decode("car/telemetry/hump",packet)
+        for distance in (0,29,30,4000,4001,4095):
+            packet=bytes([codec.VERSION])+(distance | 4095<<12 | 2<<24).to_bytes(4,"little")
+            if 30<=distance<=4000:
+                self.assertEqual(codec.decode("car/telemetry/obstacle",packet),
+                                 dict(distance_mm=distance,width_mm=4095,route="right"))
+            else:
+                with self.assertRaises(ValueError):codec.decode("car/telemetry/obstacle",packet)
+        with self.assertRaises(ValueError):
+            codec.decode("car/telemetry/hump",bytes([codec.VERSION,0,0,0,2]))
 
     def test_all_six_fault_bits_and_status_top_bit(self):
         for mask in range(64):
@@ -102,13 +122,13 @@ class LaptopCodecTests(unittest.TestCase):
                                                   if mask & (1 << i)])
             heartbeat = codec.decode("car/status", bytes([codec.VERSION, 3 | (mask << 2)]))
             self.assertEqual(heartbeat["faults"], decoded)
-        self.assertEqual(codec.decode("car/telemetry/faults", bytes.fromhex("0220"))["active"],
+        self.assertEqual(codec.decode("car/telemetry/faults", bytes.fromhex("0320"))["active"],
                          ["ir_sensor_fault"])
-        packet = bytearray([codec.VERSION, 64]) + bytearray(14)
-        # IR bit at snapshot body offset 116, then first padding bit 117.
-        packet[15] = 0x10
+        packet = bytearray([codec.VERSION, 64]) + bytearray(12)
+        # IR bit at snapshot body offset 101, then first padding bit 102.
+        packet[13] = 0x20
         self.assertEqual(codec.decode("car/reply/snapshot", packet)["faults"]["mask"], 32)
-        packet[15] |= 0x20
+        packet[13] |= 0x40
         with self.assertRaises(ValueError):
             codec.decode("car/reply/snapshot", packet)
 

@@ -1,0 +1,13 @@
+Outgoing slot: 452 -> 15 bytes
+Command slot: 450 -> 5 bytes
+4-slot outbox including RTOS per-message headers/alignment: 1824 -> 80 bytes
+2-slot commands including RTOS per-message headers/alignment: 912 -> 24 bytes
+Combined message-buffer storage requested at startup: 2736 -> 104 bytes
+Shared snapshot cache: 52 -> 14 bytes
+Example MQTT application payloads (exclude topic/TCP/MQTT headers):
+car/telemetry/motion: 33 -> 4 bytes
+car/telemetry/barcode: 30 -> 2 bytes
+car/telemetry/hump: 26 -> 5 bytes
+car/telemetry/heading: 19 -> 3 bytes
+car/telemetry/obstacle: 49 -> 5 bytes
+car/telemetry/state: 26 -> 2 bytes

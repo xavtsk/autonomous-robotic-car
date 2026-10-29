@@ -14,4 +14,7 @@ bool s5_sample_pack(unsigned angle, unsigned mm, bool valid, s5_sample_t *out);
 bool s5_sample_unpack(const s5_sample_t *sample, unsigned *angle, unsigned *mm, bool *valid);
 bool s5_profile_build(const s5_sample_t *samples, unsigned count,
                       const s5_config_t *cfg, s5_profile_t *out);
+/* Side peek result: replaces that side's clearance in the last profile (kept
+ * for telemetry); with no previous profile, a minimal valid one is made. */
+bool s5_peek_merge(s5_profile_t *profile, const s5_sample_t *sample);
 #endif

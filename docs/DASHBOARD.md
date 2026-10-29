@@ -1,10 +1,18 @@
 # Local robot dashboard
 
 The laptop dashboard replaces the separate terminal viewer and map/snapshot
-commands with one browser window. It uses Buddy 1's existing binary protocol v2
-and the original `tools/buddy1_mqtt_codec.py`. Existing telemetry needs no firmware
-rebuild. The new live three-sensor graphs require the optional `IR_DEBUG=1`
-firmware described below.
+commands with one browser window. **28 October update: robot and laptop now use
+Buddy 1 binary protocol v3 together. Rebuild/reflash the robot and restart this
+Python service; refreshing a browser alone does not reload its decoder.** Old
+v2 packets are rejected, not silently reinterpreted. Saved `.txt` captures remain
+readable. Live three-sensor graphs require optional `IR_DEBUG=1` firmware.
+
+The terrain-fault controller reason (10) is now decoded/displayed. Recorded
+`car/debug/barcode` traffic is compact binary BCAP v1; the laptop reconstructs
+text for the existing Runs graphs and downloads. See `BARCODE_WIRE_PROTOCOL.md`.
+This update changes representations/observation only, not motor, line-following,
+barcode-recognition, hump-estimation or avoidance algorithms. Current validation
+and the still-pending hardware checklist: `BUDDY1_PROTOCOL_V3_2026-10-28.md`.
 
 ## Start without the car
 
@@ -209,8 +217,10 @@ remains the evidence for individual bar widths and decoding failures. Simulation
 curves demonstrate the UI and are not real sensor or barcode-decoder evidence.
 
 **Runs** accepts saved `barcode_trace_*.txt` files and automatically saves
-incoming `car/debug/barcode` captures. Inspect a run to plot raw ADC or normalized
-darkness by episode and save the original text. Files up to 2 MiB are accepted.
+incoming binary `car/debug/barcode` captures. Inspect a run to plot raw ADC or
+normalized darkness by episode and save the reconstructed readable text. Files
+up to 2 MiB are accepted. Missing/duplicate binary records use the same capture
+completeness checks as imported logs; a partial transfer never becomes zero data.
 The recent list holds 40 captures in memory; older capture files stay on disk.
 The archive location is printed at startup; the default is `.dashboard-data/live`
 or `.dashboard-data/demo` in the repository, both ignored by Git. Original

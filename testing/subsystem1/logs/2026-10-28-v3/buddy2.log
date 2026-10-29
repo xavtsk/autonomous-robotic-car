@@ -1,0 +1,13 @@
+mkdir -p ../../build/buddy2
+cc -I../../app_program/subsystem2 -std=c11 -Wall -Wextra -Werror -Wno-bitwise-instead-of-logical -O2 -g pack_test.c ../../app_program/subsystem2/motion_pack.c ../../app_program/subsystem2/motion_codec.c ../../app_program/subsystem2/motion_snapshot_adapter.c -o ../../build/buddy2/pack_test
+../../build/buddy2/pack_test
+PASS: current 64-bit status/16-bit reports/32-bit commands, every mm/s, invalid commands, safe legacy telemetry range
+/Applications/Xcode.app/Contents/Developer/usr/bin/make -C ../subsystem3 feedback drive
+mkdir -p ../../build/buddy3
+cc -I../../app_program/subsystem3 -I. -I../../app_program/subsystem3/../subsystem2 -include motion_kernel_stub.h -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g test_motion_feedback.c ../../app_program/subsystem3/../subsystem2/motion.c ../../app_program/subsystem3/../subsystem2/motion_controller.c ../../app_program/subsystem3/../subsystem2/motion_pack.c ../../app_program/subsystem3/../subsystem2/motion_estimation.c ../../app_program/subsystem3/../subsystem2/speed_pid.c -o ../../build/buddy3/test_motion_feedback
+../../build/buddy3/test_motion_feedback
+PASS: production motion feedback timestamps, epochs, calibration exclusion and manoeuvre watchdog
+mkdir -p ../../build/buddy3
+cc -I../../app_program/subsystem3 -I. -I../../app_program/subsystem3/../subsystem2 -I../../app_program/subsystem3/../controller -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g test_drive.c ../../app_program/subsystem3/ir_acquisition.c ../../app_program/subsystem3/ir_calibration.c ../../app_program/subsystem3/ir_reflectance.c ../../app_program/subsystem3/line_detection.c ../../app_program/subsystem3/line_controller.c ../../app_program/subsystem3/barcode_decoder.c ../../app_program/subsystem3/line_navigation.c ../../app_program/subsystem3/../controller/s3_drive.c ../../app_program/subsystem3/../subsystem2/motion_controller.c ../../app_program/subsystem3/../subsystem2/motion_pack.c ../../app_program/subsystem3/../subsystem2/motion_estimation.c ../../app_program/subsystem3/../subsystem2/speed_pid.c -o ../../build/buddy3/test_drive
+../../build/buddy3/test_drive
+PASS: real Buddy 2 controller/PID + Buddy 3 navigation bridge; mocked hardware

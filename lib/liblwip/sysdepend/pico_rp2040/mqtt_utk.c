@@ -57,8 +57,8 @@ static T_MQTT_UTK_APP_MSG pending;
 static u32_t last_publish_ms;
 static u16_t publish_wait_ms;
 static u8_t pending_valid, pending_inflight, pending_warned, publish_paced;
-/* Diagnostic text slot: used only while no application packet is pending. */
-static char debug_line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+/* Binary diagnostic slot: used only while no application packet is pending. */
+static unsigned char debug_line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
 static u16_t debug_len;
 static u8_t debug_valid;
 
@@ -106,9 +106,9 @@ static void debug_publish_done_cb(void *arg, err_t result)
 	}
 }
 
-__attribute__((weak)) unsigned int mqtt_utk_debug_take(char *line, unsigned int size)
+__attribute__((weak)) unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size)
 {
-	(void)line;
+	(void)bytes;
 	(void)size;
 	return 0;
 }
@@ -368,7 +368,7 @@ void mqtt_utk_poll(void)
 
 	if(!pending_valid) {
 		if(!mqtt_utk_app_take(&pending)) {
-			/* Nothing for telemetry: send one diagnostic line, if any. */
+				/* Nothing for telemetry: send one binary diagnostic packet. */
 			if(!debug_valid) {
 				unsigned int n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
 				if(n == 0U) {

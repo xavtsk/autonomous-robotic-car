@@ -1,7 +1,7 @@
 """IR debug v1: clock32 + raw36 + normalized30 + validity6 + surface6 + seq8.
 
 The 118 body bits follow one version byte; two padding bits are zero.
-This observation topic is separate from Buddy 1 telemetry protocol v2.
+This observation topic is separate from Buddy 1 telemetry protocol v3.
 """
 from collections import deque
 

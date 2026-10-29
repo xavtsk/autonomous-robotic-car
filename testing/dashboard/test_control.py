@@ -24,6 +24,18 @@ class ControllerTests(unittest.TestCase):
                         str(ROOT/"app_program/controller/control_debug.c"),"-o",str(binary)],check=True)
         output=subprocess.check_output([str(binary)],text=True)
         cls.vector=bytes.fromhex(next(line.split()[1] for line in output.splitlines() if line.startswith("CONTROL_VECTOR ")))
+        cls.terrain=bytes.fromhex(next(line.split()[1] for line in output.splitlines() if line.startswith("TERRAIN_VECTOR ")))
+
+    def test_real_terrain_fault_reaches_dashboard_and_terminal(self):
+        self.assertEqual(decode_control(self.terrain)["data"]["reason"],10)
+        with tempfile.TemporaryDirectory() as tmp:
+            state=DashboardState(TraceStore(Path(tmp)))
+            state.ingest(TOPIC,self.terrain)
+            self.assertEqual(state.debug_snapshot()["controller"]["latest"]["data"]["reason"],10)
+            self.assertTrue(any("terrain / IMU fault" in e["message"] for e in state.events))
+        out=io.StringIO();handle(TOPIC+" "+self.terrain.hex(),Folder(True),out)
+        self.assertIn("terrain / IMU fault",out.getvalue())
+        with self.assertRaises(ValueError):encode_control(reason=11)
 
     def test_independent_c_python_wire_equality_and_signed_boundaries(self):
         frame=decode_control(self.vector);d=frame["data"]

@@ -11,7 +11,7 @@ static motion_status_t status;
 static s3_integration_status_t runtime;
 static s3_control_kind_t queued;
 static bool queue_ok=true, status_ok=true, frozen;
-static unsigned mask=BUDDY1_FAULT_WIFI, updates, invalidations, reports, states, barcodes;
+static unsigned mask=BUDDY1_FAULT_WIFI, updates, invalidations, reports, states, barcodes, obstacle_invalidations;
 static ER mirror_result=E_OK;
 static BUDDY1_ROBOT_STATE last_state;
 static int left_report,right_report;
@@ -35,7 +35,7 @@ ER buddy1_report_pose(UH cm,H deg) { (void)cm;(void)deg;return E_OK; }
 ER buddy1_report_motion(H left,H right)
 {reports++;left_report=left;right_report=right;return E_OK;}
 ER buddy1_invalidate(UB type)
-{if(type==BUDDY1_TOPIC_OBSTACLE)return E_OK;assert(type==BUDDY1_TOPIC_MOTION);invalidations++;return E_OK;}
+{if(type==BUDDY1_TOPIC_OBSTACLE){obstacle_invalidations++;return E_OK;}assert(type==BUDDY1_TOPIC_MOTION);invalidations++;return E_OK;}
 ER buddy1_configuration_claim(BUDDY1_BARCODE_MAP *map,BOOL *newly)
 {*map=(BUDDY1_BARCODE_MAP){'A','B','C','D'};if(newly)*newly=!frozen;frozen=true;return E_OK;}
 static unsigned reopens;
@@ -118,6 +118,9 @@ int main(void)
     obstacle.profile=(s5_profile_t){.valid=true,.closest_mm=250,.width_mm=400};
     cycles(1);assert(mask==(BUDDY1_FAULT_WIFI|BUDDY1_FAULT_STALL) && obstacle_reports==1);
     cycles(1);assert(obstacle_reports==1);
+    obstacle.profile.valid=false;
+    { unsigned before=obstacle_invalidations;
+      cycles(100);assert(obstacle_invalidations==before+1); }
     runtime.state=S3_DRIVE_FAULT;cycles(1);assert(last_state==BUDDY1_STATE_ERROR);
     puts("PASS: production telemetry adapter preserves Wi-Fi/motor faults, owns only no-echo, publishes obstacle profile and avoidance/error state");
 }

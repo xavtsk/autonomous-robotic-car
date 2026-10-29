@@ -16,7 +16,7 @@ bool control_debug_pack(const control_debug_sample_t *s, control_debug_packet_t 
 {
     unsigned bit=0;
     if (!s || !p || s->motion_state>5 || s->motion_fault>5 || s->drive_state>6 ||
-        s->reason>9 || s->pending>4 || s->barcode_status>4 || s->cal_sensor>2 ||
+        s->reason>10 || s->pending>4 || s->barcode_status>4 || s->cal_sensor>2 ||
         s->line_error < -100 || s->line_error > 100 ||
         s->duty_left < -100 || s->duty_left > 100 ||
         s->duty_right < -100 || s->duty_right > 100 ||

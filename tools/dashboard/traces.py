@@ -24,6 +24,7 @@ from pathlib import Path
 import re
 import threading
 import uuid
+from .barcode_protocol import decode_barcode
 
 MAX_INPUT_BYTES = 2 * 1024 * 1024
 MAX_TRACES = 40
@@ -235,6 +236,7 @@ class TraceStore:
         self._lock = threading.RLock()
         self._records: dict[str, _Record] = {}
         self._active: str | None = None
+        self._binary: dict[int, str] = {}
         candidates = sorted(self.folder.glob("trace-*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
         for meta in candidates:
             if len(self._records) >= MAX_TRACES:
@@ -358,6 +360,30 @@ class TraceStore:
             record.parsed = parsed
             self._save_info(record)
             return self._metadata(record)
+
+    def ingest_binary(self, payload: bytes) -> dict:
+        """Preserve partial/interleaved transfers; never declare loss as zero.
+
+        IDs are meaningful within the connected car session, not globally
+        unique across clock wraps/reboots. Imports on disk use independent UUIDs.
+        Duplicate summary/end records are harmless; sample retransmissions and
+        conflicting rows are checked by the existing text parser.
+        """
+        frame = decode_barcode(payload)
+        key, text = frame["capture_id"], frame["text"]
+        with self._lock:
+            self._binary = {k:v for k,v in self._binary.items() if v in self._records}
+            ident = self._binary.get(key)
+            if ident is None:
+                record = self._new("barcode_trace_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt")
+                self._binary[key] = record.id
+            else:
+                record = self._records[ident]
+            # Duplicated metadata must not create a second run or an error.
+            if text+"\n" in record.chunks:
+                return frame
+            self._append(record, text+"\n")
+            return frame
 
     def list(self) -> list[dict]:
         with self._lock:

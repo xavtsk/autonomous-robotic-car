@@ -164,7 +164,7 @@
     $('robot-state').dataset.active = String(['line_following', 'turning_left', 'turning_right', 'uturn', 'avoiding_obstacle'].includes(reported));
     const diagnostic=state?.diagnostics?.controller;
     const diagnosticReason=diagnostic?.latest?.data?.reason;
-    const detailedReasons=['OK','IR sensor fault','Motor / encoder fault','Motion request rejected','Line lost','Missing direction / duplicate barcode','Barcode not mapped','Controller timeout','Motion report fault','Bad input'];
+    const detailedReasons=['OK','IR sensor fault','Motor / encoder fault','Motion request rejected','Line lost','Missing direction / duplicate barcode','Barcode not mapped','Controller timeout','Motion report fault','Bad input','Terrain / IMU fault'];
     $('robot-state-detail').textContent = reported ? `${received(stateSection)}. ${diagnostic?.received ? `Controller: ${detailedReasons[diagnosticReason]} · ${diagnostic.stale?'stale · ':''}${age(diagnostic.age_s)}.` : 'Detailed controller reason requires updated diagnostic firmware.'}` : 'No valid state message received yet.';
     const rows = [
       ['Left wheel speed', field('motion', 'left_mms'), 'mm/s', 'motion'],
@@ -247,7 +247,7 @@
     const cd = controller?.latest?.data;
     const cdAge = cd ? `${controller.stale ? 'Stale · ' : ''}${age(controller.age_s)} · diagnostic snapshot` : 'Requires updated IR_DEBUG=1 firmware';
     const driveStates = ['Off','Following','Braking','Manoeuvre','Reacquiring','Halted','Fault'];
-    const reasons = ['OK','IR sensor fault','Motor / encoder fault','Motion request rejected','Line lost','Missing direction / duplicate barcode','Barcode not mapped','Controller timeout','Motion report fault','Bad input'];
+    const reasons = ['OK','IR sensor fault','Motor / encoder fault','Motion request rejected','Line lost','Missing direction / duplicate barcode','Barcode not mapped','Controller timeout','Motion report fault','Bad input','Terrain / IMU fault'];
     const pendingActions = ['None','Left','Right','Straight','U-turn'];
     const faultGroup = names => {
       const active = field('faults', 'active');
@@ -283,7 +283,7 @@
           commonState,
           ['Motor / encoder fault bits', faultGroup(['motor_stall', 'encoder_fault']), source('faults'), 'faults']
         ],
-        unavailable: 'Updated IR_DEBUG=1 firmware supplies coherent ramped PID setpoint, measured speed, last signed motor duty, encoder counts and brake acknowledgement at up to 5 Hz. The setpoint is not the raw speed request. Original v2 wheel reports use 2 mm/s steps. PID component terms and stop latency are still unavailable; zero speed alone does not acknowledge braking.'
+        unavailable: 'Updated IR_DEBUG=1 firmware supplies coherent ramped PID setpoint, measured speed, last signed motor duty, encoder counts and brake acknowledgement at up to 5 Hz. The setpoint is not the raw speed request. Wheel reports use 2 mm/s steps. PID component terms and stop latency are still unavailable; zero speed alone does not acknowledge braking.'
       },
       '3': {
         title: 'Buddy 3 · Line / barcode', description: 'Inspect decoded letters, assigned actions and the sensor trace behind a missed barcode.',
@@ -361,7 +361,8 @@
     packets.forEach(packet => {
       const row = element('li');
       const heading = element('div', undefined, 'packet-heading');
-      heading.append(element('time', formatTime(packet.time)), element('span', `${(packet.hex || '').length / 2} bytes · ${packet.decode_error ? 'Rejected' : 'Decoded v2'}`, packet.decode_error ? 'warning-text' : ''));
+      const wireVersion = Number.parseInt((packet.hex || '').slice(0, 2), 16);
+      heading.append(element('time', formatTime(packet.time)), element('span', `${(packet.hex || '').length / 2} bytes · ${packet.decode_error ? 'Rejected' : `Decoded v${wireVersion}`}`, packet.decode_error ? 'warning-text' : ''));
       row.append(heading, element('p', packet.topic, 'packet-topic'), element('pre', `HEX  ${packet.hex || '—'}\n${packet.decode_error ? 'ERROR  ' + packet.decode_error : JSON.stringify(packet.decoded, null, 2)}`));
       fragment.append(row);
     });

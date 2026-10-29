@@ -2,7 +2,7 @@
 
 `IR_DEBUG=1 S3_MOTION=1 MQTT=1` enables observation of the existing three-channel
 scan; default is off. It does not change motor/PID, line following, calibration,
-barcode decoding, start/stop or mapping decisions. Buddy 1 telemetry protocol v2
+barcode decoding, start/stop or mapping decisions. Buddy 1 telemetry protocol v3
 and its caches/commands remain unchanged.
 
 Topic: `car/debug/ir`. Exactly **16 binary bytes**, QoS 0, retain 0. Byte 0 is
@@ -62,6 +62,11 @@ higher-rate BCAP upload for detailed decoding analysis. On-car control timing,
 stack use and Wi-Fi behaviour with the stream enabled remain hardware checks.
 
 ## Controller/buddy debug snapshot, version 1
+
+28 October integration update: reason 10 is terrain/IMU fault; 11–15 remain
+reserved. Firmware, independent laptop decoder and the UI agree on this value.
+The packet remains 70 bytes, including the existing 4-bit reason field. Live
+previews remain optional (`IR_DEBUG=1`), latest-only and below ordinary telemetry.
 
 The same optional build also publishes `car/debug/controller`, exactly **70
 bytes**, QoS 0, retain 0, capped at **5 Hz**. Byte 0 is version 1; the body

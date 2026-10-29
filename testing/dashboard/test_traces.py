@@ -1,5 +1,4 @@
 """Trace handling tests use the actual firmware text format, without hardware."""
-import importlib.util
 from pathlib import Path
 import sys
 import tempfile
@@ -7,10 +6,8 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location("dashboard_traces", ROOT / "tools/dashboard/traces.py")
-traces = importlib.util.module_from_spec(spec)
-sys.modules[spec.name] = traces
-spec.loader.exec_module(traces)
+sys.path.insert(0, str(ROOT / "tools"))
+from dashboard import traces
 
 SUMMARY = "[BCAP] run summary: episodes=1 not_stored=7 decoded=1 letters=Z rejected=0 timing_error=0 overflow=0 | raw:dark4:flags:mm:dt\n"
 FULL = SUMMARY + "[BCAP] episode 1 t=20ms samples=3\nBC1 0: 100:0:1:0:9 3500:250:34:1:10 200:4:5:2:0\n[BCAP] end\n"

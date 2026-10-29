@@ -19,7 +19,8 @@ FIELDS = [
 DRIVE_STATES = ("off","following","braking","manoeuvre","reacquiring","halted","fault")
 REASONS = ("OK","IR sensor fault","motor / encoder fault",
            "motion request rejected","line lost","junction without a direction / duplicate barcode",
-           "barcode letter not mapped","controller timeout","motion report fault","bad input")
+           "barcode letter not mapped","controller timeout","motion report fault","bad input",
+           "terrain / IMU fault")
 MOTION_STATES = ("idle","velocity","drive","turn","complete","fault")
 MOTION_FAULTS = ("none","stall","stale command","encoder","direction","timeout")
 ACTIONS = ("none","left","right","straight","u-turn")
@@ -28,7 +29,7 @@ BARCODE_STATUS = ("none","decoded","rejected","timing error","overflow")
 
 def validate(d):
     for name, maximum in (("motion_state",5),("motion_fault",5),("drive_state",6),
-                          ("reason",9),("pending",4),("barcode_status",4),("cal_sensor",2)):
+                          ("reason",10),("pending",4),("barcode_status",4),("cal_sensor",2)):
         if d[name] > maximum:
             raise ValueError("Reserved controller diagnostic value")
     if abs(d["line_error"]) > 100 or abs(d["duty_left"]) > 100 or abs(d["duty_right"]) > 100:

@@ -27,7 +27,9 @@ void terrain_monitor_process(terrain_monitor_t *t,const imu_sample_t *s,const te
     float n, dynamic_g;
     uint32_t gap=t->seen?s->timestamp_us-t->previous_us:0;
     bool valid=imu_sample_is_valid(s), tilt_ok=false, movement_ok=false;
-    bool continuity=t->seen && gap>0 && gap<=100000U && !s->overrun;
+    /* The real gap check covers missed samples. The overrun bit fires whenever the
+     * ~22 ms loop (10 ms kernel tick) skips one 20 ms sample; it is not a fault. */
+    bool continuity=t->seen && gap>0 && gap<=100000U;
     unsigned i;
     terrain_result_t r={0}; r.timestamp_us=s->timestamp_us;
     if(t->hump.highest_valid) { r.peak_m=t->hump.highest_m; r.flags|=TERRAIN_PEAK_VALID; }

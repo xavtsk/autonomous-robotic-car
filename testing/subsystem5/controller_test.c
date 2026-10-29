@@ -135,7 +135,8 @@ static void heartbeat(bool enabled)
 static s3_drive_t drive;
 static s5_observation_t obstacle;
 static bool scanning_requested, range_bad, recovery_tape=true;
-static unsigned scan_calls;
+static unsigned scan_calls, peek_calls, peek_beside; /* peeks that still see the obstacle */
+static unsigned peek_angle;
 static int turn_sign=1;
 static s5_snapshot_result_t snapshot_result;
 static uint32_t sample_age_us;
@@ -150,7 +151,11 @@ bool subsystem5_request_scan(uint16_t id) {
     assert(motion_controller_is_stopped());scan_calls++;scanning_requested=true;
     obstacle.scan_id=id;return true;
 }
-void subsystem5_cancel_scan(void) { scanning_requested=false; }
+bool subsystem5_request_peek(uint16_t id,unsigned angle) {
+    assert(motion_controller_is_stopped());peek_calls++;peek_angle=angle;
+    obstacle.scan_id=id;return true;
+}
+void subsystem5_cancel_scan(void) { scanning_requested=false;peek_angle=0; }
 void subsystem5_set_controller_status(unsigned s,unsigned f,unsigned r) { (void)s;(void)f;(void)r; }
 uint8_t subsystem5_controller_status(void) { return 0; }
 motion_result_t motion_request_drive(float metres,float speed) {
@@ -170,6 +175,12 @@ static void tick(uint16_t barcode, uint16_t left, uint16_t right, bool valid)
     now += 10000U;
     obstacle.range_us=now;obstacle.range_valid=!range_bad;
     if(range_bad) { obstacle.range_mm=0;obstacle.no_echo=true; }
+    if(peek_angle) { /* one side reading: obstacle still beside (200 mm) or clear */
+        unsigned side=peek_beside?200U:2000U; if(peek_beside) { peek_beside--; }
+        obstacle.scan_done=true;obstacle.scan_us=now;
+        if(peek_angle<90U) { obstacle.profile.right_clear_mm=(uint16_t)side; } else { obstacle.profile.left_clear_mm=(uint16_t)side; }
+        peek_angle=0;
+    }
     if(scanning_requested) {
         obstacle.scan_done=true;obstacle.scan_us=now;
         obstacle.profile=(s5_profile_t){250,100,2000,2000,50,-50,250,true};
@@ -226,7 +237,7 @@ static void init(bool calibrated)
     imu_run=0; imu_impact=false; terrain_control_init();
 #endif
     obstacle=(s5_observation_t){.range_mm=2000,.range_valid=true};
-    scan_calls=0;scanning_requested=range_bad=false;recovery_tape=true;
+    scan_calls=peek_calls=peek_beside=peek_angle=0;scanning_requested=range_bad=false;recovery_tape=true;
     lease = false;
     epoch = 1U;
     reject_velocity = false;
@@ -312,12 +323,12 @@ static void snapshot_contention(void)
     init(true);start();drive.obstacle_snapshot_valid=false;snapshot_result=S5_SNAPSHOT_BUSY;
     simulate();assert(drive.state==S3_DRIVE_FAULT);
     /* Active avoidance gets the same grace, without dropping a DONE event. */
-    init(true);start();obstacle.range_mm=200;simulate();
+    init(true);start();obstacle.range_mm=120;simulate();
     for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
     assert(drive.obstacle.issued);snapshot_result=S5_SNAPSHOT_BUSY;simulate();
     assert(drive.obstacle_active && drive.state==S3_DRIVE_MANOEUVRE);
     s3_drive_stop(&drive);assert(!drive.obstacle_active && !drive.obstacle_snapshot_valid && !lease);
-    init(true);start();obstacle.range_mm=200;simulate();
+    init(true);start();obstacle.range_mm=120;simulate();
     for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
     snapshot_result=S5_SNAPSHOT_BUSY;
     for(unsigned i=0;i<30 && drive.state!=S3_DRIVE_FAULT;i++) { simulate(); }
@@ -327,7 +338,7 @@ static void snapshot_contention(void)
 int main(void)
 {
     snapshot_contention();
-    init(true);start();obstacle.range_mm=200;
+    init(true);start();obstacle.range_mm=120;peek_beside=2;
     tick(150,202,202,true);
     assert(drive.obstacle_active && drive.obstacle.state==S5_WAIT_STOP && scan_calls==0);
     /* Actual controller applies STOP and produces its matching cancellation. */
@@ -339,17 +350,20 @@ int main(void)
     snapshot_result=S5_SNAPSHOT_OK;
     assert(drive.state==S3_DRIVE_FOLLOW && !drive.obstacle_active && scan_calls==1);
     assert(drive.obstacle.recovery.confirmed && drive.navigation.mode==S3_MODE_TRACK);
-    assert(polls==7 && turns==0); /* seven S5 finite moves, no barcode manoeuvre */
+    /* Leg 3 measured the depth: 3 side peeks (2 still beside, 1 clear), 2 steps. */
+    assert(peek_calls==3 && drive.obstacle.searched_mm==2U*S5_PEEK_STEP_MM);
+    /* 3 turns + out + approach + 2 steps + clearance + back = 10 finite moves, no barcode manoeuvre */
+    assert(polls==10 && turns==0);
     s3_drive_stop(&drive);assert(!drive.obstacle_active && !lease);
     init(true);start();range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT && !lease);
-    init(true);start();obstacle.range_mm=200;simulate();s3_drive_stop(&drive);simulate();
+    init(true);start();obstacle.range_mm=120;simulate();s3_drive_stop(&drive);simulate();
     assert(drive.state==S3_DRIVE_OFF && !drive.obstacle_active && scan_calls==0);
-    init(true);start();obstacle.range_mm=200;simulate();report_losses++;simulate();assert(drive.state==S3_DRIVE_FAULT && drive.obstacle.state==S5_FAULT && drive.obstacle.fault==S5_INTERRUPTED);
-    init(true);start();obstacle.range_mm=200;simulate();
+    init(true);start();obstacle.range_mm=120;simulate();report_losses++;simulate();assert(drive.state==S3_DRIVE_FAULT && drive.obstacle.state==S5_FAULT && drive.obstacle.fault==S5_INTERRUPTED);
+    init(true);start();obstacle.range_mm=120;simulate();
     for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
     assert(drive.obstacle.issued);range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT);
 #if APP_S4
-    init(true);start();obstacle.range_mm=200;simulate();
+    init(true);start();obstacle.range_mm=120;simulate();
     for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
     assert(drive.obstacle_active && drive.obstacle.issued);
     imu_impact=true;simulate();
@@ -360,5 +374,5 @@ int main(void)
     assert(motion_controller_is_stopped());
     puts("PASS: IMU impact cancels an active S5 bypass through the sole controller and brakes Buddy 2");
 #endif
-    puts("PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, seven-leg bypass, real tape gate, STOP, stale range and report loss");
+    puts("PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, bypass with side-peek depth search, real tape gate, STOP, stale range and report loss");
 }
