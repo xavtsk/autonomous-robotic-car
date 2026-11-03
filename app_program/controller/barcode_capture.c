@@ -82,7 +82,9 @@ void bcap_record(bcap_t *c, const bcap_input_t *in)
     else if (in->status == 3U) { c->timing++; }
     else if (in->status == 4U) { c->overflow++; }
 
-    if (!c->active && (in->surface == 2U)) /* IR_SURFACE_BLACK */
+    /* Start on BLACK, or as soon as a barcode reader starts collecting: the
+     * record-then-decide reader starts on bars too faint to read BLACK. */
+    if (!c->active && ((in->surface == 2U) || in->collecting)) /* IR_SURFACE_BLACK */
     {
         if ((c->episodes >= BCAP_MAX_EPISODES) ||
             ((c->used + c->pre_count + 1U) > BCAP_POOL))
@@ -125,7 +127,8 @@ void bcap_record(bcap_t *c, const bcap_input_t *in)
             e->count++;
         }
         c->quiet = (in->surface == 1U) ? (uint16_t)(c->quiet + 1U) : 0U; /* WHITE */
-        if ((c->quiet >= BCAP_END_QUIET) || (c->used >= BCAP_POOL))
+        /* Keep one barcode in one episode: not while a reader still collects. */
+        if (((c->quiet >= BCAP_END_QUIET) && !in->collecting) || (c->used >= BCAP_POOL))
         {
             close_episode(c);
             c->pre_count = 0U; /* the next pre-trigger window starts afresh */

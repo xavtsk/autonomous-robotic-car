@@ -66,6 +66,13 @@ bool s3_navigation_init(s3_navigation_t *context,
     context->configured = true;
     return true;
 }
+/* Both barcode readers restart together so one barcode never gives two letters. */
+static void reset_barcode(s3_navigation_t *context)
+{
+    s3_barcode_reset(&context->barcode);
+    s3_barcode_record_reset(&context->barcode_record);
+    context->barcode_held = 0U;
+}
 static void begin_rearm(s3_navigation_t *context)
 {
     context->rearming = true;
@@ -73,7 +80,7 @@ static void begin_rearm(s3_navigation_t *context)
     context->rearm_anchor_valid = context->odometry_available;
     context->rearm_anchor_m = context->odometry.centre_m;
     context->rearm_epoch = context->odometry.epoch;
-    s3_barcode_reset(&context->barcode);
+    reset_barcode(context);
 }
 bool s3_navigation_set_mode(s3_navigation_t *context, s3_processing_mode_t mode)
 {
@@ -85,7 +92,7 @@ bool s3_navigation_set_mode(s3_navigation_t *context, s3_processing_mode_t mode)
     if (context->mode != mode)
     {
         s3_line_reset(&context->line);
-        s3_barcode_reset(&context->barcode);
+        reset_barcode(context);
         context->capture_distance = (s3_capture_distance_t){0};
         if (context->lifecycle == S3_RUN_ACTIVE)
         {
@@ -116,7 +123,7 @@ bool s3_navigation_apply_calibration(
     context->valid_sensors &= (uint8_t)~S3_SENSOR_BIT(id);
     (void)ir_reflectance_init(&context->sensor[id], &candidate);
     s3_line_reset(&context->line);
-    s3_barcode_reset(&context->barcode);
+    reset_barcode(context);
     return true;
 }
 bool s3_navigation_set_mapping(s3_navigation_t *context,
@@ -195,7 +202,7 @@ bool s3_navigation_start(s3_navigation_t *context, uint32_t now_us)
     }
     context->lifecycle = S3_RUN_ACTIVE;
     s3_line_reset(&context->line);
-    s3_barcode_reset(&context->barcode);
+    reset_barcode(context);
     context->capture_distance = (s3_capture_distance_t){0};
     context->rearming = false;
     return true;
@@ -210,7 +217,7 @@ bool s3_navigation_end_run(s3_navigation_t *context)
     context->lifecycle = S3_RUN_INACTIVE;
     context->rearming = false;
     s3_line_reset(&context->line);
-    s3_barcode_reset(&context->barcode);
+    reset_barcode(context);
     context->capture_distance = (s3_capture_distance_t){0};
     return true;
 }
@@ -290,12 +297,64 @@ static void process_barcode(s3_navigation_t *context,
     {
         return;
     }
-    was_collecting = context->barcode.collecting;
-    output->barcode_status = s3_barcode_update(
-        &context->barcode, frame->sensor[S3_SENSOR_BARCODE].timestamp_us,
-        barcode->valid && (barcode->surface != IR_SURFACE_UNKNOWN),
-        barcode->surface == IR_SURFACE_BLACK, &output->barcode);
-    if (!was_collecting && context->barcode.collecting)
+    was_collecting = context->barcode.collecting ||
+                     s3_barcode_record_active(&context->barcode_record);
+    {
+        const uint32_t t = frame->sensor[S3_SENSOR_BARCODE].timestamp_us;
+        s3_barcode_result_t live_result, rec_result;
+        s3_barcode_status_t live = s3_barcode_update(
+            &context->barcode, t,
+            barcode->valid && (barcode->surface != IR_SURFACE_UNKNOWN),
+            barcode->surface == IR_SURFACE_BLACK, &live_result);
+        s3_barcode_status_t rec = s3_barcode_record_update(
+            &context->barcode_record, &context->config.barcode, t,
+            barcode->valid, barcode->darkness, &rec_result);
+        output->barcode_status = S3_BARCODE_NONE;
+        if (live == S3_BARCODE_DECODED)
+        {   /* First reader to decode wins; the other restarts. */
+            output->barcode_status = live;
+            output->barcode = live_result;
+            s3_barcode_record_reset(&context->barcode_record);
+            context->barcode_held = 0U;
+        }
+        else if (rec == S3_BARCODE_DECODED)
+        {
+            output->barcode_status = rec;
+            output->barcode = rec_result;
+            s3_barcode_reset(&context->barcode);
+            context->barcode_held = 0U;
+        }
+        else
+        {
+            if (live != S3_BARCODE_NONE)
+            {   /* e.g. a faint bar never crossed the fixed limits: let the
+                 * recorder, still reading this barcode, have its say first. */
+                if (s3_barcode_record_active(&context->barcode_record))
+                {
+                    context->barcode_held = (uint8_t)live;
+                }
+                else
+                {
+                    output->barcode_status = live;
+                }
+            }
+            if ((rec != S3_BARCODE_NONE) && !context->barcode.collecting &&
+                !context->barcode.pending)
+            {   /* Recorder failed and the live decoder is idle: report. */
+                output->barcode_status = (context->barcode_held != 0U) ?
+                    (s3_barcode_status_t)context->barcode_held : rec;
+                context->barcode_held = 0U;
+            }
+            else if ((context->barcode_held != 0U) &&
+                     !s3_barcode_record_active(&context->barcode_record))
+            {
+                output->barcode_status = (s3_barcode_status_t)context->barcode_held;
+                context->barcode_held = 0U;
+            }
+        }
+    }
+    if (!was_collecting && (context->barcode.collecting ||
+                            s3_barcode_record_active(&context->barcode_record)))
     {
         context->capture_distance = (s3_capture_distance_t){0};
         if (context->odometry_available)
@@ -424,7 +483,7 @@ static void process_health(s3_navigation_t *context,
         context->lifecycle = S3_RUN_FAULT_LATCHED;
         context->latched_faults = context->current_faults;
         output->events |= S3_EVENT_SENSOR_FAULT;
-        s3_barcode_reset(&context->barcode);
+        reset_barcode(context);
         context->capture_distance = (s3_capture_distance_t){0};
     }
     else if (context->lifecycle == S3_RUN_FAULT_LATCHED)

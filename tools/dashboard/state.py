@@ -13,6 +13,8 @@ from .debug_history import DebugHistory
 from .route import RouteTracker
 
 POSE_TOPIC = "car/telemetry/pose"
+TILT_TOPIC = "car/telemetry/tilt"
+LIVE_SECTIONS = ("motion", "tilt")  # periodic 5 Hz streams: stale after MOTION_TIMEOUT
 
 HEARTBEAT_TOPIC = "mtk3smp-pico/heartbeat"
 COMMAND_TIMEOUT = 8.0
@@ -37,7 +39,7 @@ class DashboardState:
         self.last_car = self.last_heartbeat = None
         self.sections = {name: dict(valid=False, data={}, received_at=None,
                                     source="unavailable", mono=None)
-                         for name in NAMES}
+                         for name in NAMES + ("tilt",)}
         self.commands = {"map": self._idle(), "snapshot": self._idle(),
                          "map_lock": "unknown"}
         self.events = deque(maxlen=160)
@@ -187,6 +189,21 @@ class DashboardState:
                                               hex=payload.hex(), decoded=decoded))
                 self.route.pose(decoded["distance_cm_mod"], decoded["heading_deg"], timestamp())
                 return
+            if topic == TILT_TOPIC:
+                try:
+                    decoded = decode(topic, payload)
+                except (ValueError, TypeError) as exc:
+                    self.counters["malformed"] += 1
+                    self.add_event(4, "warning", f"Rejected {topic}: {exc}")
+                    return
+                self.last_car = self.clock()
+                self.counters["received"] += 1
+                self.counters["bytes_received"] += len(payload)
+                self.debug.receive(len(payload))
+                self.history.appendleft(dict(time=timestamp(), topic=topic,
+                                              hex=payload.hex(), decoded=decoded))
+                self._update("tilt", decoded)
+                return
             is_heartbeat = topic in ("car/status", self.heartbeat_topic)
             if not is_heartbeat and topic not in {"car/reply/snapshot", "car/reply/barcode_map"} and not (
                     topic.startswith("car/telemetry/") and topic.rsplit("/", 1)[-1] in NAMES):
@@ -277,9 +294,9 @@ class DashboardState:
             for name, section in self.sections.items():
                 item = {k: deepcopy(v) for k, v in section.items() if k != "mono"}
                 item["age_s"] = None if section["mono"] is None else round(max(0, now - section["mono"]), 2)
-                item["stale"] = not online or (name == "motion" and item["age_s"] is not None and item["age_s"] > MOTION_TIMEOUT)
+                item["stale"] = not online or (name in LIVE_SECTIONS and item["age_s"] is not None and item["age_s"] > MOTION_TIMEOUT)
                 item["freshness"] = ("unavailable" if section["mono"] is None else "invalid" if not item["valid"]
-                                     else "cached" if item["source"] == "snapshot" else "live" if name == "motion"
+                                     else "cached" if item["source"] == "snapshot" else "live" if name in LIVE_SECTIONS
                                      else "last_report")
                 if item["source"] == "snapshot":
                     item["stale"] = True
@@ -352,6 +369,7 @@ class DashboardState:
             if t-self._demo_control_last >= 0.2:
                 self._demo_control_last = t
                 self._demo_pose(t, active)
+                self._demo_tilt(t, active)
                 following = self.demo_scenario in {"following","barcode"}
                 fault = self.demo_scenario == "fault"
                 v = dict(timestamp_us=int(t*1e6)&0xffffffff,motion_timestamp_us=int(t*1e6)&0xffffffff,
@@ -373,6 +391,15 @@ class DashboardState:
                     self._demo_encoders[i]=((self._demo_encoders[i]+round(v["measured_"+c]*2.4)+524288)%1048576)-524288
                     v["encoder_"+c]=self._demo_encoders[i]
                 self.ingest(CONTROL_TOPIC,encode_control(**v))
+
+    def _demo_tilt(self, t, active):
+        """Simulated Buddy 4 tilt: a gentle hump every 15 s while following."""
+        phase = t % 15.0
+        pitch = round(80 * math.sin((phase - 5) / 3 * 2 * math.pi)) if active and 5 < phase < 8 else 0
+        roll = round(15 * math.sin(t * 0.7)) if active else 0
+        terrain = (5 if pitch > 40 else 6 if pitch < -40 else 2) if active else 1
+        body = 1 | ((pitch & 0x7ff) << 1) | ((roll & 0x7ff) << 12) | (terrain << 23)
+        self.ingest(TILT_TOPIC, bytes([VERSION]) + body.to_bytes(4, "little"))
 
     def _demo_pose(self, t, active):
         """Simulated pose on an oval: 60 cm straights, 15 cm radius ends, 4 cm/s."""

@@ -7,13 +7,14 @@ _Static_assert(BUDDY1_FAULT_MASK == (1U << BUDDY1_FAULT_BITS) - 1U,
 static const uint8_t body_bits[BUDDY1_TOPIC_COUNT] = {
     18, 8, 25, 9, 26, 3, BUDDY1_FAULT_BITS,
     96U + BUDDY1_FAULT_BITS, 2, 2U + BUDDY1_FAULT_BITS,
-    BUDDY1_POSE_DISTANCE_BITS + 9U
+    BUDDY1_POSE_DISTANCE_BITS + 9U,
+    1U + 2U * BUDDY1_TILT_BITS + 3U
 };
 static const char *const topics[BUDDY1_TOPIC_COUNT] = {
     "car/telemetry/motion", "car/telemetry/barcode", "car/telemetry/hump",
     "car/telemetry/heading", "car/telemetry/obstacle", "car/telemetry/state",
     "car/telemetry/faults", "car/reply/snapshot", "car/reply/barcode_map", "car/status",
-    "car/telemetry/pose"
+    "car/telemetry/pose", "car/telemetry/tilt"
 };
 _Static_assert(BUDDY1_TOPIC_COUNT <= 16U, "outbox topic selector is four bits");
 
@@ -116,6 +117,18 @@ static int write_fields(uint8_t topic, const BUDDY1_SNAPSHOT *v,
         put(p, bit, v->pose_distance_cm, BUDDY1_POSE_DISTANCE_BITS);
         put(p, bit, (uint32_t)v->pose_heading_deg, 9);
         return 1;
+    case BUDDY1_TOPIC_TILT:
+        if (v->tilt_terrain >= BUDDY1_TERRAIN_STATES) return 0;
+        if (v->tilt_valid) {
+            if (v->tilt_pitch_x10 < -BUDDY1_TILT_LIMIT_X10 || v->tilt_pitch_x10 > BUDDY1_TILT_LIMIT_X10 ||
+                v->tilt_roll_x10 < -BUDDY1_TILT_LIMIT_X10 || v->tilt_roll_x10 > BUDDY1_TILT_LIMIT_X10) return 0;
+        } else if (v->tilt_pitch_x10 != 0 || v->tilt_roll_x10 != 0) return 0; /* canonical zero */
+        put(p, bit, v->tilt_valid != 0U, 1);
+        /* Two's complement in 11 bits. */
+        put(p, bit, (uint32_t)(int32_t)v->tilt_pitch_x10 & 0x7FFU, BUDDY1_TILT_BITS);
+        put(p, bit, (uint32_t)(int32_t)v->tilt_roll_x10 & 0x7FFU, BUDDY1_TILT_BITS);
+        put(p, bit, v->tilt_terrain, 3);
+        return 1;
     default: return 0;
     }
 }
@@ -163,6 +176,17 @@ static int read_fields(uint8_t topic, const uint8_t *p, unsigned *bit,
         v->pose_distance_cm = (uint16_t)get(p, bit, BUDDY1_POSE_DISTANCE_BITS);
         v->pose_heading_deg = (int16_t)get(p, bit, 9);
         v->pose_valid = 1; return v->pose_heading_deg <= 359;
+    case BUDDY1_TOPIC_TILT: {
+        uint32_t pitch, roll;
+        v->tilt_valid = (uint8_t)get(p, bit, 1);
+        pitch = get(p, bit, BUDDY1_TILT_BITS); roll = get(p, bit, BUDDY1_TILT_BITS);
+        v->tilt_pitch_x10 = (int16_t)((pitch & 0x400U) ? (int32_t)pitch - 0x800 : (int32_t)pitch);
+        v->tilt_roll_x10 = (int16_t)((roll & 0x400U) ? (int32_t)roll - 0x800 : (int32_t)roll);
+        v->tilt_terrain = (uint8_t)get(p, bit, 3);
+        if (!v->tilt_valid) return v->tilt_pitch_x10 == 0 && v->tilt_roll_x10 == 0;
+        return v->tilt_pitch_x10 >= -BUDDY1_TILT_LIMIT_X10 && v->tilt_pitch_x10 <= BUDDY1_TILT_LIMIT_X10 &&
+               v->tilt_roll_x10 >= -BUDDY1_TILT_LIMIT_X10 && v->tilt_roll_x10 <= BUDDY1_TILT_LIMIT_X10;
+    }
     default: return 0;
     }
 }

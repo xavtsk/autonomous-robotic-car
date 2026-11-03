@@ -188,3 +188,237 @@ s3_barcode_status_t s3_barcode_update(s3_barcode_decoder_t *decoder,
     }
     return S3_BARCODE_NONE;
 }
+
+/* ---- Record-then-decide reader ------------------------------------------ */
+#define REC_DARK(r,i) ((unsigned int)((r)->sample[i] & 0x3FFU))
+#define REC_STEP_US(r,i) ((uint32_t)((r)->sample[i] >> 10) * S3_REC_STEP_US)
+void s3_barcode_record_reset(s3_barcode_record_t *record)
+{
+    if (record != 0) { *record=(s3_barcode_record_t){0}; }
+}
+bool s3_barcode_record_active(const s3_barcode_record_t *record)
+{
+    return (record != 0) && (record->state != (uint16_t)S3_REC_WAITING);
+}
+/* Elapsed time as a 6-bit step, carrying the rounding remainder forward so
+ * summed steps track real time. False when the gap does not fit (stall). */
+static bool rec_step(s3_barcode_record_t *r, uint32_t gap_us, uint16_t *step)
+{
+    uint32_t total=gap_us+r->residual_us, units=total/S3_REC_STEP_US;
+    if ((gap_us == 0U) || (units > S3_REC_STEP_MAX)) { return false; }
+    r->residual_us=(uint16_t)(total-units*S3_REC_STEP_US);
+    *step=(uint16_t)units;
+    return true;
+}
+static bool rec_white(const s3_barcode_record_t *r, unsigned int dark)
+{
+    return dark <= (unsigned int)r->paper + S3_REC_WHITE_BAND;
+}
+static uint32_t sat_add(uint32_t a, uint32_t b)
+{
+    return (a > 0x7FFFFFFFU - b) ? 0x7FFFFFFFU : a + b;
+}
+/* Edge time where the readings cross mid between samples i and i+1. */
+/* How far reading d still sits at the start level lo of a segment that ends
+ * at level hi: 1024 = still at lo, 0 = already at hi. */
+static uint32_t rec_frac(unsigned int d, unsigned int lo, unsigned int hi)
+{
+    int32_t num=(int32_t)d-(int32_t)hi, den=(int32_t)lo-(int32_t)hi;
+    int32_t f=(den == 0) ? 0 : (int32_t)(((int64_t)num*1024)/den);
+    return (f < 0) ? 0U : ((f > 1024) ? 1024U : (uint32_t)f);
+}
+unsigned int s3_barcode_record_runs(const s3_barcode_record_t *record,
+    uint32_t runs[S3_BARCODE_RUNS], uint32_t *first_edge_us,
+    uint32_t *last_edge_us, uint32_t *end_us, uint32_t *max_step_us)
+{
+    /* Alternating dip, bump, dip, ... indices; 15 bars need 31 extremes. */
+    uint16_t ext[S3_REC_EXT_MAX];
+    uint32_t edge_prev=0U, t=0U;
+    unsigned int n=1U, best=0U, i, k=0U, edges=0U;
+    bool rising=true;
+    if ((record == 0) || (runs == 0) || (first_edge_us == 0) || (last_edge_us == 0) ||
+        (end_us == 0) || (max_step_us == 0) || (record->count < 3U)) { return 0U; }
+    *max_step_us=0U;
+    ext[0]=0U;
+    for (i=1U; i<record->count; i++) {
+        unsigned int d=REC_DARK(record,i), b=REC_DARK(record,best);
+        if (REC_STEP_US(record,i) > *max_step_us) { *max_step_us=REC_STEP_US(record,i); }
+        if (rising ? (d > b) : (d < b)) { best=i; }
+        else if ((rising ? b-d : d-b) >= S3_REC_PROMINENCE) {
+            if (n >= S3_REC_EXT_MAX-1U) { return 0U; }   /* far too many stripes */
+            ext[n++]=(uint16_t)best; best=i; rising=!rising;
+        }
+    }
+    if (!rising) { ext[n++]=(uint16_t)best; }  /* dip after the last bump */
+    if (n < 3U) { return 0U; }                 /* no complete bar */
+    /* A sag or scratch inside a wide bar (or a smudge inside a wide gap)
+     * adds an extra dip/bump pair. While there are more than 31 extremes,
+     * drop the neighbouring interior pair that is "smallest" = height times
+     * time apart: a wiggle is shallow or brief, a real stripe is deep and
+     * about one narrow module long. The strict Code 39 checks still have to
+     * pass afterwards, so a wrong trim gives a rejection, not a wrong letter. */
+    while (n > S3_BARCODE_RUNS+2U) {
+        unsigned int j, m, cut=1U;
+        uint64_t small=UINT64_MAX;
+        for (j=1U; j+2U < n; j++) {
+            unsigned int a=REC_DARK(record,ext[j]), b=REC_DARK(record,ext[j+1U]);
+            uint64_t span=0U, size;
+            for (m=(unsigned int)ext[j]+1U; m<=(unsigned int)ext[j+1U]; m++) { span+=REC_STEP_US(record,m); }
+            size=(uint64_t)((a > b) ? a-b : b-a)*span;
+            if (size < small) { small=size; cut=j; }
+        }
+        for (j=cut; j+2U < n; j++) { ext[j]=ext[j+2U]; }
+        n-=2U;
+    }
+    /* Edges. Between two neighbouring extremes the reading moves from level
+     * lo to level hi. Estimate: where the time spent "still at lo" (each
+     * sample weighted by how close it is to lo) runs out - a brief scratch
+     * only shifts this by its own short width. The edge is then the crossing
+     * of the halfway level nearest that estimate: exact for a blurred step,
+     * not fooled by a scratch, and not pulled into a grey shelf (a bar that
+     * reads half grey, half black) as the estimate alone would be. */
+    {
+        uint32_t t_lo=0U; uint64_t at_lo=0U;
+        for (i=1U; i<record->count; i++) {
+            uint32_t step=REC_STEP_US(record,i);
+            t+=step;
+            if (k+1U < n) {
+                unsigned int lo=REC_DARK(record,ext[k]), hi=REC_DARK(record,ext[k+1U]);
+                at_lo+=((uint64_t)step*(rec_frac(REC_DARK(record,i-1U),lo,hi)+
+                                        rec_frac(REC_DARK(record,i),lo,hi)))/2048U;
+                if (i == (unsigned int)ext[k+1U]) {
+                    const uint32_t guess=t_lo+(uint32_t)at_lo;
+                    const unsigned int mid=(lo+hi)/2U;
+                    const bool up=hi > lo;
+                    uint32_t edge=guess, best_off=UINT32_MAX, tj=t_lo;
+                    unsigned int j;
+                    for (j=(unsigned int)ext[k]; j<i; j++) {
+                        unsigned int a=REC_DARK(record,j), b=REC_DARK(record,j+1U);
+                        uint32_t sj=REC_STEP_US(record,j+1U);
+                        if ((up && (a < mid) && (b >= mid)) || (!up && (a > mid) && (b <= mid))) {
+                            uint32_t x=tj+(uint32_t)(((uint64_t)sj*(uint32_t)(up ? mid-a : a-mid))/
+                                                     (uint32_t)(up ? b-a : a-b));
+                            uint32_t off=(x > guess) ? x-guess : guess-x;
+                            if (off < best_off) { best_off=off; edge=x; }
+                        }
+                        tj+=sj;
+                    }
+                    if (edges == 0U) { *first_edge_us=edge; }
+                    else { runs[edges-1U]=edge-edge_prev; }
+                    edge_prev=edge; edges++; k++;
+                    t_lo=t; at_lo=0U;
+                }
+            }
+        }
+    }
+    *last_edge_us=edge_prev;
+    *end_us=t;
+    return (edges >= 2U) ? edges-1U : 0U;
+}
+/* Average of the six smallest of nine runs (as character() computes narrow). */
+static uint32_t rec_narrow(const uint32_t *runs)
+{
+    uint32_t s[9]; uint64_t sum=0U; unsigned int i,j;
+    for (i=0U; i<9U; i++) {
+        uint32_t v=runs[i]; j=i;
+        while ((j > 0U) && (s[j-1U] > v)) { s[j]=s[j-1U]; j--; }
+        s[j]=v;
+    }
+    for (i=0U; i<6U; i++) { sum+=s[i]; }
+    return (uint32_t)(sum/6U);
+}
+static s3_barcode_status_t rec_finish(s3_barcode_record_t *r, s3_barcode_status_t status)
+{
+    uint16_t paper=r->paper; bool seen=r->seen; uint32_t last=r->last_us;
+    s3_barcode_record_reset(r);
+    r->seen=seen; r->paper=paper; r->last_us=last;   /* keep the white reference */
+    /* Like s3_barcode_update: after a failure, only a new white-to-dark
+     * start can begin the next recording (no second report mid-bar). */
+    r->blocked=(status != S3_BARCODE_DECODED) ? 1U : 0U;
+    return status;
+}
+s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
+    const s3_barcode_config_t *config, uint32_t timestamp_us, bool valid,
+    uint16_t darkness, s3_barcode_result_t *result)
+{
+    unsigned int dark=(darkness > 1000U) ? 1000U : darkness;
+    uint16_t step=0U;
+    if ((result == 0) || (r == 0) || !config_valid(config)) { return S3_BARCODE_NONE; }
+    *result=(s3_barcode_result_t){0};
+    if (!valid) { s3_barcode_record_reset(r); return S3_BARCODE_NONE; }
+    if (!r->seen) {
+        r->seen=1U; r->paper=(uint16_t)dark; r->last_us=timestamp_us;
+        r->prev=(uint16_t)dark; return S3_BARCODE_NONE;
+    }
+    if (!rec_step(r,timestamp_us-r->last_us,&step) ||
+        ((uint32_t)step*S3_REC_STEP_US > config->max_gap_us+S3_REC_STEP_US)) {
+        bool was=s3_barcode_record_active(r);
+        s3_barcode_record_reset(r);
+        r->seen=1U; r->paper=(uint16_t)dark; r->last_us=timestamp_us; r->prev=(uint16_t)dark;
+        return was ? S3_BARCODE_TIMING_ERROR : S3_BARCODE_NONE;
+    }
+    r->last_us=timestamp_us;
+    if (r->state == (uint16_t)S3_REC_WAITING) {
+        /* Learn the paper: follow lighter readings at once, darker ones slowly. */
+        if (dark < r->paper) { r->paper=(uint16_t)dark; }
+        else { r->paper=(uint16_t)(r->paper+((dark-r->paper)>>5)); }
+        if (r->blocked) {
+            if (!rec_white(r,dark)) { r->white_us=0U; return S3_BARCODE_NONE; }
+            r->blocked=0U;
+        }
+        if (dark < (unsigned int)r->paper + S3_REC_RISE) {
+            /* Margin before a barcode: everything short of a bar counts, as
+             * in s3_barcode_update (the rising slope is never a bar). */
+            r->white_us=sat_add(r->white_us,(uint32_t)step*S3_REC_STEP_US);
+            r->prev=(uint16_t)dark;
+            return S3_BARCODE_NONE;
+        }
+        /* Clearly darker than the paper: a bar starts. Keep the reading
+         * before it as sample 0 so the rising edge is complete. */
+        r->state=(uint16_t)S3_REC_RECORDING;
+        r->leading_us=r->white_us; r->white_us=0U; r->frame_us=0U; r->required_us=0U;
+        r->sample[0]=r->prev; r->count=1U;
+        r->best=(uint16_t)r->prev; r->falling=0U; r->turn_us=0U;
+    }
+    if (r->count >= S3_REC_MAX) { return rec_finish(r,S3_BARCODE_OVERFLOW); }
+    r->sample[r->count++]=(uint16_t)(dark | ((unsigned int)step << 10));
+    r->frame_us=sat_add(r->frame_us,(uint32_t)step*S3_REC_STEP_US);
+    if (r->frame_us > config->max_frame_us) { return rec_finish(r,S3_BARCODE_REJECTED); }
+    /* Follow bumps and dips as they come: no stripe is longer than
+     * max_run_us, so this long without a turn while dark is a line or a
+     * patch, not a barcode (s3_barcode_update rejects the same case). */
+    r->turn_us=sat_add(r->turn_us,(uint32_t)step*S3_REC_STEP_US);
+    if (r->falling ? (dark < r->best) : (dark > r->best)) { r->best=(uint16_t)dark; }
+    else if ((r->falling ? dark-r->best : r->best-dark) >= S3_REC_PROMINENCE) {
+        r->best=(uint16_t)dark; r->falling=r->falling ? 0U : 1U; r->turn_us=0U;
+    }
+    if ((r->turn_us > config->max_run_us) && !rec_white(r,dark)) {
+        return rec_finish(r,S3_BARCODE_REJECTED);
+    }
+    if (!rec_white(r,dark)) {
+        /* Dark after the barcode was judged complete: quiet zone broken. */
+        if (r->state == (uint16_t)S3_REC_QUIET) { return rec_finish(r,S3_BARCODE_REJECTED); }
+        r->white_us=0U;
+        return S3_BARCODE_NONE;
+    }
+    r->white_us=sat_add(r->white_us,(uint32_t)step*S3_REC_STEP_US);
+    /* No stripe is longer than max_run_us, so this much white ends the code. */
+    if (r->white_us < config->max_run_us) { return S3_BARCODE_NONE; }
+    {
+        uint32_t runs[S3_BARCODE_RUNS], first=0U, last=0U, end=0U, gap=0U;
+        unsigned int n=s3_barcode_record_runs(r,runs,&first,&last,&end,&gap);
+        if (n != S3_BARCODE_RUNS) { return rec_finish(r,S3_BARCODE_REJECTED); }
+        if (r->state == (uint16_t)S3_REC_RECORDING) {
+            /* Wait for the trailing quiet zone the decoder requires. */
+            uint64_t need=(uint64_t)config->quiet_modules*rec_narrow(&runs[20]);
+            r->required_us=(need > 0x7FFFFFFFU) ? 0x7FFFFFFFU : (uint32_t)need;
+            r->state=(uint16_t)S3_REC_QUIET;
+        }
+        if ((end-last) < r->required_us) { return S3_BARCODE_NONE; }
+        if (!s3_barcode_decode_runs(runs,n,sat_add(r->leading_us,first),end-last,gap,config,result)) {
+            return rec_finish(r,S3_BARCODE_REJECTED);
+        }
+        result->timestamp_us=timestamp_us;
+        return rec_finish(r,S3_BARCODE_DECODED);
+    }
+}

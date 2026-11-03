@@ -17,15 +17,17 @@ test:
 	$(BUILD)/test_mapping
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_ir_reflectance.c $(SOURCE_DIR)/ir_reflectance.c -o $(BUILD)/test_ir_reflectance
 	$(BUILD)/test_ir_reflectance
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_record.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_record
+	$(BUILD)/test_barcode_record
 
 regression:
 	bash run_regression.sh
 
 compare:
 	mkdir -p $(BUILD)
-	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) host_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(MODULES))) -o $(BUILD)/before_trace
+	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) -DS3_BASELINE_TRACE host_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(MODULES))) -o $(BUILD)/before_trace
 	$(BUILD)/before_trace > $(BUILD)/before.trace
-	$(CC) $(CPPFLAGS) $(CFLAGS) host_trace.c $(SOURCES) -o $(BUILD)/after_trace
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DS3_BASELINE_TRACE host_trace.c $(SOURCES) -o $(BUILD)/after_trace
 	$(BUILD)/after_trace > $(BUILD)/after.trace
 	cmp $(BUILD)/before.trace $(BUILD)/after.trace
 	shasum -a 256 $(BUILD)/before.trace $(BUILD)/after.trace

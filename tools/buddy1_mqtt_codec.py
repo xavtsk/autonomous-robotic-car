@@ -19,6 +19,10 @@ ACTIONS = ("unknown", "forward", "left", "right", "uturn")
 FAULTS = ("motor_stall", "encoder_fault", "imu_fault", "no_echo", "wifi_loss", "ir_sensor_fault")
 POSE_DISTANCE_BITS = 12
 POSE_DISTANCE_MOD = 1 << POSE_DISTANCE_BITS
+TILT_BITS = 11            # signed 0.1 degree, -90.0..+90.0 (Buddy 4 widths)
+TILT_LIMIT_X10 = 900
+TERRAIN_STATES = ("unknown", "stationary", "moving", "accelerating", "turning",
+                  "climbing", "descending", "impact")
 
 
 def unwrap_distance(previous_cm, wrapped_cm):
@@ -129,6 +133,22 @@ def decode(topic, payload):
         if heading > 359:
             raise ValueError("invalid heading")
         return dict(distance_cm_mod=value & (POSE_DISTANCE_MOD - 1), heading_deg=heading)
+    if topic == "car/telemetry/tilt":
+        value = _check(payload, 1 + 2 * TILT_BITS + 3)
+        valid = bool(value & 1)
+        angles = []
+        for shift in (1, 1 + TILT_BITS):
+            raw = (value >> shift) & ((1 << TILT_BITS) - 1)
+            angles.append(raw - (1 << TILT_BITS) if raw >> (TILT_BITS - 1) else raw)
+        if not valid and any(angles):
+            raise ValueError("unavailable tilt with nonzero angles")
+        if any(abs(a) > TILT_LIMIT_X10 for a in angles):
+            raise ValueError("tilt outside -90.0..+90.0 degrees")
+        terrain = TERRAIN_STATES[value >> (1 + 2 * TILT_BITS)]
+        if not valid:
+            return dict(tilt_valid=False, pitch_deg=None, roll_deg=None, terrain=terrain)
+        return dict(tilt_valid=True, pitch_deg=angles[0] / 10, roll_deg=angles[1] / 10,
+                    terrain=terrain)
     if topic.startswith("car/telemetry/") and name in NAMES:
         return _section(name, _check(payload, WIDTHS[NAMES.index(name)]))
     raise ValueError("unknown topic; use car/status when decoding a custom heartbeat topic")

@@ -112,7 +112,7 @@ MQTT framing and do not measure the Pico's RAM or network bandwidth.
 | 1 | Broker connection, heartbeat, decoded packet count/errors, map and snapshot replies | Actual MCU queue usage, RAM and Wi-Fi association/DHCP/retry diagnostics |
 | 2 | Wheel speeds/fault bits; updated optional diagnostics add ramped PID setpoints, measured speed, signed motor duty, encoder counts, motion state and brake acknowledgement | PID component terms, measured stop latency |
 | 3 | Barcode/action, state, IR fault, recorded captures and 20 Hz IR preview; updated diagnostics add calibration references/ranges, line error, pending action, event counts and controller reason | Exact per-event timestamps, original-line identity after recovery |
-| 4 | With `S4=1`: hump count, run peak height, IMU fault bit. The heading topic stays reserved (empty) | Tilt, raw IMU and motion events are USB-only |
+| 4 | With `S4=1`: live pitch/roll and terrain state every 200 ms (also while stopped), hump count, run peak height, IMU fault bit. The heading topic stays reserved (empty) | Raw accelerometer/gyro and calibration details are USB-only |
 | 5 | With `S5=1 S5_HARDWARE_CONFIRMED=1`: closest distance, width and route per completed scan, no-echo fault, "avoiding obstacle" state | Servo angles, scan samples and left/right clearance are not published |
 
 The debug pages include rolling histories, graph pause/window selection and
