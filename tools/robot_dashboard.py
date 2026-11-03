@@ -16,7 +16,7 @@ def main():
     parser.add_argument("--demo", action="store_true", help="Simulated data; never connects to the car")
     parser.add_argument("--open", action="store_true", help="Open the dashboard in your browser")
     parser.add_argument("--port", type=int, default=8765, help="Local web port (default 8765)")
-    parser.add_argument("--broker", default="127.0.0.1", help="MQTT hostname/IP (default local Mac)")
+    parser.add_argument("--broker", default="127.0.0.1", help="MQTT hostname/IP (default this laptop)")
     parser.add_argument("--mqtt-port", type=int, default=1883)
     parser.add_argument("--connect", action="store_true", help="Connect to the broker immediately")
     parser.add_argument("--heartbeat-topic", default=HEARTBEAT_TOPIC)
