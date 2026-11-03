@@ -62,9 +62,18 @@
   }
   // Tilt unavailable (IMU still settling, moving too hard, stale) is not 0°.
   function tiltAngle(key) {
-    const value = field('tilt', key);
-    if (section('tilt')?.valid && value === null) return 'Unavailable';
+    const value = field('terrain', key);
+    if (section('terrain')?.valid && value === null) return 'Unavailable';
     return value === null ? null : value.toFixed(1);
+  }
+  // Not on a hump / no completed hump since START are states, not 0 mm.
+  function climbText() {
+    if (!section('terrain')?.valid) return null;
+    return field('terrain', 'on_hump') ? String(field('terrain', 'climb_mm')) : 'Not on a hump';
+  }
+  function peakText() {
+    if (!section('terrain')?.valid) return null;
+    return field('terrain', 'peak_valid') ? String(field('terrain', 'peak_mm')) : 'No hump yet this run';
   }
   function connected() {
     return !transportError && state?.connection?.status === 'connected';
@@ -180,7 +189,7 @@
       ['Faults', faultText(), '', 'faults']
     ];
     if (section('heading')?.received_at) rows.push(['Heading', field('heading', 'heading_deg'), '°', 'heading']);
-    if (section('tilt')?.received_at) rows.push(['Pitch (+ nose up)', tiltAngle('pitch_deg'), field('tilt', 'pitch_deg') === null ? '' : '°', 'tilt'], ['Roll', tiltAngle('roll_deg'), field('tilt', 'roll_deg') === null ? '' : '°', 'tilt'], ['Terrain', field('tilt', 'terrain') === null ? null : titleCase(field('tilt', 'terrain')), '', 'tilt']);
+    if (section('terrain')?.received_at) rows.push(['Pitch (+ nose up)', tiltAngle('pitch_deg'), field('terrain', 'pitch_deg') === null ? '' : '°', 'terrain'], ['Roll (+ right side up)', tiltAngle('roll_deg'), field('terrain', 'roll_deg') === null ? '' : '°', 'terrain'], ['Terrain', field('terrain', 'state') === null ? null : titleCase(field('terrain', 'state')), '', 'terrain'], ['Climb on current hump', climbText(), field('terrain', 'on_hump') ? 'mm' : '', 'terrain'], ['Highest hump this run', peakText(), field('terrain', 'peak_valid') ? 'mm' : '', 'terrain']);
     if (section('hump')?.received_at) rows.push(['Humps reported', field('hump', 'count'), '', 'hump'], ['Reported hump height', field('hump', 'height_mm'), 'mm', 'hump']);
     if (section('obstacle')?.received_at) rows.push(['Obstacle distance', field('obstacle', 'distance_mm'), 'mm', 'obstacle'], ['Obstacle width', field('obstacle', 'width_mm'), 'mm', 'obstacle'], ['Selected route', readable(field('obstacle', 'route')), '', 'obstacle']);
     const body = document.createDocumentFragment();
@@ -312,17 +321,19 @@
         unavailable: 'The updated diagnostic firmware adds line position, pending action, controller reason, calibration and event counts at up to 5 Hz. A sampled candidate is not a junction event; use the cumulative count. Both front sensors may read white when the line runs between them. These observations cannot prove original-line identity after avoidance. Use Sensors for 20 Hz IR curves and Runs for high-rate recorded barcode evidence.'
       },
       '4': {
-        title: 'Buddy 4 · IMU / terrain', description: 'Live pitch/roll and terrain state (5 Hz), hump count, run peak height and the IMU fault bit, published by firmware built with S4=1.',
+        title: 'Buddy 4 · IMU / terrain', description: 'Live pitch/roll, terrain state (incl. impact), climb height and this run’s highest hump (5 Hz), completed-hump count and the IMU fault bit, published by firmware built with S4=1.',
         rows: [
-          ['Pitch (+ nose up)', tiltAngle('pitch_deg') === null ? '—' : `${tiltAngle('pitch_deg')}${field('tilt','pitch_deg') === null ? '' : ' °'}`, source('tilt'), 'tilt'],
-          ['Roll', tiltAngle('roll_deg') === null ? '—' : `${tiltAngle('roll_deg')}${field('tilt','roll_deg') === null ? '' : ' °'}`, source('tilt'), 'tilt'],
-          ['Terrain state', field('tilt', 'terrain') === null ? '—' : titleCase(field('tilt', 'terrain')), source('tilt'), 'tilt'],
+          ['Pitch (+ nose up)', tiltAngle('pitch_deg') === null ? '—' : `${tiltAngle('pitch_deg')}${field('terrain','pitch_deg') === null ? '' : ' °'}`, source('terrain'), 'terrain'],
+          ['Roll (+ right side up)', tiltAngle('roll_deg') === null ? '—' : `${tiltAngle('roll_deg')}${field('terrain','roll_deg') === null ? '' : ' °'}`, source('terrain'), 'terrain'],
+          ['Terrain state', field('terrain', 'state') === null ? '—' : titleCase(field('terrain', 'state')), source('terrain'), 'terrain'],
+          ['Climb on current hump', climbText() === null ? '—' : `${climbText()}${field('terrain','on_hump') ? ' mm' : ''}`, source('terrain'), 'terrain'],
+          ['Highest hump this run (resets at START)', peakText() === null ? '—' : `${peakText()}${field('terrain','peak_valid') ? ' mm' : ''}`, source('terrain'), 'terrain'],
           ['Heading', valueUnit('heading', 'heading_deg', '°'), source('heading'), 'heading'],
           ['Hump count', shown(field('hump', 'count')), source('hump'), 'hump'],
           ['Reported hump height', valueUnit('hump', 'height_mm', 'mm'), source('hump'), 'hump'],
           ['IMU fault bit', faultGroup(['imu_fault']), source('faults'), 'faults']
         ],
-        unavailable: 'Firmware built with S4=1 publishes pitch/roll and the terrain state every 200 ms (car/telemetry/tilt, also while stopped), the hump count, the highest hump peak of the current run and the IMU fault bit; default builds (S4=0) publish none of them. "Unavailable" tilt means the IMU gave no usable angle (not calibrated, moving too hard, stale), not 0°. The heading topic stays empty and reserved for Buddy 4: the encoder heading used for the route map is in car/telemetry/pose. Raw accelerometer/gyro and calibration details are not published. Empty graphs do not mean zero height or a healthy IMU.'
+        unavailable: 'Firmware built with S4=1 publishes car/telemetry/terrain every 200 ms, also while stopped: pitch/roll, terrain state (an impact anywhere in the 200 ms is reported), the height climbed so far on a hump being crossed, and the highest completed hump since START. It also publishes the completed-hump count (car/telemetry/hump, during runs) and the IMU fault bit; default builds (S4=0) publish none of them. "Unavailable" tilt means the IMU gave no usable angle (not calibrated, moving too hard, stale), not 0°. Heights need the wheels to turn (they come from wheel distance × tilt). The heading topic stays empty and reserved for Buddy 4: the encoder heading used for the route map is in car/telemetry/pose. Raw accelerometer/compass and calibration details are not published. Empty graphs do not mean zero height or a healthy IMU.'
       },
       '5': {
         title: 'Buddy 5 · Obstacle / recovery', description: 'Obstacle summary, no-echo fault and avoidance state, published by firmware built with S5=1.',

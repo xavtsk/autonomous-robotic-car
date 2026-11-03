@@ -21,6 +21,7 @@ POSE_DISTANCE_BITS = 12
 POSE_DISTANCE_MOD = 1 << POSE_DISTANCE_BITS
 TILT_BITS = 11            # signed 0.1 degree, -90.0..+90.0 (Buddy 4 widths)
 TILT_LIMIT_X10 = 900
+TERRAIN_BITS = 1 + 2 * TILT_BITS + 3 + 10 + 10  # 46: tilt, state, climb, run peak
 TERRAIN_STATES = ("unknown", "stationary", "moving", "accelerating", "turning",
                   "climbing", "descending", "impact")
 
@@ -133,22 +134,28 @@ def decode(topic, payload):
         if heading > 359:
             raise ValueError("invalid heading")
         return dict(distance_cm_mod=value & (POSE_DISTANCE_MOD - 1), heading_deg=heading)
-    if topic == "car/telemetry/tilt":
-        value = _check(payload, 1 + 2 * TILT_BITS + 3)
+    if topic == "car/telemetry/terrain":
+        value = _check(payload, TERRAIN_BITS)
         valid = bool(value & 1)
         angles = []
         for shift in (1, 1 + TILT_BITS):
             raw = (value >> shift) & ((1 << TILT_BITS) - 1)
             angles.append(raw - (1 << TILT_BITS) if raw >> (TILT_BITS - 1) else raw)
+        state = (value >> 23) & 7
+        on_hump, climb = bool(value >> 26 & 1), (value >> 27) & 511
+        peak_valid, peak = bool(value >> 36 & 1), (value >> 37) & 511
         if not valid and any(angles):
             raise ValueError("unavailable tilt with nonzero angles")
         if any(abs(a) > TILT_LIMIT_X10 for a in angles):
             raise ValueError("tilt outside -90.0..+90.0 degrees")
-        terrain = TERRAIN_STATES[value >> (1 + 2 * TILT_BITS)]
-        if not valid:
-            return dict(tilt_valid=False, pitch_deg=None, roll_deg=None, terrain=terrain)
-        return dict(tilt_valid=True, pitch_deg=angles[0] / 10, roll_deg=angles[1] / 10,
-                    terrain=terrain)
+        if climb > 500 or peak > 500 or (not on_hump and climb) or (not peak_valid and peak):
+            raise ValueError("invalid hump height field")
+        return dict(tilt_valid=valid,
+                    pitch_deg=angles[0] / 10 if valid else None,
+                    roll_deg=angles[1] / 10 if valid else None,
+                    state=TERRAIN_STATES[state],
+                    on_hump=on_hump, climb_mm=climb if on_hump else None,
+                    peak_valid=peak_valid, peak_mm=peak if peak_valid else None)
     if topic.startswith("car/telemetry/") and name in NAMES:
         return _section(name, _check(payload, WIDTHS[NAMES.index(name)]))
     raise ValueError("unknown topic; use car/status when decoding a custom heartbeat topic")

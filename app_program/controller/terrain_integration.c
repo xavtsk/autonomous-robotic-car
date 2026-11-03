@@ -14,7 +14,8 @@ typedef struct {
     int sent_fault;
 } terrain_control_t;
 static terrain_control_t control;
-static void terrain_tilt_report(void);
+static void terrain_live_report(void);
+static bool impact_seen; /* impact since the last live report */
 
 static bool healthy(uint32_t now)
 {
@@ -23,7 +24,7 @@ static bool healthy(uint32_t now)
         !(control.sample.flags&TERRAIN_FAULT) && !control.sample.impact &&
         control.sample.state!=TERRAIN_IMPACT;
 }
-void terrain_control_init(void) { control=(terrain_control_t){0}; }
+void terrain_control_init(void) { control=(terrain_control_t){0}; impact_seen=false; }
 bool terrain_control_ready(uint32_t now)
 { return !control.latched && !control.waiting && healthy(now); }
 bool terrain_control_reset_ready(uint32_t now)
@@ -51,6 +52,7 @@ void terrain_control_poll(s3_drive_t *drive,uint32_t now)
         if(running && control.run_owned && run!=control.expected_run) { event_fault=true; }
         else {
             control.sample=sample; control.run=run; control.humps=humps; control.have=true;
+            if(sample.impact || sample.state==TERRAIN_IMPACT) { impact_seen=true; }
             if(control.waiting && run==control.expected_run) { control.waiting=false; }
         }
     }
@@ -60,6 +62,7 @@ void terrain_control_poll(s3_drive_t *drive,uint32_t now)
         if(lost || event.impact || event.state==TERRAIN_IMPACT || (event.flags&TERRAIN_FAULT)) {
             event_fault=true;
         }
+        if(event.impact || event.state==TERRAIN_IMPACT) { impact_seen=true; }
     }
     if(!running) { return; }
     if(control.waiting && (uint32_t)(now-control.reset_us)<=TERRAIN_RESET_WAIT_US && !event_fault) {
@@ -100,33 +103,45 @@ void terrain_control_report(void)
     }
     /* S4 exports compass-derived turn RATE, not absolute heading. Never feed
      * degrees/second into Buddy 1's heading-degrees packet. */
-    terrain_tilt_report();
+    terrain_live_report();
 }
-/* Live pitch/roll for the laptop, every TERRAIN_TILT_PERIOD calls (200 ms at
- * the 10 ms control cycle), with or without a run, so tilting the car on the
- * bench shows up. Phase-shifted from the 200 ms motion/pose reports so the
- * four-message outbox is not filled in one cycle. QoS 0: a full outbox drops
- * one sample; the next follows. Stale or missing IMU data is sent as
- * "tilt unavailable", never as 0 degrees. */
-#define TERRAIN_TILT_PERIOD 20U
+/* Live Buddy 4 report for the laptop, every TERRAIN_LIVE_PERIOD calls (200 ms
+ * at the 10 ms control cycle), with or without a run, so tilting or pushing
+ * the car on the bench shows up: pitch/roll, terrain state, the height so far
+ * on a hump being crossed, and the highest completed hump since START (reset
+ * at START; Buddy 4 retains it for the run). An impact anywhere in the period
+ * is reported as the impact state even if the latest sample is normal.
+ * Phase-shifted from the 200 ms motion/pose reports so the four-message
+ * outbox is not filled in one cycle. QoS 0: a full outbox drops one report.
+ * Stale or missing IMU data is "unavailable", never 0 degrees or 0 mm. */
+#define TERRAIN_LIVE_PERIOD 20U
 static int16_t tilt_x10(float deg, bool *ok)
 {
     float x=deg*10.0f;
     if(!(x>=-900.0f && x<=900.0f)) { *ok=false; return 0; }   /* also NaN */
     return (int16_t)(x>=0.0f ? x+0.5f : x-0.5f);
 }
-static void terrain_tilt_report(void)
+static bool height_mm(float m, uint16_t *mm)
 {
-    static uint8_t divider=TERRAIN_TILT_PERIOD/2U;
+    if(!(m>=0.0f && m<=0.5f)) { return false; }                /* also NaN */
+    *mm=(uint16_t)(m*1000.0f+0.5f); return true;
+}
+static void terrain_live_report(void)
+{
+    static uint8_t divider=TERRAIN_LIVE_PERIOD/2U;
+    BUDDY1_TERRAIN t={0};
+    const terrain_result_t *s=&control.sample;
     bool fresh, ok;
-    int16_t pitch=0, roll=0;
-    if(++divider<TERRAIN_TILT_PERIOD) { return; }
+    if(++divider<TERRAIN_LIVE_PERIOD) { return; }
     divider=0U;
-    fresh=control.have && (uint32_t)(control.now-control.sample.timestamp_us)<=TERRAIN_MAX_AGE_US;
-    ok=fresh && (control.sample.flags&TERRAIN_TILT_VALID) && !(control.sample.flags&TERRAIN_FAULT);
-    if(ok) { pitch=tilt_x10(control.sample.pitch_deg,&ok); roll=tilt_x10(control.sample.roll_deg,&ok); }
-    if(!ok) { pitch=0; roll=0; }
-    (void)buddy1_report_tilt(ok ? TRUE : FALSE, pitch, roll,
-        fresh && (unsigned)control.sample.state<8U ? (UB)control.sample.state : (UB)TERRAIN_UNKNOWN);
+    fresh=control.have && (uint32_t)(control.now-s->timestamp_us)<=TERRAIN_MAX_AGE_US;
+    ok=fresh && (s->flags&TERRAIN_TILT_VALID) && !(s->flags&TERRAIN_FAULT);
+    if(ok) { t.pitch_x10=tilt_x10(s->pitch_deg,&ok); t.roll_x10=tilt_x10(s->roll_deg,&ok); }
+    if(ok) { t.tilt_valid=1U; } else { t.pitch_x10=0; t.roll_x10=0; }
+    t.state=fresh && (unsigned)s->state<8U ? (uint8_t)s->state : (uint8_t)TERRAIN_UNKNOWN;
+    if(impact_seen) { t.state=(uint8_t)TERRAIN_IMPACT; }
+    if(fresh && s->hump_active && height_mm(s->hump_height_m,&t.climb_mm)) { t.on_hump=1U; }
+    if(control.have && (s->flags&TERRAIN_PEAK_VALID) && height_mm(s->peak_m,&t.peak_mm)) { t.peak_valid=1U; }
+    if(buddy1_report_terrain(&t)==E_OK) { impact_seen=false; }
 }
 #endif

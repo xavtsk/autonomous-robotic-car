@@ -22,7 +22,7 @@
         controller('Signed motor duty',[series('Left','duty_left','target'),series('Right','duty_right')],'%',d=>d.motion_valid,[-100,100])];
     }
     if(buddy==='3') return [controller('Line-position error',[series('Error','line_error')],'±100',d=>d.line_flags&1,[-100,100])];
-    if(buddy==='4') return [{...report('Pitch and roll','tilt',[series('Pitch','pitch_deg'),series('Roll','roll_deg','target')],'°',[-45,45]),clock:'Laptop receive time · 5 Hz tilt reports; gaps = tilt unavailable'},report('Heading reports','heading',[series('Heading','heading_deg')],'°',[0,360]),report('Reported hump height','hump',[series('Height','height_mm')],'mm',null,true)];
+    if(buddy==='4') return [{...report('Pitch and roll','terrain',[series('Pitch','pitch_deg'),series('Roll','roll_deg','target')],'°',[-45,45]),clock:'Laptop receive time · 5 Hz terrain reports; gaps = tilt unavailable'},{...report('Hump height','terrain',[series('Climb on current hump','climb_mm'),series('Highest this run','peak_mm','target')],'mm',[0,100]),clock:'Laptop receive time · 5 Hz terrain reports; gaps = not on a hump / no hump yet'},report('Heading reports','heading',[series('Heading','heading_deg')],'°',[0,360]),report('Reported hump height','hump',[series('Height','height_mm')],'mm',null,true)];
     return [report('Obstacle distance reports','obstacle',[series('Distance','distance_mm')],'mm',null,true),report('Obstacle width reports','obstacle',[series('Width','width_mm')],'mm',null,true)];
   }
   function layout(defs) {

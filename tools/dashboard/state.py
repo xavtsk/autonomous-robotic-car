@@ -13,8 +13,8 @@ from .debug_history import DebugHistory
 from .route import RouteTracker
 
 POSE_TOPIC = "car/telemetry/pose"
-TILT_TOPIC = "car/telemetry/tilt"
-LIVE_SECTIONS = ("motion", "tilt")  # periodic 5 Hz streams: stale after MOTION_TIMEOUT
+TERRAIN_TOPIC = "car/telemetry/terrain"
+LIVE_SECTIONS = ("motion", "terrain")  # periodic 5 Hz streams: stale after MOTION_TIMEOUT
 
 HEARTBEAT_TOPIC = "mtk3smp-pico/heartbeat"
 COMMAND_TIMEOUT = 8.0
@@ -39,7 +39,7 @@ class DashboardState:
         self.last_car = self.last_heartbeat = None
         self.sections = {name: dict(valid=False, data={}, received_at=None,
                                     source="unavailable", mono=None)
-                         for name in NAMES + ("tilt",)}
+                         for name in NAMES + ("terrain",)}
         self.commands = {"map": self._idle(), "snapshot": self._idle(),
                          "map_lock": "unknown"}
         self.events = deque(maxlen=160)
@@ -189,7 +189,7 @@ class DashboardState:
                                               hex=payload.hex(), decoded=decoded))
                 self.route.pose(decoded["distance_cm_mod"], decoded["heading_deg"], timestamp())
                 return
-            if topic == TILT_TOPIC:
+            if topic == TERRAIN_TOPIC:
                 try:
                     decoded = decode(topic, payload)
                 except (ValueError, TypeError) as exc:
@@ -202,7 +202,12 @@ class DashboardState:
                 self.debug.receive(len(payload))
                 self.history.appendleft(dict(time=timestamp(), topic=topic,
                                               hex=payload.hex(), decoded=decoded))
-                self._update("tilt", decoded)
+                previous = self.sections["terrain"]["data"]
+                if decoded["state"] == "impact" and previous.get("state") != "impact":
+                    self.add_event(4, "warning", "Buddy 4: sudden impact detected")
+                if decoded["peak_valid"] and decoded["peak_mm"] != previous.get("peak_mm"):
+                    self.add_event(4, "info", f"Buddy 4: highest hump this run {decoded['peak_mm']} mm")
+                self._update("terrain", decoded)
                 return
             is_heartbeat = topic in ("car/status", self.heartbeat_topic)
             if not is_heartbeat and topic not in {"car/reply/snapshot", "car/reply/barcode_map"} and not (
@@ -333,6 +338,7 @@ class DashboardState:
                 self.route = RouteTracker(self.clock)
                 self._demo_pose_t0 = None
                 self._demo_barcode_last = None
+                self._demo_peak = None
             self.add_event("all", "info", "SIMULATION: " + scenario.replace("_", " "))
             if scenario == "wifi_loss":
                 self.set_connection("disconnected", error="Simulated Wi-Fi/broker loss")
@@ -369,7 +375,7 @@ class DashboardState:
             if t-self._demo_control_last >= 0.2:
                 self._demo_control_last = t
                 self._demo_pose(t, active)
-                self._demo_tilt(t, active)
+                self._demo_terrain(t, active)
                 following = self.demo_scenario in {"following","barcode"}
                 fault = self.demo_scenario == "fault"
                 v = dict(timestamp_us=int(t*1e6)&0xffffffff,motion_timestamp_us=int(t*1e6)&0xffffffff,
@@ -392,14 +398,20 @@ class DashboardState:
                     v["encoder_"+c]=self._demo_encoders[i]
                 self.ingest(CONTROL_TOPIC,encode_control(**v))
 
-    def _demo_tilt(self, t, active):
-        """Simulated Buddy 4 tilt: a gentle hump every 15 s while following."""
+    def _demo_terrain(self, t, active):
+        """Simulated Buddy 4: a gentle 30 mm hump every 15 s while following."""
         phase = t % 15.0
-        pitch = round(80 * math.sin((phase - 5) / 3 * 2 * math.pi)) if active and 5 < phase < 8 else 0
+        on = active and 5 < phase < 8
+        pitch = round(80 * math.sin((phase - 5) / 3 * 2 * math.pi)) if on else 0
         roll = round(15 * math.sin(t * 0.7)) if active else 0
-        terrain = (5 if pitch > 40 else 6 if pitch < -40 else 2) if active else 1
-        body = 1 | ((pitch & 0x7ff) << 1) | ((roll & 0x7ff) << 12) | (terrain << 23)
-        self.ingest(TILT_TOPIC, bytes([VERSION]) + body.to_bytes(4, "little"))
+        state = (5 if pitch > 40 else 6 if pitch < -40 else 2) if active else 1
+        climb = round(30 * math.sin((phase - 5) / 3 * math.pi)) if on else 0
+        if on and phase > 7.8:
+            self._demo_peak = 30
+        peak = getattr(self, "_demo_peak", None) if active else None
+        body = (1 | (pitch & 0x7ff) << 1 | (roll & 0x7ff) << 12 | state << 23 |
+                int(on) << 26 | climb << 27 | int(peak is not None) << 36 | (peak or 0) << 37)
+        self.ingest(TERRAIN_TOPIC, bytes([VERSION]) + body.to_bytes(6, "little"))
 
     def _demo_pose(self, t, active):
         """Simulated pose on an oval: 60 cm straights, 15 cm radius ends, 4 cm/s."""

@@ -83,12 +83,12 @@ def describe(topic, d):
         return f"HUMP      count {d['count']}, highest {d['height_mm']} mm"
     if name == "heading":
         return f"HEADING   {d['heading_deg']} deg"
-    if name == "tilt":
-        if not d["tilt_valid"]:
-            return f"TILT      unavailable, terrain {d['terrain']}"
-        return f"TILT      pitch {d['pitch_deg']:+.1f} deg, roll {d['roll_deg']:+.1f} deg, terrain {d['terrain']}"
-    if name == "obstacle":
-        return f"OBSTACLE  {d['distance_mm']} mm away, {d['width_mm']} mm wide, route {d['route']}"
+    if name == "terrain":
+        tilt = (f"pitch {d['pitch_deg']:+.1f} deg, roll {d['roll_deg']:+.1f} deg"
+                if d["tilt_valid"] else "tilt unavailable")
+        hump = f", on hump {d['climb_mm']} mm" if d["on_hump"] else ""
+        peak = f", highest this run {d['peak_mm']} mm" if d["peak_valid"] else ", no hump yet"
+        return f"TERRAIN   {tilt}, {d['state']}{hump}{peak}"
     return str(d)
 
 
@@ -100,7 +100,7 @@ class Folder:
         self.last_heartbeat = None
         self.heartbeats = 0
         self.last_speed = None
-        self.last_tilt = None
+        self.last_tilt = None  # last printed terrain report
 
     def keep(self, topic, d):
         if self.show_all:
@@ -118,12 +118,13 @@ class Folder:
                     abs(a - b) < SPEED_STEP_MMS for a, b in zip(speed, self.last_speed)):
                 return False
             self.last_speed = speed
-        if name == "tilt":
-            # 5 Hz: print only changes of at least 1 degree or of terrain state.
-            key = (d["tilt_valid"], d["terrain"], d["pitch_deg"], d["roll_deg"])
+        if name == "terrain":
+            # 5 Hz: print only changes of >= 1 degree, state, hump or peak.
+            key = (d["tilt_valid"], d["state"], d["on_hump"], d["climb_mm"], d["peak_mm"],
+                   d["pitch_deg"], d["roll_deg"])
             last, self.last_tilt = self.last_tilt, key
-            if last is not None and key[:2] == last[:2] and (not key[0] or all(
-                    abs(a - b) < 1.0 for a, b in zip(key[2:], last[2:]))):
+            if last is not None and key[:5] == last[:5] and (not key[0] or all(
+                    abs(a - b) < 1.0 for a, b in zip(key[5:], last[5:]))):
                 self.last_tilt = last
                 return False
         return True

@@ -35,9 +35,10 @@ IMPORT ER buddy1_report_obstacle(UH distance_mm, UH width_mm, BUDDY1_OBSTACLE_RO
 /* Live route pose: distance since START modulo 4096 cm, heading 0-359 deg
  * since START (+ anticlockwise). Not cached in the snapshot. */
 IMPORT ER buddy1_report_pose(UH distance_cm_mod, H heading_deg);
-/* Live Buddy 4 tilt: pitch/roll in 0.1 degree (-900..900, + = nose up),
- * terrain state 0..7. valid=FALSE sends no angles. Not cached. */
-IMPORT ER buddy1_report_tilt(BOOL valid, H pitch_x10, H roll_x10, UB terrain_state);
+/* Live Buddy 4 terrain: tilt, terrain state, live climb height and this
+ * run's highest hump (see MQTT_PROTOCOL.md). Unavailable values must be zero;
+ * out-of-range values are rejected (E_PAR). Not cached. */
+IMPORT ER buddy1_report_terrain(const BUDDY1_TERRAIN *terrain);
 IMPORT ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state);
 /* Central protected telemetry fault mirror. Each caller updates only its
  * owned bits; active is a subset of changed. Task context only. Controller
