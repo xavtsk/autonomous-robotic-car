@@ -387,53 +387,61 @@ static void test_pose(void)
            d.pose_distance_cm == 1234U && d.pose_heading_deg == 270);
     puts("HOST PASS: route pose 21 bits/4 bytes, 4095/359 limits, padding/length rejection, live-only (snapshot unchanged), own topic");
 }
-/* Buddy 4 tilt: live-only, 26 bits/5 bytes, every pitch/roll code round-trips,
- * invalid means canonical zero angles, never touches the snapshot cache. */
-static void test_tilt(void)
+/* Buddy 4 terrain: live-only, 46 bits/7 bytes, every pitch/roll and height
+ * code round-trips, unavailable means canonical zero, never cached. */
+static int same_terrain(const BUDDY1_TERRAIN *a, const BUDDY1_TERRAIN *b)
+{
+    return a->tilt_valid == b->tilt_valid && a->pitch_x10 == b->pitch_x10 &&
+           a->roll_x10 == b->roll_x10 && a->state == b->state && a->on_hump == b->on_hump &&
+           a->climb_mm == b->climb_mm && a->peak_valid == b->peak_valid && a->peak_mm == b->peak_mm;
+}
+static void test_terrain(void)
 {
     BUDDY1_SNAPSHOT v = {0}, d, before, after;
+    BUDDY1_TERRAIN t;
     UB p[16];
     int x;
-    assert(buddy1_payload_size(BUDDY1_TOPIC_TILT) == 5U &&
-           buddy1_payload_bits(BUDDY1_TOPIC_TILT) == 26U);
+    assert(buddy1_payload_size(BUDDY1_TOPIC_TERRAIN) == 7U &&
+           buddy1_payload_bits(BUDDY1_TOPIC_TERRAIN) == 46U);
     for (x = -900; x <= 900; ++x) {
         v = (BUDDY1_SNAPSHOT){0};
-        v.tilt_valid = 1; v.tilt_pitch_x10 = (int16_t)x; v.tilt_roll_x10 = (int16_t)(-x);
-        v.tilt_terrain = (uint8_t)((unsigned)(x + 900) % 8U);
-        assert(buddy1_encode(BUDDY1_TOPIC_TILT, &v, p, sizeof p) == 5U && (p[4] >> 2) == 0U);
-        assert(buddy1_decode(BUDDY1_TOPIC_TILT, p, 5U, &d) && d.tilt_valid &&
-               d.tilt_pitch_x10 == x && d.tilt_roll_x10 == -x && d.tilt_terrain == v.tilt_terrain);
+        v.terrain = (BUDDY1_TERRAIN){1, (int16_t)x, (int16_t)(-x), (uint8_t)((unsigned)(x + 900) % 8U),
+                                     1, (uint16_t)((unsigned)(x + 900) % 501U), 1, (uint16_t)((unsigned)(900 - x) % 501U)};
+        assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 7U && (p[6] >> 6) == 0U);
+        assert(buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d) && d.terrain_valid &&
+               same_terrain(&d.terrain, &v.terrain));
     }
-    v.tilt_pitch_x10 = 901; assert(buddy1_encode(BUDDY1_TOPIC_TILT, &v, p, sizeof p) == 0U);
-    v.tilt_pitch_x10 = 0; v.tilt_roll_x10 = -901;
-    assert(buddy1_encode(BUDDY1_TOPIC_TILT, &v, p, sizeof p) == 0U);
-    v.tilt_roll_x10 = 0; v.tilt_terrain = 8; assert(buddy1_encode(BUDDY1_TOPIC_TILT, &v, p, sizeof p) == 0U);
-    /* Unavailable tilt: terrain state still sent, angles must be zero. */
-    v = (BUDDY1_SNAPSHOT){0}; v.tilt_terrain = 2;
-    assert(buddy1_encode(BUDDY1_TOPIC_TILT, &v, p, sizeof p) == 5U &&
-           p[1] == 0U && p[2] == 0U && p[3] == 0U && p[4] == 0x01U);
-    assert(buddy1_decode(BUDDY1_TOPIC_TILT, p, 5U, &d) && !d.tilt_valid && d.tilt_terrain == 2U);
-    v.tilt_pitch_x10 = 5; assert(buddy1_encode(BUDDY1_TOPIC_TILT, &v, p, sizeof p) == 0U);
-    p[1] = 0x02U; assert(!buddy1_decode(BUDDY1_TOPIC_TILT, p, 5U, &d)); /* invalid + angle */
-    p[1] = 0xF1U; p[2] = 0x07U; p[3] = 0U; p[4] = 0U;               /* pitch +1016 */
-    assert(!buddy1_decode(BUDDY1_TOPIC_TILT, p, 5U, &d));
-    p[2] = 0; p[3] = 0; p[4] = 0x04U; assert(!buddy1_decode(BUDDY1_TOPIC_TILT, p, 5U, &d)); /* padding */
-    p[4] = 0; assert(!buddy1_decode(BUDDY1_TOPIC_TILT, p, 4U, &d));  /* length */
-    assert(buddy1_invalidate(BUDDY1_TOPIC_TILT) == E_PAR); /* no snapshot section */
+    v.terrain = (BUDDY1_TERRAIN){1, 901, 0, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, -901, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 8, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 1, 501, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 1, 501}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){0, 5, 0, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 7, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 0, 7}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    /* Everything unavailable: terrain state still sent, all values zero. */
+    v.terrain = (BUDDY1_TERRAIN){0, 0, 0, 2, 0, 0, 0, 0};
+    assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 7U && p[1] == 0U && p[2] == 0U &&
+           p[3] == 0U && p[4] == 0x01U && p[5] == 0U && p[6] == 0U);
+    assert(buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d) && !d.terrain.tilt_valid && d.terrain.state == 2U);
+    p[1] = 0x02U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d));  /* unavailable + angle */
+    p[1] = 0xF1U; p[2] = 0x07U; p[4] = 0U;                                  /* pitch +1016 */
+    assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d));
+    p[1] = 0; p[2] = 0; p[4] = 0x08U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d)); /* climb w/o hump */
+    p[4] = 0; p[6] = 0x40U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d));            /* padding */
+    p[6] = 0; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 6U, &d));                          /* length */
+    assert(buddy1_invalidate(BUDDY1_TOPIC_TERRAIN) == E_PAR); /* no snapshot section */
     empty_outbox();
     assert(buddy1_snapshot(&before));
-    assert(buddy1_report_tilt(TRUE, 901, 0, 1) == E_PAR && buddy1_report_tilt(TRUE, 0, 0, 8) == E_PAR);
-    assert(buddy1_report_tilt(TRUE, -305, 42, 5) == E_OK);
+    assert(buddy1_report_terrain(0) == E_PAR);
+    t = (BUDDY1_TERRAIN){1, 901, 0, 1, 0, 0, 0, 0}; assert(buddy1_report_terrain(&t) == E_PAR);
+    t = (BUDDY1_TERRAIN){1, -305, 42, 5, 1, 17, 1, 33}; assert(buddy1_report_terrain(&t) == E_OK);
     assert(buddy1_snapshot(&after) && memcmp(&before, &after, sizeof before) == 0);
     poll_after(20);
-    assert(strcmp(published_topic, "car/telemetry/tilt") == 0 && published_len == 5U &&
-           buddy1_decode(BUDDY1_TOPIC_TILT, published, published_len, &d) && d.tilt_valid &&
-           d.tilt_pitch_x10 == -305 && d.tilt_roll_x10 == 42 && d.tilt_terrain == 5U);
-    assert(buddy1_report_tilt(FALSE, 123, 45, 0) == E_OK); /* angles dropped */
-    poll_after(20);
-    assert(buddy1_decode(BUDDY1_TOPIC_TILT, published, published_len, &d) && !d.tilt_valid &&
-           d.tilt_pitch_x10 == 0 && d.tilt_roll_x10 == 0);
-    puts("HOST PASS: Buddy 4 tilt 26 bits/5 bytes, all 1801 pitch/roll codes, +/-90.0 limits, invalid=zero angles, padding/length rejection, live-only, own topic");
+    assert(strcmp(published_topic, "car/telemetry/terrain") == 0 && published_len == 7U &&
+           buddy1_decode(BUDDY1_TOPIC_TERRAIN, published, published_len, &d) &&
+           same_terrain(&d.terrain, &t));
+    puts("HOST PASS: Buddy 4 terrain 46 bits/7 bytes, all pitch/roll codes, +/-90.0 and 0..500 mm limits, unavailable=zero, padding/length rejection, live-only, own topic");
 }
 static void *producer(void *which)
 {
@@ -458,7 +466,7 @@ static void emit_vectors(void)
     v.obstacle_distance_mm = 180; v.obstacle_width_mm = 140; v.obstacle_route = BUDDY1_ROUTE_LEFT;
     v.robot_state = BUDDY1_STATE_LINE_FOLLOWING; v.faults = 0x31;
     v.pose_distance_cm = 2049; v.pose_heading_deg = 90;
-    v.tilt_valid = 1; v.tilt_pitch_x10 = 123; v.tilt_roll_x10 = -51; v.tilt_terrain = 5;
+    v.terrain = (BUDDY1_TERRAIN){1, 123, -51, 5, 1, 23, 1, 41};
     for (topic = 0; topic < BUDDY1_TOPIC_COUNT; ++topic) {
         if (topic == BUDDY1_TOPIC_MAP_REPLY) continue;
         len = buddy1_encode((UB)topic, &v, packet, sizeof(packet)); assert(len);
@@ -603,7 +611,7 @@ int main(void)
     test_publish_backpressure();
     test_debug_lines();
     test_pose();
-    test_tilt();
+    test_terrain();
     test_terrain_widths();
 #if APP_IR_DEBUG
     test_ir_preview();

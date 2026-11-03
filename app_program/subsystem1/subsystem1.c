@@ -93,8 +93,8 @@ LOCAL ER report(UB type, const BUDDY1_SNAPSHOT *v)
     unsigned length = buddy1_encode(type, v, payload, sizeof(payload));
     ER er;
     if (!length) return E_PAR;
-    /* Pose and tilt are live-only: no snapshot section, so skip the cache. */
-    if (type != BUDDY1_TOPIC_POSE && type != BUDDY1_TOPIC_TILT) {
+    /* Pose and terrain are live-only: no snapshot section, so skip the cache. */
+    if (type != BUDDY1_TOPIC_POSE && type != BUDDY1_TOPIC_TERRAIN) {
         er = tk_loc_mtx(mtx_buddy1_state, TMO_FEVR);
         if (er < E_OK) return er;
         er = store_section(type, v);
@@ -137,13 +137,12 @@ EXPORT ER buddy1_report_pose(UH distance_cm_mod, H heading_deg)
     v.pose_distance_cm = distance_cm_mod; v.pose_heading_deg = heading_deg;
     return report(BUDDY1_TOPIC_POSE, &v);
 }
-EXPORT ER buddy1_report_tilt(BOOL valid, H pitch_x10, H roll_x10, UB terrain_state)
+EXPORT ER buddy1_report_terrain(const BUDDY1_TERRAIN *terrain)
 {
     BUDDY1_SNAPSHOT v = {0};
-    v.tilt_valid = valid ? 1U : 0U;
-    v.tilt_pitch_x10 = valid ? pitch_x10 : 0; v.tilt_roll_x10 = valid ? roll_x10 : 0;
-    v.tilt_terrain = terrain_state;
-    return report(BUDDY1_TOPIC_TILT, &v);
+    if (!terrain) return E_PAR;
+    v.terrain = *terrain;
+    return report(BUDDY1_TOPIC_TERRAIN, &v);
 }
 EXPORT ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state)
 {

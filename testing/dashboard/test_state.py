@@ -33,7 +33,7 @@ class StateTests(unittest.TestCase):
         packets = {"motion": "033c7602", "barcode": "0356",
                    "hump": "0302002d00", "heading": "036701",
                    "obstacle": "03b4c00801", "state": "0301", "faults": "0331",
-                   "tilt": "03f7d0fc02"}
+                   "terrain": "03f7d0fcbe3005"}
         for name, value in packets.items():
             self.state.ingest("car/telemetry/" + name, bytes.fromhex(value))
         sections = self.state.snapshot()["sections"]
@@ -43,24 +43,25 @@ class StateTests(unittest.TestCase):
         self.assertEqual(sections["heading"]["data"], dict(heading_deg=359))
         self.assertEqual(sections["obstacle"]["data"], dict(distance_mm=180, width_mm=140, route="left"))
         self.assertEqual(sections["barcode"]["data"], dict(letter="W", action="left"))
-        self.assertEqual(sections["tilt"]["data"],
-                         dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, terrain="climbing"))
+        self.assertEqual(sections["terrain"]["data"],
+                         dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, state="climbing",
+                              on_hump=True, climb_mm=23, peak_valid=True, peak_mm=41))
 
-    def test_tilt_is_live_and_unavailable_is_not_zero(self):
-        self.state.ingest("car/telemetry/tilt", bytes.fromhex("03f7d0fc02"))
-        tilt = self.state.snapshot()["sections"]["tilt"]
-        self.assertEqual((tilt["freshness"], tilt["stale"]), ("live", False))
+    def test_terrain_is_live_and_unavailable_is_not_zero(self):
+        self.state.ingest("car/telemetry/terrain", bytes.fromhex("03f7d0fcbe3005"))
+        terrain = self.state.snapshot()["sections"]["terrain"]
+        self.assertEqual((terrain["freshness"], terrain["stale"]), ("live", False))
         self.now += 3.5
-        self.assertTrue(self.state.snapshot()["sections"]["tilt"]["stale"])
-        self.state.ingest("car/telemetry/tilt", bytes.fromhex("0300000001"))
-        tilt = self.state.snapshot()["sections"]["tilt"]
-        self.assertIsNone(tilt["data"]["pitch_deg"])
-        self.assertEqual(tilt["data"]["terrain"], "moving")
-        self.state.ingest("car/telemetry/tilt", bytes.fromhex("03f1070000"))  # +101.6 deg
+        self.assertTrue(self.state.snapshot()["sections"]["terrain"]["stale"])
+        self.state.ingest("car/telemetry/terrain", bytes.fromhex("03000000010000"))
+        data = self.state.snapshot()["sections"]["terrain"]["data"]
+        self.assertIsNone(data["pitch_deg"]); self.assertIsNone(data["peak_mm"])
+        self.assertEqual(data["state"], "moving")
+        self.state.ingest("car/telemetry/terrain", bytes.fromhex("03f10700000000"))  # +101.6 deg
         self.assertEqual(self.state.snapshot()["counters"]["malformed"], 1)
-        self.assertIsNone(self.state.snapshot()["sections"]["tilt"]["data"]["pitch_deg"])
-        reports = self.state.debug_snapshot()["telemetry"]["tilt"]
+        reports = self.state.debug_snapshot()["telemetry"]["terrain"]
         self.assertEqual([r["data"]["pitch_deg"] for r in reports], [12.3, None])
+        self.assertTrue(any("highest hump this run 41 mm" in e["message"] for e in self.state.snapshot()["events"]))
 
     def test_bad_packets_and_retained_packets_do_not_prove_liveness(self):
         self.state.ingest("car/status", b"\x03\x03", retained=True)

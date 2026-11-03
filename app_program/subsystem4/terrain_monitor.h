@@ -3,7 +3,7 @@
 #include "imu_calibration.h"
 #include "hump_detection.h"
 #include "motion_events.h"
-#define TERRAIN_PACKET_SIZE 11U
+#define TERRAIN_PACKET_SIZE 12U
 /* Flags describe validity, not proof of calibrated physical accuracy. */
 #define TERRAIN_TILT_VALID 1U
 #define TERRAIN_TURN_VALID 2U
@@ -13,9 +13,10 @@
 typedef struct {
     uint32_t timestamp_us;
     float pitch_deg, roll_deg, turn_dps, peak_m;
+    float hump_height_m;   /* current height on a hump in progress (0..0.5 m) */
     terrain_state_t state;
     uint8_t flags;
-    bool impact, hump_completed;
+    bool impact, hump_completed, hump_active;
 } terrain_result_t;
 typedef struct {
     double distance_m;

@@ -32,13 +32,15 @@ ER buddy1_update_faults(UB changed,UB active)
 { assert(changed==BUDDY1_FAULT_IMU && !(active&~changed)); faults=(faults&~changed)|active; return E_OK; }
 ER buddy1_report_hump(UH humps,UH mm)
 { reports++; sent_count=humps; sent_height=mm; return E_OK; }
-static unsigned tilts, tilt_valid_count;
+static unsigned tilts;
+static BUDDY1_TERRAIN last_terrain;
 static int tilt_pitch, tilt_roll, tilt_state;
-ER buddy1_report_tilt(BOOL valid,H pitch,H roll,UB state)
+ER buddy1_report_terrain(const BUDDY1_TERRAIN *t)
 {
-    assert(state<8U && (valid || (pitch==0 && roll==0)));
-    tilts++; if(valid) tilt_valid_count++;
-    tilt_pitch=valid?pitch:9999; tilt_roll=valid?roll:9999; tilt_state=state; return E_OK;
+    assert(t && t->state<8U && (t->tilt_valid || (t->pitch_x10==0 && t->roll_x10==0)));
+    assert((t->on_hump || t->climb_mm==0) && (t->peak_valid || t->peak_mm==0));
+    tilts++; last_terrain=*t;
+    tilt_pitch=t->tilt_valid?t->pitch_x10:9999; tilt_roll=t->tilt_valid?t->roll_x10:9999; tilt_state=t->state; return E_OK;
 }
 ER buddy1_invalidate(UB topic)
 { assert(topic==BUDDY1_TOPIC_HUMP); invalidations++; return E_OK; }
@@ -139,8 +141,24 @@ int main(void)
       assert(tilt_pitch==-900 && tilt_roll==900);
       readable=false; for(unsigned i=0;i<20;++i) { cycle(); } readable=true;
       for(unsigned i=0;i<20;++i) terrain_control_report();
-      assert(tilt_pitch==9999 && tilt_state==TERRAIN_UNKNOWN);     /* stale */ }
-    puts("PASS: live tilt every 20 cycles, valid/invalid/out-of-range/stale, terrain state");
+      assert(tilt_pitch==9999 && tilt_state==TERRAIN_UNKNOWN && !last_terrain.on_hump); /* stale */
+      /* Live climb height and this run's highest hump, with or without a run. */
+      fresh(); imu.hump_active=true; imu.hump_height_m=0.0234f;
+      imu.flags|=TERRAIN_PEAK_VALID; imu.peak_m=0.0411f; cycle();
+      for(unsigned i=0;i<20;++i) terrain_control_report();
+      assert(last_terrain.on_hump && last_terrain.climb_mm==23U && last_terrain.peak_valid && last_terrain.peak_mm==41U);
+      fresh(); cycle(); for(unsigned i=0;i<20;++i) terrain_control_report();
+      assert(!last_terrain.on_hump && last_terrain.climb_mm==0U && !last_terrain.peak_valid);
+      fresh(); imu.flags|=TERRAIN_PEAK_VALID; imu.peak_m=0.7f; cycle();   /* out of range */
+      for(unsigned i=0;i<20;++i) terrain_control_report();
+      assert(!last_terrain.peak_valid && last_terrain.peak_mm==0U);
+      /* A one-sample impact between reports is still reported. */
+      queued=(terrain_result_t){.impact=true}; event_pending=true; fresh(); cycle();
+      fresh(); cycle(); for(unsigned i=0;i<20;++i) terrain_control_report();
+      assert(tilt_state==TERRAIN_IMPACT);
+      for(unsigned i=0;i<20;++i) terrain_control_report();
+      assert(tilt_state==TERRAIN_STATIONARY); }
+    puts("PASS: live terrain every 20 cycles: tilt valid/invalid/out-of-range/stale, state, climb height, run peak, latched impact");
     puts("PASS: IMU START/reset acknowledgement and timeout, STOP priority, stale data, lost/impact events, latched reset, cumulative humps and owned fault bit");
     return 0;
 }

@@ -20,7 +20,9 @@ values only: their compiler-dependent representation is never the wire format.
 | Pose heading since START | 0–359 degrees | 1 degree | 9 | 360–511 rejected; live-only packet |
 | Tilt available | angles usable / unavailable | Boolean | 1 | unavailable sends zero angles; zero alone never means unavailable |
 | Pitch (+ nose up), roll | −90.0…+90.0 degrees each | 0.1 degree | 11 each, signed | same widths as Buddy 4's packet (1801 codes); ±90.1 and beyond rejected; live-only packet |
-| Terrain state | Buddy 4 states 0–7 (unknown…impact) | one state | 3 | sent even when the angles are unavailable |
+| Terrain state | Buddy 4 states 0–7 (unknown…impact) | one state | 3 | sent even when the angles are unavailable; impact latched over the 200 ms period |
+| On hump / run peak valid | Boolean each | Boolean | 1 each | unavailable height is sent as zero; zero alone never means unavailable |
+| Live climb height, run peak height | 0–500 mm each | 1 mm | 9 each | same range/width as the hump packet; 501–511 rejected; live-only `car/telemetry/terrain` (46 bits, 7 bytes) |
 | Obstacle distance | 30–4000 mm | 1 mm | 12 | matches Buddy 5; invalid uses snapshot validity, not zero distance |
 | Obstacle width | 0–4095 mm | 1 mm | 12 | conservative profile width, not exact physical width |
 | Obstacle route | unknown/left/right (0–2) | one route | 2 | code 3 rejected |

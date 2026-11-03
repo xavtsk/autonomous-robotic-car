@@ -5,9 +5,11 @@ bool tilt_estimation(const float a[3],float *pitch,float *roll)
 {
     float n=a[0]*a[0]+a[1]*a[1]+a[2]*a[2];
     if (!isfinite(n) || n<0.81f || n>1.21f || a[2]<=0.0f) { return false; }
-    /* Positive pitch = nose up. Accelerometer measures support against gravity. */
+    /* Positive pitch = nose up; positive roll = right side up (team choice,
+     * 3 Nov 2026). Accelerometer measures support against gravity; a[1] is
+     * the vehicle-left axis, so right side up makes it negative. */
     *pitch=atan2f(a[0],sqrtf(a[1]*a[1]+a[2]*a[2]))*DEG;
-    *roll=atan2f(a[1],a[2])*DEG;
+    *roll=atan2f(-a[1],a[2])*DEG;
     return true;
 }
 bool tilt_heading(const float a[3],const float m[3],float *heading)

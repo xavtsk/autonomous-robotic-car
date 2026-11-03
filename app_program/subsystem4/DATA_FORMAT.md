@@ -1,6 +1,7 @@
-# Buddy 4 internal packet v2
+# Buddy 4 internal packet v3
 
-11 bytes, 83 meaningful bits and five zero padding bits; bit 0 is the least
+12 bytes, 93 meaningful bits and three zero padding bits (v3, 3 Nov 2026: adds
+the live climb height so the laptop can see a hump being crossed); bit 0 is the least
 significant bit of byte 0. Explicit packing avoids ABI padding. Arithmetic and
 calibration use floats; shared measurement snapshots/events use the packet.
 This is an internal format revision. Buddy 1 MQTT protocol v2 is unchanged.
@@ -10,13 +11,15 @@ This is an internal format revision. Buddy 1 MQTT protocol v2 is unchanged.
 | 0 | 32 | Timestamp, microseconds modulo 2^32 |
 | 32 | 3 | Terrain state enum, 0 unknown through 7 impact |
 | 35 | 5 | Tilt valid, turn valid, peak valid, calibrated, fault |
-| 40 | 11 | Signed pitch, -900..900, 0.1 degree |
-| 51 | 11 | Signed roll, -900..900, 0.1 degree |
+| 40 | 11 | Signed pitch, -900..900, 0.1 degree, + = nose up |
+| 51 | 11 | Signed roll, -900..900, 0.1 degree, + = right side up |
 | 62 | 10 | Signed turn rate, -360..360, 1 degree/second |
 | 72 | 9 | Highest completed valid hump, 0..500 mm |
 | 81 | 1 | Hump completion event |
 | 82 | 1 | Impact candidate |
-| 83 | 5 | Reserved, zero |
+| 83 | 1 | Hump in progress |
+| 84 | 9 | Height climbed so far on that hump, 0..500 mm; zero when none |
+| 93 | 3 | Reserved, zero |
 
 Signed fields use two's complement. Eleven bits cover 1801 pitch/roll values;
 ten cover 721 turn-rate values; nine cover 501 height values. These are the
@@ -36,7 +39,7 @@ mutex, not independently read across a reset. Generation wraps modulo 65536;
 count saturates at 65535. Both widths are minimal for their declared 0..65535 ranges.
 The controller owns run-reset requests. A pending reset invalidates the old snapshot;
 only the sensing task acknowledges it with a new publication. Queue capacity remains
-eight 11-byte events, and overflow is surfaced to the controller.
+eight 12-byte events, and overflow is surfaced to the controller.
 
 The controller updates only `BUDDY1_FAULT_IMU` through Buddy 1's protected masked
 update API. No unsynchronised read-modify-write of the shared fault mask is used.

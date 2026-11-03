@@ -82,6 +82,9 @@ void terrain_monitor_process(terrain_monitor_t *t,const imu_sample_t *s,const te
                 (!(r.flags&TERRAIN_TURN_VALID) || fabsf(r.turn_dps)<15),s->timestamp_us);
     if(t->hump.highest_valid) { r.peak_m=t->hump.highest_m; r.flags|=TERRAIN_PEAK_VALID; }
     r.hump_completed=t->hump.completed;
+    /* Live climb: height so far on the hump being crossed (not yet a peak). */
+    r.hump_active=t->hump.active;
+    if(r.hump_active) { r.hump_height_m=t->hump.height_m<0?0.0f:(t->hump.height_m>0.5f?0.5f:t->hump.height_m); }
     if(r.impact) { r.state=TERRAIN_IMPACT; t->stable_count=0; }
     else if(tilt_ok && movement_ok) {
         terrain_state_t candidate=motion_classify(pitch,speed,dynamic_g,r.turn_dps,(r.flags&TERRAIN_TURN_VALID)!=0,false);
@@ -101,7 +104,8 @@ void terrain_pack(const terrain_result_t *r,uint8_t out[TERRAIN_PACKET_SIZE])
 {
     unsigned bit=0;
     uint8_t flags=r->flags;
-    int32_t pitch=0,roll=0,rate=0; uint32_t height=0;
+    int32_t pitch=0,roll=0,rate=0; uint32_t height=0,climb=0;
+    bool active=r->hump_active && isfinite(r->hump_height_m) && r->hump_height_m>=0 && r->hump_height_m<=0.5f;
     memset(out,0,TERRAIN_PACKET_SIZE);
     if(!isfinite(r->pitch_deg)||!isfinite(r->roll_deg)||fabsf(r->pitch_deg)>90||fabsf(r->roll_deg)>90) { flags&=(uint8_t)~TERRAIN_TILT_VALID; }
     if(!isfinite(r->turn_dps)||fabsf(r->turn_dps)>360) { flags&=(uint8_t)~TERRAIN_TURN_VALID; }
@@ -109,10 +113,12 @@ void terrain_pack(const terrain_result_t *r,uint8_t out[TERRAIN_PACKET_SIZE])
     if(flags&TERRAIN_TILT_VALID) { pitch=(int32_t)lroundf(r->pitch_deg*10); roll=(int32_t)lroundf(r->roll_deg*10); }
     if(flags&TERRAIN_TURN_VALID) { rate=(int32_t)lroundf(r->turn_dps); }
     if(flags&TERRAIN_PEAK_VALID) { height=(uint32_t)lroundf(r->peak_m*1000); }
+    if(active) { climb=(uint32_t)lroundf(r->hump_height_m*1000); }
     put_bits(out,&bit,r->timestamp_us,32); put_bits(out,&bit,(uint32_t)r->state,3); put_bits(out,&bit,flags,5);
     put_bits(out,&bit,(uint32_t)pitch,11); put_bits(out,&bit,(uint32_t)roll,11);
     put_bits(out,&bit,(uint32_t)rate,10); put_bits(out,&bit,height,9);
     put_bits(out,&bit,r->hump_completed,1); put_bits(out,&bit,r->impact,1);
+    put_bits(out,&bit,active,1); put_bits(out,&bit,climb,9);
 }
 
 static uint32_t get_bits(const uint8_t *p,unsigned *bit,unsigned width)
@@ -132,4 +138,5 @@ void terrain_unpack(const uint8_t in[TERRAIN_PACKET_SIZE],terrain_result_t *r)
     r->roll_deg=signed_value(get_bits(in,&bit,11),11)/10.0f;
     r->turn_dps=(float)signed_value(get_bits(in,&bit,10),10); r->peak_m=get_bits(in,&bit,9)/1000.0f;
     r->hump_completed=get_bits(in,&bit,1)!=0; r->impact=get_bits(in,&bit,1)!=0;
+    r->hump_active=get_bits(in,&bit,1)!=0; r->hump_height_m=get_bits(in,&bit,9)/1000.0f;
 }

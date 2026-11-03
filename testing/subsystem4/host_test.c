@@ -30,6 +30,8 @@ int main(void)
  assert(fabsf(s.mag_gauss[0]-0.1f)<0.001f && fabsf(s.mag_gauss[1]-0.1f)<0.001f && fabsf(s.mag_gauss[2]-0.1f)<0.001f);
  mag[3]=0xf0;mag[4]=0;assert(imu_sensor_read(&bus,127,&s) && !s.mag_valid);
  {float a[3]={0.5f,0,0.8660254f};assert(tilt_estimation(a,&pitch,&roll));assert(fabsf(pitch-30)<0.01f);}
+ /* Right side up = positive roll: the vehicle-left axis then points down. */
+ {float a[3]={0,-0.5f,0.8660254f};assert(tilt_estimation(a,&pitch,&roll));assert(fabsf(roll-30)<0.01f && fabsf(pitch)<0.01f);}
  assert(fabsf(tilt_angle_delta(1,359)-2)<0.001f);
  terrain_monitor_init(&t);o.stationary=true;s=(imu_sample_t){0};s.valid=true;s.accel_g[2]=1;
  for(i=1;i<=100;i++){s.timestamp_us=i*20000;terrain_monitor_process(&t,&s,&o);}
@@ -59,9 +61,25 @@ int main(void)
    assert(fabsf(decoded.pitch_deg-t.result.pitch_deg)<0.001f);
    assert(fabsf(decoded.roll_deg-t.result.roll_deg)<0.001f);
    assert(decoded.turn_dps==t.result.turn_dps && decoded.peak_m==0.5f);
-   assert(decoded.hump_completed && decoded.impact && (packed[10]&0xf8U)==0);
+   assert(decoded.hump_completed && decoded.impact && !decoded.hump_active && (packed[11]&0xf8U)==0);
   }
+  /* Live climb height: 1 + 9 bits after the impact bit, 0..500 mm, zero when no hump. */
+  for(int mm=0;mm<=500;mm++) {
+   t.result=(terrain_result_t){.hump_active=true,.hump_height_m=mm/1000.0f};
+   terrain_pack(&t.result,packed);terrain_unpack(packed,&decoded);
+   assert(bits(packed,83,1)==1 && bits(packed,84,9)==(unsigned)mm && (packed[11]&0xe0U)==0);
+   assert(decoded.hump_active && fabsf(decoded.hump_height_m-mm/1000.0f)<0.0001f);
+  }
+  t.result=(terrain_result_t){.hump_active=true,.hump_height_m=0.501f};
+  terrain_pack(&t.result,packed);assert(bits(packed,83,10)==0);
+  t.result=(terrain_result_t){.hump_active=false,.hump_height_m=0.2f};
+  terrain_pack(&t.result,packed);assert(bits(packed,83,10)==0);
  }
- puts("Buddy 4 host tests PASS: driver, axes, signed data, saturation, calibration, tilt, gaps, hump, packing, reset");
+ /* The monitor reports the live climb while crossing a hump. */
+ {hump_detector_t h={0};
+  for(i=0;i<10;i++)hump_update(&h,30,0.01f,true,i*20000);
+  assert(h.active && h.height_m>0.04f);
+ }
+ puts("Buddy 4 host tests PASS: driver, axes, signed data, saturation, calibration, tilt, gaps, hump, packing incl. live climb height, reset");
  return 0;
 }

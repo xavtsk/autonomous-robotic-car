@@ -41,25 +41,35 @@ class LaptopCodecTests(unittest.TestCase):
                          dict(distance_cm_mod=2049, heading_deg=90))
         self.assertNotIn("pose", snapshot)
 
-    def test_tilt_wire(self):
-        self.assertEqual(codec.decode("car/telemetry/tilt", self.vectors["car/telemetry/tilt"]),
-                         dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, terrain="climbing"))
-        self.assertNotIn("tilt", codec.decode("car/reply/snapshot", self.vectors["car/reply/snapshot"]))
-        self.assertEqual(codec.decode("car/telemetry/tilt", bytes.fromhex("0300000001")),
-                         dict(tilt_valid=False, pitch_deg=None, roll_deg=None, terrain="moving"))
-        # Independent encoder for every pitch/roll code at the limits.
-        for pitch, roll in ((-900, 900), (900, -900), (0, 0), (-1, 1)):
-            body = 1 | ((pitch & 0x7ff) << 1) | ((roll & 0x7ff) << 12) | (7 << 23)
-            payload = bytes([3]) + body.to_bytes(4, "little")
-            self.assertEqual(codec.decode("car/telemetry/tilt", payload),
-                             dict(tilt_valid=True, pitch_deg=pitch / 10, roll_deg=roll / 10, terrain="impact"))
-        for bad in ("03f1070000",   # pitch +101.6
-                    "0302000000",   # unavailable but nonzero angle
-                    "0300000004",   # padding bit
-                    "03000000",     # length
-                    "0200000000"):  # version
+    def test_terrain_wire(self):
+        full = dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, state="climbing",
+                    on_hump=True, climb_mm=23, peak_valid=True, peak_mm=41)
+        self.assertEqual(codec.decode("car/telemetry/terrain", self.vectors["car/telemetry/terrain"]), full)
+        self.assertNotIn("terrain", codec.decode("car/reply/snapshot", self.vectors["car/reply/snapshot"]))
+        self.assertEqual(codec.decode("car/telemetry/terrain", bytes.fromhex("03000000010000")),
+                         dict(tilt_valid=False, pitch_deg=None, roll_deg=None, state="moving",
+                              on_hump=False, climb_mm=None, peak_valid=False, peak_mm=None))
+
+        def pack(pitch, roll, state, climb, peak):
+            body = (1 | (pitch & 0x7ff) << 1 | (roll & 0x7ff) << 12 | state << 23 |
+                    (climb is not None) << 26 | (climb or 0) << 27 |
+                    (peak is not None) << 36 | (peak or 0) << 37)
+            return bytes([3]) + body.to_bytes(6, "little")
+        for pitch, roll, climb, peak in ((-900, 900, 0, 500), (900, -900, 500, 0), (0, 0, None, None), (-1, 1, 1, 499)):
+            self.assertEqual(codec.decode("car/telemetry/terrain", pack(pitch, roll, 7, climb, peak)),
+                             dict(tilt_valid=True, pitch_deg=pitch / 10, roll_deg=roll / 10, state="impact",
+                                  on_hump=climb is not None, climb_mm=climb,
+                                  peak_valid=peak is not None, peak_mm=peak))
+        for bad in ("03f10700000000",   # pitch +101.6
+                    "03020000000000",   # unavailable but nonzero angle
+                    "03000000080000",   # climb height without a hump
+                    "0300000000a000",   # peak height without a valid peak
+                    "03000000fcff0f",   # climb 511 mm
+                    "03000000000040",   # padding bit
+                    "030000000000",     # length
+                    "02000000000000"):  # version
             with self.subTest(bad=bad), self.assertRaises(ValueError):
-                codec.decode("car/telemetry/tilt", bytes.fromhex(bad))
+                codec.decode("car/telemetry/terrain", bytes.fromhex(bad))
 
     def test_pose_wire_and_unwrap(self):
         self.assertEqual(codec.decode("car/telemetry/pose", bytes.fromhex("03ff7f16")),
