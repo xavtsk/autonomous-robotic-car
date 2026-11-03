@@ -41,6 +41,26 @@ class LaptopCodecTests(unittest.TestCase):
                          dict(distance_cm_mod=2049, heading_deg=90))
         self.assertNotIn("pose", snapshot)
 
+    def test_tilt_wire(self):
+        self.assertEqual(codec.decode("car/telemetry/tilt", self.vectors["car/telemetry/tilt"]),
+                         dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, terrain="climbing"))
+        self.assertNotIn("tilt", codec.decode("car/reply/snapshot", self.vectors["car/reply/snapshot"]))
+        self.assertEqual(codec.decode("car/telemetry/tilt", bytes.fromhex("0300000001")),
+                         dict(tilt_valid=False, pitch_deg=None, roll_deg=None, terrain="moving"))
+        # Independent encoder for every pitch/roll code at the limits.
+        for pitch, roll in ((-900, 900), (900, -900), (0, 0), (-1, 1)):
+            body = 1 | ((pitch & 0x7ff) << 1) | ((roll & 0x7ff) << 12) | (7 << 23)
+            payload = bytes([3]) + body.to_bytes(4, "little")
+            self.assertEqual(codec.decode("car/telemetry/tilt", payload),
+                             dict(tilt_valid=True, pitch_deg=pitch / 10, roll_deg=roll / 10, terrain="impact"))
+        for bad in ("03f1070000",   # pitch +101.6
+                    "0302000000",   # unavailable but nonzero angle
+                    "0300000004",   # padding bit
+                    "03000000",     # length
+                    "0200000000"):  # version
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                codec.decode("car/telemetry/tilt", bytes.fromhex(bad))
+
     def test_pose_wire_and_unwrap(self):
         self.assertEqual(codec.decode("car/telemetry/pose", bytes.fromhex("03ff7f16")),
                          dict(distance_cm_mod=4095, heading_deg=359))

@@ -80,10 +80,29 @@ int main(void)
     assert(cap.used <= BCAP_POOL && cap.episodes <= BCAP_MAX_EPISODES);
     assert(cap.dropped > 0);
     (void)dump(text, sizeof text);
+    /* A faint barcode (never BLACK) is still captured while a reader is
+     * collecting, and stays one episode through its white gaps. */
+    bcap_begin_run(&cap, t);
+    for (i = 0; i < 50; i++) feed(20, 0, 0);
+    {
+        bcap_input_t in = {t, 650U, 500U, 0U, 0U, 0, true, false, pos};
+        for (i = 0; i < 3U * BCAP_END_QUIET; i++)
+        {   /* grey bars, then white while the reader still decides */
+            in.t_us = t; in.darkness = (i < 10U) ? 500U : 20U;
+            in.surface = (i < 10U) ? 0U : 1U;
+            bcap_record(&cap, &in);
+            t += 10000U;
+            assert(cap.active && cap.episodes == 0);
+        }
+        in.collecting = false; in.t_us = t; in.status = 1U; in.letter = 'Y';
+        bcap_record(&cap, &in);
+        assert(!cap.active && cap.episodes == 1 && strcmp(cap.letters, "Y") == 0);
+        assert(cap.episode[0].count == BCAP_PRE + 3U * BCAP_END_QUIET + 1U);
+    }
     /* Letters buffer never overflows. */
     bcap_begin_run(&cap, t);
     for (i = 0; i < 20; i++) feed(10, 1, (char)('A' + i));
     assert(cap.decoded == 20 && strlen(cap.letters) == sizeof cap.letters - 1U);
-    puts("PASS: barcode capture episodes, pre-trigger, quiet end, run end, counters, bounded pool/letters and USB dump format");
+    puts("PASS: barcode capture episodes, pre-trigger, quiet end, run end, counters, bounded pool/letters, faint reader-collecting capture and USB dump format");
     return 0;
 }

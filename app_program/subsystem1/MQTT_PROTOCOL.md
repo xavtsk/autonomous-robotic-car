@@ -41,6 +41,7 @@ Bit positions below are relative to the body, excluding the version byte.
 | `car/telemetry/state` | state bits 0–2 | 2 |
 | `car/telemetry/faults` | shared fault mask bits 0–5 | 2 |
 | `car/telemetry/pose` | distance since START, cm modulo 4096, bits 0–11; heading since START bits 12–20 | 4 |
+| `car/telemetry/tilt` | tilt-available bit 0; pitch bits 1–11; roll bits 12–22 (signed, 0.1°); terrain state bits 23–25 | 5 |
 | `car/reply/snapshot` | validity and all seven sections, described below | 14 |
 | `car/reply/barcode_map` | result bits 0–1: 0 OK, 1 invalid, 2 configuration closed, 3 internal error | 2 |
 | `car/status` | alive bit 0; faults-valid bit 1; fault mask bits 2–7 | 2 |
@@ -77,6 +78,23 @@ run ends. Both values come from Buddy 2's encoder estimate
   9-bit encoding as `car/telemetry/heading`, which stays reserved for Buddy 4.
 - Samples are skipped while Buddy 2's estimate is invalid or calibrating. Encoder
   dead reckoning drifts with wheel slip; it is a route sketch, not a survey.
+
+### Buddy 4 tilt (`car/telemetry/tilt`, added 3 Nov 2026)
+
+Live only, like pose: no snapshot section, never cached. The controller sends
+one every 200 ms (S4=1 builds), with or without a run, so tilting the car on
+the bench is visible. Values are Buddy 4's latest sample (pitch/roll from the
+accelerometer, + pitch = nose up).
+
+- **Available bit**: 0 when the IMU gave no usable angle (not calibrated, total
+  acceleration outside 0.9–1.1 g, fault, or sample older than 150 ms). Pitch
+  and roll are then sent as zero and must be shown as unavailable, not 0°.
+- **Pitch, roll**: 11-bit two's complement, 0.1° units, −900…+900. Codes
+  outside that range are rejected. Same widths as Buddy 4's internal packet.
+- **Terrain state**: unknown=0, stationary, moving, accelerating, turning,
+  climbing, descending, impact=7. Unknown when the sample is stale.
+- 26 bits + 6 zero padding bits; 5 bytes with the version byte. Example
+  `03 f7 d0 fc 02` = pitch +12.3°, roll −5.1°, climbing.
 
 Letter is A=0 through Z=25. Action is unknown=0, forward=1, left=2, right=3,
 uturn=4. Route is unknown=0, left=1, right=2. State is stopped=0,

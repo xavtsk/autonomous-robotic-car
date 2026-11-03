@@ -22,7 +22,7 @@
         controller('Signed motor duty',[series('Left','duty_left','target'),series('Right','duty_right')],'%',d=>d.motion_valid,[-100,100])];
     }
     if(buddy==='3') return [controller('Line-position error',[series('Error','line_error')],'±100',d=>d.line_flags&1,[-100,100])];
-    if(buddy==='4') return [report('Heading reports','heading',[series('Heading','heading_deg')],'°',[0,360]),report('Reported hump height','hump',[series('Height','height_mm')],'mm',null,true)];
+    if(buddy==='4') return [{...report('Pitch and roll','tilt',[series('Pitch','pitch_deg'),series('Roll','roll_deg','target')],'°',[-45,45]),clock:'Laptop receive time · 5 Hz tilt reports; gaps = tilt unavailable'},report('Heading reports','heading',[series('Heading','heading_deg')],'°',[0,360]),report('Reported hump height','hump',[series('Height','height_mm')],'mm',null,true)];
     return [report('Obstacle distance reports','obstacle',[series('Distance','distance_mm')],'mm',null,true),report('Obstacle width reports','obstacle',[series('Width','width_mm')],'mm',null,true)];
   }
   function layout(defs) {
@@ -100,7 +100,7 @@
       const name=['Barcode','Left','Right'][d.cal_sensor];
       target.append(make('p',`${d.collecting?'Collecting':'Last collection'} · ${name}: white ${d.white_count?`${d.white_min}–${d.white_max}`:'not sampled'} (n=${d.white_count}), black ${d.black_count?`${d.black_min}–${d.black_max}`:'not sampled'} (n=${d.black_count}). Active references are not the full observed ranges.`, 'buddy-chart-note'));
       target.append(make('p','Line error: negative = line left, positive = line right. Both white can be normal in the current between-sensors mounting. Diagnostic states are sampled at 5 Hz; event counters preserve brief events but are not exact event timestamps.', 'buddy-chart-note'));
-    }else if(buddy==='4')target.append(make('p','Pitch / roll, raw acceleration / gyro and estimate-validity diagnostics: not published. Hump height is shown as individual reports, not a continuous height signal. Current course firmware has no Buddy 4 telemetry adapter.', 'future-signal'));
+    }else if(buddy==='4')target.append(make('p','Raw acceleration / gyro and calibration diagnostics: not published. Hump height is shown as individual reports, not a continuous height signal. Pitch/roll beyond ±45° is clipped on this chart only; the readings table shows the reported value.', 'future-signal'));
     else target.append(make('p','Distance versus scan angle, per-angle no-echo, avoidance/recovery state and original-line confirmation: not published. A summary distance cannot be turned into a scan profile. No-echo is shown separately in the fault table, never guessed from a zero distance.', 'future-signal'));
   }
   function draw(){

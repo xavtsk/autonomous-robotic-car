@@ -25,12 +25,17 @@
  * sent modulo 4096 and unwrapped by the laptop; heading since START. */
 #define BUDDY1_POSE_DISTANCE_BITS 12U
 #define BUDDY1_POSE_DISTANCE_MOD  (1U << BUDDY1_POSE_DISTANCE_BITS)
+/* Buddy 4 tilt (live only, not in the snapshot): pitch/roll in 0.1 degree,
+ * -90.0..+90.0, the same 11-bit signed widths as Buddy 4's own packet. */
+#define BUDDY1_TILT_BITS          11U
+#define BUDDY1_TILT_LIMIT_X10     900
+#define BUDDY1_TERRAIN_STATES     8U  /* Buddy 4 terrain_state_t, 3 bits */
 
 enum {
     BUDDY1_TOPIC_MOTION = 0, BUDDY1_TOPIC_BARCODE, BUDDY1_TOPIC_HUMP,
     BUDDY1_TOPIC_HEADING, BUDDY1_TOPIC_OBSTACLE, BUDDY1_TOPIC_STATE,
     BUDDY1_TOPIC_FAULTS, BUDDY1_TOPIC_SNAPSHOT, BUDDY1_TOPIC_MAP_REPLY,
-    BUDDY1_TOPIC_STATUS, BUDDY1_TOPIC_POSE, BUDDY1_TOPIC_COUNT
+    BUDDY1_TOPIC_STATUS, BUDDY1_TOPIC_POSE, BUDDY1_TOPIC_TILT, BUDDY1_TOPIC_COUNT
 };
 typedef enum {
     BUDDY1_ACTION_UNKNOWN = 0, BUDDY1_ACTION_FORWARD, BUDDY1_ACTION_LEFT,
@@ -74,6 +79,11 @@ typedef struct {
     uint8_t pose_valid;
     uint16_t pose_distance_cm;  /* 0..4095, distance since START modulo 4096 */
     int16_t pose_heading_deg;   /* 0..359, + = anticlockwise since START */
+    /* Live-only Buddy 4 tilt; never part of the snapshot packet. */
+    uint8_t tilt_valid;         /* 0: pitch/roll unavailable (sent as zero) */
+    int16_t tilt_pitch_x10;     /* -900..900, + = nose up */
+    int16_t tilt_roll_x10;      /* -900..900 */
+    uint8_t tilt_terrain;       /* 0..7 terrain state, sent even without tilt */
 } BUDDY1_SNAPSHOT;
 
 unsigned buddy1_payload_size(uint8_t topic);

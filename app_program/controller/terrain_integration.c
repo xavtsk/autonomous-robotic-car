@@ -14,6 +14,7 @@ typedef struct {
     int sent_fault;
 } terrain_control_t;
 static terrain_control_t control;
+static void terrain_tilt_report(void);
 
 static bool healthy(uint32_t now)
 {
@@ -99,5 +100,33 @@ void terrain_control_report(void)
     }
     /* S4 exports compass-derived turn RATE, not absolute heading. Never feed
      * degrees/second into Buddy 1's heading-degrees packet. */
+    terrain_tilt_report();
+}
+/* Live pitch/roll for the laptop, every TERRAIN_TILT_PERIOD calls (200 ms at
+ * the 10 ms control cycle), with or without a run, so tilting the car on the
+ * bench shows up. Phase-shifted from the 200 ms motion/pose reports so the
+ * four-message outbox is not filled in one cycle. QoS 0: a full outbox drops
+ * one sample; the next follows. Stale or missing IMU data is sent as
+ * "tilt unavailable", never as 0 degrees. */
+#define TERRAIN_TILT_PERIOD 20U
+static int16_t tilt_x10(float deg, bool *ok)
+{
+    float x=deg*10.0f;
+    if(!(x>=-900.0f && x<=900.0f)) { *ok=false; return 0; }   /* also NaN */
+    return (int16_t)(x>=0.0f ? x+0.5f : x-0.5f);
+}
+static void terrain_tilt_report(void)
+{
+    static uint8_t divider=TERRAIN_TILT_PERIOD/2U;
+    bool fresh, ok;
+    int16_t pitch=0, roll=0;
+    if(++divider<TERRAIN_TILT_PERIOD) { return; }
+    divider=0U;
+    fresh=control.have && (uint32_t)(control.now-control.sample.timestamp_us)<=TERRAIN_MAX_AGE_US;
+    ok=fresh && (control.sample.flags&TERRAIN_TILT_VALID) && !(control.sample.flags&TERRAIN_FAULT);
+    if(ok) { pitch=tilt_x10(control.sample.pitch_deg,&ok); roll=tilt_x10(control.sample.roll_deg,&ok); }
+    if(!ok) { pitch=0; roll=0; }
+    (void)buddy1_report_tilt(ok ? TRUE : FALSE, pitch, roll,
+        fresh && (unsigned)control.sample.state<8U ? (UB)control.sample.state : (UB)TERRAIN_UNKNOWN);
 }
 #endif

@@ -109,6 +109,7 @@ typedef struct
     ir_reflectance_t sensor[S3_SENSOR_COUNT];
     s3_line_detector_t line;
     s3_barcode_decoder_t barcode;
+    s3_barcode_record_t barcode_record; /* record-then-decide, beside barcode */
     uint32_t last_us, sensor_last_us[S3_SENSOR_COUNT];
     uint16_t seen_sensors : 3;
     uint16_t mode : 1;
@@ -127,6 +128,7 @@ typedef struct
     uint8_t rearming : 1;
     uint8_t rearm_anchor_valid : 1;
     uint8_t rearm_stable : 1;
+    uint8_t barcode_held : 3; /* live failure held while the recorder finishes */
     double rearm_anchor_m;
     uint32_t rearm_epoch, rearm_since_us;
     s3_capture_distance_t capture_distance;

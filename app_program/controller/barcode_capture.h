@@ -5,8 +5,9 @@
  * replayed offline. Never changes navigation or motion.
  *
  * An "episode" starts when the barcode sensor reports BLACK (a bar, or any
- * tape it crosses; same cut-offs as the decoder) and ends after
- * BCAP_END_QUIET consecutive WHITE samples; BCAP_PRE samples before the
+ * tape it crosses; same cut-offs as the decoder) or a barcode reader starts
+ * collecting, and ends after BCAP_END_QUIET consecutive WHITE samples once no
+ * reader is collecting; BCAP_PRE samples before the
  * trigger are kept so the leading quiet zone is visible. Episodes share one
  * fixed pool; when it is full, later episodes are only counted.
  *

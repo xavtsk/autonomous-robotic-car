@@ -366,7 +366,8 @@ static void sample(INT code, void *unused)
                 (uint8_t)g_drive.output.sensor[S3_SENSOR_BARCODE].surface,
                 (uint8_t)g_drive.output.barcode_status,
                 g_drive.output.barcode.letter,
-                g_drive.navigation.barcode.collecting != 0U,
+                (g_drive.navigation.barcode.collecting != 0U) ||
+                    s3_barcode_record_active(&g_drive.navigation.barcode_record),
                 g_drive.navigation.rearming,
                 feedback.valid ? feedback.centre_m : 0.0};
             if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)

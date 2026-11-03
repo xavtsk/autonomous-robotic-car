@@ -1,5 +1,41 @@
 # Buddy 3: Tribunal 1 data representation
 
+## 3 November record-then-decide barcode reader
+
+Problem: the small barcode (Y) blurs, so thin bars read about 500 and grey
+gaps 300+; fixed WHITE <= 400 / BLACK >= 600 limits never see those stripes.
+A second reader (`s3_barcode_record_*`, `barcode_decoder.c`) runs beside the
+unchanged live decoder. It stores the darkness of the whole pass, then finds
+bumps/dips (prominence >= 100), trims brief/shallow wiggles if more than 31,
+places each edge time-weighted between neighbouring levels and gives the 29
+widths to the unchanged `s3_barcode_decode_runs()` Code 39 rules. First reader
+to decode wins; the other is reset, so one barcode gives one event.
+
+| Field | Range | Bits | Why |
+|---|---|---|---|
+| Stored reading: darkness | 0..1000 | 10 | Full calibrated range, no precision lost |
+| Stored reading: time step | 0..31.5 ms, 0.5 ms units | 6 | > 30 ms sample-age limit; remainder carried, no drift |
+| Readings per pass | 0..1024 | 11 (count) | Big Z at the slowest pass needs ~800 |
+| Reader state | waiting/recording/quiet | 2 | |
+| Paper level, last extreme | 0..1000 | 10 each | Same range as darkness |
+| Direction, blocked, seen | flags | 1 each | |
+| Times (white, leading, frame, quiet, since turn) | uint32 us | 32 each | Full validated config range (< 2^31 us) |
+
+Each reading is **16 bits** (was nothing stored before; the live decoder keeps
+only 29 run widths). Buffer 1024 x 16 bits = 2048 bytes; the whole reader is
+**2084 bytes**; `s3_navigation_t` grows 488 -> 2576 bytes (ARM, measured with
+arm-none-eabi-gcc). Firmware .bss +2088 bytes, .text +3.7 KB (S4/S5 build).
+No wire, MQTT or codec format changes.
+
+Evidence: all 109 saved BCAP traces replayed - the new reader reads every
+barcode the old one reads, plus the complete Y pass (183812 ep7) and one more
+Z, and never a wrong letter. Host tests `test_barcode_record.c` (26 letters,
+both directions, sharp/blurred/faint, scratch, +/-25 % width jitter with no
+wrong letter, cut pass, quiet zones, line crossing, overflow, timing) and a
+faint-Y navigation test. `make regression` trace is byte-identical to the
+pre-change baseline. Cut passes (first stripes never recorded) still cannot
+be read - nothing can recover stripes that were not sampled.
+
 ## 27 October observation extension
 
 The internal shared status is now **146 bytes** (60 navigation + 22 feedback +

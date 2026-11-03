@@ -30,6 +30,7 @@ bool subsystem4_event(terrain_result_t *out,bool *lost)
 }
 ER buddy1_update_faults(UB changed,UB active) { (void)changed;(void)active;return E_OK; }
 ER buddy1_report_hump(UH count,UH height) { (void)count;(void)height;return E_OK; }
+ER buddy1_report_tilt(BOOL valid,H pitch,H roll,UB state) { (void)valid;(void)pitch;(void)roll;(void)state;return E_OK; }
 ER buddy1_invalidate(UB topic) { (void)topic;return E_OK; }
 #endif
 

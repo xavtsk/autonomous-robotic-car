@@ -32,6 +32,14 @@ ER buddy1_update_faults(UB changed,UB active)
 { assert(changed==BUDDY1_FAULT_IMU && !(active&~changed)); faults=(faults&~changed)|active; return E_OK; }
 ER buddy1_report_hump(UH humps,UH mm)
 { reports++; sent_count=humps; sent_height=mm; return E_OK; }
+static unsigned tilts, tilt_valid_count;
+static int tilt_pitch, tilt_roll, tilt_state;
+ER buddy1_report_tilt(BOOL valid,H pitch,H roll,UB state)
+{
+    assert(state<8U && (valid || (pitch==0 && roll==0)));
+    tilts++; if(valid) tilt_valid_count++;
+    tilt_pitch=valid?pitch:9999; tilt_roll=valid?roll:9999; tilt_state=state; return E_OK;
+}
 ER buddy1_invalidate(UB topic)
 { assert(topic==BUDDY1_TOPIC_HUMP); invalidations++; return E_OK; }
 static void fresh(void)
@@ -114,6 +122,25 @@ int main(void)
     assert(g_drive.state==S3_DRIVE_OFF && !g_drive.external_hold && fb_command_id==0);
     reset_pending=false; step(); begin(); ack();
     run_id++; step(); assert(g_drive.state==S3_DRIVE_FAULT);
+    /* Live tilt: one report per 20 control cycles, run or no run; stale or
+     * invalid IMU data is "unavailable", never 0 degrees. */
+    { unsigned before=tilts;
+      fresh(); imu.pitch_deg=12.34f; imu.roll_deg=-5.06f; imu.state=TERRAIN_CLIMBING;
+      cycle(); for(unsigned i=0;i<40;++i) terrain_control_report();
+      assert(tilts==before+2U && tilt_pitch==123 && tilt_roll==-51 && tilt_state==TERRAIN_CLIMBING);
+      imu.flags&=~TERRAIN_TILT_VALID; cycle();
+      for(unsigned i=0;i<20;++i) terrain_control_report();
+      assert(tilts==before+3U && tilt_pitch==9999 && tilt_state==TERRAIN_CLIMBING);
+      fresh(); imu.pitch_deg=95.0f; cycle();
+      for(unsigned i=0;i<20;++i) terrain_control_report();
+      assert(tilts==before+4U && tilt_pitch==9999);               /* out of range */
+      fresh(); imu.pitch_deg=-90.0f; imu.roll_deg=90.0f; cycle();
+      for(unsigned i=0;i<20;++i) terrain_control_report();
+      assert(tilt_pitch==-900 && tilt_roll==900);
+      readable=false; for(unsigned i=0;i<20;++i) { cycle(); } readable=true;
+      for(unsigned i=0;i<20;++i) terrain_control_report();
+      assert(tilt_pitch==9999 && tilt_state==TERRAIN_UNKNOWN);     /* stale */ }
+    puts("PASS: live tilt every 20 cycles, valid/invalid/out-of-range/stale, terrain state");
     puts("PASS: IMU START/reset acknowledgement and timeout, STOP priority, stale data, lost/impact events, latched reset, cumulative humps and owned fault bit");
     return 0;
 }

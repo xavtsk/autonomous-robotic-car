@@ -83,6 +83,10 @@ def describe(topic, d):
         return f"HUMP      count {d['count']}, highest {d['height_mm']} mm"
     if name == "heading":
         return f"HEADING   {d['heading_deg']} deg"
+    if name == "tilt":
+        if not d["tilt_valid"]:
+            return f"TILT      unavailable, terrain {d['terrain']}"
+        return f"TILT      pitch {d['pitch_deg']:+.1f} deg, roll {d['roll_deg']:+.1f} deg, terrain {d['terrain']}"
     if name == "obstacle":
         return f"OBSTACLE  {d['distance_mm']} mm away, {d['width_mm']} mm wide, route {d['route']}"
     return str(d)
@@ -96,6 +100,7 @@ class Folder:
         self.last_heartbeat = None
         self.heartbeats = 0
         self.last_speed = None
+        self.last_tilt = None
 
     def keep(self, topic, d):
         if self.show_all:
@@ -113,6 +118,14 @@ class Folder:
                     abs(a - b) < SPEED_STEP_MMS for a, b in zip(speed, self.last_speed)):
                 return False
             self.last_speed = speed
+        if name == "tilt":
+            # 5 Hz: print only changes of at least 1 degree or of terrain state.
+            key = (d["tilt_valid"], d["terrain"], d["pitch_deg"], d["roll_deg"])
+            last, self.last_tilt = self.last_tilt, key
+            if last is not None and key[:2] == last[:2] and (not key[0] or all(
+                    abs(a - b) < 1.0 for a, b in zip(key[2:], last[2:]))):
+                self.last_tilt = last
+                return False
         return True
 
 

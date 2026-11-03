@@ -515,8 +515,52 @@ static void test_clearance_persistence_and_epochs(void)
     /* Faulted calibration updates cannot clear the latch. */
     assert(!s3_navigation_apply_calibration(&rig.nav, S3_SENSOR_BARCODE, &c));
 }
+#ifndef S3_BASELINE_TRACE /* "make compare" replays only the pre-recorder tests */
+/* A small barcode whose thin bars blur to grey: bars read darkness ~550 and
+ * gaps ~300, so the fixed WHITE/BLACK limits never see a black bar. The
+ * record-then-decide reader still reads it - once, as one barcode event. */
+static void test_faint_barcode(void)
+{
+    static const uint16_t y = 0x190U;
+    uint16_t symbols[3] = {0x094U, y, 0x094U};
+    unsigned int c, i, direction;
+    for (direction = 0U; direction < 2U; direction++)
+    {
+        rig_t rig;
+        uint32_t runs[29];
+        init_rig(&rig, 10000U, true);
+        rig.jitter = true;
+        for (c = 0U; c < 3U; c++)
+        {
+            for (i = 0U; i < 9U; i++)
+            {
+                runs[c * 10U + i] =
+                    (symbols[c] & (1U << (8U - i))) ? 130000U : 50000U;
+            }
+            if (c < 2U)
+            {
+                runs[c * 10U + 9U] = 50000U;
+            }
+        }
+        hold(&rig, 1500000U, 150U, 202U, 202U);
+        for (i = 0U; i < 29U; i++)
+        {   /* raw 222 = darkness 553, raw 189 = darkness 300 */
+            hold(&rig, runs[direction ? 28U - i : i], (i % 2U) ? 189U : 222U,
+                 202U, 202U);
+        }
+        hold(&rig, 1500000U, 150U, 202U, 202U);
+        assert(rig.barcodes == 1U && rig.letter == 'Y' && rig.rejects == 0U);
+        assert(rig.last_reversed == (direction != 0U));
+        assert(rig.out.rearming);
+    }
+}
+#endif
+
 void test_navigation(void)
 {
+#ifndef S3_BASELINE_TRACE
+    test_faint_barcode();
+#endif
     test_readiness_and_updates();
     test_faults();
     test_rearming_and_timing();
