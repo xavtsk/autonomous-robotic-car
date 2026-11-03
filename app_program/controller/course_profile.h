@@ -38,14 +38,14 @@
 #ifndef S3_COURSE_STEERING_KP
 #define S3_COURSE_STEERING_KP (0.10f)
 #endif
-/* Cruise speed. Buddy 3's default is 0.10 m/s; on 27 Oct no barcode was
- * decoded at that speed (the printed bars give the barcode sensor weak
- * contrast, and thin bars pass in ~35 ms against a 30 ms minimum). 0.07 m/s
- * gave each bar ~40 % more time; 0.06 m/s on request (27 Oct, 20:08). 0.06 is
- * also the integration minimum wheel speed (S3_MIN_WHEEL_MPS): going lower
- * needs that floor lowered too, and 0.04 m/s stalled a wheel on 26 Oct. */
+/* 3 Nov barcode-A experiment: half the previous 0.04 m/s cruise speed.
+ * Keep the 10 ms sampling period and decoder thresholds unchanged to isolate
+ * speed. The current integration floor is 0.01 m/s, so 0.02 is not clamped.
+ * Verify measured wheel speeds: low-speed motion may stutter or stall.
+ * The recorder still holds 1024 readings / at most 10 s; long barcodes may
+ * exceed that window at this test speed. */
 #ifndef S3_COURSE_BASE_MPS
-#define S3_COURSE_BASE_MPS (0.04f)
+#define S3_COURSE_BASE_MPS (0.02f)
 #endif
 /* The junction is reported a few mm after the sensors reach the crossing tape;
  * the crossing centre is about this much further on. */

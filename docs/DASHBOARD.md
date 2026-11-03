@@ -35,6 +35,63 @@ faults or rejected commands. The simulation banner uses an informational blue.
 
 ## Start with the robot
 
+### Windows laptop (3 November barcode-A test)
+
+The Windows dashboard now uses `paho-mqtt==2.1.0`, without Unix PTYs or
+Mosquitto command-line clients. Mosquitto is still needed if this laptop hosts
+the broker. Download it from <https://mosquitto.org/download/>. The launcher
+finds `build/tooling/mosquitto/mosquitto.exe` or the normal Program Files install.
+
+In PowerShell, from the repository root (use the actual Python executable if
+the Windows Store `python` alias or `py` launcher does not work):
+
+```powershell
+python -m venv build/dashboard-venv
+build/dashboard-venv/Scripts/python.exe -m pip install -r tools/dashboard/requirements-windows.txt
+./tools/start-telemetry.ps1 -StartBroker
+```
+
+This opens `http://127.0.0.1:8765`. The launcher starts a hidden broker only if
+port 1883 is unused, and stops only that broker when the dashboard closes.
+For an existing broker on another laptop, instead use
+`./tools/start-telemetry.ps1 -Broker <broker-laptop-IP>`.
+`./tools/start-telemetry.ps1 -Demo` needs no broker and is simulated data.
+
+Connect the Pico and laptop to the same hotspot/LAN. Run `ipconfig` and use the
+IPv4 address of the adapter on that network as `MQTT_BROKER_IP` in the Pico's
+private `config/wifi_secrets.h`; also set `WIFI_SSID` and `WIFI_PASSWORD` there.
+Use `config/wifi_secrets.example.h` as the template. The Pico must not use
+127.0.0.1: that address refers to itself, not the laptop. Permit Mosquitto's
+TCP 1883 listener through Windows Firewall for the trusted test network; the
+supplied `config/mosquitto-dev.conf` allows anonymous clients on that network.
+
+Initialize missing SDK network dependencies and build the Wi-Fi test image:
+
+```powershell
+git -C build/tooling/pico-sdk submodule update --init lib/cyw43-driver lib/lwip
+./tools/build-s3-motion.ps1 -Telemetry
+```
+
+Flash the resulting
+`build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_ir_debug.uf2`
+using BOOTSEL. The ordinary build without `-Telemetry` has no Wi-Fi/MQTT.
+Wait for **Broker connected** AND fresh robot traffic, then request a snapshot.
+For the A-stop test, send a direction map that leaves A unassigned: for example,
+**Forward B, Left Z, Right Y, U-turn C**. Wait for OK before the first START.
+The existing controller halts on an unmapped letter; there is no hardcoded A
+override. Assigning A to a direction makes it perform that direction again.
+The boot default maps A to Forward, so sending the test map is required.
+If a run has already started, reboot the Pico before changing its frozen map.
+
+A stop requires a successful full decode, including trailing blank paper; it
+does not occur at the first bar. Expect barcode **A**, robot **STOPPED**,
+controller reason **unmapped**, and a run capture with `decoded=1 letters=A`.
+The separate direction/action field is **unknown**, since A is unmapped. GP20
+starts the next run. Wait for the Runs capture to be complete before restarting
+or downloading, because another START can truncate the previous upload.
+
+### macOS/Linux
+
 Keep the existing Mosquitto broker running, with the Mac and Pico on the same
 hotspot. If the broker is running on this Mac:
 
@@ -55,7 +112,7 @@ installed and available on PATH (`brew install mosquitto` on macOS). The Python
 server uses only the standard library; no Python package installation is needed.
 
 If no broker is already running, the existing lab configuration can be started
-in another terminal using `mosquitto -c mosquitto-dev.conf -v`. Do not start a
+in another terminal using `mosquitto -c config/mosquitto-dev.conf -v`. Do not start a
 second broker on a port already in use. The dashboard combines monitoring and
 setup commands; it does not start or reconfigure the broker itself.
 
@@ -269,6 +326,6 @@ browser JSON exists only on the laptop. MQTT authentication/TLS and remote
 hosting are outside this lab dashboard's current configuration.
 
 Close it with Control+C in its terminal. `--port 8766` selects another web port
-if needed. The web server currently targets macOS/Linux; its Mosquitto bridge
-uses a private terminal descriptor to receive connection acknowledgements
-without waiting for stdout buffering.
+if needed. On macOS/Linux the Mosquitto bridge uses a private terminal
+descriptor to receive connection acknowledgements without waiting for stdout
+buffering. Windows uses the native Paho client described above.
