@@ -66,6 +66,12 @@ s3_barcode_status_t s3_barcode_update(s3_barcode_decoder_t *decoder,
  * s3_barcode_decode_runs() Code 39 rules. If necessary, the two
  * sentinel stars alone estimate a bounded black/white width bias, shared
  * first, then varying between the stars if no shared fit exists.
+ * On a quiet, near-zero paper background, an independent bounded recovery
+ * groups ink above a 5-unit noise band into exactly 15
+ * complete regions. Weak regions use the half-height core around their peak;
+ * strong regions retain outer edges. Each accepted interpretation must pass
+ * full validation; conflicting valid letters are rejected. No letter or width rule
+ * selects regions.
  * Change Requirement 1: each stored reading is 16 bits (10-bit darkness
  * 0..1000 + 6-bit time step in 0.5 ms units, 0..31.5 ms). */
 #define S3_REC_MAX (2048U)        /* room for a frame plus history at 100 Hz */
@@ -75,6 +81,9 @@ s3_barcode_status_t s3_barcode_update(s3_barcode_decoder_t *decoder,
 #define S3_REC_WHITE_BAND (75U)   /* within this of the paper = white       */
 #define S3_REC_PROMINENCE (100U)  /* maximum/default peak prominence       */
 #define S3_REC_MIN_PROMINENCE (15U) /* minimum contrast on the 0..1000 scale */
+#define S3_REC_FAINT_BAND (5U)     /* recovery noise band above near-zero paper */
+#define S3_REC_FAINT_MAX_NOISE (15U) /* refuse recovery on noisier recordings */
+#define S3_REC_FAINT_DIP_US (30000U) /* bridge brief low dips inside one bar */
 #define S3_REC_STEP_US (500U)     /* time-step unit of a stored reading     */
 #define S3_REC_STEP_MAX (63U)     /* 6 bits: 31.5 ms > 30 ms sample-age limit */
 #define S3_REC_EXT_MAX (63U)      /* bumps+dips found before wiggles are trimmed */
@@ -87,7 +96,7 @@ typedef struct {
     uint32_t prefix_us;           /* retained history; excluded from post-trigger timeout */
     uint32_t last_us;             /* previous reading's timestamp           */
     uint32_t white_us;            /* white before the barcode (waiting) or after it */
-    uint32_t leading_us;          /* white measured before the first bar    */
+    uint32_t leading_us;          /* white before retained history; see rec_pre_drop */
     uint32_t frame_us;            /* recording length                       */
     uint32_t required_us;         /* earliest frame_us with enough trailing white */
     uint16_t prev;                /* last waiting reading (becomes sample 0) */
@@ -109,9 +118,11 @@ bool s3_barcode_record_active(const s3_barcode_record_t *record);
 s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *record,
     const s3_barcode_config_t *config, uint32_t timestamp_us, bool valid,
     uint16_t darkness, s3_barcode_result_t *result);
-/* Pure step used above, exposed for tests: stripe widths from the recorded
+/* Pure diagnostic extraction: stripe widths from the recorded
  * readings. Returns the number of stripes (black first); 0 when none or more
- * than S3_BARCODE_RUNS. first/last edge are microseconds from sample 0. */
+ * than S3_BARCODE_RUNS. first/last edge are microseconds from sample 0.
+ * This count-only interface uses faint recovery if the primary count is wrong;
+ * the live reader validates both candidates independently before selection. */
 unsigned int s3_barcode_record_runs(const s3_barcode_record_t *record,
     uint32_t runs[S3_BARCODE_RUNS], uint32_t *first_edge_us,
     uint32_t *last_edge_us, uint32_t *end_us, uint32_t *max_step_us);

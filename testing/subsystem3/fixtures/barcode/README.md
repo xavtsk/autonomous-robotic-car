@@ -162,6 +162,61 @@ failure is not introduced by the outer-edge selection change.
 
 Diagnostic-only minimum prominence 12 or 10 does not produce a valid A:
 the adaptive threshold and extra/missed extrema still prevent validation.
-This fixture is preserved for diagnosis, not added to the current replay
-success expectations. Its observed hardware rejection and offline analyses
-must not be described as a successful A decode.
+Those initial diagnostics did not establish a fix. Its recorded hardware result
+remains a rejection; later recovery checks below are offline software evidence.
+
+The user also confirmed these three complete captures as the same small A:
+
+| Fixture time | Samples | Original hardware result |
+|---|---:|---|
+| `20261105-160054-small-a-faint-rejected.txt` | 568 | rejected |
+| `20261105-160403-small-a-faint-rejected.txt` | 522 | rejected |
+| `20261105-160438-small-a-faint-rejected.txt` | 522 | rejected |
+
+The bounded faint-region recovery retains 15 bars and measures weak peaks around
+their connected half-height core. All four raw-normalized captures recover A at
+midpoint reconstructed timing with explicit trailing white padding. Normalization
+uses the recorded firmware calibration, white=215 and black=3550. Their raw ADC
+counts retain information that the exported darkness/4 stream discards: the last
+quantized capture can still reject. One captured stream (16:00:54) decodes without
+padding; the other three end before the new reader finalizes trailing quiet.
+
+The replay suite checks raw and quantized inputs, three interval reconstructions,
+both waveform directions, and four explicit padding choices. The observed raw
+scan direction must recover at midpoint timing with padding; uncertain variants
+may reject but cannot report another letter. These checks neither invent physical
+quiet-zone evidence nor establish a successful run of the new firmware.
+
+## 5 November evening: repeat A failures and successful Z control
+
+The user confirmed the following four scans as the small A and the last as
+the larger Z. All five uploads contain one complete episode, with no reported
+timing error, overflow or unstored episode. The names retain the observed
+hardware result; a later successful replay does not change that result.
+
+| Fixture | Samples | Hardware result | Dashboard trace ID |
+|---|---:|---|---|
+| `20261105-182025-small-a-decoded.txt` | 533 | A decoded | `385d66f5e07e475e996e0446cbbedf17` |
+| `20261105-182223-small-a-rejected.txt` | 531 | rejected | `594e98326151409bb6ec535db4d7372f` |
+| `20261105-182416-small-a-rejected.txt` | 519 | rejected | `09aed14d2fdf475db0ebd103ed19fade` |
+| `20261105-182831-small-a-rejected.txt` | 507 | rejected | `eb6313e5a49147ae883ff67d857a710b` |
+| `20261105-183024-wide-z-decoded.txt` | 990 | Z decoded | `8f2f9e42b9bd4b39bff5c4c928d3fc7c` |
+
+These fixtures exercise two further failure paths: rising or faint barcode
+features contaminate an estimate intended for quiet-paper noise, and a primary
+extraction can return 29 widths while retaining a wide-bar wiggle in place of
+a real narrow bar. A count of 29 is therefore not itself a valid barcode.
+
+The later correction recovers the 18:24 and 18:28 raw-normalized A captures in
+offline replay. The 18:22 raw capture still refuses: one narrow payload white gap
+remains about 2 ms below the strict minimum. Its quantized representation can
+pass, which illustrates that lossy previews are not interchangeable with raw ADC
+measurements. The successful A and Z controls must remain successful.
+
+At midpoint reconstructed timing in the observed direction, replay requires
+those recoveries and the retained 18:22 raw rejection with explicit 2-second
+leading and 1-second trailing synthetic white margins. Quantized inputs, both
+scan directions, three timing reconstructions and all four margin choices must
+never produce a different letter. Lossy or timing-uncertain variants may refuse.
+These are software regression requirements, not claims that the rejected
+hardware runs decoded or that the added quiet intervals were physically observed.

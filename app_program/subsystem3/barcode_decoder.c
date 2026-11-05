@@ -228,10 +228,24 @@ static bool rec_step(s3_barcode_record_t *r, uint32_t gap_us, uint16_t *step)
     *step=(uint16_t)units;
     return true;
 }
+/* Calibration can clamp a quiet paper background near zero while narrow
+ * bars still rise only 10..25 units. Keep their small turns and quiet-zone
+ * interruptions visible. The normal batch extractor retains its learned
+ * prominence; this only enables a bounded second extraction if bars are lost. */
+static bool rec_faint_eligible(const s3_barcode_record_t *r)
+{
+    return r != 0 && r->paper <= S3_REC_FAINT_BAND &&
+        r->prominence != 0U && r->prominence <= S3_REC_FAINT_MAX_NOISE;
+}
+static unsigned int rec_monitor_band(const s3_barcode_record_t *r)
+{
+    return rec_faint_eligible(r) ? S3_REC_FAINT_BAND : r->prominence;
+}
 static bool rec_white(const s3_barcode_record_t *r, unsigned int dark)
 {
     unsigned int band=S3_REC_WHITE_BAND;
-    if ((r->prominence != 0U) && (r->prominence < band)) { band=r->prominence; }
+    const unsigned int monitor=rec_monitor_band(r);
+    if ((monitor != 0U) && (monitor < band)) { band=monitor; }
     return dark <= (unsigned int)r->paper + band;
 }
 static uint32_t sat_add(uint32_t a, uint32_t b)
@@ -242,9 +256,19 @@ static uint32_t sat_add(uint32_t a, uint32_t b)
  * preceding step: dropping it also drops the next entry's incoming interval. */
 static void rec_pre_drop(s3_barcode_record_t *r)
 {
+    const bool was_white=(r->pre[r->pre_head]&0x3FFU)<=S3_REC_FAINT_BAND;
+    uint32_t elapsed;
     r->pre_head=(uint16_t)((r->pre_head+1U)%S3_REC_PRE_MAX);
     r->pre_count--;
-    r->pre_us-=(uint32_t)(r->pre[r->pre_head]>>10)*S3_REC_STEP_US;
+    elapsed=(uint32_t)(r->pre[r->pre_head]>>10)*S3_REC_STEP_US;
+    /* While waiting, leading_us measures verified low-band white BEFORE
+     * the retained history. A faint mark that falls out of the ring must
+     * still break that margin; the stronger recording trigger cannot prove
+     * that everything before it was white. The absolute band is conservative
+     * for all eligible paper levels (0..5), even if the reference changes. */
+    r->leading_us=was_white && ((r->pre[r->pre_head]&0x3FFU)<=S3_REC_FAINT_BAND) ?
+        sat_add(r->leading_us,elapsed) : 0U;
+    r->pre_us-=elapsed;
     r->pre[r->pre_head]&=0x3FFU;
 }
 static void rec_pre_push(s3_barcode_record_t *r, unsigned int dark, uint16_t step)
@@ -258,6 +282,35 @@ static void rec_pre_push(s3_barcode_record_t *r, unsigned int dark, uint16_t ste
     r->pre_us+=(uint32_t)step*S3_REC_STEP_US;
     while ((r->pre_count>1U) && (r->pre_us>S3_REC_PRE_US)) { rec_pre_drop(r); }
 }
+/* The waiting EWMA can include faint ink below the stronger recording trigger.
+ * If the retained history starts with an actual blank-paper interval, measure
+ * its noise alone. Stop at the first ink sample; never use inter-bar valleys
+ * to certify a noisy background as quiet. Otherwise retain the EWMA estimate. */
+static unsigned int rec_paper_prominence(const s3_barcode_record_t *r,
+    const s3_barcode_config_t *config)
+{
+    unsigned int prominence=(r->noise_q4+3U)/4U;
+    if (r->paper<=S3_REC_FAINT_BAND && r->pre_count>1U) {
+        const unsigned int floor=(unsigned int)r->paper+S3_REC_FAINT_BAND;
+        unsigned int previous=r->pre[r->pre_head]&0x3FFU, differences=0U;
+        uint32_t elapsed=0U, sum=0U;
+        for (unsigned int i=1U; previous<=floor && i<r->pre_count; i++) {
+            const uint16_t entry=r->pre[((unsigned int)r->pre_head+i)%S3_REC_PRE_MAX];
+            const unsigned int dark=entry&0x3FFU;
+            if (dark>floor) { break; }
+            elapsed+=(uint32_t)(entry>>10)*S3_REC_STEP_US;
+            sum+=(dark>previous) ? dark-previous : previous-dark;
+            differences++;
+            previous=dark;
+        }
+        if (differences!=0U && elapsed>=config->quiet_modules*config->min_narrow_us) {
+            prominence=(4U*sum+differences-1U)/differences;
+        }
+    }
+    if (prominence<S3_REC_MIN_PROMINENCE) { prominence=S3_REC_MIN_PROMINENCE; }
+    if (prominence>S3_REC_PROMINENCE) { prominence=S3_REC_PROMINENCE; }
+    return prominence;
+}
 /* Edge time where the readings cross mid between samples i and i+1. */
 /* How far reading d still sits at the start level lo of a segment that ends
  * at level hi: 1024 = still at lo, 0 = already at hi. */
@@ -270,9 +323,49 @@ static uint32_t rec_frac(unsigned int d, unsigned int lo, unsigned int hi)
     int32_t f=(den == 0) ? 0 : (num*1024)/den;
     return (f < 0) ? 0U : ((f > 1024) ? 1024U : (uint32_t)f);
 }
-unsigned int s3_barcode_record_runs(const s3_barcode_record_t *record,
+/* Group low-contrast ink regions, retaining one strongest peak per region.
+ * A bar must return below the noise band for more than 30 ms before another
+ * can start. Internal plateau wiggles therefore cannot replace a faint bar.
+ * Require exactly 15 complete regions: never prune this path to a desired
+ * count, infer a missing bar, or use an expected letter to choose peaks. */
+static unsigned int rec_faint_extrema(const s3_barcode_record_t *r,
+    uint16_t ext[S3_REC_EXT_MAX])
+{
+    const unsigned int floor=(unsigned int)r->paper+S3_REC_FAINT_BAND;
+    unsigned int cursor=0U, n=1U;
+    ext[0]=0U;
+    while (cursor<r->count) {
+        unsigned int peak, dip;
+        uint32_t low_us=0U;
+        while (cursor<r->count && REC_DARK(r,cursor)<=floor) { cursor++; }
+        if (cursor==r->count) { break; }
+        if (n+2U>S3_BARCODE_RUNS+2U) { return 0U; }
+        peak=cursor++; dip=peak;
+        while (cursor<r->count) {
+            if (REC_DARK(r,cursor)>floor) {
+                if (REC_DARK(r,cursor)>REC_DARK(r,peak)) { peak=cursor; }
+                low_us=0U;
+            } else {
+                if (low_us==0U || REC_DARK(r,cursor)<REC_DARK(r,dip)) { dip=cursor; }
+                low_us+=REC_STEP_US(r,cursor);
+                if (low_us>S3_REC_FAINT_DIP_US) { break; }
+            }
+            cursor++;
+        }
+        if (low_us<=S3_REC_FAINT_DIP_US) { return 0U; } /* incomplete last bar */
+        /* Include the entire valley, including its first low readings. */
+        while (cursor<r->count && REC_DARK(r,cursor)<=floor) {
+            if (REC_DARK(r,cursor)<REC_DARK(r,dip)) { dip=cursor; }
+            cursor++;
+        }
+        ext[n++]=(uint16_t)peak;
+        ext[n++]=(uint16_t)dip;
+    }
+    return n==S3_BARCODE_RUNS+2U ? n : 0U;
+}
+static unsigned int rec_extract_runs(const s3_barcode_record_t *record,
     uint32_t runs[S3_BARCODE_RUNS], uint32_t *first_edge_us,
-    uint32_t *last_edge_us, uint32_t *end_us, uint32_t *max_step_us)
+    uint32_t *last_edge_us, uint32_t *end_us, uint32_t *max_step_us, bool faint)
 {
     /* Alternating dip, bump, dip, ... indices; 15 bars need 31 extremes. */
     uint16_t ext[S3_REC_EXT_MAX];
@@ -284,42 +377,50 @@ unsigned int s3_barcode_record_runs(const s3_barcode_record_t *record,
         (record->count > S3_REC_MAX)) { return 0U; }
     *max_step_us=0U;
     ext[0]=0U;
-    for (i=1U; i<record->count; i++) {
-        unsigned int d=REC_DARK(record,i), b=REC_DARK(record,best);
-        if (REC_STEP_US(record,i) > *max_step_us) { *max_step_us=REC_STEP_US(record,i); }
-        if (rising ? (d > b) : (d < b)) { best=i; }
-        else if ((rising ? b-d : d-b) >=
-                 (record->prominence ? record->prominence : S3_REC_PROMINENCE)) {
-            if (n >= S3_REC_EXT_MAX-1U) { return 0U; }   /* far too many stripes */
-            ext[n++]=(uint16_t)best; best=i; rising=!rising;
+    if (faint) {
+        n=rec_faint_extrema(record,ext);
+        if (n==0U) { return 0U; }
+        for (i=1U; i<record->count; i++) {
+            if (REC_STEP_US(record,i)>*max_step_us) { *max_step_us=REC_STEP_US(record,i); }
         }
-    }
-    if (!rising) { ext[n++]=(uint16_t)best; }  /* dip after the last bump */
-    if (n < 3U) { return 0U; }                 /* no complete bar */
-    /* A sag or scratch inside a wide bar (or a smudge inside a wide gap)
-     * adds an extra dip/bump pair. While there are more than 31 extremes,
-     * drop the neighbouring interior pair that is "smallest" = height times
-     * time apart: a wiggle is shallow or brief, a real stripe is deep and
-     * about one narrow module long. The strict Code 39 checks still have to
-     * pass afterwards; they reduce false accepts but are not a checksum. */
-    while (n > S3_BARCODE_RUNS+2U) {
-        unsigned int j, m, cut=1U;
-        uint64_t small=UINT64_MAX;
-        for (j=1U; j+2U < n; j++) {
-            unsigned int a=REC_DARK(record,ext[j]), b=REC_DARK(record,ext[j+1U]);
-            uint64_t span=0U, size;
-            for (m=(unsigned int)ext[j]+1U; m<=(unsigned int)ext[j+1U]; m++) { span+=REC_STEP_US(record,m); }
-            size=(uint64_t)((a > b) ? a-b : b-a)*span;
-            if (size < small) { small=size; cut=j; }
+    } else {
+        for (i=1U; i<record->count; i++) {
+            unsigned int d=REC_DARK(record,i), b=REC_DARK(record,best);
+            if (REC_STEP_US(record,i) > *max_step_us) { *max_step_us=REC_STEP_US(record,i); }
+            if (rising ? (d > b) : (d < b)) { best=i; }
+            else if ((rising ? b-d : d-b) >=
+                     (record->prominence ? record->prominence : S3_REC_PROMINENCE)) {
+                if (n >= S3_REC_EXT_MAX-1U) { return 0U; }   /* far too many stripes */
+                ext[n++]=(uint16_t)best; best=i; rising=!rising;
+            }
         }
-        for (j=cut; j+2U < n; j++) { ext[j]=ext[j+2U]; }
-        n-=2U;
+        if (!rising) { ext[n++]=(uint16_t)best; }  /* dip after the last bump */
+        if (n < 3U) { return 0U; }                 /* no complete bar */
+        /* A sag or scratch inside a wide bar (or a smudge inside a wide gap)
+         * adds an extra dip/bump pair. While there are more than 31 extremes,
+         * drop the neighbouring interior pair that is "smallest" = height times
+         * time apart: a wiggle is shallow or brief, a real stripe is deep and
+         * about one narrow module long. The strict Code 39 checks still have to
+         * pass afterwards; they reduce false accepts but are not a checksum. */
+        while (n > S3_BARCODE_RUNS+2U) {
+            unsigned int j, m, cut=1U;
+            uint64_t small=UINT64_MAX;
+            for (j=1U; j+2U < n; j++) {
+                unsigned int a=REC_DARK(record,ext[j]), b=REC_DARK(record,ext[j+1U]);
+                uint64_t span=0U, size;
+                for (m=(unsigned int)ext[j]+1U; m<=(unsigned int)ext[j+1U]; m++) { span+=REC_STEP_US(record,m); }
+                size=(uint64_t)((a > b) ? a-b : b-a)*span;
+                if (size < small) { small=size; cut=j; }
+            }
+            for (j=cut; j+2U < n; j++) { ext[j]=ext[j+2U]; }
+            n-=2U;
+        }
     }
     /* Edges of the retained bumps: first rising / last falling crossing of
      * the local halfway level. Once an interior dip has been merged into a
      * bar above, its early downward crossing must not end that bar while a
-     * later rebound still crosses the same level. The rule mirrors exactly
-     * on scan reversal and never uses the expected letter or marker widths.
+     * later rebound still crosses the same level. Neither extraction path
+     * uses the expected letter or marker widths to choose edges.
      * Keep the time-weighted estimate only as a fallback if no crossing is
      * available. All stripe, marker and actual quiet checks still follow. */
     {
@@ -337,16 +438,25 @@ unsigned int s3_barcode_record_runs(const s3_barcode_record_t *record,
                     const uint32_t guess=t_lo+(uint32_t)at_lo;
                     const unsigned int mid=(lo+hi)/2U;
                     const bool up=hi > lo;
+                    /* Near the noise floor, measure the half-height core
+                     * connected to the maximum. An earlier weak shoulder
+                     * must not consume the neighbouring white gap. Strong
+                     * bars retain the outer crossings used for wide dips. */
+                    const bool core=faint &&
+                        ((up ? hi : lo)-(unsigned int)record->paper<=S3_REC_RISE);
                     uint32_t edge=guess, tj=t_lo;
                     bool crossed=false;
                     unsigned int j;
                     for (j=(unsigned int)ext[k]; j<i; j++) {
                         unsigned int a=REC_DARK(record,j), b=REC_DARK(record,j+1U);
                         uint32_t sj=REC_STEP_US(record,j+1U);
-                        if ((up && (a < mid) && (b >= mid)) || (!up && (a > mid) && (b <= mid))) {
+                        const bool crossing=up ?
+                            (core ? (a<=mid && b>mid) : (a<mid && b>=mid)) :
+                            (a>mid && b<=mid);
+                        if (crossing) {
                             uint32_t x=tj+(sj*(uint32_t)(up ? mid-a : a-mid))/
                                             (uint32_t)(up ? b-a : a-b);
-                            if (!crossed || !up) { edge=x; }
+                            if (!crossed || (core ? up : !up)) { edge=x; }
                             crossed=true;
                         }
                         tj+=sj;
@@ -362,6 +472,17 @@ unsigned int s3_barcode_record_runs(const s3_barcode_record_t *record,
     *last_edge_us=edge_prev;
     *end_us=t;
     return (edges >= 2U) ? edges-1U : 0U;
+}
+unsigned int s3_barcode_record_runs(const s3_barcode_record_t *record,
+    uint32_t runs[S3_BARCODE_RUNS], uint32_t *first_edge_us,
+    uint32_t *last_edge_us, uint32_t *end_us, uint32_t *max_step_us)
+{
+    unsigned int n=rec_extract_runs(record,runs,first_edge_us,last_edge_us,
+                                   end_us,max_step_us,false);
+    if (n!=S3_BARCODE_RUNS && rec_faint_eligible(record)) {
+        n=rec_extract_runs(record,runs,first_edge_us,last_edge_us,end_us,max_step_us,true);
+    }
+    return n;
 }
 /* Average of the six smallest of nine runs (as character() computes narrow). */
 static uint32_t rec_narrow(const uint32_t *runs)
@@ -548,6 +669,46 @@ bool s3_barcode_record_correct_varying_runs(uint32_t runs[S3_BARCODE_RUNS],
     bias_us[0]=chosen[0];bias_us[1]=chosen[1];
     return true;
 }
+/* Validate each independently measured set of edges by the same rules. A
+ * count of 29 alone does not prove that the right 15 bumps were selected.
+ * Neither extraction nor sentinel fitting uses an expected payload letter. */
+static bool rec_candidate(const s3_barcode_record_t *r,
+    const s3_barcode_config_t *config, bool faint,
+    s3_barcode_result_t *candidate, uint32_t *required_us)
+{
+    uint32_t runs[S3_BARCODE_RUNS], first=0U, last=0U, end=0U, gap=0U;
+    uint32_t leading;
+    int32_t bias[2]={0,0};
+    int64_t half, need;
+    bool shared_matched=false;
+    unsigned int n=rec_extract_runs(r,runs,&first,&last,&end,&gap,faint);
+    if (n != S3_BARCODE_RUNS) { return false; }
+    leading=sat_add(r->leading_us,first);
+    /* Trailing white is provisional here; the live reader waits for the
+     * real margin below before it releases this candidate. */
+    if (!s3_barcode_decode_runs(runs,n,leading,0x7FFFFFFFU,gap,config,candidate)) {
+        if (rec_correct_shared_runs(runs,gap,config,&bias[0],&shared_matched)) {
+            bias[1]=bias[0];
+        } else if (shared_matched ||
+            !s3_barcode_record_correct_varying_runs(runs,gap,config,bias)) {
+            return false;
+        }
+        /* Within an extraction, a chosen model is final. Never try another
+         * correction merely because its payload or leading margin fails. */
+        half=(bias[0]>0) ? ((int64_t)bias[0]+1)/2 : (int64_t)bias[0]/2;
+        if ((int64_t)leading<half) { return false; }
+        leading=(uint32_t)((int64_t)leading-half);
+        if (!s3_barcode_decode_runs(runs,n,leading,0x7FFFFFFFU,gap,config,candidate)) {
+            return false;
+        }
+    }
+    /* Expanding a bar moves its outer edge into the quiet zone too.
+     * Round toward requiring more white, never inventing extra margin. */
+    half=(bias[1]>0) ? ((int64_t)bias[1]+1)/2 : (int64_t)bias[1]/2;
+    need=(int64_t)last+half+(int64_t)config->quiet_modules*rec_narrow(&runs[20]);
+    *required_us=(need>0x7FFFFFFF) ? 0x7FFFFFFFU : (uint32_t)need;
+    return true;
+}
 static s3_barcode_status_t rec_finish(s3_barcode_record_t *r, s3_barcode_status_t status)
 {
     uint16_t paper=r->paper, noise=r->noise_q4; bool seen=r->seen; uint32_t last=r->last_us;
@@ -612,14 +773,11 @@ s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
          * faint opening star/slow edge is not discarded. The history is part
          * of the already-measured leading interval, never extra quiet time. */
         r->state=(uint16_t)S3_REC_RECORDING;
-        {
-            unsigned int prominence=(r->noise_q4+3U)/4U; /* 4x mean |difference| */
-            if (prominence<S3_REC_MIN_PROMINENCE) { prominence=S3_REC_MIN_PROMINENCE; }
-            if (prominence>S3_REC_PROMINENCE) { prominence=S3_REC_PROMINENCE; }
-            r->prominence=(uint16_t)prominence;
-        }
+        r->prominence=(uint16_t)rec_paper_prominence(r,config);
         r->prefix_us=r->pre_us;
-        r->leading_us=(r->white_us>=r->prefix_us) ? r->white_us-r->prefix_us : 0U;
+        if (!rec_faint_eligible(r)) {
+            r->leading_us=(r->white_us>=r->prefix_us) ? r->white_us-r->prefix_us : 0U;
+        }
         r->white_us=0U; r->frame_us=r->prefix_us; r->required_us=0U;
         r->count=r->pre_count;
         for (unsigned int i=0U;i<r->pre_count;i++) {
@@ -639,7 +797,7 @@ s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
      * patch, not a barcode (s3_barcode_update rejects the same case). */
     r->turn_us=sat_add(r->turn_us,(uint32_t)step*S3_REC_STEP_US);
     if (r->falling ? (dark < r->best) : (dark > r->best)) { r->best=(uint16_t)dark; }
-    else if ((r->falling ? dark-r->best : r->best-dark) >= r->prominence) {
+    else if ((r->falling ? dark-r->best : r->best-dark) >= rec_monitor_band(r)) {
         r->best=(uint16_t)dark; r->falling=r->falling ? 0U : 1U; r->turn_us=0U;
     }
     if ((r->turn_us > config->max_run_us) && !rec_white(r,dark)) {
@@ -655,39 +813,26 @@ s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
     /* No stripe is longer than max_run_us, so this much white ends the code. */
     if (r->white_us < config->max_run_us) { return S3_BARCODE_NONE; }
     if (r->state == (uint16_t)S3_REC_RECORDING) {
-        uint32_t runs[S3_BARCODE_RUNS], first=0U, last=0U, end=0U, gap=0U;
-        uint32_t leading;
-        int32_t bias[2]={0,0};
-        int64_t half, need;
         s3_barcode_result_t candidate;
-        bool shared_matched=false;
-        unsigned int n=s3_barcode_record_runs(r,runs,&first,&last,&end,&gap);
-        if (n != S3_BARCODE_RUNS) { return rec_finish(r,S3_BARCODE_REJECTED); }
-        leading=sat_add(r->leading_us,first);
-        /* Prefer an already-valid measurement. The provisional trailing
-         * allowance only validates the pattern; no result is emitted until
-         * the actual trailing quiet zone below has elapsed. */
-        if (!s3_barcode_decode_runs(runs,n,leading,0x7FFFFFFFU,gap,config,&candidate)) {
-            if (rec_correct_shared_runs(runs,gap,config,&bias[0],&shared_matched)) {
-                bias[1]=bias[0];
-            } else if (shared_matched ||
-                !s3_barcode_record_correct_varying_runs(runs,gap,config,bias)) {
-                return rec_finish(r,S3_BARCODE_REJECTED);
-            }
-            /* A chosen model is final: never try another correction merely
-             * because the payload or its real leading margin fails. */
-            half=(bias[0]>0) ? ((int64_t)bias[0]+1)/2 : (int64_t)bias[0]/2;
-            if ((int64_t)leading<half) { return rec_finish(r,S3_BARCODE_REJECTED); }
-            leading=(uint32_t)((int64_t)leading-half);
-            if (!s3_barcode_decode_runs(runs,n,leading,0x7FFFFFFFU,gap,config,&candidate)) {
-                return rec_finish(r,S3_BARCODE_REJECTED);
+        uint32_t required=0U;
+        bool good=rec_candidate(r,config,false,&candidate,&required);
+        if (rec_faint_eligible(r)) {
+            s3_barcode_result_t recovered;
+            uint32_t recovery_required=0U;
+            if (rec_candidate(r,config,true,&recovered,&recovery_required)) {
+                /* Two valid but disagreeing interpretations are ambiguous.
+                 * When they agree, require the more conservative margin. */
+                if (good && ((candidate.letter!=recovered.letter) ||
+                    (candidate.reversed!=recovered.reversed))) {
+                    return rec_finish(r,S3_BARCODE_REJECTED);
+                }
+                candidate=recovered;
+                if (!good || recovery_required>required) { required=recovery_required; }
+                good=true;
             }
         }
-        /* Expanding a bar moves its outer edge into the quiet zone too.
-         * Round toward requiring more white, never inventing extra margin. */
-        half=(bias[1]>0) ? ((int64_t)bias[1]+1)/2 : (int64_t)bias[1]/2;
-        need=(int64_t)last+half+(int64_t)config->quiet_modules*rec_narrow(&runs[20]);
-        r->required_us=(need>0x7FFFFFFF) ? 0x7FFFFFFFU : (uint32_t)need;
+        if (!good) { return rec_finish(r,S3_BARCODE_REJECTED); }
+        r->required_us=required;
         r->candidate=(s3_barcode_stored_result_t){(uint8_t)(candidate.letter-'A'+1),candidate.reversed};
         r->state=(uint16_t)S3_REC_QUIET;
     }

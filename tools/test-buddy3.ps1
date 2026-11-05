@@ -27,6 +27,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Barcode record test compilation failed.' }
     & $recordExe
     if ($LASTEXITCODE -ne 0) { throw 'Barcode record tests failed.' }
+    $faintExe = Join-Path $testDir 'test_barcode_faint.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\testing\subsystem3\test_barcode_faint.c" -o $faintExe
+    if ($LASTEXITCODE -ne 0) { throw 'Faint barcode test compilation failed.' }
+    & $faintExe
+    if ($LASTEXITCODE -ne 0) { throw 'Faint barcode tests failed.' }
     $varyingExe = Join-Path $testDir 'test_barcode_varying.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `

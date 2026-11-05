@@ -1,5 +1,82 @@
 # Buddy 3 stationary diagnostics and software tests
 
+## 5 November 2026: recover faint bars without selecting a known letter
+
+Four complete small-A captures lost narrow bars before width validation. Their
+weak peaks were near 10..25 normalized units, while broad bars reached hundreds.
+Lowering prominence alone admitted plateau wiggles that displaced real bars.
+In the two 16:04 captures, a weak leading shoulder also shortened one measured
+white gap enough to fail the existing width checks.
+
+The primary learned-prominence extractor is retained. Both its complete
+candidate and the bounded recovery candidate are checked when paper is near zero
+(0..5) and frozen prominence is at most 15. A primary count of 29 does not prevent
+recovery when those widths fail validation. Two valid interpretations must agree
+on letter and orientation; disagreement rejects, while agreement retains the
+more conservative trailing-quiet requirement. Recovery groups readings above paper+5 into exactly
+15 complete ink regions, bridging dips of at most 30 ms. It neither prunes to
+15 regions nor chooses regions using the expected letter. Weak regions use the
+half-height core connected to their maximum; strong bars keep outer crossings.
+Marker, payload-width, correction, sampling and quiet-zone rules are unchanged.
+
+At recording start, a contiguous low-band paper prefix can provide the noise
+estimate before faint bars or a rising shoulder contaminate it. The prefix must
+last at least `quiet_modules * min_narrow_us` (300 ms with current settings).
+Otherwise the earlier running estimate is retained. This does not skip noisy
+samples to manufacture a clean interval; alternating paper readings remain
+subject to the measured noise gate.
+
+Eligible recordings use the 5-unit band for live quiet/turn monitoring as well,
+so a long sequence of faint bars cannot look like blank paper. The pre-trigger
+ring separately accounts for continuous low-band white before its oldest entry:
+a faint mark that has fallen out of the ring must still interrupt leading quiet.
+No additional record storage, global calibration change, sampling-rate change or
+speed change is required. The profile remains 100 Hz and 0.04 m/s.
+
+The four raw-ADC recordings decode A at midpoint reconstructed timing with
+explicit synthetic quiet padding. This is software evidence, not four hardware
+successes: three saved streams end before the reader finishes waiting for white.
+The quantized darkness/4 export can lose enough detail to reject a trace that
+its raw ADC readings recover. Timing, quantization and reversed-waveform variants
+are checked for wrong letters, without claiming universal noise robustness.
+
+The evening hardware captures include a successful A and Z, plus three further
+A rejections. Raw replay now recovers the 18:24 and 18:28 failures: the earlier
+noise estimate and the count-only recovery decision had blocked the correct
+interpretation. The 18:22 raw trace remains a rejection because one narrow white
+gap is about 2 ms below its strict minimum. Its quantized preview can pass; that
+does not justify relaxing the raw width check. Fixture documentation preserves
+each original hardware result and labels all synthetic quiet padding.
+
+Coverage includes 781 synthetic faint-bar/noisy-paper checks across A-Z and both directions,
+the existing 3000 jittered-frame/no-wrong-letter checks, and 552 saved-waveform
+replays. Run `tools/test-buddy3.ps1`, followed by
+`python testing/subsystem3/test_barcode_replay.py`. These are software checks;
+the later physical results below remain the deployment reliability evidence.
+
+The evening Wi-Fi firmware build and startup-profile check passed, as did all
+15 controller integration executables. These host/build results do not establish
+successful physical operation of the revised decoder.
+
+The evening image was copied to the Pico's RPI-RP2 bootloader at approximately
+18:51 SGT. UF2 SHA256:
+`DF4B0BC62A5C797B3D9DC2D40235A2DAB1F11C4871D0729593AAC3174BE2AFD8`.
+Fresh post-reboot controller telemetry was braked, drive state 0, with no motion
+fault and a 10.31 ms sample gap. The B=forward, D=left, Y=right, C=U-turn map
+received a fresh OK reply at 18:51:49 SGT. A and Z are therefore unmapped and
+halt on a successful decode. The map requires four distinct letters rather than
+blank direction slots, and must be resent after reboot. No remote START was sent.
+
+The user's next ten small-A trials (18:53:51 to 19:04:59 SGT) produced five A
+decodes and five rejections. Four failed waveforms are complete: two contain a
+tiny preliminary bump counted as a sixteenth region; two retain all fifteen
+bars but the same corrected payload white gap is about 46 ms, below its roughly
+51 ms minimum. The fifth failure uploaded only six samples, so its cause is
+unknown. Five of the eleven post-flash exports, including an earlier success,
+were incomplete; starting a new run clears the unfinished capture upload.
+All summaries report zero timing errors and overflow. This baseline is useful
+for comparison, but is not a reliably solved small-barcode reader.
+
 ## 3 November 2026: retain the outer edges of uneven bars
 
 The 21:27:37 shifted F run still reported zero decodes and one rejection, with
