@@ -49,6 +49,8 @@ ER tk_slp_tsk(TMO t) { assert(t==TMO_FEVR&&!locked);if(++sleeps==2)longjmp(bound
 ER tk_dly_tsk(unsigned ms) { (void)ms;return E_OK; }
 ID app_start_task(FP f,PRI p,UW core,const char *name)
 { (void)f;(void)p;(void)core;(void)name;return 3; }
+ID app_start_task_sized(FP f,PRI p,UW core,const char *name,UINT stack_bytes)
+{ assert(stack_bytes==4096U);return app_start_task(f,p,core,name); }
 int tm_printf(const UB *format,...) { (void)format;assert(!locked);return 0; }
 uint32_t runtime_read_clock(uint32_t address) { (void)address;return clock_value; }
 int32_t ir_sensor_init(const s3_acquisition_config_t *cfg)

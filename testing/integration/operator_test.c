@@ -73,6 +73,8 @@ void vehicle_controller_observe(const s3_integration_status_t *s) { (void)s; }
 /* Console capture: everything the operator would read on USB. */
 static char console[1<<16];
 static size_t console_len;
+ID app_start_task_sized(FP f,PRI p,UW core,const char *name,UINT stack_bytes)
+{ assert(stack_bytes==4096U);return app_start_task(f,p,core,name); }
 int tm_printf(const UB *format,...)
 {
     va_list ap; int n;

@@ -1,6 +1,76 @@
 # Buddy 3 stationary diagnostics and software tests
 
-## 5 November 2026: separate signal, pattern and frame validation
+## 5 November 2026: raw-signal architecture integrated, experimental image built
+
+The architecture branch now uses one reader in navigation:
+`barcode_signal.c` preserves raw 12-bit contrast and extracts edges,
+`barcode_pattern.c` classifies black/white widths independently, and
+`barcode_frame.c` validates timing, geometry, markers and actual quiet margins.
+The legacy decoder remains available for standalone comparison tests but does
+not emit navigation commands in this image. ELF symbols confirm the new signal
+reader is linked and the old streaming/recording entry points are absent.
+
+Input polarity comes from calibration. A three-sample median rejects isolated
+spikes; a paper-noise estimate freezes when capture starts. Local prominence
+finds peaks/valleys without pruning to fifteen bars. A local shallow-dip rule
+merges plateau fluctuations independently of any letter or expected bar count.
+Every consecutive fifteen-bar window is eligible for exact marker validation;
+earlier retained marks still interrupt its leading quiet. Drifted approach
+history is discarded conservatively, never converted into extra white time.
+
+Frame width ratios use an uncertainty interval based on the observed sample
+gap, rather than treating optical width estimates as exact printed dimensions.
+The allowed interval must overlap 1.8..3.5; exact patterns and the separate
+colour-class separation checks still apply. Quiet requires ten estimated local
+modules plus boundary/sample allowance. A valid pattern waits for real trailing
+white; invalid samples or timing faults cancel it. Mapping, physical START/STOP,
+rearm and controller fault handling retain their existing ownership.
+
+Validation performed:
+
+- 17,727 pure pattern checks and 2,005 frame-validation checks passed.
+- 2,539 raw-stream scenarios passed, including 1,560 randomized A-Z scans with
+  jitter, faint bars, noise and broad-bar dips: no wrong letters.
+- 540 recorded raw-waveform checks passed across timestamp-rounding extremes,
+  ADC polarities and explicitly labelled padding. Refusal is permitted for
+  ambiguous/noisy recordings; the suite also requires named positive cases.
+- Navigation/core and fresh drive integration passed. Eleven controller
+  integration executables passed the final stack-change run; Windows
+  Application Control blocked four (`runtime_ir_debug`, `map_freeze`, `course`,
+  `bcap_wire`), plus mapping and motion-feedback reruns. Those blocked checks
+  are incomplete, not passes. All fifteen controller executables passed the
+  earlier run before the task-stack allocation change.
+- Wi-Fi/MQTT firmware build and startup/portable-object profile checks passed.
+  No new firmware has been flashed or physically validated.
+
+The latest six complete small-A recordings do **not** establish a higher
+success rate for this architecture. Four retain a preliminary low-contrast
+feature and fail leading quiet: 18:54:45, 19:00:21, 19:01:47 and 19:04:13.
+For example, 18:54:45 has about 467 ms clear interval but needs about 962 ms;
+19:00:21 has 439 ms but needs 915 ms. The raw traces cannot determine whether
+those features are ink, paper variation or motor interference. The 18:57:01
+and 19:04:59 clips pass width/leading checks and need roughly another 42 ms
+and 28 ms of trailing white. They decode with explicitly synthetic tail
+samples. None of these six unchanged clips emits a complete result in the
+current replay. Several older recordings that the legacy padded reader could
+recover still refuse. This is an experimental candidate, not a demonstrated
+replacement with better physical reliability.
+
+Run `tools/test-buddy3.ps1`, then
+`python testing/subsystem3/test_barcode_signal_replay.py`. POSIX equivalents are
+`make -C testing/subsystem3 test drive feedback replay-signal`. The old
+`test_barcode_replay.py` still tests the unchanged legacy reader; its positive
+results are not results for the new architecture. Historical exact trace/bench
+comparisons intentionally detect changed behaviour and are not a functional
+equivalence release gate for this rewrite.
+
+Before a physical trial, use a straight path on uniform white paper, sufficient
+clear approach/exit space, and let the full BCAP upload finish. A stationary
+raw comparison with motors off/on can distinguish paper/optical effects from
+motor interference. The remaining signal assumptions and task timing need
+physical measurement; do not interpret synthetic padding as that measurement.
+
+## Earlier checkpoint: separate signal, pattern and frame validation
 
 The deployed baseline is preserved on `main` at `46725c7`. Development of its
 replacement starts on `codex/barcode-signal-architecture`. The first stage is

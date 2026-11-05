@@ -9,7 +9,7 @@ try {
     $env:PATH = "$(Join-Path $MsysRoot 'ucrt64\bin');$originalPath"
     & powershell -ExecutionPolicy Bypass -File "$repoRoot\tools\test-ir-reflectance.ps1" -MsysRoot $MsysRoot
     if ($LASTEXITCODE -ne 0) { throw 'Reflectance tests failed.' }
-    $sources = @('ir_acquisition', 'ir_calibration', 'ir_reflectance', 'line_detection', 'line_controller', 'barcode_decoder', 'line_navigation') |
+    $sources = @('ir_acquisition', 'ir_calibration', 'ir_reflectance', 'line_detection', 'line_controller', 'barcode_decoder', 'barcode_pattern', 'barcode_frame', 'barcode_signal', 'line_navigation') |
         ForEach-Object { "$repoRoot\app_program\subsystem3\$_.c" }
     $testExe = Join-Path $testDir 'test_buddy3.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
@@ -59,6 +59,22 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Barcode pattern test compilation failed.' }
     & $patternExe
     if ($LASTEXITCODE -ne 0) { throw 'Barcode pattern tests failed.' }
+    $signalSources = @('barcode_decoder', 'barcode_pattern', 'barcode_frame', 'barcode_signal') |
+        ForEach-Object { "$repoRoot\app_program\subsystem3\$_.c" }
+    foreach ($layer in @('frame', 'signal')) {
+        $layerExe = Join-Path $testDir "test_barcode_$layer.exe"
+        & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+            "-I$repoRoot\app_program\subsystem3" @signalSources `
+            "$repoRoot\testing\subsystem3\test_barcode_$layer.c" -o $layerExe
+        if ($LASTEXITCODE -ne 0) { throw "Barcode $layer test compilation failed." }
+        & $layerExe
+        if ($LASTEXITCODE -ne 0) { throw "Barcode $layer tests failed." }
+    }
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" @signalSources `
+        "$repoRoot\testing\subsystem3\replay_barcode_signal.c" `
+        -o (Join-Path $testDir 'replay_barcode_signal.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Raw barcode replay compilation failed.' }
     $replayExe = Join-Path $testDir 'replay_barcode_record.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `

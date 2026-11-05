@@ -340,7 +340,8 @@ ER subsystem3_start(void)
         return E_OBJ;
     }
     g_sample_task =
-        app_start_task((FP)ir_sample_task, S3_PRI_MAIN, TP_PRC1, "ir-sample");
+        app_start_task_sized((FP)ir_sample_task, S3_PRI_MAIN, TP_PRC1,
+                             "ir-sample", 4096U); /* same barcode stack as motion */
     if (g_sample_task < E_OK)
     {
         error = (ER)g_sample_task;

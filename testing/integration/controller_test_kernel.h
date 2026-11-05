@@ -29,4 +29,6 @@ ER tk_unl_mtx(ID id);
 ER tk_wup_tsk(ID id);
 ER tk_slp_tsk(TMO timeout);
 ID app_start_task(FP entry, PRI priority, UW core, const char *name);
+ID app_start_task_sized(FP entry, PRI priority, UW core, const char *name,
+                        UINT stack_bytes);
 #endif

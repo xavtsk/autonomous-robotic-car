@@ -3,7 +3,7 @@ APP = ../../app_program
 BUILD = ../../build/buddy5
 CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g
 S5 = $(addprefix $(APP)/subsystem5/,obstacle_profile.c obstacle_scan.c avoidance_planner.c line_recovery.c obstacle_avoidance.c s5_codec.c)
-S3 = $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c)
+S3 = $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c barcode_pattern.c barcode_frame.c barcode_signal.c line_navigation.c)
 S2 = $(addprefix $(APP)/subsystem2/,motion_controller.c motion_pack.c motion_estimation.c speed_pid.c)
 INC = -I$(APP)/subsystem5 -I$(APP)/subsystem3 -I$(APP)/subsystem2 -I$(APP)/controller
 .PHONY: test sanitize

@@ -6,7 +6,7 @@
 #include "ir_acquisition.h"
 #include "ir_calibration.h"
 #include "line_controller.h"
-#include "barcode_decoder.h"
+#include "barcode_signal.h"
 typedef enum
 {
     S3_NAV_NONE = 0,
@@ -108,8 +108,7 @@ typedef struct
     s3_navigation_config_t config;
     ir_reflectance_t sensor[S3_SENSOR_COUNT];
     s3_line_detector_t line;
-    s3_barcode_decoder_t barcode;
-    s3_barcode_record_t barcode_record; /* record-then-decide, beside barcode */
+    s3_barcode_signal_t barcode_signal; /* sole barcode reader on this branch */
     uint32_t last_us, sensor_last_us[S3_SENSOR_COUNT];
     uint16_t seen_sensors : 3;
     uint16_t mode : 1;
@@ -128,7 +127,6 @@ typedef struct
     uint8_t rearming : 1;
     uint8_t rearm_anchor_valid : 1;
     uint8_t rearm_stable : 1;
-    uint8_t barcode_held : 3; /* live failure held while the recorder finishes */
     double rearm_anchor_m;
     uint32_t rearm_epoch, rearm_since_us;
     s3_capture_distance_t capture_distance;
@@ -140,6 +138,9 @@ typedef struct
 s3_navigation_config_t s3_navigation_defaults(void);
 bool s3_navigation_init(s3_navigation_t *context,
                         const s3_navigation_config_t *config);
+/* Includes a candidate waiting for real trailing quiet. No surface-threshold
+ * reader runs alongside this signal reader. */
+bool s3_navigation_barcode_active(const s3_navigation_t *context);
 bool s3_navigation_set_mode(s3_navigation_t *context,
                             s3_processing_mode_t mode);
 bool s3_navigation_apply_calibration(

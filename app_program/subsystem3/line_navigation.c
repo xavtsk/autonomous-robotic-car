@@ -1,4 +1,5 @@
 #include "line_navigation.h"
+#include "barcode_frame.h"
 #include <math.h>
 s3_navigation_config_t s3_navigation_defaults(void)
 {
@@ -35,7 +36,7 @@ bool s3_navigation_init(s3_navigation_t *context,
     if ((config == 0) || !s3_acquisition_config_valid(&config->acquisition) ||
         !s3_steering_config_valid(&config->steering) ||
         !s3_line_init(&context->line, &config->line) ||
-        !s3_barcode_init(&context->barcode, &config->barcode) ||
+        !s3_barcode_frame_config_valid(&config->barcode) ||
         (config->max_sample_age_us == 0U) ||
         (config->max_sample_age_us >= 0x80000000U) ||
         (config->rearm_stable_us == 0U) ||
@@ -62,16 +63,20 @@ bool s3_navigation_init(s3_navigation_t *context,
         }
     }
     context->config = *config;
+    s3_barcode_signal_reset(&context->barcode_signal);
     context->mode = S3_MODE_TRACK;
     context->configured = true;
     return true;
 }
-/* Both barcode readers restart together so one barcode never gives two letters. */
+bool s3_navigation_barcode_active(const s3_navigation_t *context)
+{
+    return context != 0 && context->configured &&
+           s3_barcode_signal_active(&context->barcode_signal);
+}
+/* Lifecycle, faults and suppression all reset the sole barcode reader. */
 static void reset_barcode(s3_navigation_t *context)
 {
-    s3_barcode_reset(&context->barcode);
-    s3_barcode_record_reset(&context->barcode_record);
-    context->barcode_held = 0U;
+    s3_barcode_signal_reset(&context->barcode_signal);
 }
 static void begin_rearm(s3_navigation_t *context)
 {
@@ -297,64 +302,19 @@ static void process_barcode(s3_navigation_t *context,
     {
         return;
     }
-    was_collecting = context->barcode.collecting ||
-                     s3_barcode_record_active(&context->barcode_record);
+    was_collecting = s3_navigation_barcode_active(context);
     {
         const uint32_t t = frame->sensor[S3_SENSOR_BARCODE].timestamp_us;
-        s3_barcode_result_t live_result, rec_result;
-        s3_barcode_status_t live = s3_barcode_update(
-            &context->barcode, t,
-            barcode->valid && (barcode->surface != IR_SURFACE_UNKNOWN),
-            barcode->surface == IR_SURFACE_BLACK, &live_result);
-        s3_barcode_status_t rec = s3_barcode_record_update(
-            &context->barcode_record, &context->config.barcode, t,
-            barcode->valid, barcode->darkness, &rec_result);
-        output->barcode_status = S3_BARCODE_NONE;
-        if (live == S3_BARCODE_DECODED)
-        {   /* First reader to decode wins; the other restarts. */
-            output->barcode_status = live;
-            output->barcode = live_result;
-            s3_barcode_record_reset(&context->barcode_record);
-            context->barcode_held = 0U;
-        }
-        else if (rec == S3_BARCODE_DECODED)
-        {
-            output->barcode_status = rec;
-            output->barcode = rec_result;
-            s3_barcode_reset(&context->barcode);
-            context->barcode_held = 0U;
-        }
-        else
-        {
-            if (live != S3_BARCODE_NONE)
-            {   /* e.g. a faint bar never crossed the fixed limits: let the
-                 * recorder, still reading this barcode, have its say first. */
-                if (s3_barcode_record_active(&context->barcode_record))
-                {
-                    context->barcode_held = (uint8_t)live;
-                }
-                else
-                {
-                    output->barcode_status = live;
-                }
-            }
-            if ((rec != S3_BARCODE_NONE) && !context->barcode.collecting &&
-                !context->barcode.pending)
-            {   /* Recorder failed and the live decoder is idle: report. */
-                output->barcode_status = (context->barcode_held != 0U) ?
-                    (s3_barcode_status_t)context->barcode_held : rec;
-                context->barcode_held = 0U;
-            }
-            else if ((context->barcode_held != 0U) &&
-                     !s3_barcode_record_active(&context->barcode_record))
-            {
-                output->barcode_status = (s3_barcode_status_t)context->barcode_held;
-                context->barcode_held = 0U;
-            }
-        }
+        const ir_calibration_t *calibration =
+            &context->config.calibration[S3_SENSOR_BARCODE];
+        /* Preserve raw contrast even below the calibrated white reference.
+         * Normalised darkness/surface remain available for telemetry/rearming. */
+        output->barcode_status = s3_barcode_signal_update(
+            &context->barcode_signal, &context->config.barcode, t,
+            barcode->valid, frame->sensor[S3_SENSOR_BARCODE].raw,
+            calibration->black_raw > calibration->white_raw, &output->barcode);
     }
-    if (!was_collecting && (context->barcode.collecting ||
-                            s3_barcode_record_active(&context->barcode_record)))
+    if (!was_collecting && s3_navigation_barcode_active(context))
     {
         context->capture_distance = (s3_capture_distance_t){0};
         if (context->odometry_available)

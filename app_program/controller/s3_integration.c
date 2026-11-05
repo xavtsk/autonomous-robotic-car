@@ -366,8 +366,7 @@ static void sample(INT code, void *unused)
                 (uint8_t)g_drive.output.sensor[S3_SENSOR_BARCODE].surface,
                 (uint8_t)g_drive.output.barcode_status,
                 g_drive.output.barcode.letter,
-                (g_drive.navigation.barcode.collecting != 0U) ||
-                    s3_barcode_record_active(&g_drive.navigation.barcode_record),
+                s3_navigation_barcode_active(&g_drive.navigation),
                 g_drive.navigation.rearming,
                 feedback.valid ? feedback.centre_m : 0.0};
             if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
@@ -852,7 +851,10 @@ int32_t s3_integration_start(void)
     {
         return E_OBJ;
     }
-    g_task = app_start_task((FP)sample, S3_PRI_MAIN, TP_PRC1, "s3-motion");
+    /* Cortex-M0+ static barcode call frames exceed 1.8 KB before this task's
+     * controller frames and library calls. Keep the 2 KB default for others. */
+    g_task = app_start_task_sized((FP)sample, S3_PRI_MAIN, TP_PRC1,
+                                  "s3-motion", 4096U);
     if (g_task < E_OK)
     {
         er = g_task;

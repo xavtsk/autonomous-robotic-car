@@ -1,5 +1,45 @@
 # Buddy 3: Tribunal 1 data representation
 
+## 5 November raw-signal architecture branch
+
+Navigation now owns one `s3_barcode_signal_t`, rather than concurrent binary and
+record readers. Its explicit input is 12-bit raw ADC with calibrated polarity;
+the 0..1000 reflectance API and existing telemetry formats are unchanged.
+
+| Stored field | Range | Bits | Representation |
+|---|---|---|---|
+| Median-selected raw ADC | 0..4095 | 12 | No normalized-white clipping |
+| Sample step | 0..31.5 ms in 0.5 ms units | 6 | Remainder carried between steps |
+| Ring slot | Raw + step | 18 | Explicit byte packing, no per-slot padding |
+| Head/count | 0..2559 / 0..2560 | 12 each | Bounded ring; 512 approach entries |
+| Frozen prominence | 20..100 ADC | 7 | Derived from unfiltered paper noise |
+| State/diagnostic | flags, 0..2 seen, 0..6 frame status | 1/2/3 | Bit fields |
+
+The shared history/recording array is 2560 x 18 bits = **5760 bytes**.
+There is no separate pre-trigger array. Ring truncation discards its quiet
+evidence; it does not create leading-white credit. Calibration, sample validity,
+and raw polarity remain explicit. The three-sample median changes the signal
+intentionally; it is not a claim that every original raw sample is stored in
+the reader. BCAP continues to store the original raw input.
+
+Exact ARM ABI probes: `s3_navigation_t` is **6144 bytes**, compared with
+**5280 bytes** on baseline `46725c7` (**+864 bytes**). Navigation/raw-frame/barcode
+packets remain **60/34/5 bytes**. No application or MQTT wire-field expansion
+was introduced. State stays private to the existing navigation owner; shared
+status and command synchronization remain unchanged.
+
+Cortex-M0+ GCC stack-usage files give a **2504-byte visible C call-chain sum**
+for sampling -> drive -> navigation -> signal/frame/pattern validation, before
+external helper/context overhead. Motion and stationary IR sampling tasks now
+request **4096 bytes** each; only one is used in a selected profile. Other tasks
+retain the 2048-byte default. This adds 2048 bytes to the active sampling-task
+allocation. It is static compiler evidence, not an on-device stack watermark
+or a timing guarantee. The experimental Wi-Fi build reports `.text=411576`,
+`.data=156`, `.bss=110028` bytes; kernel-managed task stacks are a separate
+allocation concern. Physical deadline/stack measurements remain pending.
+
+The historical measurements below describe earlier implementations.
+
 ## 3 November record-then-decide barcode reader
 
 Problem: the small barcode (Y) blurs, so thin bars read about 500 and grey

@@ -32,7 +32,8 @@ if ($Profile -eq 'bench') {
     if ($s3.Count -or $runtime.Count) { throw 'Default profile unexpectedly starts Buddy 3.' }
 }
 foreach ($name in @('ir_acquisition', 'ir_calibration', 'ir_reflectance',
-                    'line_detection', 'line_controller', 'barcode_decoder', 'line_navigation')) {
+                    'line_detection', 'line_controller', 'barcode_decoder',
+                    'barcode_pattern', 'barcode_frame', 'barcode_signal', 'line_navigation')) {
     if ((Undefined "subsystem3/$name") -match '^(motion_|motor_|stop$|tk_)') {
         throw "Portable sensor core depends on motion or RTOS: $name"
     }

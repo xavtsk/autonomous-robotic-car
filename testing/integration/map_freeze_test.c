@@ -54,6 +54,8 @@ ER tk_dly_tsk(unsigned ms) { (void)ms;return E_OK; }
 ER tk_snd_mbf(ID id,const void *msg,INT size,TMO t) { (void)id;(void)msg;(void)size;(void)t;return E_OK; }
 INT tk_rcv_mbf(ID id,void *msg,TMO t) { (void)id;(void)msg;(void)t;return 0; }
 ID app_start_task(FP f,PRI p,UW core,const char *name) { (void)f;(void)p;(void)core;(void)name;return 3; }
+ID app_start_task_sized(FP f,PRI p,UW core,const char *name,UINT stack_bytes)
+{ assert(stack_bytes==4096U);return app_start_task(f,p,core,name); }
 int tm_printf(const UB *format,...) { (void)format;return 0; }
 uint32_t runtime_read_clock(uint32_t address) { (void)address;return clock_value; }
 int32_t ir_sensor_init(const s3_acquisition_config_t *cfg) { (void)cfg;return E_OK; }

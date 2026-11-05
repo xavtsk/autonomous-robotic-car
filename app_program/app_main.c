@@ -23,7 +23,8 @@
  * Create and start one task (declared in app.h for every subsystem).
  *   prc = TP_PRC1 (core 0), TP_PRC2 (core 1), or 0 for "any core".
  */
-EXPORT ID app_start_task(FP entry, PRI pri, UW prc, const char *name)
+EXPORT ID app_start_task_sized(FP entry, PRI pri, UW prc, const char *name,
+                              UINT stack_bytes)
 {
 	T_CTSK	ctsk = {0};
 	ID	tid;
@@ -31,7 +32,7 @@ EXPORT ID app_start_task(FP entry, PRI pri, UW prc, const char *name)
 
 	ctsk.task    = entry;		/* function the task runs */
 	ctsk.itskpri = pri;		/* initial priority (1 = highest) */
-	ctsk.stksz   = TASK_STACK_SIZE;	/* kernel allocates the stack */
+	ctsk.stksz   = stack_bytes;	/* kernel allocates the stack */
 	ctsk.tskatr  = TA_HLNG		/* written in a high-level language (C) */
 		     | TA_RNG3;		/* runs at user protection level */
 #if TK_SUPPORT_SMP
@@ -58,6 +59,11 @@ EXPORT ID app_start_task(FP entry, PRI pri, UW prc, const char *name)
 		return (ID)er;
 	}
 	return tid;
+}
+
+EXPORT ID app_start_task(FP entry, PRI pri, UW prc, const char *name)
+{
+    return app_start_task_sized(entry, pri, prc, name, TASK_STACK_SIZE);
 }
 
 EXPORT INT usermain(void)

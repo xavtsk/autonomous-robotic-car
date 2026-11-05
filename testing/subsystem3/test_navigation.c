@@ -356,7 +356,7 @@ static void test_rearming_and_timing(void)
                    rig.out.capture_distance.end_valid);
             assert(rig.out.capture_distance.start_m == 0.0 &&
                    rig.out.capture_distance.end_m == 0.0);
-            assert(rig.nav.barcode.count == 0U);
+            assert(!s3_navigation_barcode_active(&rig.nav));
             anchor = rig.nav.rearm_anchor_m;
             /* Oscillations accumulate travel, but never sufficient NET
              * displacement. */
@@ -426,10 +426,10 @@ static void test_line_modes_and_diagnostics(void)
     assert(rig.acquired == 1U && rig.out.steering.valid);
     hold(&rig, 500000U, 150U, 202U, 202U);
     hold(&rig, 200000U, 280U, 150U, 150U);
-    assert(rig.nav.barcode.collecting && rig.lost == 2U &&
+    assert(s3_navigation_barcode_active(&rig.nav) && rig.lost == 2U &&
            !rig.out.stop_requested);
     assert(s3_navigation_set_mode(&rig.nav, S3_MODE_SUPPRESSED));
-    assert(!rig.nav.barcode.collecting);
+    assert(!s3_navigation_barcode_active(&rig.nav));
     scan(&rig, 'A', false);
     hold(&rig, 150000U, 150U, 280U, 280U);
     assert(rig.barcodes == 0U && rig.junctions == 0U &&

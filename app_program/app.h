@@ -32,6 +32,9 @@
 /* Create and start a task.  prc = TP_PRC1 (core 0), TP_PRC2 (core 1), or
    0 for "any core".  Defined in app_main.c. */
 IMPORT ID app_start_task(FP entry, PRI pri, UW prc, const char *name);
+/* Use only for tasks with a measured need beyond TASK_STACK_SIZE. */
+IMPORT ID app_start_task_sized(FP entry, PRI pri, UW prc, const char *name,
+                             UINT stack_bytes);
 
 /* ---------------------------------------------------------------------
  *  Every subsystem provides these.  usermain() calls ALL the _init()

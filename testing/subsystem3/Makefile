@@ -5,11 +5,12 @@ BASELINE_DIR ?=
 BUILD = ../../build/buddy3
 CPPFLAGS = -I$(SOURCE_DIR) -I.
 CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g
-MODULES = ir_acquisition ir_calibration ir_reflectance line_detection line_controller barcode_decoder line_navigation
+MODULES = ir_acquisition ir_calibration ir_reflectance line_detection line_controller barcode_decoder barcode_pattern barcode_frame barcode_signal line_navigation
+BASELINE_MODULES = ir_acquisition ir_calibration ir_reflectance line_detection line_controller barcode_decoder line_navigation
 SOURCES = $(addprefix $(SOURCE_DIR)/,$(addsuffix .c,$(MODULES)))
 
-.PHONY: test pattern replay regression compare bench bench-compare codec sanitize sizes drive feedback
-test: pattern
+.PHONY: test pattern frame signal replay replay-signal regression compare bench bench-compare codec sanitize sizes drive feedback
+test: pattern frame signal
 	mkdir -p $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_core.c test_navigation.c $(SOURCES) -o $(BUILD)/test_core
 	$(BUILD)/test_core
@@ -31,6 +32,17 @@ pattern:
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_pattern.c $(SOURCE_DIR)/barcode_pattern.c -o $(BUILD)/test_barcode_pattern
 	$(BUILD)/test_barcode_pattern
 
+SIGNAL_SOURCES = $(addprefix $(SOURCE_DIR)/,barcode_decoder.c barcode_pattern.c barcode_frame.c barcode_signal.c)
+frame signal:
+	mkdir -p $(BUILD)
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_$@.c $(SIGNAL_SOURCES) -o $(BUILD)/test_barcode_$@
+	$(BUILD)/test_barcode_$@
+
+replay-signal:
+	mkdir -p $(BUILD)
+	$(CC) $(CPPFLAGS) $(CFLAGS) replay_barcode_signal.c $(SIGNAL_SOURCES) -o $(BUILD)/replay_barcode_signal
+	$(PYTHON) test_barcode_signal_replay.py $(BUILD)/replay_barcode_signal
+
 PYTHON ?= python3
 replay:
 	mkdir -p $(BUILD)
@@ -42,7 +54,7 @@ regression:
 
 compare:
 	mkdir -p $(BUILD)
-	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) -DS3_BASELINE_TRACE host_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(MODULES))) -o $(BUILD)/before_trace
+	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) -DS3_BASELINE_TRACE host_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) -o $(BUILD)/before_trace
 	$(BUILD)/before_trace > $(BUILD)/before.trace
 	$(CC) $(CPPFLAGS) $(CFLAGS) -DS3_BASELINE_TRACE host_trace.c $(SOURCES) -o $(BUILD)/after_trace
 	$(BUILD)/after_trace > $(BUILD)/after.trace
@@ -57,7 +69,7 @@ bench:
 
 bench-compare: bench
 	mkdir -p $(BUILD)
-	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) bench_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(MODULES))) -o $(BUILD)/before_bench
+	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) bench_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) -o $(BUILD)/before_bench
 	$(BUILD)/before_bench > $(BUILD)/before-bench.trace
 	cmp $(BUILD)/before-bench.trace $(BUILD)/after-bench.trace
 	shasum -a 256 $(BUILD)/before-bench.trace $(BUILD)/after-bench.trace
