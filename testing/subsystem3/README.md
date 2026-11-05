@@ -1,5 +1,126 @@
 # Buddy 3 stationary diagnostics and software tests
 
+## 3 November 2026: retain the outer edges of uneven bars
+
+The 21:27:37 shifted F run still reported zero decodes and one rejection, with
+no timing error or overflow. Unlike the earlier F captures, all 15 real bars
+survived extrema trimming. A wide closing-marker bar dipped below its local
+midpoint, rebounded, then reached white. Choosing the crossing nearest the
+weighted estimate ended that bar at the internal dip (about 220 ms), making
+the adjacent white gap too wide (about 365 ms).
+
+The new reader chooses the first rising and last falling midpoint crossing
+within each retained pair of extrema. It keeps the complete merged bump,
+mirrors on scan reversal, and does not select edges using a known letter.
+The weighted estimate remains only a fallback when no crossing exists.
+This changes no thresholds, marker tolerances, width corrections or actual
+quiet-zone requirements. The earlier experimental contrast-normalised and
+shallow-first extrema cleanup changes remain unshipped.
+
+The shifted F fixture now passes both strict markers and the F payload in
+offline analysis. Its saved stream alone still lacks enough measured quiet
+to emit a result: explicit synthetic leading/trailing margins are required in
+the regression. The capture starts 169 ms after the run began and ends at
+the previous reader's rejection, so omitted white must not be treated as
+observed samples. Earlier poor-contrast F captures still reject.
+
+The new Wi-Fi build was flashed at approximately 21:39 SGT, SHA256
+`F3E1510A9D6F17C6DD61142ACFB550AD736607DCE9D7F473BC6AC353101CCFB7`.
+Post-reboot Wi-Fi controller telemetry was fresh, braked and fault-free.
+At the user's request, the runtime map is now B=forward, A=left, Y=right,
+C=U-turn. The first map request timed out; an identical retry received an OK
+reply at 21:40:40 SGT. A now queues LEFT for a junction, rather than halting
+as an unmapped letter. This runtime map must be supplied again after reboot.
+Physical barcode/turn validation of this firmware is still pending.
+It retains 100 Hz, 0.04 m/s and the wider-gap settings below. Saved-waveform
+coverage is now 120 checks. New synthetic regressions cover 104 broad dips
+inside wide bars and 624 brief spikes in white gaps across A-Z and both scan
+directions; the latter must never emit a wrong letter. Existing quiet,
+grey-shelf, scratch and 3000 jittered-frame checks remain in the suite.
+The complete host suite, 120 saved-waveform checks, controller integration
+suite and Wi-Fi firmware profile check passed for this build. The new wide-bar
+dip regression fails against the earlier crossing rule and passes this fix.
+
+## 3 November 2026: wider printed gaps
+
+The wider-gap Wi-Fi image keeps 100 Hz sampling, 0.04 m/s cruise, start rise 50
+and minimum prominence 15. It increases the post-trigger recording deadline
+from 10 to 15 seconds. At 0.04 m/s a 19 mm wide element takes 475 ms; a
+nominal 2:1 frame plus trailing quiet can take about 11.4 seconds. The
+one-second individual-run limit and 30 ms sampling safety limit are unchanged.
+
+The letter may contain at most one narrow white gap up to 150% of its narrow
+mean, instead of 135%. This addresses the measured Z payload's approximately
+149.4% gap. All sentinel widths, black bars, wide gaps, lower bounds and other
+narrow gaps keep their original checks. Edge interpolation also uses bounded
+32-bit arithmetic with the same integer rounding, removing expensive 64-bit
+divisions; this is not a measured guarantee of the sampling deadline.
+
+`test_barcode_wide.c` covers 468 synthetic scans: A-Z, both directions,
+8/14/19 mm wide elements and 2:1/2.5:1/3:1 ratios, plus malformed widths,
+truncation, real quiet and the longer deadline. These ideal geometries do not
+prove that the user's different papers are scaled copies. The recorder,
+varying-correction and 108 existing saved-waveform checks also pass. Full host
+and integration runners encountered Windows Application Control launch
+failures; those incomplete runs are not test passes.
+
+The complete 21:00:17 capture of the user-confirmed F paper still rejects.
+Its first episode has jagged thick bars and a faint bar peaking near 42/1000.
+The current extrema trimming drops that real bar in favour of a plateau wiggle.
+Even diagnostic cleanup that retains it leaves a distorted closing star that
+fails strict width validation. A broad contrast-normalised cleanup was not
+adopted because it produced a wrong letter in the recorder's 3000-frame
+width-jitter/noise stress test.
+The bounded gap/deadline changes do not establish a fix for this F waveform.
+Use at least 10 cm clear white before the first bar and a straight path.
+The user cannot rotate the paper because its edge catches the sensor;
+comparison scans instead use a shifted parallel path in the same orientation.
+
+This image was flashed at approximately 21:17 SGT on 3 November, SHA256
+`E71CD50732805B4EA8F0A6056E7902A998F184323E2A914094877B049FC386C1`.
+Fresh post-reboot wireless telemetry showed the car braked, drive off, no
+motion fault and a 10.3 ms latest sample interval. The B/Z/Y/C direction map
+was resent and acknowledged, leaving A and F unmapped stop actions.
+The first complete F test after flashing (21:19:05) reported zero decodes,
+one rejection, and no timing error or overflow. Its middle symbol matches
+reverse F, but the marker checks still fail. The previously faint closing bar
+is stronger (~588 versus 42); a different opening bar is now faint (~70) and
+is discarded by current trimming. Diagnostic shallow-pair cleanup restores
+the opening marker but still cannot validate the closing marker. The approach
+to the first bar is only about 34 mm of logged travel. Three later attempts
+were interrupted by paper catching the sensor, as confirmed by the user;
+they are not counted as complete barcode tests. Physical A regression tests
+of this image are still pending.
+The earlier 100 Hz/start-50 image
+produced 21/22 observed A successes, including the last 20 consecutively;
+those results do not validate the wider-gap changes on hardware.
+
+## 3 November 2026: earlier recording with real pre-trigger history
+
+The integrated motion profile is back to 10 ms samples (100 Hz) and a 10 ms
+kernel tick. This also restores motion/pose telemetry's original 200 ms cadence.
+Cruise remains 0.04 m/s and minimum peak prominence 15; the recording-start
+rise is now 50 rather than 150 normalised units above the paper reference.
+
+The decoder retains up to 1.5 seconds of real waiting readings in a bounded
+320-entry ring. When a stronger bar triggers, those readings are copied in
+chronological order so a faint opening star or gradual edge is preserved.
+Their measured duration is subtracted from the prior quiet time: no synthetic
+white is added and no interval is credited twice. Invalid samples, timing gaps
+and reset discard the history. A failed scan cannot re-trigger on the same
+50..75-contrast patch without first returning below the start threshold.
+
+The decoder retains its 2048-entry frame buffer. Dashboard captures now retain
+the same 1.5-second pre-trigger window, with the original 400 ms quiet ending;
+their 2400-entry pool covers about 24 seconds at 100 Hz. The existing width,
+quiet-zone, frame-duration and 30 ms safety checks are retained. Host coverage
+includes faint opening stars, ring/timestamp wrap, insufficient quiet, invalid
+input/history reset, noise, 100/200 Hz shapes and recorded waveform regression.
+Fresh physical A runs are still required: the earlier failed captures omitted
+their opening readings and cannot demonstrate recovery of those missing bars.
+
+The sections below retain the earlier bench/integration history.
+
 25 October team integration: `S3_MOTION=1` now also starts Buddy 1 and mirrors
 telemetry through a taskless facade, while preserving this runtime's single
 motion/report owner. Mac/Linux: `make -C testing/subsystem3 test codec drive
@@ -54,6 +175,20 @@ malformed capture recovery, odometry epoch changes, persistent stop requests,
 no suppressed replay and synthetic 5 ms/10 ms traces with jitter. The existing
 acquisition, calibration, line, steering, A-Z and independent A/Z tests remain.
 These are synthetic tests, not measured physical detection performance.
+
+The Windows script also runs `test_barcode_record.c` and
+`test_barcode_varying.c`, and builds a stdin replay utility. To run the saved
+3 November waveform regressions afterwards:
+
+```powershell
+python .\testing\subsystem3\test_barcode_replay.py
+```
+
+On Mac/Linux, use `make -C testing/subsystem3 replay`. The
+[fixture notes](fixtures/barcode/README.md) document adaptive peak detection,
+sentinel-only width correction, original run outcomes, quantised timing and
+the explicitly synthetic quiet margins used in replay. Replay success does
+not replace a new hardware run.
 
 `barcode_fixtures.h` contains independent bar widths from all four pages of the
 supplied `Project/Barcode Sample.pdf` (A,A,Z,Z). Its source hash and extraction

@@ -38,14 +38,11 @@
 #ifndef S3_COURSE_STEERING_KP
 #define S3_COURSE_STEERING_KP (0.10f)
 #endif
-/* 3 Nov barcode-A experiment: half the previous 0.04 m/s cruise speed.
- * Keep the 10 ms sampling period and decoder thresholds unchanged to isolate
- * speed. The current integration floor is 0.01 m/s, so 0.02 is not clamped.
- * Verify measured wheel speeds: low-speed motion may stutter or stall.
- * The recorder still holds 1024 readings / at most 10 s; long barcodes may
- * exceed that window at this test speed. */
+/* 3 Nov: normal 0.04 m/s cruise with 100 Hz barcode sampling.
+ * Keep prominence floor 15; start rise 50 plus real pre-trigger history.
+ * Verify motor startup and barcode reliability in the next hardware runs. */
 #ifndef S3_COURSE_BASE_MPS
-#define S3_COURSE_BASE_MPS (0.02f)
+#define S3_COURSE_BASE_MPS (0.04f)
 #endif
 /* The junction is reported a few mm after the sensors reach the crossing tape;
  * the crossing centre is about this much further on. */

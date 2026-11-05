@@ -17,11 +17,13 @@
 #define BARCODE_CAPTURE_H
 #include <stdbool.h>
 #include <stdint.h>
+#include "run_timing.h"
+#include "../subsystem3/barcode_decoder.h"
 
-#define BCAP_POOL (2400U)       /* samples, ~24 s at 10 ms */
+#define BCAP_POOL (2400U)       /* samples, ~24 s at 100 Hz */
 #define BCAP_MAX_EPISODES (12U)
-#define BCAP_PRE (20U)          /* samples kept before the trigger */
-#define BCAP_END_QUIET (40U)    /* white samples that end an episode */
+#define BCAP_PRE (S3_REC_PRE_US / S3_SAMPLE_PERIOD_US) /* retain the decoder's history */
+#define BCAP_END_QUIET (400U / S3_SAMPLE_PERIOD_MS) /* keep 400 ms of white */
 
 /* flags: bits 0-1 surface (0 unknown, 1 white, 2 black), bits 2-4 decoder
  * status (0 none, 1 decoded, 2 rejected, 3 timing error, 4 overflow),

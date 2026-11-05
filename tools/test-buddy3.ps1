@@ -19,6 +19,36 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Buddy 3 host compilation failed.' }
     & $testExe
     if ($LASTEXITCODE -ne 0) { throw 'Buddy 3 host tests failed.' }
+    $recordExe = Join-Path $testDir 'test_barcode_record.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\testing\subsystem3\test_barcode_record.c" -o $recordExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode record test compilation failed.' }
+    & $recordExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode record tests failed.' }
+    $varyingExe = Join-Path $testDir 'test_barcode_varying.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\testing\subsystem3\test_barcode_varying.c" -o $varyingExe
+    if ($LASTEXITCODE -ne 0) { throw 'Varying barcode correction test compilation failed.' }
+    & $varyingExe
+    if ($LASTEXITCODE -ne 0) { throw 'Varying barcode correction tests failed.' }
+    $wideExe = Join-Path $testDir 'test_barcode_wide.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\testing\subsystem3\test_barcode_wide.c" -o $wideExe
+    if ($LASTEXITCODE -ne 0) { throw 'Wide barcode test compilation failed.' }
+    & $wideExe
+    if ($LASTEXITCODE -ne 0) { throw 'Wide barcode tests failed.' }
+    $replayExe = Join-Path $testDir 'replay_barcode_record.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\testing\subsystem3\replay_barcode_record.c" -o $replayExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode replay compilation failed.' }
     $mappingExe = Join-Path $testDir 'test_ir_mapping.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
         "-I$repoRoot\app_program\subsystem3" @sources `

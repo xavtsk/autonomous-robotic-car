@@ -102,7 +102,7 @@ void bcap_record(bcap_t *c, const bcap_input_t *in)
             e->origin_m = (c->pre_count != 0U) ? c->pre_m[oldest] : in->centre_m;
             {
                 const uint32_t now_ms = (in->t_us - c->run_start_us) / 1000U;
-                const uint32_t back_ms = (uint32_t)c->pre_count * 10U;
+                const uint32_t back_ms = (uint32_t)c->pre_count * S3_SAMPLE_PERIOD_MS;
                 e->start_ms = now_ms > back_ms ? now_ms - back_ms : 0U;
             }
             for (i = 0U; i < c->pre_count; i++)

@@ -35,7 +35,8 @@ static bool debug_motion_out_of_range;
 ID tk_cre_mtx(const T_CMTX *m) { assert(m->mtxatr==TA_INHERIT); return 1; }
 ER tk_loc_mtx(ID id,TMO t) { if(test_mutex_busy){assert(t==TMO_POL);return E_TMOUT;}assert(id==1&&!locked);locked=1;return E_OK; }
 ER tk_unl_mtx(ID id) { assert(id==1&&locked);locked=0;return E_OK; }
-ID tk_cre_cyc(const T_CCYC *c) { assert(c->cyctim==10&&c->cychdr); return 2; }
+ID tk_cre_cyc(const T_CCYC *c)
+{ assert(c->cyctim==S3_SAMPLE_PERIOD_MS&&c->cycphs==S3_SAMPLE_PERIOD_MS&&c->cychdr); return 2; }
 ER tk_stp_cyc(ID id) { (void)id;return E_OK; }
 ER tk_del_cyc(ID id) { (void)id;return E_OK; }
 ER tk_del_mtx(ID id) { (void)id;return E_OK; }
@@ -86,7 +87,7 @@ void vehicle_controller_observe(const s3_integration_status_t *s)
 { assert(!locked&&s);observed++; }
 #include "../../app_program/controller/s3_integration.c"
 static void cycle(void)
-{ sleeps=0;clock_value+=10000;if(setjmp(boundary)==0)sample(0,NULL);assert(!locked); }
+{ sleeps=0;clock_value+=S3_SAMPLE_PERIOD_US;if(setjmp(boundary)==0)sample(0,NULL);assert(!locked); }
 int main(void)
 {
     s3_integration_status_t status;
@@ -120,7 +121,7 @@ int main(void)
             uint16_t base=surface?2500:300;
             cmd=(s3_control_request_t){.kind=surface?S3_CONTROL_BLACK:S3_CONTROL_WHITE,.sensor=(s3_sensor_id_t)s};
             assert(s3_integration_submit(&cmd));
-            for(unsigned k=0;k<110;k++){raw=(uint16_t)(base+k%7);cycle();}
+            for(unsigned k=0;k<1100000U/S3_SAMPLE_PERIOD_US;k++){raw=(uint16_t)(base+k%7);cycle();}
             assert(s3_integration_status(&status)&&status.command_ok&&!status.collecting);
             assert(status.calibration_sensor==s);
         }
@@ -134,9 +135,9 @@ int main(void)
     /* Overlapping surfaces must still be rejected and leave the sensor's
      * accepted calibration untouched. */
     cmd=(s3_control_request_t){.kind=S3_CONTROL_WHITE,.sensor=S3_SENSOR_LEFT};
-    assert(s3_integration_submit(&cmd));for(unsigned k=0;k<110;k++){raw=(uint16_t)(1000+k%7);cycle();}
+    assert(s3_integration_submit(&cmd));for(unsigned k=0;k<1100000U/S3_SAMPLE_PERIOD_US;k++){raw=(uint16_t)(1000+k%7);cycle();}
     cmd.kind=S3_CONTROL_BLACK;
-    assert(s3_integration_submit(&cmd));for(unsigned k=0;k<110;k++){raw=(uint16_t)(1003+k%7);cycle();}
+    assert(s3_integration_submit(&cmd));for(unsigned k=0;k<1100000U/S3_SAMPLE_PERIOD_US;k++){raw=(uint16_t)(1003+k%7);cycle();}
     cmd.kind=S3_CONTROL_APPLY_CALIBRATION;assert(s3_integration_submit(&cmd));cycle();
     assert(s3_integration_status(&status)&&!status.command_ok);
     assert(g_drive.navigation.accepted_calibration==S3_ALL_SENSORS);
@@ -155,11 +156,11 @@ int main(void)
     assert(status.run_timing.samples==0&&status.run_timing.max_gap_us==0);
     raw=900;cycle();
     assert(s3_integration_status(&status)&&status.state==S3_DRIVE_FOLLOW);
-    assert(status.run_timing.samples==1&&status.run_timing.max_gap_us==10000);
+    assert(status.run_timing.samples==1&&status.run_timing.max_gap_us==S3_SAMPLE_PERIOD_US);
     assert(status.run_timing.above_target==0&&status.run_timing.above_safety==0);
     clock_value+=120000;cycle();
     assert(s3_integration_status(&status)&&status.state==S3_DRIVE_FAULT);
-    assert(status.run_timing.max_gap_us==130000&&status.run_timing.above_safety==1);
+    assert(status.run_timing.max_gap_us==120000U+S3_SAMPLE_PERIOD_US&&status.run_timing.above_safety==1);
     assert(status.run_timing.last_safety_us==clock_value);
     s3_run_timing_t frozen=status.run_timing;
     cycle();cycle();assert(s3_integration_status(&status));
@@ -171,7 +172,7 @@ int main(void)
     cmd.kind=S3_CONTROL_RESET;assert(s3_integration_submit(&cmd));cycle();
     assert(s3_integration_status(&status)&&status.command_sequence==sequence&&reset_calls==1);
     cmd.kind=S3_CONTROL_START;assert(!s3_integration_submit(&cmd));
-    for(unsigned k=0;k<20;k++)cycle();
+    for(unsigned k=0;k<200000U/S3_SAMPLE_PERIOD_US;k++)cycle();
     assert(s3_integration_status(&status)&&status.command_sequence==sequence+1&&status.command_ok&&status.state==S3_DRIVE_OFF);
     assert(!g_shared.reset_pending&&!g_reset_waiting);
 
@@ -193,12 +194,12 @@ int main(void)
     assert(g_reset_waiting&&s3_integration_status(&status));sequence=status.command_sequence;
     cmd.kind=S3_CONTROL_STOP;assert(s3_integration_submit(&cmd));cycle();
     assert(s3_integration_status(&status)&&status.state==S3_DRIVE_FAULT&&status.command_sequence==sequence+1);
-    sequence=status.command_sequence;for(unsigned k=0;k<60;k++)cycle();
+    sequence=status.command_sequence;for(unsigned k=0;k<600000U/S3_SAMPLE_PERIOD_US;k++)cycle();
     assert(s3_integration_status(&status)&&status.command_sequence==sequence&&!g_reset_waiting&&!g_shared.reset_pending);
 
     /* Persistent fault: bounded refusal with no automatic start. */
     cmd.kind=S3_CONTROL_RESET;assert(s3_integration_submit(&cmd));cycle();
-    for(unsigned k=0;k<51;k++)cycle();
+    for(unsigned k=0;k<510000U/S3_SAMPLE_PERIOD_US;k++)cycle();
     assert(s3_integration_status(&status)&&!status.command_ok&&status.state==S3_DRIVE_FAULT);
     assert(status.command_sequence==sequence+1&&!g_reset_waiting&&!g_shared.reset_pending);
 #if defined(TM_MQTT) && TM_MQTT
@@ -226,19 +227,19 @@ int main(void)
         unsigned char bytes[IR_DEBUG_PACKET_SIZE];
         ir_debug_packet_t preview;
         ir_debug_sample_t decoded;
-        for(unsigned k=0;k<5;k++)cycle();
+        for(unsigned k=0;k<50000U/S3_SAMPLE_PERIOD_US;k++)cycle();
         assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes-1U)==0U);
         assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==16U);
         memcpy(preview.bytes,bytes,sizeof bytes);
         assert(ir_debug_unpack(&preview,&decoded)&&decoded.raw_valid==7U);
         assert(decoded.raw[0]==raw&&decoded.raw[1]==raw&&decoded.raw[2]==raw);
         assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==0U);
-        for(unsigned k=0;k<5;k++)cycle();
+        for(unsigned k=0;k<50000U/S3_SAMPLE_PERIOD_US;k++)cycle();
         test_mutex_busy=true;
         assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==0U);
         test_mutex_busy=false;
         assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==16U);
-        for(unsigned k=0;k<5;k++)cycle();
+        for(unsigned k=0;k<50000U/S3_SAMPLE_PERIOD_US;k++)cycle();
         clock_value+=100001U;
         assert(mqtt_utk_ir_debug_take(bytes,sizeof bytes)==0U&&!g_ir_ready);
         puts("PASS: production IR preview latest-only mailbox, physical channel mapping, bounded age and nonblocking network access");
@@ -246,7 +247,7 @@ int main(void)
             unsigned char control[CONTROL_DEBUG_PACKET_SIZE];
             control_debug_packet_t cp;
             control_debug_sample_t cd;
-            for(unsigned k=0;k<20;k++)cycle();
+            for(unsigned k=0;k<200000U/S3_SAMPLE_PERIOD_US;k++)cycle();
             assert(mqtt_utk_control_debug_take(control,sizeof control-1)==0);
             assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
             memcpy(cp.bytes,control,sizeof control);
@@ -254,26 +255,26 @@ int main(void)
             assert(cd.motion_valid && cd.setpoint_right==-50 && cd.encoder_left==-123 && cd.measured_right==-42);
             assert(cd.accepted_calibration==7 && cd.left_white_limit<=1000);
             assert(mqtt_utk_control_debug_take(control,sizeof control)==0);
-            for(unsigned k=0;k<20;k++)cycle();
+            for(unsigned k=0;k<200000U/S3_SAMPLE_PERIOD_US;k++)cycle();
             test_mutex_busy=true;assert(mqtt_utk_control_debug_take(control,sizeof control)==0);test_mutex_busy=false;
             assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
-            for(unsigned k=0;k<20;k++){cycle();}
+            for(unsigned k=0;k<200000U/S3_SAMPLE_PERIOD_US;k++){cycle();}
             clock_value+=400001;
             assert(mqtt_utk_control_debug_take(control,sizeof control)==0&&!g_control_ready);
             /* A newer motion tick after the ADC stamp is fresh, not wrapped
              * negative age. Old or out-of-range feedback remains invalid. */
             debug_motion_advance=100;
-            for(unsigned k=0;k<20;k++)cycle();
+            for(unsigned k=0;k<200000U/S3_SAMPLE_PERIOD_US;k++)cycle();
             assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
             memcpy(cp.bytes,control,sizeof control);assert(control_debug_unpack(&cp,&cd));
             assert(cd.motion_valid && (int32_t)(cd.motion_timestamp_us-cd.timestamp_us)>0);
             debug_motion_advance=0;debug_motion_age=60000;
-            for(unsigned k=0;k<20;k++)cycle();
+            for(unsigned k=0;k<200000U/S3_SAMPLE_PERIOD_US;k++)cycle();
             assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
             memcpy(cp.bytes,control,sizeof control);assert(control_debug_unpack(&cp,&cd));
             assert(cd.motion_available&&!cd.motion_valid&&cd.measured_left==0&&cd.encoder_left==0);
             debug_motion_age=0;debug_motion_out_of_range=true;
-            for(unsigned k=0;k<20;k++)cycle();
+            for(unsigned k=0;k<200000U/S3_SAMPLE_PERIOD_US;k++)cycle();
             assert(mqtt_utk_control_debug_take(control,sizeof control)==70);
             memcpy(cp.bytes,control,sizeof control);assert(control_debug_unpack(&cp,&cd));
             assert(!cd.motion_valid&&cd.setpoint_left==0&&cd.duty_left==0);

@@ -38,7 +38,7 @@
 
 #define	CNF_MAX_TSKPRI		32	/* Task Max priority */
 
-#define CNF_TIMER_PERIOD	10	/* System timer period */
+#define CNF_TIMER_PERIOD	10	/* ms; matches the 100 Hz sensor cyclic handler */
 
 /* Maximum number of kernel objects (raised for a 5-subsystem team project) */
 #define CNF_MAX_TSKID		32	/* Task */

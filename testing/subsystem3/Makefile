@@ -8,7 +8,7 @@ CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g
 MODULES = ir_acquisition ir_calibration ir_reflectance line_detection line_controller barcode_decoder line_navigation
 SOURCES = $(addprefix $(SOURCE_DIR)/,$(addsuffix .c,$(MODULES)))
 
-.PHONY: test regression compare bench bench-compare codec sanitize sizes drive feedback
+.PHONY: test replay regression compare bench bench-compare codec sanitize sizes drive feedback
 test:
 	mkdir -p $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_core.c test_navigation.c $(SOURCES) -o $(BUILD)/test_core
@@ -19,6 +19,16 @@ test:
 	$(BUILD)/test_ir_reflectance
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_record.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_record
 	$(BUILD)/test_barcode_record
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_varying.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_varying
+	$(BUILD)/test_barcode_varying
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_wide.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_wide
+	$(BUILD)/test_barcode_wide
+
+PYTHON ?= python3
+replay:
+	mkdir -p $(BUILD)
+	$(CC) $(CPPFLAGS) $(CFLAGS) replay_barcode_record.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/replay_barcode_record
+	$(PYTHON) test_barcode_replay.py $(BUILD)/replay_barcode_record
 
 regression:
 	bash run_regression.sh
