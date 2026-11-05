@@ -1,4 +1,38 @@
-# 3 November 2026 barcode replay fixtures
+# Barcode replay fixtures
+
+## 5 November: preserved architecture comparison set
+
+The latest ten trials were all small A, confirmed by the user. Hardware reported
+five decodes and five rejections. Only six of those ten waveforms are complete;
+these copies preserve the full original BCAP exports byte for byte:
+
+| Fixture | Original dashboard trace ID | Samples | Hardware outcome |
+| --- | --- | ---: | --- |
+| `20261105-185445-small-a-width-rejected.txt` | `cc05d1cb0f48416f93412d58615cb8b6` | 535 | rejected |
+| `20261105-185701-small-a-decoded.txt` | `c4e9b41b380641b99bdcaee3bdf382cd` | 575 | A |
+| `20261105-190021-small-a-decoded.txt` | `49837b25100646a2bfd3e928261d4b28` | 574 | A |
+| `20261105-190147-small-a-extra-region-rejected.txt` | `41d2285e9bd7460a85f767fdf426a2dd` | 537 | rejected |
+| `20261105-190413-small-a-extra-region-rejected.txt` | `ce5909a7105f4981af71df413688b8da` | 534 | rejected |
+| `20261105-190459-small-a-width-rejected.txt` | `e77a1309a25c487485e9875540cfbdcf` | 536 | rejected |
+
+The complete failures divide into two observed causes. At 18:54:45 and
+19:04:59 the existing extraction retains all fifteen bars, but the shared
+black/white correction reduces a payload white gap to about 46 ms, below its
+roughly 51 ms minimum. The fixed uncorrected width vectors now classify as A
+with `barcode_pattern.c`. At 19:01:47 and 19:04:13, an earlier one/two-sample
+bump makes sixteen regions; the pattern module does not resolve that extraction
+problem. One failed trial uploaded only six samples and cannot be diagnosed.
+
+`test_barcode_pattern.c` preserves fixed measured width vectors and identifies
+their source traces. Measurements used raw ADC reconstructed with calibration
+215/3550, sample intervals reconstructed at `dt_ms * 1000 + 500`, and the
+baseline's extraction before optical-bias correction. The diagnostic run added
+synthetic white margins; those margins are not evidence of real quiet. Fixed
+width tests intentionally exclude capture and framing; the six new complete
+waveforms are retained for the next signal/framing stage, not added as passing
+end-to-end expectations to the legacy replay suite.
+
+## 3 November: original replay set
 
 These are unmodified BCAP exports, not synthetic sensor readings. Filenames
 identify the local capture time. Source exports:

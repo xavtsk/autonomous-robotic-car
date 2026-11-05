@@ -51,6 +51,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Wide barcode test compilation failed.' }
     & $wideExe
     if ($LASTEXITCODE -ne 0) { throw 'Wide barcode tests failed.' }
+    $patternExe = Join-Path $testDir 'test_barcode_pattern.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\app_program\subsystem3\barcode_pattern.c" `
+        "$repoRoot\testing\subsystem3\test_barcode_pattern.c" -o $patternExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode pattern test compilation failed.' }
+    & $patternExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode pattern tests failed.' }
     $replayExe = Join-Path $testDir 'replay_barcode_record.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `

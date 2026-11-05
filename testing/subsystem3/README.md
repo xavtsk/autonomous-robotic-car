@@ -1,5 +1,62 @@
 # Buddy 3 stationary diagnostics and software tests
 
+## 5 November 2026: separate signal, pattern and frame validation
+
+The deployed baseline is preserved on `main` at `46725c7`. Development of its
+replacement starts on `codex/barcode-signal-architecture`. The first stage is
+`app_program/subsystem3/barcode_pattern.c`: a pure duration-pattern classifier,
+independent of capture, ADC normalization, peak extraction and navigation.
+The live reader still uses `barcode_decoder.c`; the new module is not linked
+into the firmware yet.
+
+Each nine-element symbol classifies black bars and white spaces independently.
+Each colour's cutoff is the greater of its min/max midpoint and 1.5 times its
+minimum width. This follows the separate-colour approach used by
+[ZXing-C++](https://github.com/zxing-cpp/zxing-cpp/blob/master/core/src/oned/ODRowReader.h)
+and described in [US5352878A, Figure 14](https://patents.google.com/patent/US5352878A/en).
+It avoids fitting an optical bias or assuming that narrow black and white
+durations must be equal. The implementation is independent and does not copy
+ZXing-C++'s image-specific spread guards.
+
+Only exact Code 39 patterns are recognized. Application frames require exactly
+29 positive widths matching `*A-Z*`, including both markers, in one orientation.
+The closest narrow/wide classes must differ by more than twice the supplied
+maximum sample interval. That separation guard is experimental, not a Code 39
+standard tolerance or a guarantee against noisy waveforms.
+
+Run the new stage alone with `make -C testing/subsystem3 pattern`, or run it
+alongside the existing host tests with `tools/test-buddy3.ps1` on Windows.
+`test_barcode_pattern.c` covers 17,727 checks: all 44 symbols, A-Z in both
+directions, scales, width ratios, arithmetic boundaries, malformed patterns,
+and fixed measured widths from A/Z/F recordings. Of 15,600 distorted synthetic
+frames, 15,495 classify correctly and 105 refuse; none produces a wrong letter.
+The fixed widths from the 18:22, 18:54:45 and 19:04:59 A rejections now classify
+as A. Those are pattern results only, not successful whole-capture replays or
+new physical scans.
+
+The remaining architecture work is deliberately separated into these layers:
+
+1. Preserve raw ADC contrast and timestamps through capture. A new raw-input
+   API must explicitly declare its 0..4095 range and polarity; the existing
+   darkness API's 0..1000 contract must not silently change. Keep storage bounded
+   and account for the packed representation required by CR1.
+2. Extract edges and locate candidate start markers within the recording, so a
+   small preliminary bump need not invalidate every subsequent frame. Searching
+   must not discard real ink and then credit that ink as white quiet time.
+3. Validate actual leading/trailing quiet, inter-character spaces, sample
+   freshness, duration and contrast before accepting a pattern. These checks
+   are absent from the pure pattern API; even implausible nonzero gap durations
+   are intentionally not rejected there. An OK pattern cannot drive the car.
+4. Select the new reader explicitly in integration, preserve command mapping
+   and fault behaviour, replay complete captures including negative controls,
+   then build and physically validate it. Avoid concurrent readers where the
+   first result hides which architecture emitted the command.
+
+Six complete recordings from the latest ten-trial set are retained with their
+original hardware outcomes in `fixtures/barcode`. The two failures with an
+extra preliminary region remain unresolved by this pattern-only stage. Firmware
+build, flash and new physical success-rate measurements are still outstanding.
+
 ## 5 November 2026: recover faint bars without selecting a known letter
 
 Four complete small-A captures lost narrow bars before width validation. Their

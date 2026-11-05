@@ -8,8 +8,8 @@ CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g
 MODULES = ir_acquisition ir_calibration ir_reflectance line_detection line_controller barcode_decoder line_navigation
 SOURCES = $(addprefix $(SOURCE_DIR)/,$(addsuffix .c,$(MODULES)))
 
-.PHONY: test replay regression compare bench bench-compare codec sanitize sizes drive feedback
-test:
+.PHONY: test pattern replay regression compare bench bench-compare codec sanitize sizes drive feedback
+test: pattern
 	mkdir -p $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_core.c test_navigation.c $(SOURCES) -o $(BUILD)/test_core
 	$(BUILD)/test_core
@@ -25,6 +25,11 @@ test:
 	$(BUILD)/test_barcode_varying
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_wide.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_wide
 	$(BUILD)/test_barcode_wide
+
+pattern:
+	mkdir -p $(BUILD)
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_pattern.c $(SOURCE_DIR)/barcode_pattern.c -o $(BUILD)/test_barcode_pattern
+	$(BUILD)/test_barcode_pattern
 
 PYTHON ?= python3
 replay:
