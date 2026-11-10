@@ -145,9 +145,13 @@ class TransportTests(unittest.TestCase):
                 while not state.debug_snapshot()["controller"]["received"] and time.monotonic()<deadline:
                     time.sleep(0.05)
                 self.assertEqual(state.debug_snapshot()["controller"]["latest"]["data"]["reason"],4)
+                samples = [(3500,250,34,i,10) for i in range(25)]
+                full_packet = encode_barcode(42,"samples",episode=1,index=0,samples=samples[:24])
+                self.assertEqual(len(full_packet),164)
                 for payload in (encode_barcode(42,"summary",episodes=1,decoded=1,letters="Z"),
-                                encode_barcode(42,"episode",episode=1,start_ms=10,count=1),
-                                encode_barcode(42,"samples",episode=1,index=0,samples=[(3500,250,34,0,10)]),
+                                encode_barcode(42,"episode",episode=1,start_ms=10,count=25),
+                                full_packet,
+                                encode_barcode(42,"samples",episode=1,index=24,samples=samples[24:]),
                                 encode_barcode(42,"end")):
                     subprocess.run(["mosquitto_pub","-h","127.0.0.1","-p",str(port),
                                     "-t","car/debug/barcode","-s"],input=payload,timeout=3,check=True)
@@ -156,8 +160,9 @@ class TransportTests(unittest.TestCase):
                     time.sleep(0.05)
                 record=state.traces.list()[0]
                 self.assertTrue(record["complete"])
-                self.assertEqual(record["sample_count"],1)
+                self.assertEqual(record["sample_count"],25)
                 self.assertIn("3500:250:34:0:10",state.traces.download(record["id"])[1])
+                self.assertIn("3500:250:34:24:10",state.traces.download(record["id"])[1])
                 capture = subprocess.Popen(["mosquitto_sub", "-h", "127.0.0.1", "-p", str(port), "-t", "car/cmd/barcode_map", "-C", "1", "-W", "3", "-F", "%x"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 time.sleep(0.15)
                 state.request("map", dict(forward="A", left="B", right="C", uturn="D"))

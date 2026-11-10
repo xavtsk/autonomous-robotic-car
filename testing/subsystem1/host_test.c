@@ -82,6 +82,8 @@ static int defer_completion;
 static host_done_cb deferred_done;
 static void *deferred_arg;
 static T_MQTT_UTK_APP_MSG attempted;
+static UB attempted_bytes[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+static unsigned heartbeat_pending;
 
 u32_t sys_now(void) { return fake_now; }
 
@@ -102,6 +104,7 @@ err_t mqtt_publish(mqtt_client_t *c, const char *topic, const void *payload, u16
     strcpy(attempted.topic, topic);
     memcpy(attempted.payload, payload, len < sizeof attempted.payload ? len : sizeof attempted.payload);
     attempted.payload_len = len; attempted.qos = qos; attempted.retain = retain;
+    memcpy(attempted_bytes, payload, len);
     if (publish_result != ERR_OK) return publish_result;
     strcpy(published_topic, topic); memcpy(published, payload, len);
     published_len = len; published_qos = qos; published_retain = retain;
@@ -113,8 +116,14 @@ err_t mqtt_publish(mqtt_client_t *c, const char *topic, const void *payload, u16
 }
 int ip4addr_aton(const char *text, ip_addr_t *addr) { (void)text; *addr = 0; return 1; }
 void sys_timeout(unsigned ms, void (*callback)(void *), void *arg)
-{ (void)arg; if (ms == 5000) heartbeat = callback; }
-void sys_untimeout(void (*callback)(void *), void *arg) { (void)callback; (void)arg; }
+{
+    (void)arg;
+    if (ms == 5000) {
+        assert(!heartbeat_pending); heartbeat_pending = 1; heartbeat = callback;
+    }
+}
+void sys_untimeout(void (*callback)(void *), void *arg)
+{ (void)arg; if (callback == heartbeat) heartbeat_pending = 0; }
 
 static void empty_outbox(void) { BUDDY1_TELEMETRY_MSG msg; while (buddy1_outbox_take(&msg)) { } }
 
@@ -128,8 +137,8 @@ static void complete_publish(err_t result)
 }
 
 /* Binary diagnostic hook: payloads contain embedded zero bytes, not strings. */
-static const unsigned char *debug_queue[4];
-static unsigned debug_size[4];
+static const unsigned char *debug_queue[16];
+static unsigned debug_size[16];
 static const unsigned char debug_summary[16]={1};
 #if APP_IR_DEBUG
 static const unsigned char debug_end[6]={1,0,0,0,0,3};
@@ -147,7 +156,7 @@ unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size)
 }
 static void test_debug_lines(void)
 {
-    static unsigned char longest[47];
+    static unsigned char longest[MQTT_UTK_DEBUG_PAYLOAD_MAX];
     unsigned count;
     memset(longest, 0xa5, sizeof longest); longest[10]=0;
     empty_outbox();
@@ -172,12 +181,167 @@ static void test_debug_lines(void)
     assert(publish_count == count + 2 && debug_head == 2);
     publish_result = ERR_OK;
     poll_after(100);
-    assert(publish_count == count + 3 && published_len == sizeof longest && published[10]==0);
+    assert(publish_count == count + 3 && published_len == 164U &&
+           memcmp(published, longest, sizeof longest) == 0);
     /* Nothing left: no more publishes. */
     poll_after(100); poll_after(100);
     assert(publish_count == count + 3);
     debug_count = 0; debug_head = 0;
-    puts("HOST PASS: binary capture packets only after telemetry, zero bytes preserved, paced, retried, bounded");
+    puts("HOST PASS: exact 164-byte binary capture, event priority, zero bytes preserved, paced and retried");
+}
+
+static void queue_debug(unsigned count, const unsigned char *bytes, unsigned size)
+{
+    assert(count <= sizeof debug_queue / sizeof debug_queue[0]);
+    debug_head = 0; debug_count = count;
+    for (unsigned i = 0; i < count; ++i) {
+        debug_queue[i] = bytes; debug_size[i] = size;
+    }
+}
+
+static void test_capture_fairness(void)
+{
+    BUDDY1_SNAPSHOT decoded;
+    BUDDY1_TERRAIN terrain = {0};
+    T_MQTT_UTK_APP_MSG message;
+    unsigned count, reports = 0;
+    empty_outbox();
+    /* Scheduling metadata is local: only recurring samples yield a turn. */
+    assert(buddy1_report_motion(2, 4) == E_OK);
+    assert(mqtt_utk_app_take(&message) && message.routine);
+    assert(buddy1_report_pose(12, 34) == E_OK);
+    assert(mqtt_utk_app_take(&message) && message.routine);
+    assert(buddy1_report_terrain(&terrain) == E_OK);
+    assert(mqtt_utk_app_take(&message) && message.routine);
+
+    /* Start after a capture completion, then keep the four-slot app FIFO
+     * replenished throughout twelve captures. Both sources must progress,
+     * including with the fake port's synchronous completion callbacks. */
+    queue_debug(1, debug_summary, sizeof debug_summary); poll_after(20);
+    queue_debug(12, debug_summary, sizeof debug_summary);
+    for (unsigned i = 1; i <= 4; ++i)
+        assert(buddy1_report_motion((H)(2U*i), (H)(2U*i)) == E_OK);
+    count = publish_count;
+    for (unsigned i = 0; i < 24; ++i) {
+        poll_after(20);
+        assert(publish_count == count + i + 1);
+        if ((i & 1U) == 0) {
+            ++reports;
+            assert(!strcmp(published_topic, "car/telemetry/motion") &&
+                   buddy1_decode(BUDDY1_TOPIC_MOTION, published, published_len, &decoded) &&
+                   decoded.left_mms == (H)(2U*reports));
+            assert(buddy1_report_motion((H)(2U*(reports+4U)), 0) == E_OK);
+        } else {
+            assert(!strcmp(published_topic, MQTT_UTK_DEBUG_TOPIC));
+        }
+    }
+    assert(debug_head == 12 && reports == 12);
+    /* The capture turn held one fresh app packet; drain that slot before
+     * dropping the rest of this synthetic workload. */
+    poll_after(20);
+    assert(!strcmp(published_topic, "car/telemetry/motion") &&
+           buddy1_decode(BUDDY1_TOPIC_MOTION, published, published_len, &decoded) &&
+           decoded.left_mms == 26);
+    empty_outbox(); debug_head = debug_count = 0;
+    puts("HOST PASS: saturated FIFO and BCAP each progress every other slot, app order intact, synchronous completion safe");
+}
+
+static void test_capture_event_priority(void)
+{
+    BUDDY1_COMMAND_MSG snapshot = {.kind = BUDDY1_COMMAND_SNAPSHOT,
+                                   .payload = {BUDDY1_WIRE_VERSION}};
+    const char *topics[] = {"car/telemetry/faults", "car/telemetry/state",
+                           "car/telemetry/barcode", "car/reply/snapshot",
+                           "car/reply/barcode_map"};
+    UB map_reply[] = {BUDDY1_WIRE_VERSION, 0};
+    unsigned asks;
+    empty_outbox();
+    queue_debug(1, debug_summary, sizeof debug_summary);
+    assert(buddy1_update_faults(BUDDY1_FAULT_WIFI, 0) == E_OK);
+    assert(buddy1_report_robot_state(BUDDY1_STATE_STOPPED) == E_OK);
+    assert(buddy1_report_barcode('A') == E_OK);
+    assert(buddy1_command_process(&snapshot) == E_OK);
+    asks = debug_asks;
+    for (unsigned i = 0; i < 5; ++i) {
+        poll_after(20);
+        assert(!strcmp(published_topic, topics[i]) && debug_asks == asks);
+        assert(published_qos == (i >= 3 ? 1 : 0));
+        if (i == 0)
+            assert(buddy1_queue_publish(BUDDY1_TOPIC_MAP_REPLY, map_reply, sizeof map_reply) == E_OK);
+    }
+    poll_after(20); assert(!strcmp(published_topic, MQTT_UTK_DEBUG_TOPIC));
+
+    /* Priority applies at the head: never reorder an urgent event ahead of
+     * an already staged routine sample, even if that sample yields a slot. */
+    assert(buddy1_report_heading(22) == E_OK); poll_after(20);
+    queue_debug(2, debug_summary, sizeof debug_summary);
+    assert(buddy1_report_motion(44, 46) == E_OK);
+    assert(buddy1_update_faults(BUDDY1_FAULT_WIFI, 0) == E_OK);
+    poll_after(20); assert(!strcmp(published_topic, MQTT_UTK_DEBUG_TOPIC));
+    poll_after(20); assert(!strcmp(published_topic, "car/telemetry/motion"));
+    poll_after(20); assert(!strcmp(published_topic, "car/telemetry/faults"));
+    poll_after(20); assert(!strcmp(published_topic, MQTT_UTK_DEBUG_TOPIC));
+    debug_head = debug_count = 0;
+    puts("HOST PASS: faults/state/barcode/replies ahead of fresh captures, QoS preserved, no app FIFO reordering");
+}
+
+static void test_capture_mixed_retries(void)
+{
+    static unsigned char full[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+    unsigned attempts, asks;
+    memset(full, 0xa6, sizeof full); full[15] = 0;
+    empty_outbox();
+    queue_debug(2, full, sizeof full);
+    assert(buddy1_report_motion(48, 50) == E_OK);
+    publish_result = ERR_MEM; poll_after(20);
+    assert(!strcmp(attempted.topic, "car/telemetry/motion") && debug_head == 0);
+    assert(buddy1_report_heading(23) == E_OK);
+    publish_result = ERR_OK; poll_after(100);
+    assert(!strcmp(published_topic, "car/telemetry/motion") && debug_head == 0);
+    poll_after(20); assert(!strcmp(published_topic, "car/telemetry/heading"));
+
+    /* Capture rejection retains all 164 bytes; a newly arrived event cannot
+     * replace it. Retry pacing and only one request apply across both sources. */
+    assert(buddy1_report_motion(60, 62) == E_OK);
+    publish_result = ERR_MEM; poll_after(20);
+    assert(debug_head == 1 && attempted.payload_len == sizeof full &&
+           !strcmp(attempted.topic, MQTT_UTK_DEBUG_TOPIC) &&
+           !memcmp(attempted_bytes, full, sizeof full));
+    assert(buddy1_report_heading(24) == E_OK);
+    attempts = publish_attempts; asks = debug_asks;
+    poll_after(99); assert(publish_attempts == attempts);
+    publish_result = ERR_OK; defer_completion = 1; poll_after(1);
+    assert(publish_attempts == attempts + 1 && outbox_count() == 1 &&
+           debug_asks == asks && !memcmp(published, full, sizeof full));
+    poll_after(200); assert(publish_attempts == attempts + 1);
+    complete_publish(ERR_TIMEOUT); poll_after(99);
+    assert(publish_attempts == attempts + 1);
+    poll_after(1);
+    assert(publish_attempts == attempts + 2 && debug_asks == asks &&
+           outbox_count() == 1 && !memcmp(published, full, sizeof full));
+
+    /* lwIP clears the callback on disconnect. Retry the same capture after
+     * reconnect, keep the waiting event, and keep one heartbeat timer chain. */
+    fake_client.connected = 0; deferred_done = NULL; deferred_arg = NULL;
+    connected(&fake_client, NULL, 256); poll_after(100);
+    assert(publish_attempts == attempts + 2 && heartbeat_pending == 1);
+    fake_client.connected = 1; defer_completion = 0;
+    connected(&fake_client, NULL, MQTT_CONNECT_ACCEPTED); mqtt_utk_poll();
+    assert(publish_attempts == attempts + 3 && debug_asks == asks &&
+           heartbeat_pending == 1 && outbox_count() == 1 &&
+           !strcmp(published_topic, MQTT_UTK_DEBUG_TOPIC) &&
+           !memcmp(published, full, sizeof full));
+    /* The routine sample staged before the capture still precedes the event. */
+    poll_after(20); assert(!strcmp(published_topic, "car/telemetry/motion"));
+    poll_after(20); assert(!strcmp(published_topic, "car/telemetry/heading"));
+
+    /* A permanent capture error frees its slot; fresh telemetry progresses. */
+    publish_result = ERR_ARG; poll_after(20); assert(debug_head == 2);
+    assert(buddy1_report_motion(52, 54) == E_OK);
+    publish_result = ERR_OK; poll_after(20);
+    assert(!strcmp(published_topic, "car/telemetry/motion"));
+    debug_head = debug_count = 0;
+    puts("HOST PASS: mixed app/capture exact retries, 164 bytes, one in-flight, reconnect, one heartbeat chain, permanent-error recovery");
 }
 
 #if APP_IR_DEBUG
@@ -606,10 +770,13 @@ int main(void)
     empty_outbox();
     assert(buddy1_report_motion(0, 0) == E_OK);
     poll_after(20); assert(published_len == 4 && published[1] == 0 && published[2] == 0 && published[3] == 0);
-    heartbeat(NULL); assert(published_len == 2 &&
+    heartbeat_pending = 0; heartbeat(NULL); assert(published_len == 2 &&
         buddy1_decode(BUDDY1_TOPIC_STATUS, published, published_len, &decoded));
     test_publish_backpressure();
     test_debug_lines();
+    test_capture_fairness();
+    test_capture_event_priority();
+    test_capture_mixed_retries();
     test_pose();
     test_terrain();
     test_terrain_widths();

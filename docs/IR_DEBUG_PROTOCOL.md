@@ -41,9 +41,11 @@ by the actual algorithms are unchanged.
 - One 16-byte latest-only mailbox shares the existing status mutex. The network
   owner polls it with `TMO_POL`, and drops samples older than 100 ms. Packing is
   outside the mutex; bounded copying occurs inside it.
-- The existing Wi-Fi/MQTT owner remains the only network caller. Normal outbox
-  messages have first priority, BCAP recorded upload second, the optional
-  controller snapshot third and live IR last.
+- The existing Wi-Fi/MQTT owner remains the only network caller. Events/replies
+  at the application FIFO head have priority; recurring motion/pose/terrain
+  samples alternate with waiting BCAP uploads. An attempted packet retains its
+  retry slot, and the application FIFO is not reordered. The optional
+  controller snapshot follows both sources, with live IR last.
   A failed preview publish is discarded, never retried as stale history. The
   existing stable diagnostic transmit buffer and one-inflight guard are reused.
 - Maximum IR application payload is 320 bytes/s; this excludes topic/MQTT/TCP/Wi-Fi

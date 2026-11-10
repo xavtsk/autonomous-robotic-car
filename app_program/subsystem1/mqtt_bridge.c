@@ -40,6 +40,12 @@ int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out)
 	out->qos = (message.type == BUDDY1_TOPIC_SNAPSHOT ||
 	            message.type == BUDDY1_TOPIC_MAP_REPLY) ? 1 : 0;
 	out->retain = 0;
+	/* Only recurring samples yield slots to barcode uploads. Faults, state,
+	 * barcode events and replies retain priority without duplicating topic
+	 * names or application enums in the network layer. */
+	out->routine = (message.type == BUDDY1_TOPIC_MOTION ||
+	                message.type == BUDDY1_TOPIC_POSE ||
+	                message.type == BUDDY1_TOPIC_TERRAIN);
 	return 1;
 }
 

@@ -16,6 +16,9 @@ typedef struct {
 	unsigned short	payload_len;
 	unsigned char	qos;
 	unsigned char	retain;
+	/* Local scheduling metadata, never transmitted. Zero preserves priority
+	 * for events/replies; recurring samples may share slots with captures. */
+	unsigned char	routine;
 } T_MQTT_UTK_APP_MSG;
 
 /*
@@ -30,7 +33,10 @@ void mqtt_utk_start(void);
 /* Network-owner task only. Attempts at most one application publish per call,
  * spaced by at least 20 ms (100 ms after transient rejection). One fixed retry
  * slot retains the packet until completion, including across disconnects;
- * no later FIFO packet is removed while it is pending. No blocking wait.
+ * no later FIFO packet is removed while it is pending. Routine telemetry
+ * alternates with waiting barcode packets. Events/replies at the FIFO head
+ * precede a fresh barcode packet; an attempted packet always finishes/retries
+ * first. No blocking wait.
  * A disconnect/timeout may make delivery ambiguous: retries can duplicate a
  * packet, and QoS 0 still does not provide broker acknowledgement. */
 void mqtt_utk_poll(void);
@@ -39,17 +45,13 @@ void mqtt_utk_poll(void);
  * it in app_program/subsystem1/mqtt_bridge.c. */
 int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out);
 
-/* Optional low-priority binary barcode capture packets on
- * MQTT_UTK_DEBUG_TOPIC. Asked for one packet only when no application message
- * is waiting, so telemetry always goes first; same single in-flight slot and
- * pacing. Return the packet length, or 0 when there is nothing to send. The
- * weak default sends nothing. Called from the network task. */
+/* Optional binary barcode capture packets on MQTT_UTK_DEBUG_TOPIC. Alternate
+ * with routine application samples while both are waiting; other FIFO-head
+ * events/replies take priority. Same single in-flight slot and pacing. Return
+ * the packet length, or 0 when there is nothing to send. The weak default
+ * sends nothing. Called from the network task. */
 #define MQTT_UTK_DEBUG_TOPIC       "car/debug/barcode"
-#if APP_IR_DEBUG
-#define MQTT_UTK_DEBUG_PAYLOAD_MAX 70 /* shared with controller preview */
-#else
-#define MQTT_UTK_DEBUG_PAYLOAD_MAX 47 /* maximum binary capture packet */
-#endif
+#define MQTT_UTK_DEBUG_PAYLOAD_MAX 164 /* 24-sample capture; also holds previews */
 unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size);
 
 /* Optional IR_DEBUG=1 preview, after ordinary telemetry and barcode uploads.

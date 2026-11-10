@@ -227,13 +227,17 @@ hex characters. A snapshot request is one byte `0x03`, not the text `"03"`.
 
 ## Optional recorded barcode diagnostics
 
-`car/debug/barcode` now carries binary BCAP v1 packets, **not ASCII**. This is
+`car/debug/barcode` now carries binary BCAP v2 packets, **not ASCII**. This is
 a separate diagnostic version, not telemetry version 3. See
 `docs/BARCODE_WIRE_PROTOCOL.md`. USB dumps and laptop `.txt` imports/exports stay
 readable and unchanged. The source owner packs capture data under its existing
 mutex; the network side uses `TMO_POL` and never waits on the capture lock.
-Core telemetry remains ahead of capture uploads; optional controller/IR live
-previews remain latest-only, lower priority and disabled unless `IR_DEBUG=1`.
+The laptop also accepts v1 captures. Restart the Python service before flashing
+v2 firmware so its decoder is reloaded. Routine motion/pose/terrain telemetry
+alternates with waiting capture packets; events/replies at the application FIFO
+head take priority. An attempted packet retains its retry slot and FIFO order
+is preserved. Optional controller/IR live previews remain latest-only, lower
+priority and disabled unless `IR_DEBUG=1`.
 
 For a heartbeat configured on a different topic, decode it with the `car/status`
 layout. The tool is a codec; broker connection/subscription is handled by the

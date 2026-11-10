@@ -85,13 +85,15 @@ typedef struct {
     unsigned header_done : 1, summary_done : 1, end_done : 1;
 } bcap_cursor_t;
 bool bcap_format_next(const bcap_t *c, bcap_cursor_t *cur, char *out, unsigned int size);
-/* Binary wireless format v1. Common header: version8, run_start_us32,
+/* Binary wireless format v2. Common header: version8, run_start_us32,
  * kind2 (summary/header/samples/end); all fields LSB-first, padding zero.
- * At most six 52-bit samples per packet. USB text format above is unchanged.
+ * At most 24 52-bit samples per packet, with a five-bit count-minus-one.
+ * USB text format above retains six samples per line.
  * Zero means finished/invalid/insufficient capacity; cursor changes only when
  * a complete packet is produced. Caller holds the existing capture mutex. */
-#define BCAP_WIRE_VERSION 1U
-#define BCAP_WIRE_MAX 47U
+#define BCAP_WIRE_VERSION 2U
+#define BCAP_WIRE_SAMPLES 24U
+#define BCAP_WIRE_MAX 164U /* ceil((63 header bits + 24 * 52 sample bits) / 8) */
 unsigned bcap_binary_next(const bcap_t *c, bcap_cursor_t *cur,
                           unsigned char *out, unsigned size);
 #endif

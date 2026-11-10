@@ -57,7 +57,12 @@ static T_MQTT_UTK_APP_MSG pending;
 static u32_t last_publish_ms;
 static u16_t publish_wait_ms;
 static u8_t pending_valid, pending_inflight, pending_warned, publish_paced;
-/* Binary diagnostic slot: used only while no application packet is pending. */
+/* One fresh application packet may wait here during a capture turn. Once
+ * either source has been attempted, retain that source until completion or a
+ * permanent error, even across reconnects. Never interleave retries. */
+enum { PUBLISH_NONE, PUBLISH_APPLICATION, PUBLISH_CAPTURE };
+static u8_t retry_source, capture_turn;
+/* Separate capture storage keeps a held application packet intact. */
 static unsigned char debug_line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
 static u16_t debug_len;
 static u8_t debug_valid;
@@ -87,6 +92,8 @@ static void application_publish_done_cb(void *arg, err_t result)
 	if(result == ERR_OK) {
 		pending_valid = 0;
 		pending_warned = 0;
+		retry_source = PUBLISH_NONE;
+		capture_turn = 1;
 	} else {
 		/* A request timeout is not proof that the broker never received it.
 		 * Retry is at-least-once best effort; consumers must tolerate repeats. */
@@ -101,6 +108,8 @@ static void debug_publish_done_cb(void *arg, err_t result)
 	pending_inflight = 0;
 	if(result == ERR_OK) {
 		debug_valid = 0;
+		retry_source = PUBLISH_NONE;
+		capture_turn = 0;
 	} else {
 		pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
 	}
@@ -356,6 +365,7 @@ void mqtt_utk_start(void)
 void mqtt_utk_poll(void)
 {
 	err_t err;
+	unsigned int n;
 
 	if(client == NULL || !mqtt_client_is_connected(client)) {
 		pending_inflight = 0;
@@ -366,61 +376,84 @@ void mqtt_utk_poll(void)
 		return;
 	}
 
+	/* A timeout/disconnect can leave delivery ambiguous. Finish the exact
+	 * attempted packet before taking another packet from either source. */
+	if(retry_source == PUBLISH_APPLICATION) goto publish_application;
+	if(retry_source == PUBLISH_CAPTURE) goto publish_capture;
+
 	if(!pending_valid) {
-		if(!mqtt_utk_app_take(&pending)) {
-				/* Nothing for telemetry: send one binary diagnostic packet. */
-			if(!debug_valid) {
-				unsigned int n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
-				if(n == 0U) {
-#if APP_IR_DEBUG
-					const char *topic = MQTT_UTK_CONTROL_DEBUG_TOPIC;
-					n = mqtt_utk_control_debug_take((unsigned char *)debug_line, MQTT_UTK_CONTROL_DEBUG_MAX);
-					if(n > MQTT_UTK_CONTROL_DEBUG_MAX) return;
-					if(n == 0U) {
-						topic = MQTT_UTK_IR_DEBUG_TOPIC;
-						n = mqtt_utk_ir_debug_take((unsigned char *)debug_line, MQTT_UTK_IR_DEBUG_MAX);
-						if(n > MQTT_UTK_IR_DEBUG_MAX) return;
-					}
-					if(n == 0U) return;
-					pending_inflight = 1;
-					pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-					err = mqtt_publish(client, topic, debug_line,
-					                  (u16_t)n, 0, 0, ir_debug_publish_done_cb, NULL);
-					if(err != ERR_OK) pending_inflight = 0;
-#endif
-					return;
-				}
-				if(n > sizeof debug_line) return;
-				debug_len = (u16_t)n;
-				debug_valid = 1;
+		pending.routine = 0; /* default for application hooks without metadata */
+		if(mqtt_utk_app_take(&pending)) {
+			pending.topic[MQTT_UTK_APP_TOPIC_MAX - 1] = '\0';
+			if(pending.payload_len > MQTT_UTK_APP_PAYLOAD_MAX ||
+			   pending.topic[0] == '\0' || pending.qos > 2 || pending.retain > 1) {
+				tm_printf((UB*)"mqtt: invalid application packet discarded\n");
+				pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+				return;
 			}
-			pending_inflight = 1;
-			pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-			err = mqtt_publish(client, MQTT_UTK_DEBUG_TOPIC, debug_line,
-			                   debug_len, 0, 0, debug_publish_done_cb, NULL);
-			if(err != ERR_OK) {
-				pending_inflight = 0;
-				if(err == ERR_MEM || err == ERR_CONN) {
-					pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
-				} else {
-					debug_valid = 0; /* cannot improve with a retry */
-				}
-			}
-			return;
+			pending_valid = 1;
+			pending_warned = 0;
 		}
-		pending.topic[MQTT_UTK_APP_TOPIC_MAX - 1] = '\0';
-		if(pending.payload_len > MQTT_UTK_APP_PAYLOAD_MAX ||
-		   pending.topic[0] == '\0' || pending.qos > 2 || pending.retain > 1) {
-			tm_printf((UB*)"mqtt: invalid application packet discarded\n");
-			pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-			return;
-		}
-		pending_valid = 1;
-		pending_warned = 0;
 	}
 
+	/* Do not reorder the application FIFO. Its head event/reply takes
+	 * priority, while recurring samples share slots one-for-one with BCAP.
+	 * Urgent events behind a held sample still wait for the existing FIFO. */
+	if(pending_valid && (!pending.routine || !capture_turn)) goto publish_application;
+	if(!debug_valid) {
+		n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
+		if(n > sizeof debug_line) return;
+		if(n != 0U) {
+			debug_len = (u16_t)n;
+			debug_valid = 1;
+		}
+	}
+	if(debug_valid) goto publish_capture;
+	if(pending_valid) goto publish_application;
+
+#if APP_IR_DEBUG
+	/* Latest-only previews remain below both telemetry and captures. */
+	{
+		const char *topic = MQTT_UTK_CONTROL_DEBUG_TOPIC;
+		n = mqtt_utk_control_debug_take(debug_line, MQTT_UTK_CONTROL_DEBUG_MAX);
+		if(n > MQTT_UTK_CONTROL_DEBUG_MAX) return;
+		if(n == 0U) {
+			topic = MQTT_UTK_IR_DEBUG_TOPIC;
+			n = mqtt_utk_ir_debug_take(debug_line, MQTT_UTK_IR_DEBUG_MAX);
+			if(n > MQTT_UTK_IR_DEBUG_MAX) return;
+		}
+		if(n == 0U) return;
+		pending_inflight = 1;
+		pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+		err = mqtt_publish(client, topic, debug_line, (u16_t)n,
+		                   0, 0, ir_debug_publish_done_cb, NULL);
+		if(err != ERR_OK) pending_inflight = 0;
+	}
+#endif
+	return;
+
+publish_capture:
+	retry_source = PUBLISH_CAPTURE;
+	pending_inflight = 1;
+	pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+	err = mqtt_publish(client, MQTT_UTK_DEBUG_TOPIC, debug_line,
+	                   debug_len, 0, 0, debug_publish_done_cb, NULL);
+	if(err != ERR_OK) {
+		pending_inflight = 0;
+		if(err == ERR_MEM || err == ERR_CONN) {
+			pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+		} else {
+			debug_valid = 0; /* cannot improve with a retry */
+			retry_source = PUBLISH_NONE;
+			capture_turn = 0;
+		}
+	}
+	return;
+
+publish_application:
 	/* Set state before calling lwIP; test ports may complete synchronously.
 	 * The next packet cannot overtake this one or consume another request slot. */
+	retry_source = PUBLISH_APPLICATION;
 	pending_inflight = 1;
 	pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
 	err = mqtt_publish(client, pending.topic, pending.payload,
@@ -437,6 +470,7 @@ void mqtt_utk_poll(void)
 			tm_printf((UB*)"mqtt: application packet discarded, err=%d\n", (int)err);
 			pending_valid = 0;
 			pending_warned = 0;
+			retry_source = PUBLISH_NONE;
 		}
 	}
 }

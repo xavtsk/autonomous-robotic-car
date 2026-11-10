@@ -8,8 +8,11 @@ v2 packets are rejected, not silently reinterpreted. Saved `.txt` captures remai
 readable. Live three-sensor graphs require optional `IR_DEBUG=1` firmware.
 
 The terrain-fault controller reason (10) is now decoded/displayed. Recorded
-`car/debug/barcode` traffic is compact binary BCAP v1; the laptop reconstructs
-text for the existing Runs graphs and downloads. See `BARCODE_WIRE_PROTOCOL.md`.
+`car/debug/barcode` traffic is compact binary BCAP v2; the laptop reconstructs
+text for the existing Runs graphs and downloads, and still accepts v1 firmware.
+See `BARCODE_WIRE_PROTOCOL.md`. Before flashing v2 firmware, restart this Python
+service after the current run's upload finishes; refreshing the browser does
+not reload the binary decoder.
 This update changes representations/observation only, not motor, line-following,
 barcode-recognition, hump-estimation or avoidance algorithms. Current validation
 and the still-pending hardware checklist: `BUDDY1_PROTOCOL_V3_2026-10-28.md`.
@@ -263,6 +266,15 @@ The wire preview is capped at **20 Hz**, in 16-byte QoS-0, non-retained packets.
 Normal telemetry and recorded barcode uploads take precedence, followed by the
 5 Hz controller snapshot and then IR preview. Each has one latest-only mailbox;
 congested or stale previews are dropped, not replayed.
+BCAP v2 packs up to 24 samples per packet (v1 packed six). Recurring motion,
+pose and terrain messages alternate with waiting capture packets; events and
+replies at the application queue's head go first. An already attempted packet
+keeps its retry slot, and messages behind the head retain their FIFO order.
+Valid zero-speed motion reports slow from 5 Hz to 1 Hz only while the drive is
+inactive and the motor reports stopped. State changes and recovery to valid
+motion report immediately; moving motion still reports at 5 Hz. Unavailable
+motion invalidates the local snapshot on the next observation and at 5 Hz
+thereafter; this does not add an unavailable packet to the wire protocol.
 The motor and line/barcode algorithms still run at their existing 10 ms cadence.
 Added packing/network work still needs on-car timing measurement: host tests do
 not establish real-time deadlines. See [IR_DEBUG_PROTOCOL.md](IR_DEBUG_PROTOCOL.md).

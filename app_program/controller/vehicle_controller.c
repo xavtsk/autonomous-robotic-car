@@ -10,7 +10,13 @@
 #include "../subsystem5/obstacle_avoidance.h"
 #endif
 
-static struct { unsigned divider:5; } telemetry;
+#define MOTION_PERIOD_US 200000U
+#define STOPPED_MOTION_PERIOD_US 1000000U
+static struct {
+    uint32_t last_us;
+    s3_drive_state_t state;
+    unsigned seen:1, usable:1, stopped:1;
+} telemetry;
 /* Route pose (car/telemetry/pose): Buddy 2's encoder distance/heading relative
  * to the start of the current run. Only the sampling owner touches it. */
 #define POSE_PERIOD_CYCLES 20U /* 10 ms cycles -> 5 Hz, same as motion */
@@ -72,6 +78,40 @@ static bool run_active(s3_drive_state_t state)
     return state == S3_DRIVE_FOLLOW || state == S3_DRIVE_BRAKING ||
            state == S3_DRIVE_MANOEUVRE || state == S3_DRIVE_REACQUIRE;
 }
+/* Repeating zero-speed packets need only a 1 Hz heartbeat while stopped (the
+ * dashboard's motion freshness window is 3 s). Keep 5 Hz when moving or the
+ * estimate is unavailable, and report transitions on the next observation. */
+static void motion_report(const s3_integration_status_t *status,
+                          const motion_status_t *m, bool available)
+{
+    const uint32_t now = status->navigation.timestamp_us;
+    float left = 0.0f, right = 0.0f;
+    bool usable = available && m->b_valid && !m->b_busy;
+    if (usable) {
+        left = m->speed_left_mps * 1000.0f;
+        right = m->speed_right_mps * 1000.0f;
+        /* Keep the agreed wheel range unchanged. Calibrated top speed exceeds
+         * +/-510 mm/s: mark unavailable, NEVER clip or widen the wire. */
+        usable = left == left && right == right &&
+                 left >= -BUDDY1_SPEED_MAX_MMS && left <= BUDDY1_SPEED_MAX_MMS &&
+                 right >= -BUDDY1_SPEED_MAX_MMS && right <= BUDDY1_SPEED_MAX_MMS;
+    }
+    /* The estimator's smoothing can leave tiny nonzero floats after braking.
+     * Only slow down when the brake/still acknowledgement agrees and both
+     * integer-mm/s values already report zero. Representable wheel movement
+     * restores 5 Hz even when the drive state says HALTED or FAULT. */
+    const bool stopped = usable && !run_active(status->state) && m->b_stopped &&
+                         (H)left == 0 && (H)right == 0;
+    const uint32_t period = stopped ? STOPPED_MOTION_PERIOD_US : MOTION_PERIOD_US;
+    if (telemetry.seen && telemetry.state == status->state &&
+        telemetry.usable == usable && telemetry.stopped == stopped &&
+        (uint32_t)(now - telemetry.last_us) < period) return;
+
+    telemetry.seen = true; telemetry.state = status->state;
+    telemetry.usable = usable; telemetry.stopped = stopped; telemetry.last_us = now;
+    if (usable) (void)buddy1_report_motion((H)left, (H)right);
+    else (void)buddy1_invalidate(BUDDY1_TOPIC_MOTION);
+}
 static int32_t round_to_int(float x) { return (int32_t)(x >= 0.0f ? x + 0.5f : x - 0.5f); }
 static void send_pose(const motion_status_t *m)
 {
@@ -112,7 +152,7 @@ ER vehicle_controller_init(void)
 {
     terrain_control_init();
     pose.running = false; pose.divider = 0U;
-    telemetry.divider = 0U; last_state = BUDDY1_STATE_UNKNOWN;
+    telemetry.seen = false; last_state = BUDDY1_STATE_UNKNOWN;
     last_action = BUDDY1_ACTION_UNKNOWN; last_faults = 0U; faults_seen = false;
     start_claimed_map = false;
 #if APP_S5
@@ -259,22 +299,6 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
         ER error=buddy1_report_robot_state(state);
         if (error==E_OK || error==E_TMOUT) last_state=state;
     }
-    if (++telemetry.divider>=20U) {
-        float left, right;
-        telemetry.divider=0U;
-        if (!motion_available || !motion.b_valid || motion.b_busy) {
-            (void)buddy1_invalidate(BUDDY1_TOPIC_MOTION); return;
-        }
-        left=motion.speed_left_mps*1000.0f; right=motion.speed_right_mps*1000.0f;
-        /* Keep the agreed wheel range unchanged. Calibrated top speed exceeds
-         * +/-510 mm/s: mark unavailable, NEVER clip or silently widen the wire. */
-        if (left!=left || right!=right || left < -BUDDY1_SPEED_MAX_MMS ||
-            left > BUDDY1_SPEED_MAX_MMS || right < -BUDDY1_SPEED_MAX_MMS ||
-            right > BUDDY1_SPEED_MAX_MMS) {
-            (void)buddy1_invalidate(BUDDY1_TOPIC_MOTION);
-        } else {
-            (void)buddy1_report_motion((H)left,(H)right);
-        }
-    }
+    motion_report(status, &motion, motion_available);
     if (status->state==S3_DRIVE_OFF) last_action=BUDDY1_ACTION_UNKNOWN;
 }

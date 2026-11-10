@@ -26,9 +26,9 @@
 #if S3_BARCODE_CAPTURE
 static bcap_t g_bcap; /* written by the sampling owner, read by report; g_mutex */
 static bool g_bcap_valid;
-/* Wi-Fi copy of the trace: sent line by line on MQTT_UTK_DEBUG_TOPIC after a
- * run ends, only while no telemetry is waiting. The flag is a cheap hint read
- * by the network task every poll; the cursor is used under g_mutex. */
+/* Wi-Fi copy of the trace: sent in binary packets on MQTT_UTK_DEBUG_TOPIC after
+ * a run ends, sharing publish slots with routine telemetry. The flag is a cheap
+ * hint read by the network task every poll; the cursor is used under g_mutex. */
 static volatile bool g_bcap_net_pending;
 static bcap_cursor_t g_bcap_net_cursor;
 #if defined(TM_CONSOLE_USB_CDC) && TM_CONSOLE_USB_CDC

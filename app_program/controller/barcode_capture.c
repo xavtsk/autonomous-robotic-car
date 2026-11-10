@@ -251,8 +251,8 @@ unsigned bcap_binary_next(const bcap_t *c, bcap_cursor_t *cur,
             if (!next.header_done) { kind=1; bits=81U; }
             else {
                 kind=2; count=e->count-next.sample;
-                if (count>BCAP_PER_LINE) count=BCAP_PER_LINE;
-                bits=61U+52U*count;
+                if (count>BCAP_WIRE_SAMPLES) count=BCAP_WIRE_SAMPLES;
+                bits=63U+52U*count;
                 for (unsigned i=0;i<count;++i) {
                     const bcap_sample_t *s=&c->pool[e->first+next.sample+i];
                     if (s->raw>4095U || s->dark4>250U ||
@@ -283,7 +283,7 @@ unsigned bcap_binary_next(const bcap_t *c, bcap_cursor_t *cur,
         next.header_done=true; next.sample=0;
     } else if (kind==2U) {
         binary_put(out,&bit,next.episode,4); binary_put(out,&bit,next.sample,12);
-        binary_put(out,&bit,count-1U,3);
+        binary_put(out,&bit,count-1U,5);
         for (unsigned i=0;i<count;++i) {
             const bcap_sample_t *s=&c->pool[e->first+next.sample+i];
             binary_put(out,&bit,s->raw,12); binary_put(out,&bit,s->dark4,8);
