@@ -30,12 +30,32 @@ No firmware has been flashed or physically verified by this change.
 ## Processing and integration
 
 `terrain_monitor_process()` is portable and receives sensor samples plus coherent
-odometry. Height integrates distance times sine of pitch; this is a provisional
-wheel-path estimate, not a guaranteed physical hump-height measurement. Vehicle
-wheelbase, rear/top mounting, acceleration, wheel slip and filtering cause error.
-Test on measured humps before declaring accuracy. Reject gaps, reverse travel,
-large roll, obvious dynamics and implausible distance changes. Only a completed
-ascent/descent with plausible return to level contributes to the run maximum.
+odometry. The runtime explicitly selects the **right-wheel-only** obstacle used
+on this car: the left wheel stays on the flat surface while the right wheel
+crosses the bump. `S4_HUMP_GEOMETRY` selects this profile and
+`S4_WHEEL_TRACK_M` supplies the wheel centre-to-centre spacing (currently 0.116 m,
+matching the Buddy 2 configuration).
+
+For this geometry, the estimated right-wheel elevation relative to the left is
+`track_m * sin(roll) * cos(pitch)`. Positive roll means right side up. A 10 mm
+right-wheel rise with 116 mm spacing produces approximately 4.95 degrees of roll
+when pitch is zero. The detector requires forward wheel travel and a rise followed
+by return to level before counting a hump. Live height is available during the
+crossing; the completed peak is retained afterward. A stationary hand tilt is not
+a completed hump. The pitch-based terrain label can remain "moving" while the
+separate `on_hump` flag and live height report a right-wheel crossing.
+
+The portable monitor defaults to `TERRAIN_HUMP_LONGITUDINAL`, which retains the
+existing distance-times-sine-of-pitch method for a hump crossed by both wheels.
+`terrain_monitor_set_hump_geometry()` selects the geometry explicitly; a new run
+retains that selection. Do not use the right-wheel formula for a general slope,
+both-wheel hump, left-wheel-only obstacle, or a lifted chassis.
+
+Both estimates require physical checks against measured obstacles. Wheel spacing,
+mounting, initial level calibration, tyre compliance, acceleration and filtering
+affect accuracy. Invalid inputs, reverse travel, excessive dynamics and timeouts
+discard an incomplete crossing. A successful sensor/telemetry check does not by
+itself validate measured height.
 
 Runtime `S4=1` reads Buddy 2's timestamped feedback and starts in the integrated
 `S3_MOTION=1` profile. `controller/terrain_integration.c` runs inside the existing
@@ -62,6 +82,10 @@ existing binary v2 hump topic. Only the IMU bit is updated in the shared fault m
 other subsystem fault bits are preserved. Peak telemetry is unavailable until a
 valid completed hump exists for the run, and a valid run maximum survives transient
 sensor faults. Cumulative counts do not depend on successful event delivery.
+If Buddy 1's outbox is full, the latest current-run count/peak remains pending
+and is retried without waiting for queue space, including after STOP. It is
+marked sent only when queued successfully; a new run supersedes an unqueued
+previous-run report. Successful enqueue is not a broker delivery acknowledgement.
 USB `[S4]` logs expose run ID, terrain state, validity flags, pitch/roll in tenths
 of a degree, turn rate, count, peak and impact. The existing heading packet remains
 unavailable: compass-derived turn rate is not an absolute heading measurement.

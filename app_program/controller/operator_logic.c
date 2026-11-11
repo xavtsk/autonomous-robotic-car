@@ -462,6 +462,13 @@ static void stop_pressed(operator_t *op, uint32_t now_ms)
     }
 }
 
+void operator_remote_stop(operator_t *op,uint32_t now_ms)
+{
+    if (!op) return;
+    op->inhibit=true;
+    stop_pressed(op,now_ms);
+}
+
 void operator_step(operator_t *op, uint32_t now_ms, op_press_t go,
                    bool stop_held, bool go_held,
                    const s3_integration_status_t *st)

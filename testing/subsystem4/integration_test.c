@@ -10,6 +10,9 @@ static terrain_result_t imu;
 static bool readable=true, reset_pending, reject_begin, event_pending, event_lost;
 static uint16_t run_id, count, sent_count, sent_height;
 static unsigned begins, reports, invalidations;
+static ER hump_report_result=E_OK;
+static unsigned accepted_reports;
+static uint16_t accepted_count, accepted_height;
 static UB faults=BUDDY1_FAULT_WIFI|BUDDY1_FAULT_STALL|BUDDY1_FAULT_NO_ECHO;
 static terrain_result_t queued;
 bool subsystem4_read(terrain_result_t *out,uint16_t *run,uint16_t *humps)
@@ -31,7 +34,13 @@ bool subsystem4_event(terrain_result_t *out,bool *lost)
 ER buddy1_update_faults(UB changed,UB active)
 { assert(changed==BUDDY1_FAULT_IMU && !(active&~changed)); faults=(faults&~changed)|active; return E_OK; }
 ER buddy1_report_hump(UH humps,UH mm)
-{ reports++; sent_count=humps; sent_height=mm; return E_OK; }
+{
+    reports++; sent_count=humps; sent_height=mm;
+    if(hump_report_result==E_OK) {
+        accepted_reports++; accepted_count=humps; accepted_height=mm;
+    }
+    return hump_report_result;
+}
 static unsigned tilts;
 static BUDDY1_TERRAIN last_terrain;
 static int tilt_pitch, tilt_roll, tilt_state;
@@ -72,6 +81,59 @@ static void ack(void)
     for(unsigned i=0;i<5 && fb_command_id==0;i++) { step(); }
     assert(g_drive.state==S3_DRIVE_FOLLOW && !g_drive.external_hold && fb_command_id==1);
 }
+static void peak_sample(uint16_t humps,float height)
+{
+    fresh(); imu.flags|=TERRAIN_PEAK_VALID; imu.peak_m=height; count=humps;
+    cycle(); terrain_control_report();
+}
+static void test_hump_report_retry(void)
+{
+    unsigned attempts=reports, accepted=accepted_reports;
+    hump_report_result=E_TMOUT;
+    peak_sample(4,0.130f);
+    assert(reports==attempts+1U && accepted_reports==accepted);
+    assert(sent_count==4U && sent_height==130U);
+    /* A rejected nonblocking write is not delivered, including repeated
+     * timeouts with no new IMU sample or changed count to trigger a retry. */
+    for(unsigned i=0;i<3;i++) {
+        terrain_control_report();
+        assert(reports==attempts+2U+i && accepted_reports==accepted);
+        assert(sent_count==4U && sent_height==130U);
+    }
+    peak_sample(5,0.140f);
+    assert(reports==attempts+5U && sent_count==5U && sent_height==140U);
+    /* Only the latest cumulative count/height is offered when space returns. */
+    hump_report_result=E_OK; terrain_control_report();
+    assert(reports==attempts+6U && accepted_reports==accepted+1U);
+    assert(accepted_count==5U && accepted_height==140U);
+    for(unsigned i=0;i<3;i++) { terrain_control_report(); }
+    assert(reports==attempts+6U); /* successful delivery clears the retry */
+
+    hump_report_result=E_TMOUT; peak_sample(6,0.160f);
+    attempts=reports; accepted=accepted_reports;
+    assert(s3_integration_submit(&(s3_control_request_t){.kind=S3_CONTROL_STOP}));
+    peak_sample(6,0.160f);
+    assert(g_drive.state==S3_DRIVE_OFF && fb_command_id==0);
+    assert(reports==attempts+1U && accepted_reports==accepted);
+    hump_report_result=E_OK; terrain_control_report();
+    assert(reports==attempts+2U && accepted_reports==accepted+1U);
+    assert(accepted_count==6U && accepted_height==160U);
+    terrain_control_report(); assert(reports==attempts+2U);
+
+    /* START requests a new-run reset: a blocked old run must not leak into
+     * that run while waiting for acknowledgement or after its empty snapshot. */
+    hump_report_result=E_TMOUT; peak_sample(7,0.190f);
+    attempts=reports; accepted=accepted_reports;
+    begin();
+    hump_report_result=E_OK;
+    for(unsigned i=0;i<3;i++) { terrain_control_report(); }
+    assert(reports==attempts && accepted_reports==accepted);
+    ack();
+    assert(reports==attempts && accepted_reports==accepted);
+    peak_sample(1,0.009f);
+    assert(reports==attempts+1U && accepted_reports==accepted+1U);
+    assert(accepted_count==1U && accepted_height==9U);
+}
 int main(void)
 {
     s3_calibration_collector_t cal;
@@ -97,6 +159,7 @@ int main(void)
     cycle(); terrain_control_report();
     assert(reports==1 && sent_count==3 && sent_height==123);
     terrain_control_report(); assert(reports==1);
+    test_hump_report_retry();
     /* An impact event survives even when the latest sample is normal. */
     queued=(terrain_result_t){.impact=true}; event_pending=true; step();
     assert(g_drive.state==S3_DRIVE_FAULT && g_drive.reason==S3_DRIVE_TERRAIN_FAULT);
@@ -159,6 +222,7 @@ int main(void)
       for(unsigned i=0;i<20;++i) terrain_control_report();
       assert(tilt_state==TERRAIN_STATIONARY); }
     puts("PASS: live terrain every 20 cycles: tilt valid/invalid/out-of-range/stale, state, climb height, run peak, latched impact");
+    puts("PASS: hump reports retry repeated timeouts with latest count/height, stop retrying on acceptance, survive STOP and discard pending prior-run data on START reset");
     puts("PASS: IMU START/reset acknowledgement and timeout, STOP priority, stale data, lost/impact events, latched reset, cumulative humps and owned fault bit");
     return 0;
 }

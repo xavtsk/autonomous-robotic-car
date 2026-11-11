@@ -66,6 +66,16 @@ static u8_t retry_source, capture_turn;
 static unsigned char debug_line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
 static u16_t debug_len;
 static u8_t debug_valid;
+#if APP_IR_DEBUG
+/* Give fresh controller observations a bounded turn even when motion/terrain
+ * fill the application FIFO. On a slow link, two successful data packets must
+ * still progress between previews. Never overwrite a staged BCAP packet. */
+#define MQTT_UTK_CONTROL_PERIOD_MS 200U
+#define MQTT_UTK_CONTROL_DATA_GAP 2U
+static unsigned char preview_line[MQTT_UTK_CONTROL_DEBUG_MAX];
+static u32_t last_control_ms;
+static u8_t control_seen, control_data_since = MQTT_UTK_CONTROL_DATA_GAP;
+#endif
 
 static void heartbeat_timeout(void *arg);
 
@@ -94,6 +104,9 @@ static void application_publish_done_cb(void *arg, err_t result)
 		pending_warned = 0;
 		retry_source = PUBLISH_NONE;
 		capture_turn = 1;
+#if APP_IR_DEBUG
+		if(control_data_since < MQTT_UTK_CONTROL_DATA_GAP) ++control_data_since;
+#endif
 	} else {
 		/* A request timeout is not proof that the broker never received it.
 		 * Retry is at-least-once best effort; consumers must tolerate repeats. */
@@ -110,6 +123,9 @@ static void debug_publish_done_cb(void *arg, err_t result)
 		debug_valid = 0;
 		retry_source = PUBLISH_NONE;
 		capture_turn = 0;
+#if APP_IR_DEBUG
+		if(control_data_since < MQTT_UTK_CONTROL_DATA_GAP) ++control_data_since;
+#endif
 	} else {
 		pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
 	}
@@ -170,6 +186,8 @@ __attribute__((weak)) int mqtt_utk_app_link(int up)
 	(void)up;
 	return 1;
 }
+
+__attribute__((weak)) void mqtt_utk_app_connection(int up) { (void)up; }
 
 /* mqtt.c NUL-terminates the topic before handing it over, but it is only
  * valid for the duration of this call -- copy it out. */
@@ -277,6 +295,7 @@ static void connection_cb(mqtt_client_t *c, void *arg, mqtt_connection_status_t 
 
 	if(status == MQTT_CONNECT_ACCEPTED) {
 		err_t	err;
+		mqtt_utk_app_connection(1);
 
 		/* No longer *connecting* -- clear the guard so that if this
 		 * connection later drops, the poll loop's mqtt_utk_start() call
@@ -317,6 +336,7 @@ static void connection_cb(mqtt_client_t *c, void *arg, mqtt_connection_status_t 
 		sys_untimeout(heartbeat_timeout, NULL);
 		sys_timeout(MQTT_UTK_HEARTBEAT_MS, heartbeat_timeout, NULL);
 	} else {
+		mqtt_utk_app_connection(0);
 		/* lwIP clears requests without completion callbacks on close.
 		 * Keep our application packet for the next connection and schedule
 		 * the existing connection retry without adding a publish timer. */
@@ -365,7 +385,7 @@ void mqtt_utk_start(void)
 void mqtt_utk_poll(void)
 {
 	err_t err;
-	unsigned int n;
+	unsigned int n, capture_checked = 0;
 
 	if(client == NULL || !mqtt_client_is_connected(client)) {
 		pending_inflight = 0;
@@ -399,8 +419,25 @@ void mqtt_utk_poll(void)
 	/* Do not reorder the application FIFO. Its head event/reply takes
 	 * priority, while recurring samples share slots one-for-one with BCAP.
 	 * Urgent events behind a held sample still wait for the existing FIFO. */
-	if(pending_valid && (!pending.routine || !capture_turn)) goto publish_application;
-	if(!debug_valid) {
+	if(pending_valid && !pending.routine) goto publish_application;
+#if APP_IR_DEBUG
+	/* With no queued application packet, check for BCAP before treating the
+	 * link as idle. A preview may hold this fresh capture, so use its own buffer. */
+	if(!pending_valid && !debug_valid) {
+		n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
+		capture_checked = 1;
+		if(n > sizeof debug_line) return;
+		if(n != 0U) { debug_len = (u16_t)n; debug_valid = 1; }
+	}
+	if((!control_seen || (u32_t)(sys_now() - last_control_ms) >= MQTT_UTK_CONTROL_PERIOD_MS) &&
+	   ((!pending_valid && !debug_valid) || control_data_since >= MQTT_UTK_CONTROL_DATA_GAP)) {
+		n = mqtt_utk_control_debug_take(preview_line, sizeof preview_line);
+		if(n > sizeof preview_line) return;
+		if(n != 0U) goto publish_control;
+	}
+#endif
+	if(pending_valid && !capture_turn) goto publish_application;
+	if(!debug_valid && !capture_checked) {
 		n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
 		if(n > sizeof debug_line) return;
 		if(n != 0U) {
@@ -412,25 +449,33 @@ void mqtt_utk_poll(void)
 	if(pending_valid) goto publish_application;
 
 #if APP_IR_DEBUG
-	/* Latest-only previews remain below both telemetry and captures. */
+	/* IR remains spare-capacity only. Controller diagnostics above get a
+	 * bounded turn; neither preview retries a stale sample. */
 	{
-		const char *topic = MQTT_UTK_CONTROL_DEBUG_TOPIC;
-		n = mqtt_utk_control_debug_take(debug_line, MQTT_UTK_CONTROL_DEBUG_MAX);
-		if(n > MQTT_UTK_CONTROL_DEBUG_MAX) return;
-		if(n == 0U) {
-			topic = MQTT_UTK_IR_DEBUG_TOPIC;
-			n = mqtt_utk_ir_debug_take(debug_line, MQTT_UTK_IR_DEBUG_MAX);
-			if(n > MQTT_UTK_IR_DEBUG_MAX) return;
-		}
+		n = mqtt_utk_ir_debug_take(preview_line, MQTT_UTK_IR_DEBUG_MAX);
+		if(n > MQTT_UTK_IR_DEBUG_MAX) return;
 		if(n == 0U) return;
 		pending_inflight = 1;
 		pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-		err = mqtt_publish(client, topic, debug_line, (u16_t)n,
+		err = mqtt_publish(client, MQTT_UTK_IR_DEBUG_TOPIC, preview_line, (u16_t)n,
 		                   0, 0, ir_debug_publish_done_cb, NULL);
 		if(err != ERR_OK) pending_inflight = 0;
 	}
 #endif
 	return;
+
+#if APP_IR_DEBUG
+publish_control:
+	last_control_ms = sys_now();
+	control_seen = 1;
+	control_data_since = 0;
+	pending_inflight = 1;
+	pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+	err = mqtt_publish(client, MQTT_UTK_CONTROL_DEBUG_TOPIC, preview_line, (u16_t)n,
+	                   0, 0, ir_debug_publish_done_cb, NULL);
+	if(err != ERR_OK) pending_inflight = 0;
+	return;
+#endif
 
 publish_capture:
 	retry_source = PUBLISH_CAPTURE;

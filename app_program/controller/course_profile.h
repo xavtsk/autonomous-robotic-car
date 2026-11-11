@@ -18,6 +18,15 @@
 #define S3_COURSE_PROFILE_H
 #include "s3_drive.h"
 
+/* Explicit table/paper experiment with no line: remove differential IR
+ * steering while retaining barcode actions, operator STOP and fault handling.
+ * Leave disabled for the track. */
+#ifndef S3_STRAIGHT_TEST
+#define S3_STRAIGHT_TEST 0
+#endif
+#if S3_STRAIGHT_TEST != 0 && S3_STRAIGHT_TEST != 1
+#error S3_STRAIGHT_TEST must be 0 or 1
+#endif
 #ifndef S3_LINE_BETWEEN
 #define S3_LINE_BETWEEN 1        /* 0 = Buddy 3's original edge design */
 #endif
@@ -87,17 +96,17 @@ static inline void s3_course_navigation(s3_navigation_config_t *cfg)
 {
     cfg->calibration[S3_SENSOR_BARCODE].white_limit = S3_BARCODE_WHITE_LIMIT;
     cfg->calibration[S3_SENSOR_BARCODE].black_limit = S3_BARCODE_BLACK_LIMIT;
-    cfg->line.between = (S3_LINE_BETWEEN != 0);
-    cfg->steering.kp_mps = S3_COURSE_STEERING_KP;
+    cfg->line.between = S3_STRAIGHT_TEST || (S3_LINE_BETWEEN != 0);
+    cfg->steering.kp_mps = S3_STRAIGHT_TEST ? 0.0f : S3_COURSE_STEERING_KP;
     cfg->steering.base_mps = S3_COURSE_BASE_MPS;
 }
 static inline s3_drive_options_t s3_course_options(void)
 {
     s3_drive_options_t o = s3_drive_default_options();
-    o.cross_straight = (S3_CROSS_STRAIGHT != 0);
+    o.cross_straight = S3_STRAIGHT_TEST || (S3_CROSS_STRAIGHT != 0);
     o.pending_wait_us = S3_COURSE_PENDING_WAIT_US;
     /* "touching" is only produced by the between-sensors detector. */
-    o.turn_line_window_us = S3_LINE_BETWEEN ? S3_TURN_LINE_WINDOW_US : 0U;
+    o.turn_line_window_us = (S3_STRAIGHT_TEST || S3_LINE_BETWEEN) ? S3_TURN_LINE_WINDOW_US : 0U;
     if (o.turn_line_window_us != 0U)
     {
         o.search_deg = S3_TURN_SEARCH_DEG;

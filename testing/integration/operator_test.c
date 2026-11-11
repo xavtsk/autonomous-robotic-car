@@ -89,6 +89,7 @@ static operator_t op;
 static op_button_t go_b,stop_b;
 static bool go_down,stop_down;
 static s3_integration_status_t st;
+static uint32_t remote_stop_seen;
 static uint32_t now_ms(void) { return clock_value/1000U; }
 /* One 10 ms period: controller cycle, then the operator poll. */
 static void period(void)
@@ -99,6 +100,9 @@ static void period(void)
     assert(!locked);
     (void)op_button_update(&stop_b,stop_down,now_ms(),&stop_edge);
     go=op_button_update(&go_b,go_down,now_ms(),&go_edge);
+    s3_remote_physical_stop(op_button_held(&stop_b));
+    const uint32_t remote_stop=s3_remote_stop_sequence();
+    if(remote_stop!=remote_stop_seen) { remote_stop_seen=remote_stop;operator_remote_stop(&op,now_ms()); }
     operator_step(&op,now_ms(),go,op_button_held(&stop_b),op_button_held(&go_b),
                   s3_integration_status(&st)?&st:0);
 }
@@ -175,6 +179,19 @@ int main(void)
     press_stop();
     assert(said_since(m,"STOP sent.")&&said_since(m,"Start cancelled."));
     run_ms(3000);assert(starts_requested==0&&g_drive.state==S3_DRIVE_OFF);
+
+    /* Dashboard STOP also cancels a GP20 countdown which has not submitted
+     * its START yet; no duplicate physical STOP steals the correlated reply. */
+    m=mark();press_go(80);run_ms(1000);assert(op.phase==OP_PHASE_COUNTDOWN);
+    {
+        uint8_t p[REMOTE_COMMAND_SIZE]={REMOTE_VERSION,REMOTE_STOP};
+        remote_put32(p+2,1);s3_remote_receive(p,sizeof p);
+        assert(s3_remote_stop_sequence()==1);run_ms(4000);
+        assert(starts_requested==0&&g_drive.state==S3_DRIVE_OFF&&op.phase==OP_PHASE_READY);
+        assert(said_since(m,"Start cancelled."));
+        assert(s3_remote_reply_take(p,sizeof p)==REMOTE_REPLY_SIZE&&p[6]==REMOTE_QUEUED);
+        assert(s3_remote_reply_take(p,sizeof p)==REMOTE_REPLY_SIZE&&p[6]==REMOTE_EXECUTED);
+    }
 
     /* 4. Buddy 2 not braked: START refused with a readable reason. */
     fb_braked=false;m=mark();press_go(80);run_ms(3300);

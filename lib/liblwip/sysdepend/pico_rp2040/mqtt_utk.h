@@ -51,12 +51,14 @@ int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out);
  * the packet length, or 0 when there is nothing to send. The weak default
  * sends nothing. Called from the network task. */
 #define MQTT_UTK_DEBUG_TOPIC       "car/debug/barcode"
-#define MQTT_UTK_DEBUG_PAYLOAD_MAX 164 /* 24-sample capture; also holds previews */
+#define MQTT_UTK_DEBUG_PAYLOAD_MAX 164 /* 24-sample capture */
 unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size);
 
-/* Optional IR_DEBUG=1 preview, after ordinary telemetry and barcode uploads.
- * Latest-only binary diagnostics; stale/rejected previews are dropped, never
- * retried ahead of application messages. No new incoming robot command. */
+/* Optional IR_DEBUG=1 latest-only diagnostics. IR uses spare capacity after
+ * telemetry/captures. Controller observations get at most 5 Hz, with at least
+ * two successful application/capture packets between them on a busy link.
+ * FIFO-head events and exact pending retries retain priority. Previews are
+ * dropped on rejection, never retried. No new incoming robot command. */
 #define MQTT_UTK_IR_DEBUG_TOPIC "car/debug/ir"
 #define MQTT_UTK_IR_DEBUG_MAX 16U
 unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size);
@@ -75,5 +77,7 @@ void mqtt_utk_app_receive(const char *topic,
  * Link returns zero while application objects are not ready; caller retries. */
 unsigned short mqtt_utk_app_status(unsigned char *payload, unsigned short capacity);
 int mqtt_utk_app_link(int up);
+/* Actual broker connection changes (distinct from the Wi-Fi link above). */
+void mqtt_utk_app_connection(int up);
 
 #endif /* MQTT_UTK_H */

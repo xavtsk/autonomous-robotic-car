@@ -11,6 +11,10 @@ test:
 	mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(INC) host_test.c $(S5) $(APP)/subsystem5/ultrasonic_sensor.c -o $(BUILD)/host_test
 	$(BUILD)/host_test
+	$(CC) $(CFLAGS) $(INC) profile_scan_test.c $(APP)/subsystem5/obstacle_profile.c $(APP)/subsystem5/obstacle_scan.c -o $(BUILD)/profile_scan_test
+	$(BUILD)/profile_scan_test
+	$(CC) $(CFLAGS) $(INC) geometry_test.c $(APP)/subsystem5/obstacle_profile.c $(APP)/subsystem5/avoidance_planner.c -lm -o $(BUILD)/geometry_test
+	$(BUILD)/geometry_test
 	$(CC) $(CFLAGS) $(INC) -DAPP_S5=1 controller_test.c $(S5) $(S3) $(S2) $(APP)/controller/s3_drive.c -o $(BUILD)/controller_test
 	$(BUILD)/controller_test
 	$(CC) $(CFLAGS) $(INC) -DAPP_S5=1 -DAPP_S4=1 -DAPP_H -DAPP_TEST=0 -include ../integration/controller_test_kernel.h controller_test.c $(S5) $(S3) $(S2) $(APP)/controller/s3_drive.c $(APP)/controller/terrain_integration.c -o $(BUILD)/terrain_controller_test

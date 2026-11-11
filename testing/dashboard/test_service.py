@@ -83,6 +83,19 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(self.request("/api/connect", {"host": "127.0.0.1", "port": 1883})[0], 400)
         self.assertEqual(self.request("/api/start", {})[0], 404)
 
+    def test_control_api_requires_session_and_valid_action(self):
+        self.assertEqual(self.request("/api/control", {"action": "stop"}, token=False)[0], 403)
+        self.assertEqual(self.request("/api/control", {"action": "stop"}, origin="http://elsewhere.invalid")[0], 403)
+        for body in ({}, {"action": "drive"}, {"action": "start", "speed": 1}):
+            self.assertEqual(self.request("/api/control", body)[0], 400)
+        status, body, _ = self.request("/api/control", {"action": "start"})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["state"]["control"]["last_request"]["status"], "sent")
+        self.assertEqual(self.request("/api/control", {"action": "start"})[0], 400)
+        status, body, _ = self.request("/api/control", {"action": "stop"})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["state"]["control"]["last_request"]["action"], "stop")
+
     def test_trace_import_retrieve_download(self):
         text = "[BCAP] run summary: episodes=0 not_stored=0 decoded=0 letters=- rejected=0 timing_error=0 overflow=0 | raw:dark4:flags:mm:dt\n[BCAP] end\n"
         status, body, _ = self.request("/api/traces/import", {"name": "my_capture.txt", "text": text})

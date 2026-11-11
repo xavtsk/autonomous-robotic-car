@@ -80,3 +80,42 @@ See [implementation and validation](../../docs/SOFTWARE_FIXES_2026-10-27.md).
 See [operation/calibration API](../subsystem3/MOTION_INTEGRATION.md) and
 [25 October review](../../docs/INTEGRATION_2026-10-25.md) for verification,
 source revisions and remaining on-car checks.
+
+## Straight driving on a table without a line
+
+Use `S3_MOTION=1 S3_STRAIGHT_TEST=1` for barcode or Buddy 4 hump experiments
+on plain paper/tabletop. The default is `S3_STRAIGHT_TEST=0`, which retains the
+normal track steering. The test profile treats white under both front sensors
+as centred, sets the IR steering gain to zero, and drives straight through
+crossings when no turn command is pending. While following, both requested
+wheel speeds are the existing `S3_COURSE_BASE_MPS` (normally **0.04 m/s**), even
+if a hump changes the two front sensors' readings differently.
+
+Barcode commands still apply: a mapped LEFT/RIGHT/U-turn can still cause a
+turn at a detected crossing. A decoded unmapped letter still stops the car.
+For a straight hump experiment, leave the test barcode unmapped. GP21 STOP,
+sensor/odometry/motor faults, and the Buddy 4 start/fault interlock are retained.
+This profile isolates IR steering during no-line tests; it does not compensate
+for unequal traction, wheel slip or the mechanical effect of a one-wheel hump.
+Equal speed requests alone do not prove the physical car will remain straight.
+
+With the existing SDK/toolchain environment configured, build the Wi-Fi/MQTT
+Buddy 4 test image from the repository root:
+
+```sh
+make -C build_make S3_MOTION=1 S3_STRAIGHT_TEST=1 S4=1 \
+  WIFI=cyw43 NET=lwip MQTT=1 IR_DEBUG=1
+```
+
+The default SMP/USB-console output is
+`build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_straight_test_s4_ir_debug.uf2`.
+The `_straight_test` filename suffix distinguishes this experiment, and the
+build profile stamp includes `s3straight1` so toggling the flag discards stale
+objects. Rebuild with `S3_STRAIGHT_TEST=0` before track line-following tests.
+
+`make -C testing/integration -f controller_test.mk test` includes both the
+normal course checks and a straight-profile regression using the real
+navigation/drive code: extreme left/right darkness and crossings request equal
+speeds; operator STOP, unmapped-barcode stop and sensor fault still stop; a
+mapped turn remains pending and brakes at a crossing. These host checks verify
+controller requests, not physical wheel motion.

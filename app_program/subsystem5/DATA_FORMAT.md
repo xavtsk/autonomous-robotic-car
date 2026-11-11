@@ -5,8 +5,8 @@ separate from zero; binary shared data; synchronise actual shared updates.
 
 ## Encoded task snapshot (same-firmware internal format)
 
-Least-significant bit first; fields follow in this order. **182 meaningful bits,
-23 bytes, six zero padding bits**. Exact re-encoding rejects noncanonical padding
+Least-significant bit first; fields follow in this order. **194 meaningful bits,
+25 bytes, six zero padding bits**. Exact re-encoding rejects noncanonical padding
 and invalid values. Decoding leaves the destination unchanged on failure.
 This internal format is not a new MQTT packet/version.
 
@@ -25,6 +25,7 @@ This internal format is not a new MQTT packet/version.
 | Left clearance | 0–4000 mm | 12 |
 | Right clearance | 0–4000 mm | 12 |
 | Estimated forward extent | 0–4000 mm | 12 |
+| Near-front bound | 0–4000 mm; no greater than forward extent; route planning requires nonzero | 12 |
 | Left/right lateral edge, each | −4000..4000 mm; encoded +4000 | 13 each |
 
 The conservative width includes angular/beam allowance; do not label it an exact
@@ -36,7 +37,8 @@ minimum. Invalid/stale values do not become clearance.
 
 - Scan sample: 12 distance bits, 5 angle-index bits (30–150 degrees in 5 degree
   steps), one validity bit = **18 bits / 3 bytes**, upper six padding bits zero.
-  Capacity 16 samples (48 bytes); the current coarse+fine schedule uses at most 12.
+  Capacity 18 samples (54 bytes); the coarse+two-edge refinement schedule uses
+  at most 17 unique angles. Three raw readings form each retained median.
 - Scan request ID: one 16-bit mailbox slot, with separate protected cancel/busy
   flags; no queue of old route requests.
 - Controller diagnostic status: 3 state bits + 3 fault bits + 2 route bits =

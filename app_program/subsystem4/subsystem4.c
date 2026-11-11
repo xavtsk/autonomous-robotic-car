@@ -10,6 +10,15 @@
 #include <tk/device.h>
 #include "../../device/include/dev_i2c.h"
 #include "../subsystem2/motion.h"
+/* This car's test obstacle raises the right wheel only. Keep the portable
+ * monitor's longitudinal default available through an explicit build choice. */
+#ifndef S4_HUMP_GEOMETRY
+#define S4_HUMP_GEOMETRY TERRAIN_HUMP_RIGHT_WHEEL
+#endif
+#ifndef S4_WHEEL_TRACK_M
+/* Wheel-centre spacing; matches Buddy 2 TRACK_WIDTH_M (116 mm). */
+#define S4_WHEEL_TRACK_M (0.116f)
+#endif
 #define S4_QUEUE_LEN 8U
 static ID g_mutex, g_task, g_device;
 static uint8_t g_snapshot[TERRAIN_PACKET_SIZE], g_events[S4_QUEUE_LEN][TERRAIN_PACKET_SIZE];
@@ -53,6 +62,9 @@ static void task(INT stacd,void *exinf)
     uint32_t last_good=0,report_at=0,retry_at=0; bool connected=false;
     (void)stacd; (void)exinf;
     terrain_monitor_init(&monitor);
+    if(!terrain_monitor_set_hump_geometry(&monitor,S4_HUMP_GEOMETRY,S4_WHEEL_TRACK_M)) {
+        tm_printf((UB *)"[S4] invalid hump geometry configuration\n"); tk_ext_tsk(); return;
+    }
     g_device=tk_opn_dev((UB *)"iicb",TD_UPDATE);
     if(g_device<0) { tm_printf((UB *)"[S4] iicb open failed: %d\n",g_device); tk_ext_tsk(); }
     for(;;) {
@@ -76,8 +88,11 @@ static void task(INT stacd,void *exinf)
             odo.stationary=true; /* Bench: user keeps car level/still for startup. */
 #else
             motion_feedback_t feedback={0};
+            /* Waiting for the motion mutex can produce feedback newer than
+             * this loop's start. Check its age against a clock read after the
+             * copy, so fresh odometry is not rejected as an unsigned wrap. */
             if(motion_get_feedback(&feedback) && feedback.valid && motion_is_calibrated() &&
-                feedback.fault==MOTION_FAULT_NONE && (uint32_t)(now-feedback.timestamp_us)<=50000U) {
+                feedback.fault==MOTION_FAULT_NONE && (uint32_t)(now_us()-feedback.timestamp_us)<=50000U) {
                 odo.valid=true; odo.stationary=feedback.braked;
                 odo.distance_m=feedback.centre_m; odo.epoch=feedback.epoch;
             }

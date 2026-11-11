@@ -11,6 +11,17 @@ void terrain_monitor_reset_run(terrain_monitor_t *t)
     hump_reset(&t->hump); t->seen=false; t->odometry_seen=false; t->heading_seen=false;
     t->stable_count=0; t->result=(terrain_result_t){0};
 }
+bool terrain_monitor_set_hump_geometry(terrain_monitor_t *t,
+                                      terrain_hump_geometry_t geometry,float track_m)
+{
+    if(!t || (geometry!=TERRAIN_HUMP_LONGITUDINAL && geometry!=TERRAIN_HUMP_RIGHT_WHEEL) ||
+       (geometry==TERRAIN_HUMP_RIGHT_WHEEL && (!isfinite(track_m) || track_m<=0 || track_m>0.5f))) {
+        return false;
+    }
+    t->hump_geometry=geometry; t->wheel_track_m=track_m;
+    terrain_monitor_reset_run(t);
+    return true;
+}
 bool terrain_monitor_set_magnetic_calibration(terrain_monitor_t *t,const float offset[3],const float scale[3])
 {
     unsigned i;
@@ -36,7 +47,9 @@ void terrain_monitor_process(terrain_monitor_t *t,const imu_sample_t *s,const te
     if(!valid || (t->seen && !continuity)) {
         r.flags|=TERRAIN_FAULT; t->heading_seen=false; t->odometry_seen=false;
         if(!t->calibration.ready) { imu_calibration_reset(&t->calibration); }
-        hump_update(&t->hump,0,0,false,s->timestamp_us);
+        if(t->hump_geometry==TERRAIN_HUMP_RIGHT_WHEEL) {
+            hump_update_right_wheel(&t->hump,0,0,t->wheel_track_m,0,false,s->timestamp_us);
+        } else { hump_update(&t->hump,0,0,false,s->timestamp_us); }
         t->seen=false; t->result=r; return;
     }
     if(!t->calibration.ready) {
@@ -77,9 +90,17 @@ void terrain_monitor_process(terrain_monitor_t *t,const imu_sample_t *s,const te
     dynamic_g=a[0]-t->filtered[0];
     /* Acceleration alone cannot distinguish slope from sustained acceleration.
      * Reject obvious dynamics/roll/turns; known-height testing remains required. */
-    hump_update(&t->hump,pitch,ds,tilt_ok && movement_ok && !r.impact &&
-                fabsf(dynamic_g)<0.08f && fabsf(roll)<10 &&
-                (!(r.flags&TERRAIN_TURN_VALID) || fabsf(r.turn_dps)<15),s->timestamp_us);
+    {
+        bool hump_valid=tilt_ok && movement_ok && !r.impact && fabsf(dynamic_g)<0.08f &&
+            (!(r.flags&TERRAIN_TURN_VALID) || fabsf(r.turn_dps)<15);
+        if(t->hump_geometry==TERRAIN_HUMP_RIGHT_WHEEL) {
+            /* Lateral acceleration can imitate a raised right wheel. */
+            hump_update_right_wheel(&t->hump,pitch,roll,t->wheel_track_m,ds,
+                hump_valid && fabsf(a[1]-t->filtered[1])<0.08f,s->timestamp_us);
+        } else {
+            hump_update(&t->hump,pitch,ds,hump_valid && fabsf(roll)<10,s->timestamp_us);
+        }
+    }
     if(t->hump.highest_valid) { r.peak_m=t->hump.highest_m; r.flags|=TERRAIN_PEAK_VALID; }
     r.hump_completed=t->hump.completed;
     /* Live climb: height so far on the hump being crossed (not yet a peak). */

@@ -32,6 +32,19 @@
     </div>
     <p class="server-alert" id="server-alert" role="alert" hidden></p>
 
+    <section class="robot-controls" aria-label="Robot controls">
+      <div class="robot-control-actions" role="group" aria-label="Drive controls">
+        <button id="control-start" class="control-start" type="button" disabled aria-describedby="control-guidance">Start</button>
+        <button id="control-stop" class="control-stop" type="button" disabled aria-describedby="control-guidance">Stop</button>
+        <button id="control-reset" class="control-reset" type="button" disabled hidden aria-describedby="control-guidance">Reset fault</button>
+      </div>
+      <div class="robot-control-status">
+        <p id="control-observed" class="control-observed">Robot state not yet received</p>
+        <p id="control-feedback" class="command-feedback" role="status" aria-live="polite" aria-atomic="true">Waiting for local service.</p>
+        <p id="control-guidance" class="form-note">Start needs recent robot readings. GP21 and the power switch remain available on the car.</p>
+      </div>
+    </section>
+
     <nav class="main-tabs" aria-label="Dashboard" role="tablist">
       <button id="tab-overview" type="button" role="tab" aria-selected="true" aria-controls="page-overview" data-page="overview">Overview</button>
       <button id="tab-sensors" type="button" role="tab" aria-selected="false" aria-controls="page-sensors" tabindex="-1" data-page="sensors">Sensors</button>
@@ -153,7 +166,7 @@
         </section>
       </section>
     </main>
-    <footer class="app-footer"><span id="footer-received">0 messages received · 0 malformed</span><span>Telemetry monitor · physical motor controls stay on the car</span></footer>
+    <footer class="app-footer"><span id="footer-received">0 messages received · 0 malformed</span><span>Robot monitor · GP20 / GP21 controls remain available on the car</span></footer>
   </div>
 </body>
 </html>

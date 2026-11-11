@@ -241,12 +241,16 @@ static unsigned int rec_monitor_band(const s3_barcode_record_t *r)
 {
     return rec_faint_eligible(r) ? S3_REC_FAINT_BAND : r->prominence;
 }
-static bool rec_white(const s3_barcode_record_t *r, unsigned int dark)
+static unsigned int rec_white_band(const s3_barcode_record_t *r)
 {
     unsigned int band=S3_REC_WHITE_BAND;
     const unsigned int monitor=rec_monitor_band(r);
     if ((monitor != 0U) && (monitor < band)) { band=monitor; }
-    return dark <= (unsigned int)r->paper + band;
+    return band;
+}
+static bool rec_white(const s3_barcode_record_t *r, unsigned int dark)
+{
+    return dark <= (unsigned int)r->paper+rec_white_band(r);
 }
 static uint32_t sat_add(uint32_t a, uint32_t b)
 {
@@ -496,6 +500,33 @@ static uint32_t rec_narrow(const uint32_t *runs)
     for (i=0U; i<6U; i++) { sum+=s[i]; }
     return (uint32_t)(sum/6U);
 }
+/* All narrow elements share one reference, and all wide elements another.
+ * Find the greatest deviation in each group before comparing their ratios.
+ * max(floor(x)) == floor(max(x)), so this gives exactly the former score and
+ * tie behaviour with one 64-bit division per fit instead of nine. RP2040
+ * performs that division in software in the synchronous sampling task. */
+static uint32_t rec_fit_error(const uint32_t adjusted[9], uint16_t star,
+    uint32_t narrow, uint32_t wide)
+{
+    uint32_t narrow_delta=0U, wide_delta=0U;
+    unsigned int i;
+    for (i=0U; i<9U; i++) {
+        const bool is_wide=(star & (1U<<(8U-i))) != 0U;
+        const uint32_t reference=is_wide ? wide : narrow;
+        const uint32_t delta=(adjusted[i]>reference) ?
+            adjusted[i]-reference : reference-adjusted[i];
+        if (is_wide) {
+            if (delta>wide_delta) { wide_delta=delta; }
+        } else if (delta>narrow_delta) { narrow_delta=delta; }
+    }
+    /* character() has established positive references and deviations no
+     * greater than 35%, so the returned score is at most 350000. Cross
+     * products fit uint64_t even for the full uint32_t input range. */
+    if ((uint64_t)wide_delta*narrow>(uint64_t)narrow_delta*wide) {
+        return (uint32_t)((uint64_t)wide_delta*1000000U/wide);
+    }
+    return (uint32_t)((uint64_t)narrow_delta*1000000U/narrow);
+}
 /* Fit only the two known sentinels, never the payload. Both star orientations
  * have three narrow bars and three narrow spaces: their narrow mean is
  * invariant under a shared bar expansion / space contraction. Search a fixed
@@ -542,12 +573,8 @@ static bool rec_correct_shared_runs(uint32_t runs[S3_BARCODE_RUNS],
                 if (!good || !character(adjusted,gap,config,&pattern,&narrow) ||
                     (pattern != star)) { good=false; break; }
                 wide/=3U;
-                for (i=0U; i<9U; i++) {
-                    uint32_t reference=(star & (1U<<(8U-i))) ? wide : narrow;
-                    uint32_t delta=(adjusted[i]>reference) ? adjusted[i]-reference : reference-adjusted[i];
-                    uint32_t error=(uint32_t)((uint64_t)delta*1000000U/reference);
-                    if (error>score) { score=error; }
-                }
+                const uint32_t error=rec_fit_error(adjusted,star,narrow,wide);
+                if (error>score) { score=error; }
             }
             if (good && ((score<best_score) || ((score==best_score) &&
                 ((bias<0 ? -bias : bias)<(best_bias<0 ? -best_bias : best_bias))))) {
@@ -603,12 +630,7 @@ static bool rec_fit_star(const uint32_t *runs, uint16_t star, uint32_t gap,
         }
         if (!good || !character(adjusted,gap,config,&pattern,&n) || (pattern!=star)) { continue; }
         wide/=3U;
-        for (i=0U;i<9U;i++) {
-            uint32_t reference=(star & (1U<<(8U-i))) ? wide : n;
-            uint32_t delta=(adjusted[i]>reference) ? adjusted[i]-reference : reference-adjusted[i];
-            uint32_t error=(uint32_t)((uint64_t)delta*1000000U/reference);
-            if (error>score) { score=error; }
-        }
+        score=rec_fit_error(adjusted,star,n,wide);
         if ((score<best_score) || ((score==best_score) &&
             ((trial<0 ? -trial : trial)<(*bias<0 ? -*bias : *bias)))) {
             best_score=score;*bias=trial;
@@ -672,6 +694,7 @@ bool s3_barcode_record_correct_varying_runs(uint32_t runs[S3_BARCODE_RUNS],
 /* Validate each independently measured set of edges by the same rules. A
  * count of 29 alone does not prove that the right 15 bumps were selected.
  * Neither extraction nor sentinel fitting uses an expected payload letter. */
+#ifdef S3_BARCODE_SYNC_REFERENCE
 static bool rec_candidate(const s3_barcode_record_t *r,
     const s3_barcode_config_t *config, bool faint,
     s3_barcode_result_t *candidate, uint32_t *required_us)
@@ -709,12 +732,331 @@ static bool rec_candidate(const s3_barcode_record_t *r,
     *required_us=(need>0x7FFFFFFF) ? 0x7FFFFFFFU : (uint32_t)need;
     return true;
 }
+#endif
+enum {
+    RW_PRIMARY=1, RW_FAINT_WHITE, RW_FAINT_INK, RW_FAINT_VALLEY,
+    RW_PRUNE_BEGIN, RW_PRUNE_SCAN, RW_PRUNE_COPY, RW_EDGES_BEGIN,
+    RW_EDGE_BEGIN, RW_EDGE_SCAN, RW_DIRECT, RW_FIT_BEGIN, RW_FIT_TICK,
+    RW_FIT_END, RW_APPLY, RW_VALIDATE, RW_PATH_END, RW_DONE
+};
+static void work_next(s3_barcode_record_t *r)
+{
+    s3_barcode_work_t *w=&r->work;
+    w->cursor++;
+    if (w->cursor<w->frozen_count) {
+        const uint32_t step=REC_STEP_US(r,w->cursor);
+        w->total_us+=step;
+        if (step>w->max_step_us) { w->max_step_us=step; }
+    }
+}
+static void work_path_begin(s3_barcode_record_t *r,bool faint)
+{
+    s3_barcode_work_t *w=&r->work;
+    w->faint=faint; w->n=1U;w->cursor=0U;w->total_us=0U;
+    w->max_step_us=0U;w->best=0U;w->best_us=0U;w->rising=true;
+    w->ext[0]=0U;w->ext_us[0]=0U;
+    w->strong=false;w->varying=false;w->orientation=0U;w->found=0U;
+    w->chosen[0]=0;w->chosen[1]=0;
+    w->phase=faint ? RW_FAINT_WHITE : RW_PRIMARY;
+    if (!faint) { work_next(r); }
+}
+static void work_begin(s3_barcode_record_t *r,bool provisional)
+{
+    r->work=(s3_barcode_work_t){0};
+    r->work.frozen_count=r->count;
+    r->work.provisional=provisional;
+    work_path_begin(r,false);
+    r->state=S3_REC_PROCESSING;
+}
+static void work_bad_path(s3_barcode_record_t *r)
+{
+    r->work.phase=RW_PATH_END;
+}
+static void work_keep_candidate(s3_barcode_record_t *r,
+    const s3_barcode_config_t *config,const s3_barcode_result_t *candidate)
+{
+    s3_barcode_work_t *w=&r->work;
+    const int32_t bias=w->chosen[1];
+    const int64_t half=bias>0 ? ((int64_t)bias+1)/2 : (int64_t)bias/2;
+    const uint32_t quiet=config->quiet_modules*rec_narrow(&w->runs[20]);
+    const int64_t end=(int64_t)w->last_us+half+quiet;
+    const uint32_t required=end>0x7FFFFFFF ? 0x7FFFFFFFU : (uint32_t)end;
+    if (w->good && ((w->candidate.letter_code!=(uint8_t)(candidate->letter-'A'+1)) ||
+                   (w->candidate.reversed!=candidate->reversed))) {
+        w->ambiguous=true;
+    }
+    if (!w->faint && w->strong) { w->allow_noise=true; }
+    if (!w->good || required>w->required_us) { w->required_us=required; }
+    if (!w->good || quiet>w->quiet_required_us) { w->quiet_required_us=quiet; }
+    w->candidate=(s3_barcode_stored_result_t){(uint8_t)(candidate->letter-'A'+1),candidate->reversed};
+    w->good=true;w->phase=RW_PATH_END;
+}
+/* Evaluate one unchanged grid position. The outer grid is resumed next tick;
+ * every inner loop here is fixed at at most two nine-element sentinels. */
+static uint32_t work_fit_trial(s3_barcode_record_t *r,
+    const s3_barcode_config_t *config)
+{
+    s3_barcode_work_t *w=&r->work;
+    const uint16_t star=w->orientation ? 0x052U : 0x094U;
+    const int32_t bias=w->varying ?
+        (int32_t)((int64_t)w->bound*w->tick/128)*2 :
+        (int32_t)((int64_t)w->bound*w->tick/64);
+    uint32_t score=0U;
+    const unsigned int begin=w->varying ? w->star_index : 0U;
+    const unsigned int end=w->varying ? begin+1U : 2U;
+    for (unsigned int c=begin;c<end;c++) {
+        uint32_t adjusted[9],narrow,wide=0U;
+        uint16_t pattern;
+        for (unsigned int i=0U;i<9U;i++) {
+            const int64_t v=(int64_t)w->runs[c*20U+i]+((i%2U) ? -bias : bias);
+            if (v<=0 || v>config->max_run_us) { return UINT32_MAX; }
+            adjusted[i]=(uint32_t)v;
+            if (star & (1U<<(8U-i))) { wide+=adjusted[i]; }
+        }
+        if (!character(adjusted,w->max_step_us,config,&pattern,&narrow) || pattern!=star) {
+            return UINT32_MAX;
+        }
+        const uint32_t error=rec_fit_error(adjusted,star,narrow,wide/3U);
+        if (error>score) { score=error; }
+    }
+    if (score<w->best_score || (score==w->best_score &&
+        (bias<0 ? -bias : bias)<(w->best_bias<0 ? -w->best_bias : w->best_bias))) {
+        w->best_score=score;w->best_bias=bias;
+    }
+    return score;
+}
+static bool work_apply(s3_barcode_work_t *w,const s3_barcode_config_t *config)
+{
+    uint64_t total=0U,start=0U,finish=0U,t=0U;
+    int32_t previous=-w->chosen[0]/2;
+    if (w->varying) {
+        for (unsigned int i=0U;i<S3_BARCODE_RUNS;i++) {
+            if (!w->runs[i] || w->runs[i]>config->max_run_us) { return false; }
+            total+=w->runs[i];
+            if (i==8U) { start=total; }
+            if (i==19U) { finish=total; }
+        }
+        if (total>config->max_frame_us) { return false; }
+    }
+    /* Fixed 29 widths; at most eleven interpolated edge divisions. A failed
+     * chosen model is final, so partially written scratch is never retried. */
+    for (unsigned int i=0U;i<S3_BARCODE_RUNS;i++) {
+        int64_t width;
+        if (!w->varying) {
+            width=(int64_t)w->runs[i]+((i%2U) ? -w->chosen[0] : w->chosen[0]);
+        } else {
+            int32_t bias,shift;
+            t+=w->runs[i];
+            if (t<=start) { bias=w->chosen[0]; }
+            else if (t>=finish) { bias=w->chosen[1]; }
+            else {
+                bias=(int32_t)(((int64_t)w->chosen[0]*(int64_t)(finish-t)+
+                               (int64_t)w->chosen[1]*(int64_t)(t-start))/(int64_t)(finish-start));
+            }
+            shift=(i%2U) ? -bias/2 : bias/2;
+            width=(int64_t)w->runs[i]+shift-previous;
+            previous=shift;
+        }
+        if (width<=0 || width>config->max_run_us) { return false; }
+        w->runs[i]=(uint32_t)width;
+    }
+    return true;
+}
+/* Each call performs bounded sample/pruning work and at most 32 fit ticks.
+ * No complete-frame extraction or grid search runs synchronously here. */
+static void work_advance(s3_barcode_record_t *r,const s3_barcode_config_t *config)
+{
+    s3_barcode_work_t *w=&r->work;
+    while (r->work_units<S3_REC_WORK_UNITS && w->phase!=RW_DONE) {
+        if (w->phase==RW_FIT_TICK && r->fit_ticks>=S3_REC_FIT_TICKS) { break; }
+        r->work_units++;
+        switch (w->phase) {
+        case RW_PRIMARY:
+            if (w->cursor>=w->frozen_count) {
+                if (!w->rising) { w->ext[w->n]=w->best;w->ext_us[w->n++]=w->best_us; }
+                w->phase=RW_PRUNE_BEGIN;break;
+            } else {
+                const unsigned int d=REC_DARK(r,w->cursor),b=REC_DARK(r,w->best);
+                if (w->rising ? d>b : d<b) { w->best=w->cursor;w->best_us=w->total_us; }
+                else if ((w->rising ? b-d : d-b)>=
+                    (r->prominence ? r->prominence : S3_REC_PROMINENCE)) {
+                    if (w->n>=S3_REC_EXT_MAX-1U) { work_bad_path(r);break; }
+                    w->ext[w->n]=w->best;w->ext_us[w->n++]=w->best_us;
+                    w->best=w->cursor;w->best_us=w->total_us;w->rising=!w->rising;
+                }
+                work_next(r);break;
+            }
+        case RW_FAINT_WHITE:
+            if (w->cursor>=w->frozen_count) { w->phase=RW_EDGES_BEGIN;break; }
+            if (REC_DARK(r,w->cursor)<=r->paper+S3_REC_FAINT_BAND) { work_next(r);break; }
+            if (w->n+2U>S3_BARCODE_RUNS+2U) { work_bad_path(r);break; }
+            w->peak=w->dip=w->cursor;w->peak_us=w->dip_us=w->total_us;
+            w->low_us=0U;work_next(r);w->phase=RW_FAINT_INK;break;
+        case RW_FAINT_INK:
+            if (w->cursor>=w->frozen_count) { work_bad_path(r);break; }
+            if (REC_DARK(r,w->cursor)>r->paper+S3_REC_FAINT_BAND) {
+                if (REC_DARK(r,w->cursor)>REC_DARK(r,w->peak)) {
+                    w->peak=w->cursor;w->peak_us=w->total_us;
+                }
+                w->low_us=0U;
+            } else {
+                if (!w->low_us || REC_DARK(r,w->cursor)<REC_DARK(r,w->dip)) {
+                    w->dip=w->cursor;w->dip_us=w->total_us;
+                }
+                w->low_us+=REC_STEP_US(r,w->cursor);
+                if (w->low_us>S3_REC_FAINT_DIP_US) { w->phase=RW_FAINT_VALLEY;break; }
+            }
+            work_next(r);break;
+        case RW_FAINT_VALLEY:
+            if (w->cursor<w->frozen_count && REC_DARK(r,w->cursor)<=r->paper+S3_REC_FAINT_BAND) {
+                if (REC_DARK(r,w->cursor)<REC_DARK(r,w->dip)) {
+                    w->dip=w->cursor;w->dip_us=w->total_us;
+                }
+                work_next(r);break;
+            }
+            w->ext[w->n]=w->peak;w->ext_us[w->n++]=w->peak_us;
+            w->ext[w->n]=w->dip;w->ext_us[w->n++]=w->dip_us;
+            w->phase=RW_FAINT_WHITE;break;
+        case RW_PRUNE_BEGIN:
+            if (w->n<=S3_BARCODE_RUNS+2U) { w->phase=RW_EDGES_BEGIN;break; }
+            w->smallest=UINT64_MAX;w->cut=1U;w->scan=1U;w->phase=RW_PRUNE_SCAN;break;
+        case RW_PRUNE_SCAN:
+            if (w->scan+2U>=w->n) { w->copy=w->cut;w->phase=RW_PRUNE_COPY;break; }
+            {
+                const unsigned int a=REC_DARK(r,w->ext[w->scan]),b=REC_DARK(r,w->ext[w->scan+1U]);
+                const uint64_t size=(uint64_t)(a>b ? a-b : b-a)*
+                    (w->ext_us[w->scan+1U]-w->ext_us[w->scan]);
+                if (size<w->smallest) { w->smallest=size;w->cut=w->scan; }
+                w->scan++;break;
+            }
+        case RW_PRUNE_COPY:
+            if (w->copy+2U>=w->n) { w->n-=2U;w->phase=RW_PRUNE_BEGIN;break; }
+            w->ext[w->copy]=w->ext[w->copy+2U];
+            w->ext_us[w->copy]=w->ext_us[w->copy+2U];w->copy++;break;
+        case RW_EDGES_BEGIN:
+            if (w->n!=S3_BARCODE_RUNS+2U) { work_bad_path(r);break; }
+            w->strong=!w->faint;
+            for (unsigned int i=1U;i+1U<w->n;i+=2U) {
+                const unsigned int p=REC_DARK(r,w->ext[i]);
+                const unsigned int a=REC_DARK(r,w->ext[i-1U]),b=REC_DARK(r,w->ext[i+1U]);
+                if (p<a+S3_QUIET_STRONG_PROMINENCE || p<b+S3_QUIET_STRONG_PROMINENCE) { w->strong=false; }
+            }
+            w->segment=0U;w->edges=0U;w->edge_previous_us=0U;w->phase=RW_EDGE_BEGIN;break;
+        case RW_EDGE_BEGIN:
+            if (w->segment+1U>=w->n) { w->last_us=w->edge_previous_us;w->phase=RW_DIRECT;break; }
+            if (w->ext[w->segment+1U]<=w->ext[w->segment]) { work_bad_path(r);break; }
+            w->edge_cursor=w->ext[w->segment]+1U;
+            w->segment_us=w->ext_us[w->segment];w->integral_us=0U;
+            w->crossed=false;w->phase=RW_EDGE_SCAN;break;
+        case RW_EDGE_SCAN:
+            {
+                const unsigned int i=w->edge_cursor,k=w->segment;
+                const unsigned int lo=REC_DARK(r,w->ext[k]),hi=REC_DARK(r,w->ext[k+1U]);
+                const unsigned int a=REC_DARK(r,i-1U),b=REC_DARK(r,i),mid=(lo+hi)/2U;
+                const uint32_t step=REC_STEP_US(r,i);
+                const bool up=hi>lo,core=w->faint && (up ? hi : lo)-r->paper<=S3_REC_RISE;
+                const bool crossed=up ? (core ? a<=mid && b>mid : a<mid && b>=mid) : a>mid && b<=mid;
+                w->integral_us+=(step*(rec_frac(a,lo,hi)+rec_frac(b,lo,hi)))/2048U;
+                if (crossed) {
+                    const uint32_t edge=w->segment_us+
+                        step*(uint32_t)(up ? mid-a : a-mid)/(uint32_t)(up ? b-a : a-b);
+                    if (!w->crossed || (core ? up : !up)) { w->edge_us=edge; }
+                    w->crossed=true;
+                }
+                w->segment_us+=step;w->edge_cursor++;
+                if (i==w->ext[k+1U]) {
+                    if (!w->crossed) { w->edge_us=w->ext_us[k]+w->integral_us; }
+                    if (!w->edges) { w->first_us=w->edge_us; }
+                    else { w->runs[w->edges-1U]=w->edge_us-w->edge_previous_us; }
+                    w->edge_previous_us=w->edge_us;w->edges++;w->segment++;
+                    w->phase=RW_EDGE_BEGIN;
+                }
+                break;
+            }
+        case RW_DIRECT:
+            {
+                s3_barcode_result_t candidate;
+                const uint32_t leading=sat_add(r->leading_us,w->first_us);
+                if (s3_barcode_decode_runs(w->runs,S3_BARCODE_RUNS,leading,0x7FFFFFFFU,
+                    w->max_step_us,config,&candidate)) { work_keep_candidate(r,config,&candidate);break; }
+                w->orientation=0U;w->star_index=0U;w->found=0U;w->varying=false;
+                w->phase=RW_FIT_BEGIN;break;
+            }
+        case RW_FIT_BEGIN:
+            if (w->orientation>=2U) { w->phase=RW_FIT_END;break; }
+            {
+                const uint16_t star=w->orientation ? 0x052U : 0x094U;
+                const unsigned int begin=w->varying ? w->star_index : 0U;
+                const unsigned int end=w->varying ? begin+1U : 2U;
+                w->minimum=UINT32_MAX;
+                for (unsigned int c=begin;c<end;c++) {
+                    uint64_t sum=0U;
+                    for (unsigned int i=0U;i<9U;i++) { if (!(star & (1U<<(8U-i)))) { sum+=w->runs[c*20U+i]; } }
+                    w->narrow[c]=(uint32_t)(sum/6U);
+                    if (w->narrow[c]<w->minimum) { w->minimum=w->narrow[c]; }
+                }
+                if (w->minimum<config->min_narrow_us || w->minimum>config->max_run_us) {
+                    w->orientation++;w->star_index=0U;break;
+                }
+                w->bound=(int32_t)(w->minimum*3U/4U);w->best_score=UINT32_MAX;
+                w->best_bias=0;w->tick=-64;w->phase=RW_FIT_TICK;break;
+            }
+        case RW_FIT_TICK:
+            (void)work_fit_trial(r,config);r->fit_ticks++;w->tick++;
+            if (w->tick<=64) { break; }
+            if (!w->varying) {
+                if (w->best_score!=UINT32_MAX) { w->found++;w->chosen[0]=w->chosen[1]=w->best_bias; }
+                w->orientation++;
+            } else if (w->best_score==UINT32_MAX) {
+                w->orientation++;w->star_index=0U;
+            } else {
+                w->trial_bias[w->star_index]=w->best_bias;
+                if (!w->star_index) { w->star_index=1U; }
+                else {
+                    const int32_t a=w->trial_bias[0],b=w->trial_bias[1],delta=b-a;
+                    const uint32_t minimum=w->narrow[0]<w->narrow[1] ? w->narrow[0] : w->narrow[1];
+                    if (!((a<0 && b>0) || (a>0 && b<0)) &&
+                        (uint32_t)(delta<0 ? -delta : delta)<=minimum/2U) {
+                        w->chosen[0]=a;w->chosen[1]=b;w->found++;
+                    }
+                    w->orientation++;w->star_index=0U;
+                }
+            }
+            w->phase=RW_FIT_BEGIN;break;
+        case RW_FIT_END:
+            if (w->found==1U) { w->phase=RW_APPLY;break; }
+            if (!w->varying && !w->found) {
+                w->varying=true;w->orientation=0U;w->star_index=0U;w->phase=RW_FIT_BEGIN;break;
+            }
+            work_bad_path(r);break;
+        case RW_APPLY:
+            w->phase=work_apply(w,config) ? RW_VALIDATE : RW_PATH_END;break;
+        case RW_VALIDATE:
+            {
+                s3_barcode_result_t candidate;
+                const int64_t half=w->chosen[0]>0 ? ((int64_t)w->chosen[0]+1)/2 : (int64_t)w->chosen[0]/2;
+                const int64_t leading=(int64_t)sat_add(r->leading_us,w->first_us)-half;
+                if (leading>=0 && s3_barcode_decode_runs(w->runs,S3_BARCODE_RUNS,(uint32_t)leading,
+                    0x7FFFFFFFU,w->max_step_us,config,&candidate)) { work_keep_candidate(r,config,&candidate); }
+                else { work_bad_path(r); }
+                break;
+            }
+        case RW_PATH_END:
+            if (!w->faint && rec_faint_eligible(r)) { work_path_begin(r,true); }
+            else { w->phase=RW_DONE; }
+            break;
+        default: w->phase=RW_DONE;w->ambiguous=true;break;
+        }
+    }
+}
 static s3_barcode_status_t rec_finish(s3_barcode_record_t *r, s3_barcode_status_t status)
 {
     uint16_t paper=r->paper, noise=r->noise_q4; bool seen=r->seen; uint32_t last=r->last_us;
+    const uint16_t units=r->work_units,ticks=r->fit_ticks;
     s3_barcode_record_reset(r);
     r->seen=seen; r->paper=paper; r->last_us=last;   /* keep the white reference */
     r->noise_q4=noise; r->prev=paper;
+    r->work_units=units;r->fit_ticks=ticks;
     /* Like s3_barcode_update: after a failure, only a new white-to-dark
      * start can begin the next recording (no second report mid-bar). */
     r->blocked=(status != S3_BARCODE_DECODED) ? 1U : 0U;
@@ -727,6 +1069,7 @@ s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
     unsigned int dark=(darkness > 1000U) ? 1000U : darkness;
     uint16_t step=0U;
     if ((result == 0) || (r == 0) || !config_valid(config)) { return S3_BARCODE_NONE; }
+    r->work_units=0U;r->fit_ticks=0U;
     *result=(s3_barcode_result_t){0};
     if (!valid) { s3_barcode_record_reset(r); return S3_BARCODE_NONE; }
     if (!r->seen) {
@@ -779,6 +1122,7 @@ s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
             r->leading_us=(r->white_us>=r->prefix_us) ? r->white_us-r->prefix_us : 0U;
         }
         r->white_us=0U; r->frame_us=r->prefix_us; r->required_us=0U;
+        s3_barcode_quiet_reset(&r->quiet);r->retry_blocked=false;r->quiet_tolerant=false;
         r->count=r->pre_count;
         for (unsigned int i=0U;i<r->pre_count;i++) {
             r->sample[i]=r->pre[((unsigned int)r->pre_head+i)%S3_REC_PRE_MAX];
@@ -803,40 +1147,51 @@ s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
     if ((r->turn_us > config->max_run_us) && !rec_white(r,dark)) {
         return rec_finish(r,S3_BARCODE_REJECTED);
     }
-    if (!rec_white(r,dark)) {
-        /* Dark after the barcode was judged complete: quiet zone broken. */
-        if (r->state == (uint16_t)S3_REC_QUIET) { return rec_finish(r,S3_BARCODE_REJECTED); }
-        r->white_us=0U;
-        return S3_BARCODE_NONE;
-    }
-    r->white_us=sat_add(r->white_us,(uint32_t)step*S3_REC_STEP_US);
-    /* No stripe is longer than max_run_us, so this much white ends the code. */
-    if (r->white_us < config->max_run_us) { return S3_BARCODE_NONE; }
-    if (r->state == (uint16_t)S3_REC_RECORDING) {
-        s3_barcode_result_t candidate;
-        uint32_t required=0U;
-        bool good=rec_candidate(r,config,false,&candidate,&required);
-        if (rec_faint_eligible(r)) {
-            s3_barcode_result_t recovered;
-            uint32_t recovery_required=0U;
-            if (rec_candidate(r,config,true,&recovered,&recovery_required)) {
-                /* Two valid but disagreeing interpretations are ambiguous.
-                 * When they agree, require the more conservative margin. */
-                if (good && ((candidate.letter!=recovered.letter) ||
-                    (candidate.reversed!=recovered.reversed))) {
-                    return rec_finish(r,S3_BARCODE_REJECTED);
-                }
-                candidate=recovered;
-                if (!good || recovery_required>required) { required=recovery_required; }
-                good=true;
-            }
+    const unsigned int quiet=s3_barcode_quiet_update(&r->quiet,
+        (uint32_t)step*S3_REC_STEP_US,dark,r->paper,rec_white_band(r),rec_faint_eligible(r));
+    r->white_us=r->quiet.strict_us;
+    if (quiet&S3_QUIET_BREAK) { r->retry_blocked=false; }
+    if (r->state==S3_REC_PROCESSING) {
+        if (!(quiet&S3_QUIET_LOW)) { r->work.strict_broken=true; }
+        if (quiet&S3_QUIET_BREAK) {
+            /* A tentative quiet interval may have crossed faint real ink.
+             * Keep those real samples for a later complete interpretation. */
+            if (r->work.provisional) { r->work=(s3_barcode_work_t){0};r->state=S3_REC_RECORDING; }
+            else { return rec_finish(r,S3_BARCODE_REJECTED); }
         }
-        if (!good) { return rec_finish(r,S3_BARCODE_REJECTED); }
-        r->required_us=required;
-        r->candidate=(s3_barcode_stored_result_t){(uint8_t)(candidate.letter-'A'+1),candidate.reversed};
-        r->state=(uint16_t)S3_REC_QUIET;
     }
-    if (r->frame_us<r->required_us) { return S3_BARCODE_NONE; }
+    if (r->state==S3_REC_QUIET && !(quiet&S3_QUIET_LOW)) {
+        if (!r->quiet_tolerant || (quiet&S3_QUIET_BREAK)) { return rec_finish(r,S3_BARCODE_REJECTED); }
+        return S3_BARCODE_NONE; /* never release during an unresolved pulse */
+    }
+    if (r->state==S3_REC_RECORDING) {
+        const bool strict=r->quiet.strict_us>=config->max_run_us;
+        const bool tentative=r->quiet.tolerant_us>=config->max_run_us;
+        if (!(quiet&S3_QUIET_LOW) || (!strict && (!tentative || r->retry_blocked))) { return S3_BARCODE_NONE; }
+        work_begin(r,!strict);
+    }
+    if (r->state==S3_REC_PROCESSING) {
+        work_advance(r,config);
+        if (r->work.phase!=RW_DONE) { return S3_BARCODE_NONE; }
+        if (r->work.ambiguous) { return rec_finish(r,S3_BARCODE_REJECTED); }
+        const bool usable=r->work.good && (r->work.allow_noise ||
+            (!r->work.provisional && !r->work.strict_broken));
+        if (!usable) {
+            if (r->work.provisional || r->work.strict_broken) {
+                r->retry_blocked=true;r->state=S3_REC_RECORDING;
+                return S3_BARCODE_NONE;
+            }
+            return rec_finish(r,S3_BARCODE_REJECTED);
+        }
+        r->candidate=r->work.candidate;r->required_us=r->work.required_us;
+        r->quiet_required_us=r->work.quiet_required_us;
+        r->quiet_tolerant=r->work.allow_noise;r->state=S3_REC_QUIET;
+    }
+    const uint32_t qualified=r->quiet_tolerant ? r->quiet.tolerant_us : r->quiet.strict_us;
+    /* Require a fresh complete quiet interval as well as corrected edge time.
+     * A cancelled job must never borrow white from before later real ink. */
+    if (!(quiet&S3_QUIET_LOW) || r->frame_us<r->required_us ||
+        qualified<r->quiet_required_us) { return S3_BARCODE_NONE; }
     result->letter=(char)('A'+r->candidate.letter_code-1U);
     result->reversed=r->candidate.reversed;
     result->timestamp_us=timestamp_us;

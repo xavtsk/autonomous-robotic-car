@@ -220,3 +220,153 @@ scan directions, three timing reconstructions and all four margin choices must
 never produce a different letter. Lossy or timing-uncertain variants may refuse.
 These are software regression requirements, not claims that the rejected
 hardware runs decoded or that the added quiet intervals were physically observed.
+
+## 10 November: replacement sensor and dense wide-bar ripple
+
+These five files are byte-for-byte copies of complete dashboard exports after
+the faster BCAP upload firmware was installed. The user tested small A and
+wide W. Names and summaries preserve the observed hardware result, including
+the rejected W; subsequent replay does not change that historical result.
+All five summaries have zero timing errors, overflow and unstored episodes.
+
+| Fixture | Samples | Hardware result | Dashboard trace ID |
+|---|---:|---|---|
+| `20261110-165431-small-a-decoded.txt` | 569 | A decoded | `bd4b228fc872427c9b382f257ea93560` |
+| `20261110-165500-small-a-decoded.txt` | 592 | A decoded | `55f0cabab3fc4610a53cbabfcd04c8d3` |
+| `20261110-165546-wide-w-rejected.txt` | 935 | rejected | `53e4457179014defa99607d08cf32fd4` |
+| `20261110-165615-wide-w-decoded.txt` | 972 | W decoded | `d05107c66f92450c965401ea9d78c5d1` |
+| `20261110-165652-wide-w-decoded.txt` | 976 | W decoded | `d4156f0daefc45c281b1423a78c6228c` |
+
+Reconstruction uses the recorded white/black calibration, 215/3550 ADC counts.
+The raw readings retain finer detail than the separate darkness/4 preview.
+Neither representation retains the discarded fraction of each millisecond
+interval; 0, 500 and 999 microseconds are alternative reconstructions, not
+measured timing. Reversing a saved waveform is likewise a software variant,
+not another observed physical scan. The 972-sample W includes one 20 ms
+interval; the remaining intervals in these five files are at most 12 ms.
+
+The failed W contains more local extrema than the former 63-entry workspace
+could retain before its existing cleanup. A dense-ripple synthetic regression
+exercises 79 extrema across an otherwise unchanged Code 39 frame, both scan
+directions and full/quantized levels. It also checks malformed markers, a
+missing bar, insufficient/interrupted quiet, and a 139-extremum input that
+must still refuse within bounded storage. These tests retain strict Code 39
+validation and are not a measure of physical reliability.
+
+At midpoint reconstructed timing using raw ADC, the two A captures and the
+reverse W decode without adding samples. The forward W hardware success has
+clipped leading history in its saved export: replay requires 100 ms of explicit
+synthetic leading white, even with the earlier firmware. The rejected forward
+W needs the larger workspace plus that same leading margin to form a valid
+candidate. With no added trailing samples it must remain in the quiet-wait
+state and emit no letter; adding one second of synthetic trailing white permits
+W. The older 63-entry workspace still rejects that same padded failed capture.
+
+The replay suite runs all five recordings at raw and darkness/4 precision,
+0/500/999 microsecond interval reconstructions, both waveform directions and
+four explicit margin choices. Every interpretation may refuse except the
+documented midpoint requirements; none may emit a different letter/orientation.
+In particular, the failed run is not reported as an unpadded software success
+or a successful hardware scan. New physical runs are required to validate it.
+
+## 11 November: raised sensor, small and large Z
+
+The sensing face was approximately 5–6 mm above the paper. The batch contained
+21 runs: two small-Z successes among 11 small scans, and one large-Z success
+among ten large scans. Six large scans ended in an acquisition-age fault and
+two in a stale motor-command fault. Their live controller records, rather than
+the separate barcode timing-error counter, establish those faults.
+
+These four fixtures are exact, complete dashboard exports:
+
+| Fixture | Samples | Hardware result | Dashboard trace ID |
+|---|---:|---|---|
+| `20261111-163031-small-z-rejected.txt` | 538 | rejected | `1460b4a27dc34ed2aeb159bd8bc28c5d` |
+| `20261111-163440-small-z-decoded.txt` | 578 | reverse Z decoded | `10fe48fa40da4fcfb7c9aab2f708bf5d` |
+| `20261111-163608-large-z-motion-fault.txt` | 950 | stale motor command; no barcode result | `28e29c93027b4bc9964dbab38a75e486` |
+| `20261111-164410-large-z-motion-fault.txt` | 947 | stale motor command; no barcode result | `dc3ba114a57a4b199766372809e0cf37` |
+
+The failed small scan lacks distinct ink regions even with the existing faint
+recovery. It must continue to refuse at midpoint raw reconstruction, including
+with added margins. The successful small scan decodes unchanged. Both large
+exports contain valid Z geometry after the existing sentinel correction, but
+their saved quiet context is insufficient for standalone replay. At midpoint
+raw timing, one second of synthetic leading white reaches the quiet-wait state;
+three additional seconds of synthetic trailing white permit Z (forward at
+16:36:08, reverse at 16:44:10). Neither result proves that the physical scan had
+those margins or would have succeeded without its controller fault.
+
+The 96 new replay variants use raw ADC calibration 215/3550, three timing
+reconstructions, both waveform directions and four explicit margin choices.
+The arithmetic optimization must preserve accepted letters and rejection
+boundaries; it does not loosen contrast, width, quiet or watchdog rules.
+
+## 11 November after 17:00: large Z and interrupted trailing quiet
+
+These five fixtures are byte-for-byte copies of complete dashboard exports
+after the arithmetic timing change. The four `no-result` names preserve the
+observed hardware outcome: neither a decode nor a rejection was reported
+before the user stopped the car. They must not be relabelled as successful
+physical scans if a later offline replay recovers Z.
+
+| Fixture | Samples | Hardware result | Dashboard trace ID |
+|---|---:|---|---|
+| `20261111-170538-large-z-decoded.txt` | 998 | forward Z decoded; unmapped stop | `7b3d6327398544808aeb00fc76c46cd8` |
+| `20261111-170621-large-z-no-result.txt` | 1193 | no result; recorder still active until stop | `3bce988b503c4746b8f414fba02cd526` |
+| `20261111-170913-large-z-no-result.txt` | 1118 | no result; recorder still active until stop | `5ff1ff7b75f443b7a3294ab6c916dfd0` |
+| `20261111-170958-large-z-no-result.txt` | 1139 | no result; recorder still active until stop | `c0c1a1c165b1438eadc92203a45ab58e` |
+| `20261111-171039-large-z-no-result.txt` | 1165 | no result; recorder still active until stop | `4d0a90a202d7431394a59b9de8206e3b` |
+
+All five summaries report zero timing errors, overflows and unstored capture
+opportunities.
+The four no-result waveforms contain reverse Z geometry followed by approximately
+2.7--3.5 seconds of observed paper. Small paper fluctuations repeatedly reset
+the former trailing-quiet timer. This differs from the older fixtures whose
+physical trailing margin was clipped by a motor/control fault.
+
+The 120 added replay variants retain raw ADC normalization with white/black
+215/3550, all three interval reconstructions, both waveform directions and
+the explicit margin choices `(0, 0)`, `(1000, 0)`, `(0, 3000)` and
+`(1000, 3000)` in milliseconds. At midpoint timing, the four no-result
+captures must recover one reverse Z with **only** one second of synthetic
+leading history; their unmodified recorded trailing paper must suffice.
+Without the synthetic lead they may still refuse because the saved pre-trigger
+history clips the leading margin. No variant may invent another letter or
+orientation, duplicate a decode, report a timing error, or overflow.
+
+The forward success remains a positive control with explicit leading/trailing
+padding; its shorter stored tail need not include the extra samples required
+to finish deferred decoder work. Padding is always reported as synthetic, and
+the original 888 replay checks retain their leading/trailing margin requirements.
+The full suite contains 1008 variants. Fresh physical tests remain necessary
+to establish whether the firmware changes resolve these failures on the car.
+
+### Explicit latency accounting for the bounded worker
+
+The former synchronous decoder could publish on the final sample retained by
+the capture. After moving that work across subsequent updates, EOF can arrive
+while the worker is still processing. The suite does not drain work at a frozen
+timestamp or append unreported samples. Only these ten midpoint, observed-direction
+variants with zero synthetic trailing time may instead end in clean processing:
+
+| Fixture | Representation | Synthetic leading ms | Existing positive counterpart |
+|---|---|---|---|
+| `20261103-152854-successful-z.txt` | darkness/4 preview | 2000 | same lead plus 1000 ms synthetic trailing white |
+| `20261110-165431-small-a-decoded.txt` | raw ADC | 0 or 100 | same lead plus 1000 ms synthetic trailing white |
+| `20261110-165500-small-a-decoded.txt` | raw ADC | 0 or 100 | same lead plus 1000 ms synthetic trailing white |
+| `20261110-165615-wide-w-decoded.txt` | raw ADC | 100 | same lead plus 1000 ms synthetic trailing white |
+| `20261110-165652-wide-w-decoded.txt` | raw ADC | 0 or 100 | same lead plus 1000 ms synthetic trailing white |
+| `20261111-163440-small-z-decoded.txt` | raw ADC | 0 or 1000 | same lead plus 3000 ms synthetic trailing white |
+
+Clean processing means `state=3` and zero decoded, rejected, timing-error and
+overflow events. Each explicitly padded positive counterpart still must emit
+exactly the expected letter and orientation. These EOF outcomes are neither
+software decode successes nor evidence that a new physical run succeeded.
+
+Three existing insufficient-trailing-margin checks likewise permit processing
+(`state=3`) as well as quiet-wait (`state=2`), while still requiring zero events:
+the rejected 16:55:46 W with 100 ms synthetic leading white, and the 16:36:08 /
+16:44:10 large-Z fault captures with 1000 ms synthetic leading white. None may
+emit a letter without its previously required explicit trailing margin. Missing
+bars, missing leading quiet, wrong letters/orientations and all other prior
+rejection requirements remain unchanged.

@@ -18,10 +18,11 @@ typedef struct {
 } s5_input_t;
 typedef struct {
     s5_config_t config; s5_plan_t plan; s5_recovery_t recovery;
-    unsigned state:3, fault:3, leg:4, issued:1, pass:3, swapped:1;
+    unsigned state:3, fault:3, leg:4, issued:1, pass:3, swapped:1, switching:2, clear_count:2;
     uint16_t searched_mm; /* leg 3 distance stepped beside the obstacle */
     uint32_t phase_us, started_us;
     double leg_start_m;
+    double bypass_offset_mm, return_mm, clear_at_m, pass_start_m;
 } s5_avoidance_t;
 void s5_avoidance_init(s5_avoidance_t *a,const s5_config_t *config);
 bool s5_range_ready(const s5_observation_t *o,uint32_t now);

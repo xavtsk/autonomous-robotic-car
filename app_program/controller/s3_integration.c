@@ -12,6 +12,7 @@
 #include "ir_debug.h"
 #include "control_debug.h"
 #include "terrain_integration.h"
+#include "remote_control.h"
 #if APP_S4
 #include "../subsystem4/subsystem4.h"
 #endif
@@ -46,6 +47,7 @@ static s3_status_packet_t g_status;
 static s3_control_packet_t g_command;
 static struct { unsigned pending:1, stop:1, status_ready:1, reset_pending:1; } g_shared;
 static bool g_reset_waiting; /* sampling-owner-only completion state */
+static bool g_reset_remote;
 static s3_calibration_collector_t g_collector[S3_SENSOR_COUNT];
 static bool g_collecting;
 #if APP_IR_DEBUG
@@ -64,6 +66,126 @@ static s3_sensor_id_t g_sensor;
 static ir_surface_t g_label;
 static uint32_t g_collect_since;
 static uint32_t now_us(void) { return in_w(TIMER_TIMERAWL); }
+/* g_mutex protects the bounded remote mailbox and correlated result ring. */
+static struct {
+    uint32_t epoch, last_id, sampled_us, published_us, stop_sequence;
+    uint8_t flags, head, count;
+    bool connected, published, physical_stop, inflight;
+    remote_request_t pending, reset;
+    uint8_t reply[6][REMOTE_REPLY_SIZE];
+} g_remote;
+static void remote_reply(const remote_request_t *r,uint8_t result,uint8_t reason)
+{
+    if (!r->valid) return;
+    if (g_remote.count==6U) { g_remote.head=(g_remote.head+1U)%6U; --g_remote.count; }
+    uint8_t *p=g_remote.reply[(g_remote.head+g_remote.count)%6U];
+    p[0]=REMOTE_VERSION; p[1]=r->action; remote_put32(p+2,r->id);
+    p[6]=result; p[7]=reason;
+    remote_put32(p+8,r->action==REMOTE_STOP?g_remote.epoch:r->epoch); ++g_remote.count;
+}
+static void remote_cancel(remote_request_t *r)
+{
+    remote_reply(r,REMOTE_CANCELLED,REMOTE_SUPERSEDED); r->valid=false;
+}
+static void remote_finish(const remote_request_t *r,bool ok,uint8_t reason)
+{
+    if (!r->valid || tk_loc_mtx(g_mutex,TMO_FEVR)!=E_OK) return;
+    remote_reply(r,ok?REMOTE_EXECUTED:REMOTE_REJECTED,ok?REMOTE_NONE:reason);
+    g_remote.inflight=false;
+    (void)tk_unl_mtx(g_mutex);
+}
+void s3_remote_link(uint32_t epoch,bool up)
+{
+    if (g_mutex<=0 || tk_loc_mtx(g_mutex,TMO_FEVR)!=E_OK) return;
+    if (g_remote.pending.valid && g_remote.pending.action!=REMOTE_STOP) {
+        remote_cancel(&g_remote.pending); g_shared.pending=false; g_shared.reset_pending=false;
+    }
+    remote_cancel(&g_remote.reset); /* owner finishes safe reset housekeeping */
+    g_remote.connected=up;
+    if (up) { g_remote.epoch=epoch?epoch:1U; g_remote.last_id=0U; }
+    g_remote.published=false;
+    (void)tk_unl_mtx(g_mutex);
+}
+void s3_remote_receive(const uint8_t *p,unsigned length)
+{
+    if (!p || length!=REMOTE_COMMAND_SIZE || p[0]!=REMOTE_VERSION ||
+        p[1]<REMOTE_START || p[1]>REMOTE_RESET || g_mutex<=0) return;
+    const remote_request_t r={.action=p[1],.id=remote_get32(p+2),
+        .epoch=remote_get32(p+6),.time_us=remote_get32(p+10),.valid=true};
+    if (tk_loc_mtx(g_mutex,TMO_FEVR)!=E_OK) return;
+    uint8_t reason=REMOTE_NONE;
+    const bool fresh=g_remote.connected && r.epoch==g_remote.epoch &&
+        (uint32_t)(now_us()-r.time_us)<=REMOTE_MAX_AGE_US;
+    if (r.action!=REMOTE_STOP && !fresh) reason=REMOTE_STALE;
+    else if (r.action!=REMOTE_STOP && !remote_newer(r.id,g_remote.last_id)) reason=REMOTE_REPLAY;
+    else if (r.action!=REMOTE_STOP && g_remote.physical_stop) reason=REMOTE_NOT_READY;
+    else if (r.action!=REMOTE_STOP && (g_shared.pending || g_shared.stop || g_shared.reset_pending || g_remote.inflight)) reason=REMOTE_BUSY;
+    /* Newer rejected IDs are consumed, too: no older START after a newer STOP. */
+    if (r.epoch==g_remote.epoch && remote_newer(r.id,g_remote.last_id)) g_remote.last_id=r.id;
+    if (reason!=REMOTE_NONE) remote_reply(&r,REMOTE_REJECTED,reason);
+    else {
+        const s3_control_request_t c={.kind=r.action==REMOTE_START?S3_CONTROL_START:
+            r.action==REMOTE_STOP?S3_CONTROL_STOP:S3_CONTROL_RESET};
+        if (r.action==REMOTE_STOP) {
+            ++g_remote.stop_sequence;
+            remote_cancel(&g_remote.pending); remote_cancel(&g_remote.reset);
+            g_shared.stop=true; g_shared.pending=false; g_shared.reset_pending=false;
+        } else {
+            (void)s3_control_pack(&c,&g_command);
+            g_shared.pending=true; g_shared.reset_pending=r.action==REMOTE_RESET;
+        }
+        g_remote.pending=r; remote_reply(&r,REMOTE_QUEUED,REMOTE_NONE);
+    }
+    (void)tk_unl_mtx(g_mutex);
+}
+unsigned s3_remote_reply_take(uint8_t *p,unsigned capacity)
+{
+    unsigned n=0;
+    if (!p || capacity<REMOTE_REPLY_SIZE || g_mutex<=0 || tk_loc_mtx(g_mutex,TMO_POL)!=E_OK) return 0;
+    if (g_remote.count) {
+        for(unsigned i=0;i<REMOTE_REPLY_SIZE;i++) p[i]=g_remote.reply[g_remote.head][i];
+        g_remote.head=(g_remote.head+1U)%6U; --g_remote.count; n=REMOTE_REPLY_SIZE;
+    }
+    (void)tk_unl_mtx(g_mutex); return n;
+}
+unsigned s3_remote_status_take(uint8_t *p,unsigned capacity)
+{
+    unsigned n=0;
+    if (!p || capacity<REMOTE_STATUS_SIZE || g_mutex<=0 || tk_loc_mtx(g_mutex,TMO_POL)!=E_OK) return 0;
+    const uint32_t now=now_us();
+    if (g_remote.connected && (!g_remote.published || (uint32_t)(now-g_remote.published_us)>=500000U)) {
+        p[0]=REMOTE_VERSION; remote_put32(p+1,g_remote.epoch); remote_put32(p+5,now);
+        remote_put32(p+9,g_remote.last_id);
+        p[13]=(uint32_t)(now-g_remote.sampled_us)<=200000U?g_remote.flags:0U;
+        g_remote.published_us=now; g_remote.published=true; n=REMOTE_STATUS_SIZE;
+    }
+    (void)tk_unl_mtx(g_mutex); return n;
+}
+uint32_t s3_remote_stop_sequence(void)
+{
+    uint32_t sequence=0;
+    if (g_mutex>0 && tk_loc_mtx(g_mutex,TMO_FEVR)==E_OK) {
+        sequence=g_remote.stop_sequence; (void)tk_unl_mtx(g_mutex);
+    }
+    return sequence;
+}
+void s3_remote_physical_stop(bool held)
+{
+    if (g_mutex>0 && tk_loc_mtx(g_mutex,TMO_FEVR)==E_OK) {
+        g_remote.physical_stop=held; (void)tk_unl_mtx(g_mutex);
+    }
+}
+static bool remote_permitted(const remote_request_t *r)
+{
+    bool permitted=false;
+    if (tk_loc_mtx(g_mutex,TMO_FEVR)==E_OK) {
+        permitted=g_remote.connected && r->epoch==g_remote.epoch &&
+            !g_shared.stop && !g_remote.physical_stop && r->id==g_remote.last_id &&
+            (uint32_t)(now_us()-r->time_us)<=REMOTE_MAX_AGE_US;
+        (void)tk_unl_mtx(g_mutex);
+    }
+    return permitted;
+}
 bool s3_integration_submit(const s3_control_request_t *request)
 {
     bool accepted = false;
@@ -80,6 +202,8 @@ bool s3_integration_submit(const s3_control_request_t *request)
     }
     if (request->kind == S3_CONTROL_STOP)
     {
+        remote_cancel(&g_remote.pending);
+        remote_cancel(&g_remote.reset);
         g_shared.stop = true;
         g_shared.pending = false;
         g_shared.reset_pending = false;
@@ -304,6 +428,7 @@ static void sample(INT code, void *unused)
         uint32_t started_us = robot_diagnostics_now_us();
 #endif
         bool pending = false;
+        remote_request_t remote_command={0};
         const bool was_running = drive_running(g_drive.state);
         /* STOP is handled before sampling, even if an earlier command queued.
          */
@@ -318,6 +443,9 @@ static void sample(INT code, void *unused)
             {
                 pending = s3_control_unpack(&g_command, &command);
             }
+            remote_command=g_remote.pending;
+            g_remote.inflight=remote_command.valid;
+            g_remote.pending.valid=false;
             g_shared.stop = false;
             g_shared.pending = false;
             (void)tk_unl_mtx(g_mutex);
@@ -325,8 +453,10 @@ static void sample(INT code, void *unused)
         if (pending && (command.kind == S3_CONTROL_STOP))
         {
             g_reset_waiting = false;
-            working.command_ok = execute(&command, now_us());
-            working.command_sequence++;
+            g_reset_remote = false;
+            const bool ok=execute(&command, now_us());
+            if (remote_command.valid) remote_finish(&remote_command,ok,REMOTE_NOT_READY);
+            else { working.command_ok=ok; working.command_sequence++; }
             pending = false;
         }
         feedback = (motion_feedback_t){0};
@@ -351,8 +481,15 @@ static void sample(INT code, void *unused)
         if (g_reset_waiting &&
             (s3_drive_reset_result(&g_drive) != S3_RESET_PENDING))
         {
-            working.command_ok = s3_drive_reset_result(&g_drive) == S3_RESET_OK;
-            working.command_sequence++;
+            const bool ok=s3_drive_reset_result(&g_drive)==S3_RESET_OK;
+            remote_request_t reset={0};
+            if (tk_loc_mtx(g_mutex,TMO_FEVR)==E_OK) {
+                reset=g_remote.reset; g_remote.reset.valid=false;
+                (void)tk_unl_mtx(g_mutex);
+            }
+            if (g_reset_remote) { if (reset.valid) remote_finish(&reset,ok,REMOTE_NOT_READY); }
+            else { working.command_ok=ok; working.command_sequence++; }
+            g_reset_remote=false;
             g_reset_waiting = false;
             reset_completed();
         }
@@ -408,16 +545,32 @@ static void sample(INT code, void *unused)
         }
         if (pending)
         {
-            const bool ok = execute(&command, now_us());
+            bool permitted=!remote_command.valid || remote_permitted(&remote_command);
+            bool ok = permitted && execute(&command, now_us());
+            /* START changes owner state/heartbeat only: velocity is sent on
+             * the next sample. If STOP/reconnect arrived during that change,
+             * cancel before publishing success or reaching a velocity tick. */
+            if (ok && remote_command.valid && !remote_permitted(&remote_command)) {
+                const s3_control_request_t stop_command={.kind=S3_CONTROL_STOP};
+                (void)execute(&stop_command,now_us()); ok=false; permitted=false;
+            }
             if ((command.kind == S3_CONTROL_RESET) && ok &&
                 (s3_drive_reset_result(&g_drive) == S3_RESET_PENDING))
             {
                 g_reset_waiting = true;
+                g_reset_remote = remote_command.valid;
+                if (remote_command.valid && tk_loc_mtx(g_mutex,TMO_FEVR)==E_OK) {
+                    if (!g_shared.stop && !g_remote.physical_stop && g_remote.connected &&
+                        remote_command.epoch==g_remote.epoch) g_remote.reset=remote_command;
+                    else remote_reply(&remote_command,REMOTE_CANCELLED,REMOTE_SUPERSEDED);
+                    g_remote.inflight=false;
+                    (void)tk_unl_mtx(g_mutex);
+                }
             }
             else
             {
-                working.command_ok = ok;
-                working.command_sequence++;
+                if (remote_command.valid) remote_finish(&remote_command,ok,permitted?REMOTE_NOT_READY:REMOTE_STALE);
+                else { working.command_ok=ok; working.command_sequence++; }
                 if (command.kind == S3_CONTROL_RESET) { reset_completed(); }
             }
             if ((command.kind == S3_CONTROL_START) && ok)
@@ -490,8 +643,21 @@ static void sample(INT code, void *unused)
             ir_packed = ir_debug_pack(&preview, &ir_packet);
         }
 #endif
+        uint8_t remote_flags=REMOTE_AVAILABLE;
+        const uint32_t remote_now=now_us();
+        if (drive_running(g_drive.state)) remote_flags|=REMOTE_RUNNING;
+        const bool motor_safe=feedback.valid && feedback.braked && feedback.state==MOTION_IDLE &&
+            feedback.fault==MOTION_FAULT_NONE && (uint32_t)(remote_now-feedback.timestamp_us)<=200000U;
+        if (!g_collecting && (g_drive.state==S3_DRIVE_OFF || g_drive.state==S3_DRIVE_HALTED) &&
+            g_drive.navigation.lifecycle==S3_RUN_INACTIVE &&
+            s3_navigation_readiness(&g_drive.navigation,remote_now)==0U &&
+            terrain_control_ready(remote_now) && motor_safe) remote_flags|=REMOTE_CAN_START;
+        if (g_drive.state==S3_DRIVE_FAULT && terrain_control_reset_ready(remote_now)) remote_flags|=REMOTE_CAN_RESET;
         if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
         {
+            g_remote.flags=remote_flags; g_remote.sampled_us=remote_now;
+            if (g_shared.stop || g_shared.pending || g_shared.reset_pending || g_remote.physical_stop)
+                g_remote.flags&=(uint8_t)~(REMOTE_CAN_START|REMOTE_CAN_RESET);
             if (packed) { g_status = packet; }
             g_shared.status_ready = packed;
 #if APP_IR_DEBUG
@@ -874,6 +1040,12 @@ int32_t s3_integration_start(void)
     return er;
 }
 #else
+void s3_remote_link(uint32_t epoch,bool up) { (void)epoch; (void)up; }
+void s3_remote_receive(const uint8_t *p,unsigned n) { (void)p; (void)n; }
+unsigned s3_remote_reply_take(uint8_t *p,unsigned n) { (void)p; (void)n; return 0; }
+unsigned s3_remote_status_take(uint8_t *p,unsigned n) { (void)p; (void)n; return 0; }
+uint32_t s3_remote_stop_sequence(void) { return 0; }
+void s3_remote_physical_stop(bool held) { (void)held; }
 bool s3_integration_submit(const s3_control_request_t *request)
 {
     (void)request;

@@ -137,8 +137,10 @@ static s3_drive_t drive;
 static s5_observation_t obstacle;
 static bool scanning_requested, range_bad, recovery_tape=true;
 static unsigned scan_calls, peek_calls, peek_beside; /* peeks that still see the obstacle */
+static unsigned step_moves, early_clear_count;
 static unsigned peek_angle;
-static int turn_sign=1;
+static int turn_sign=1, route_heading;
+static unsigned route_turns;
 static s5_snapshot_result_t snapshot_result;
 static uint32_t sample_age_us;
 s5_snapshot_result_t subsystem5_read_snapshot(s5_observation_t *out)
@@ -160,9 +162,17 @@ void subsystem5_cancel_scan(void) { scanning_requested=false;peek_angle=0; }
 void subsystem5_set_controller_status(unsigned s,unsigned f,unsigned r) { (void)s;(void)f;(void)r; }
 uint8_t subsystem5_controller_status(void) { return 0; }
 motion_result_t motion_request_drive(float metres,float speed) {
+    if(drive.obstacle.leg==3U) {
+        assert(drive.obstacle.pass!=S5_PASS_APPROACH);
+        if(drive.obstacle.pass==S5_PASS_STEP) { step_moves++; }
+    }
     return motion_controller_request_move(MOTION_DRIVE,1,1,metres,speed,now);
 }
 motion_result_t motion_request_turn(float degrees,float speed) {
+    /* Route turns are gentle; the bounded tape search uses 20/40 degrees. */
+    assert(degrees>=-45.0f && degrees<=45.0f);
+    if(drive.obstacle.leg<7U) { assert(degrees==45.0f || degrees==-45.0f);route_turns++; }
+    route_heading+=(int)degrees;
     turn_sign=degrees>0?1:-1;
     float distance=(degrees>0?degrees:-degrees)*0.13f*3.14159265f/360.0f;
     return motion_controller_request_move(MOTION_TURN,-turn_sign,turn_sign,distance,speed,now);
@@ -173,18 +183,24 @@ static void tick(uint16_t barcode, uint16_t left, uint16_t right, bool valid)
     unsigned int i;
     motion_feedback_t feedback;
     s3_sensor_frame_t frame = {0};
+    bool early_clear=false;
     now += 10000U;
     obstacle.range_us=now;obstacle.range_valid=!range_bad;
     if(range_bad) { obstacle.range_mm=0;obstacle.no_echo=true; }
     if(peek_angle) { /* one side reading: obstacle still beside (200 mm) or clear */
         unsigned side=peek_beside?200U:2000U; if(peek_beside) { peek_beside--; }
+        early_clear=side==2000U &&
+            (motion_estimation_robot_distance()-drive.obstacle.pass_start_m)*1000.0<drive.obstacle.plan.clear_after_mm;
+        if(early_clear) { early_clear_count++; }
         obstacle.scan_done=true;obstacle.scan_us=now;
         if(peek_angle<90U) { obstacle.profile.right_clear_mm=(uint16_t)side; } else { obstacle.profile.left_clear_mm=(uint16_t)side; }
         peek_angle=0;
     }
     if(scanning_requested) {
         obstacle.scan_done=true;obstacle.scan_us=now;
-        obstacle.profile=(s5_profile_t){250,100,2000,2000,50,-50,250,true};
+        obstacle.profile=(s5_profile_t){.closest_mm=250,.width_mm=100,
+            .left_clear_mm=2000,.right_clear_mm=2000,.left_edge_mm=50,.right_edge_mm=-50,
+            .front_mm=230,.forward_mm=270,.valid=true};
         obstacle.range_mm=2000;scanning_requested=false;
     }
     motion_estimation_update(0.01f);
@@ -215,6 +231,9 @@ static void tick(uint16_t barcode, uint16_t left, uint16_t right, bool valid)
     terrain_control_poll(&drive,now);
 #endif
     assert(s3_drive_process(&drive, &frame, &feedback));
+    /* A BUSY snapshot may defer consuming this observation by one tick; it
+     * still must never authorize clearance or the inward turn. */
+    if(early_clear) { assert(drive.obstacle.pass!=S5_PASS_EXTRA && drive.obstacle.clear_count==0U); }
 }
 static void hold(unsigned int ticks, uint16_t barcode, uint16_t left,
                  uint16_t right)
@@ -239,12 +258,13 @@ static void init(bool calibrated)
 #endif
     obstacle=(s5_observation_t){.range_mm=2000,.range_valid=true};
     scan_calls=peek_calls=peek_beside=peek_angle=0;scanning_requested=range_bad=false;recovery_tape=true;
+    step_moves=early_clear_count=0;
     lease = false;
     epoch = 1U;
     reject_velocity = false;
     reject_turn = false;
     reject_reset = false;
-    turns = polls = velocities = stops = 0U;
+    turns = polls = velocities = stops = 0U;route_turns=0;route_heading=0;
     counts[0] = counts[1] = 0;
     duty[0] = duty[1] = 0;
     motion_estimation_init(0.001f, 0.13f);
@@ -253,6 +273,12 @@ static void init(bool calibrated)
     motion_controller_init(0.30f, 0.0f, 0.0f, post);
     cfg.acquisition.enabled_mask = S3_ALL_SENSORS;
     assert(s3_drive_init(&drive, &cfg, &port));
+    /* Known simulation footprint and floor limits; no physical claim. */
+    drive.obstacle.config.half_width_mm=60;
+    drive.obstacle.config.front_axle_mm=80;drive.obstacle.config.rear_axle_mm=120;
+    drive.obstacle.config.sonar_axle_mm=50;drive.obstacle.config.sensor_axle_mm=0;
+    drive.obstacle.config.margin_mm=20;
+    drive.obstacle.config.left_space_mm=drive.obstacle.config.right_space_mm=1500;
     if (calibrated)
     {
         s3_calibration_begin(&collector);
@@ -288,7 +314,7 @@ static void simulate(void)
     bool tape=false;
     if(drive.obstacle_active && drive.obstacle.leg==5 && drive.obstacle.issued) {
         double travelled=motion_estimation_robot_distance()-drive.obstacle.leg_start_m;
-        double goal=(double)drive.obstacle.plan.offset_mm/1000.0;
+        double goal=drive.obstacle.return_mm/1000.0;
         tape=recovery_tape && travelled>goal-0.07 && travelled<goal+0.07;
     }
     tick(150,tape?280:202,tape?150:202,true);
@@ -324,12 +350,12 @@ static void snapshot_contention(void)
     init(true);start();drive.obstacle_snapshot_valid=false;snapshot_result=S5_SNAPSHOT_BUSY;
     simulate();assert(drive.state==S3_DRIVE_FAULT);
     /* Active avoidance gets the same grace, without dropping a DONE event. */
-    init(true);start();obstacle.range_mm=120;simulate();
+    init(true);start();obstacle.range_mm=250;simulate();
     for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
     assert(drive.obstacle.issued);snapshot_result=S5_SNAPSHOT_BUSY;simulate();
     assert(drive.obstacle_active && drive.state==S3_DRIVE_MANOEUVRE);
     s3_drive_stop(&drive);assert(!drive.obstacle_active && !drive.obstacle_snapshot_valid && !lease);
-    init(true);start();obstacle.range_mm=120;simulate();
+    init(true);start();obstacle.range_mm=250;simulate();
     for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
     snapshot_result=S5_SNAPSHOT_BUSY;
     for(unsigned i=0;i<30 && drive.state!=S3_DRIVE_FAULT;i++) { simulate(); }
@@ -339,7 +365,7 @@ static void snapshot_contention(void)
 int main(void)
 {
     snapshot_contention();
-    init(true);start();obstacle.range_mm=120;peek_beside=2;
+    init(true);start();obstacle.range_mm=250;peek_beside=2;
     tick(150,202,202,true);
     assert(drive.obstacle_active && drive.obstacle.state==S5_WAIT_STOP && scan_calls==0);
     /* Actual controller applies STOP and produces its matching cancellation. */
@@ -351,20 +377,25 @@ int main(void)
     snapshot_result=S5_SNAPSHOT_OK;
     assert(drive.state==S3_DRIVE_FOLLOW && !drive.obstacle_active && scan_calls==1);
     assert(drive.obstacle.recovery.confirmed && drive.navigation.mode==S3_MODE_TRACK);
-    /* Leg 3 measured the depth: 3 side peeks (2 still beside, 1 clear), 2 steps. */
-    assert(peek_calls==3 && drive.obstacle.searched_mm==2U*S5_PEEK_STEP_MM);
-    /* 3 turns + out + approach + 2 steps + clearance + back = 10 finite moves, no barcode manoeuvre */
-    assert(polls==10 && turns==0);
+    /* Two occupied peeks and any clear readings before the front gate cause
+     * steps. Only two later fresh clear readings can confirm the rear. */
+    assert(early_clear_count>0 && step_moves>=3U && peek_calls==step_moves+2U);
+    assert(drive.obstacle.searched_mm>=step_moves*S5_PEEK_STEP_MM &&
+           drive.obstacle.searched_mm<=step_moves*(S5_PEEK_STEP_MM+1U));
+    assert(drive.obstacle.searched_mm>=drive.obstacle.plan.clear_after_mm);
+    /* Four turns + out + measured steps + clearance + back. No blind approach. */
+    assert(drive.obstacle.plan.forward_mm==0U);
+    assert(polls==7U+step_moves && turns==0 && route_turns==4 && route_heading==0);
     s3_drive_stop(&drive);assert(!drive.obstacle_active && !lease);
     init(true);start();range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT && !lease);
-    init(true);start();obstacle.range_mm=120;simulate();s3_drive_stop(&drive);simulate();
+    init(true);start();obstacle.range_mm=250;simulate();s3_drive_stop(&drive);simulate();
     assert(drive.state==S3_DRIVE_OFF && !drive.obstacle_active && scan_calls==0);
-    init(true);start();obstacle.range_mm=120;simulate();report_losses++;simulate();assert(drive.state==S3_DRIVE_FAULT && drive.obstacle.state==S5_FAULT && drive.obstacle.fault==S5_INTERRUPTED);
-    init(true);start();obstacle.range_mm=120;simulate();
+    init(true);start();obstacle.range_mm=250;simulate();report_losses++;simulate();assert(drive.state==S3_DRIVE_FAULT && drive.obstacle.state==S5_FAULT && drive.obstacle.fault==S5_INTERRUPTED);
+    init(true);start();obstacle.range_mm=250;simulate();
     for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
     assert(drive.obstacle.issued);range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT);
 #if APP_S4
-    init(true);start();obstacle.range_mm=120;simulate();
+    init(true);start();obstacle.range_mm=250;simulate();
     for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
     assert(drive.obstacle_active && drive.obstacle.issued);
     imu_impact=true;simulate();

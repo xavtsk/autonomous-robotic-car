@@ -4,6 +4,7 @@
 #include "operator_panel.h"
 #if APP_S3_MOTION
 #include "operator_logic.h"
+#include "remote_control.h"
 #include <sys/sysdef.h>
 
 #define OP_GO_PIN (20U)
@@ -33,6 +34,7 @@ static void panel(INT code, void *unused)
     static s3_integration_status_t status;
     const op_port_t port = {s3_integration_submit, tm_printf};
     uint32_t now;
+    uint32_t remote_stop_seen=0;
     (void)code;
     (void)unused;
     op_button_init(&go_button);
@@ -51,6 +53,12 @@ static void panel(INT code, void *unused)
             (void)op_button_update(&stop_button, down(OP_STOP_PIN), now,
                                    &stop_edge);
             go = op_button_update(&go_button, down(OP_GO_PIN), now, &go_edge);
+            s3_remote_physical_stop(op_button_held(&stop_button));
+            const uint32_t remote_stop=s3_remote_stop_sequence();
+            if (remote_stop!=remote_stop_seen) {
+                remote_stop_seen=remote_stop;
+                operator_remote_stop(&op,now);
+            }
             operator_step(&op, now, go, op_button_held(&stop_button),
                           op_button_held(&go_button),
                           s3_integration_status(&status) ? &status : 0);

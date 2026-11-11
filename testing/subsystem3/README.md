@@ -1,5 +1,104 @@
 # Buddy 3 stationary diagnostics and software tests
 
+## 11 November 2026: bounded decoding and noisy trailing paper
+
+The next big-Z batch still had four sensor timing faults. Four other complete
+captures retained valid Z geometry but never finished recording: shallow raw
+ADC excursions around 240–255 repeatedly broke the five-unit paper interval.
+They contained 2.7–3.5 seconds after the last bar; this was not just a missing
+trailing capture. The observed hardware outcomes remain failures.
+
+Recording analysis now has per-record resumable work. It takes a fixed sample
+snapshot, spreads extraction, pruning, edge measurement and correction searches
+across updates, and continues observing incoming samples. Extrema timestamps
+make pruning comparisons constant-time. A reset, invalid sample or real quiet
+interruption cannot leave a job that later emits a stale result. The existing
+100 Hz sampling and 30 ms sensor/250 ms motor deadlines are retained.
+
+`barcode_quiet.h` maintains separate strict and provisional background clocks.
+The provisional clock can bridge an excursion of at most 14 normalized units
+above paper for at most 40 ms, and credits it only after the signal returns to
+the strict band. This is below the primary 15-unit peak floor, so tolerated
+background cannot add primary bar peaks. Only a fully validated primary frame whose 15 retained peaks
+each exceed both neighbouring valleys by at least 60 units may use that clock.
+Faint frames retain strict quiet checks. Raw readings, faint-bar extraction,
+Code 39 markers, width correction and ambiguity checks are not filtered or
+replaced by the background clock. A failed provisional check must not discard
+a faint recording that has not yet reached its strict quiet interval.
+
+New helper and public-record API tests exercise duration/amplitude boundaries,
+all letters in both directions, weak bars, genuine interruptions and invalid
+frames. Five additional exact exports cover the successful forward control
+and four unfinished reverse runs. Those reverse replay expectations add only
+explicit synthetic leading context; their existing trailing recordings must
+suffice. Hardware timing and reliability still need new physical runs.
+
+Validation for the 11 November deployment: the quiet-clock tests and all 116
+new public-record checks passed with the final 14-unit limit. Record, faint,
+varying-correction and controller integration checks passed during development.
+The complete development replay audit found only the documented deferred-EOF
+differences; its 120 new variants passed. Final builds of the 1,008-case replay,
+incremental-budget, wide and runtime runners compiled, but Windows Application
+Control blocked their execution (4551). They are not reported as final passes.
+No security-policy workaround was used. The firmware built without warnings,
+and all ELF flash bytes were checked against the UF2 before flashing. Fresh car
+runs remain necessary to establish actual sampling gaps and physical decoding.
+
+## 11 November 2026: reduce synchronous sentinel-fit cost
+
+Six large-Z runs exceeded the 30 ms acquisition deadline (maximum sample gaps
+30.080–41.799 ms), and two more hit the 250 ms motor-command watchdog. Small
+scans had weaker narrow bars but no corresponding controller faults. Processing
+the completed waveform synchronously is a plausible contributor to the larger
+scan faults; a host benchmark cannot establish the actual Pico deadline margin.
+
+The sentinel score formerly divided a 64-bit numerator once for each of nine
+widths. Narrow widths share one reference and wide widths share another, so the
+new helper takes the largest deviation in each group, compares the two ratios,
+and divides only the larger one. `max(floor(x)) == floor(max(x))` preserves the
+exact integer score and tie handling. There is now one software 64-bit division
+per valid star fit instead of nine. Decoder rules and safety deadlines are
+unchanged. This is a computation optimization, not recovery of missing ink.
+
+The existing synthetic suites and saved-waveform checks remain required.
+Four additional raised-sensor Z fixtures cover faint-bar rejection, an observed
+success, and forward/reverse large-code geometry with explicitly synthetic
+quiet margins. Run the saved-waveform suite against a newly compiled replay
+executable; the suite now has 888 cases. New on-car runs must verify timing and
+decoding after this change.
+
+## 10 November 2026: retain dense ripple until existing cleanup
+
+A complete 935-sample W capture rejected without a timing error or overflow.
+Replay traced its primary extraction failure to the 63-entry extrema workspace:
+the reader stopped before the existing small-area wiggle cleanup could run.
+The workspace now holds up to 127 extrema. Peak prominence, recorder timing,
+sample storage, width correction, Code 39 checks and actual quiet requirements
+are unchanged. This is an extra 128 bytes of local extrema storage, not a new
+capture queue or another decoding method.
+
+The new synthetic suite covers 728 A-Z/direction/quantization cases. Valid frames
+with 79 extrema from shallow wide-bar ripple must decode. Malformed opening or
+closing markers, a missing payload bar, short/interrupted quiet, and excessive
+139-extremum inputs must refuse. The first new valid case fails against the
+former workspace and passes with the larger one. Existing scratch, grey-shelf,
+wide-dip, white-gap-spike and 3000 jittered-frame no-wrong-letter checks remain.
+
+Five exact dashboard exports add 240 replay variants, bringing the saved-waveform
+suite to 792 checks. Both A captures and reverse W decode at midpoint raw timing
+without padding. Two forward W exports lack sufficient saved leading white.
+The hardware-successful forward W needs 100 ms of synthetic leading white in
+both versions. The failed forward W needs the larger workspace and that leading
+margin to form a valid candidate; it must then wait for trailing white, decoding
+only after an explicit additional synthetic second in replay. Its original
+hardware result remains a rejection. Details and provenance are in
+`fixtures/barcode/README.md`; these are software checks, not five new physical
+successes or a guarantee about printed-barcode quality.
+
+Run `tools/test-buddy3.ps1`, then
+`python testing/subsystem3/test_barcode_replay.py` to reproduce the C and saved
+waveform regressions. Fresh on-car runs are still needed after flashing.
+
 ## 5 November 2026: recover faint bars without selecting a known letter
 
 Four complete small-A captures lost narrow bars before width validation. Their

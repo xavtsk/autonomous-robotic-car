@@ -141,6 +141,18 @@ endif
 S3_MOTION_SUFFIX := _s3_motion
 endif
 
+# Explicit no-line table/paper test; preserve the normal track profile by default.
+S3_STRAIGHT_TEST ?= 0
+ifneq ($(filter $(S3_STRAIGHT_TEST),0 1),$(S3_STRAIGHT_TEST))
+$(error S3_STRAIGHT_TEST must be 0 or 1)
+endif
+ifeq ($(S3_STRAIGHT_TEST),1)
+ifneq ($(S3_MOTION),1)
+$(error S3_STRAIGHT_TEST=1 requires S3_MOTION=1)
+endif
+S3_STRAIGHT_TEST_SUFFIX := _straight_test
+endif
+
 # Optional observation only: no motion requests or automatic run start.
 # IR_DEBUG=1 adds a 20 Hz, latest-only binary preview of the existing IR scan.
 IR_DEBUG ?= 0
@@ -242,7 +254,7 @@ ifeq ($(S5_HARDWARE_CONFIRMED),0)
 S5_SUFFIX := _s5_UNCONFIGURED
 endif
 endif
-EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)$(S4_SUFFIX)$(S5_SUFFIX)$(IR_DEBUG_SUFFIX)
+EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(S3_STRAIGHT_TEST_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)$(S4_SUFFIX)$(S5_SUFFIX)$(IR_DEBUG_SUFFIX)
 
 GCC := arm-none-eabi-gcc
 AS := arm-none-eabi-gcc
@@ -309,6 +321,7 @@ endif
 CFLAGS += -DAPP_S4=$(S4) -DAPP_S4_BENCH=$(S4_BENCH) -DAPP_S5=$(S5) -DS5_HARDWARE_CONFIRMED=$(S5_HARDWARE_CONFIRMED)
 CFLAGS  += -DAPP_TEST=$(TEST)
 CFLAGS  += -DAPP_IR_BENCH=$(IR_BENCH) -DAPP_S3_MOTION=$(S3_MOTION) -DAPP_IR_CHANNELS=$(IR_CHANNELS)
+CFLAGS  += -DS3_STRAIGHT_TEST=$(S3_STRAIGHT_TEST)
 CFLAGS  += -DAPP_DIAGNOSTICS=$(DIAGNOSTICS)
 CFLAGS  += -DAPP_MOTION_SMOKE=$(MOTION_SMOKE)
 CFLAGS  += -DAPP_IR_DEBUG=$(IR_DEBUG)
@@ -344,7 +357,7 @@ endif
 # before any recipe executes.
 ################################################################################
 
-PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)-s4$(S4)-s4bench$(S4_BENCH)-s5$(S5)-s5confirmed$(S5_HARDWARE_CONFIRMED)-irdebug$(IR_DEBUG)
+PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-s3straight$(S3_STRAIGHT_TEST)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)-s4$(S4)-s4bench$(S4_BENCH)-s5$(S5)-s5confirmed$(S5_HARDWARE_CONFIRMED)-irdebug$(IR_DEBUG)
 PROFILE_FILE := .build_profile
 
 ifneq ($(strip $(shell cat $(PROFILE_FILE) 2>/dev/null)),$(PROFILE_ID))

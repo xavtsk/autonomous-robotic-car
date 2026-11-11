@@ -118,6 +118,10 @@ class Handler(BaseHTTPRequestHandler):
                 state.request("map", body)
             elif path == "/api/snapshot":
                 state.request("snapshot")
+            elif path == "/api/control":
+                if set(body) != {"action"}:
+                    raise ValueError("Supply only the control action")
+                state.request_control(body["action"])
             elif path == "/api/demo":
                 state.demo_select(body.get("scenario"))
             elif path == "/api/traces/import":

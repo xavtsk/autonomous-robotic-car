@@ -127,15 +127,46 @@ the existing protocol has no request ID or echoed map, so concurrent terminal
 commands and delayed replies cannot be conclusively correlated.
 
 GP20 and GP21 remain the physical calibration/start and software-stop controls.
-The physical power switch is the independent cutoff. The dashboard supports
-only the existing map and snapshot commands. Test the first live dashboard
-session with the car stationary, using a snapshot and map reply before a run.
+The physical power switch is the independent cutoff. Test the first live
+dashboard session with the car stationary, using a snapshot and map reply
+before a run.
 
 The firmware freezes mapping after the first accepted START until a physical
 robot reboot. A broker reconnect does not clear that rule. If the dashboard has
 seen an active run or a BUSY/closed reply, it labels the map previously locked.
 After a robot reboot, its explicit Retry button lets the firmware decide whether
 the next map is allowed; the dashboard cannot identify a reboot automatically.
+
+## Start, Stop and Reset from the dashboard
+
+Use firmware with the [run-control protocol](REMOTE_CONTROL_PROTOCOL.md) and
+restart the dashboard service after updating it. Before the first run, send the
+desired letter map and wait for its OK reply. The map still freezes after START.
+
+- **Start** requests one run through the same controller readiness checks as
+  GP20: accepted sensor calibration, healthy sensors/IMU and fresh, idle, braked
+  motor feedback. Start is disabled while controller/control-status data is
+  stale, another control request is pending, or the car has a latched fault.
+- **Stop** remains available while the broker is connected, including when car
+  telemetry is stale or Start is pending. It supersedes a pending Start/Reset.
+  It does not wait for a pending Start publication or clear a latched fault.
+  If its outcome is unconfirmed, request Stop again and wait for confirmation
+  before starting another run.
+- **Reset fault** requests fault recovery only. Wait for the stopped, fault-free
+  controller to be observed, then press Start separately when ready. Reset never
+  starts the car automatically.
+
+**Sent** means the laptop published the request; **queued** means firmware
+accepted it into its mailbox. **Executed** confirms controller handling, and
+**observed** additionally requires fresh matching controller telemetry. A queued
+request does not prove the car moved or stopped. Timeouts are unconfirmed and
+are never automatically retried. The separate observed-state display shows the
+latest robot evidence throughout.
+
+Wi-Fi Stop can be delayed or lost. Use **GP21** if Wi-Fi/dashboard communication
+fails, and the physical power switch when a power cutoff is needed. Wait for a
+Runs capture to finish uploading before starting the next run. Demo mode supports
+the same buttons with simulated replies and no MQTT commands.
 
 ## Pages
 

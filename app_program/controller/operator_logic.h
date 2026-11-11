@@ -78,6 +78,9 @@ op_press_t op_button_update(op_button_t *button, bool down, uint32_t now_ms,
 bool op_button_held(const op_button_t *button);
 
 bool operator_init(operator_t *op, const op_port_t *port);
+/* A remote STOP was already queued by the controller. Cancel a GP20 countdown
+ * without submitting a duplicate STOP or acknowledging a different command. */
+void operator_remote_stop(operator_t *op, uint32_t now_ms);
 /* Call every poll. status may be 0 until the controller has published one.
  * go is the GP20 press kind; stop_held/go_held are the debounced levels.
  * While GP21 is held: STOP is sent once per hold (retried, with one message,

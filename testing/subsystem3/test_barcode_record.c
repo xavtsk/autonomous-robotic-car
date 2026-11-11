@@ -591,6 +591,110 @@ static void test_never_a_wrong_letter(void)
     assert(right > 0U);
 }
 
+enum { RIPPLE_INTACT, RIPPLE_BAD_START, RIPPLE_BAD_STOP, RIPPLE_MISSING_BAR,
+       RIPPLE_SHORT_LEAD, RIPPLE_BROKEN_TRAIL };
+
+/* A high-contrast print with shallow sensor ripple inside every wide black
+ * bar. Four dips per wide bar add 48 extrema to the frame's original 31;
+ * nine dips exceed the bounded cleanup workspace. All dips remain well above
+ * the black/white midpoint, so the physical Code 39 stripe widths are fixed.
+ * Paper=100 deliberately exercises the primary extractor, not faint recovery.
+ * Reverse the entire waveform, including defects and unequal ripple depths. */
+static tally_t feed_rippled_frame(char letter, bool reverse,
+                                 unsigned int dips, unsigned int damage,
+                                 bool quantized)
+{
+    static s3_barcode_record_t r;
+    const s3_barcode_config_t cfg=s3_barcode_defaults();
+    shape_t s=sharp;
+    uint32_t runs[29], total, t, clock=0xffff0000U;
+    unsigned int missing=29U, i;
+    tally_t k={0};
+    s.narrow_us=100000U; s.wide_us=300000U;
+    s.paper=100U; s.gap=100U; s.bar=900U;
+    if (damage==RIPPLE_SHORT_LEAD) { s.lead_us=200000U; }
+    make_runs(letter,&s,runs);
+    if (damage==RIPPLE_BAD_START) { runs[0]=s.wide_us; }
+    if (damage==RIPPLE_BAD_STOP) { runs[28]=s.wide_us; }
+    for (i=10U;i<19U;i+=2U) {
+        if (runs[i]==s.narrow_us) { missing=i; break; }
+    }
+    assert(missing<29U);
+    total=s.lead_us+s.trail_us;
+    for (i=0U;i<29U;i++) { total+=runs[i]; }
+    s3_barcode_record_reset(&r);
+    for (t=0U;t<total;t+=s.period_us) {
+        const uint32_t physical=reverse ? total-s.period_us-t : t;
+        uint32_t start=s.lead_us;
+        uint16_t dark=s.paper;
+        s3_barcode_result_t result;
+        s3_barcode_status_t status;
+        for (i=0U;i<29U;i++) {
+            if (physical>=start && physical<start+runs[i]) {
+                if (i%2U==0U && !(damage==RIPPLE_MISSING_BAR && i==missing)) {
+                    dark=(uint16_t)(880U+(i%5U)*7U);
+                    if (runs[i]==s.wide_us) {
+                        unsigned int dip;
+                        for (dip=1U;dip<=dips;dip++) {
+                            const uint32_t at=start+dip*s.wide_us/(dips+1U);
+                            if (physical>=at && physical<at+s.period_us) {
+                                dark=(uint16_t)(740U+(dip%3U)*9U);
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            start+=runs[i];
+        }
+        if (damage==RIPPLE_BROKEN_TRAIL && physical>=total-s.trail_us+200000U &&
+            physical<total-s.trail_us+280000U) { dark=900U; }
+        if (quantized) { dark=(uint16_t)((dark/4U)*4U); }
+        clock+=s.period_us;
+        status=s3_barcode_record_update(&r,&cfg,clock,true,dark,&result);
+        if (status==S3_BARCODE_DECODED) { k.decoded++; k.last=result; }
+        else if (status==S3_BARCODE_REJECTED) { k.rejected++; }
+        else if (status==S3_BARCODE_TIMING_ERROR) { k.timing++; }
+        else if (status==S3_BARCODE_OVERFLOW) { k.overflow++; }
+    }
+    return k;
+}
+
+static void test_dense_wide_bar_ripples(void)
+{
+    unsigned int c,dir,quantized,damage,checks=0U;
+    for (c=0U;c<26U;c++) {
+        for (dir=0U;dir<2U;dir++) {
+            for (quantized=0U;quantized<2U;quantized++) {
+                for (damage=RIPPLE_INTACT;damage<=RIPPLE_BROKEN_TRAIL;damage++) {
+                    const tally_t k=feed_rippled_frame((char)('A'+c),dir!=0U,4U,
+                                                       damage,quantized!=0U);
+                    assert(k.timing==0U && k.overflow==0U);
+                    if (damage==RIPPLE_INTACT) {
+                        if (!(k.decoded==1U && k.last.letter==(char)('A'+c) &&
+                              k.last.reversed==(dir!=0U) && k.rejected==0U)) {
+                            printf("dense ripple: letter=%c dir=%u quantized=%u decoded=%u got=%c rejected=%u\n",
+                                   'A'+c,dir,quantized,k.decoded,
+                                   k.last.letter ? k.last.letter : '-',k.rejected);
+                            fflush(stdout); assert(0);
+                        }
+                    } else { assert(k.decoded==0U); }
+                    checks++;
+                }
+                /* Excessive ripple must fail closed; no data-dependent heap
+                 * growth, silent truncation or selection of a known letter. */
+                {
+                    const tally_t k=feed_rippled_frame((char)('A'+c),dir!=0U,9U,
+                                                       RIPPLE_INTACT,quantized!=0U);
+                    assert(k.decoded==0U && k.rejected==1U && k.timing==0U && k.overflow==0U);
+                    checks++;
+                }
+            }
+        }
+    }
+    printf("PASS: %u dense-ripple A-Z/direction/quantization and strict marker/bar/quiet/capacity checks\n",checks);
+}
+
 static void test_cut_pass_is_not_read(void)
 {
     /* The first two stripes were never seen: 27 stripes cannot decode. */
@@ -797,7 +901,7 @@ static void test_adaptive_peaks_and_quiet(void)
             if ((scenario==2U) && (t<s.lead_us)) { dark=(t/10000U)%2U ? 65U : 10U; }
             clock+=s.period_us;
             status=s3_barcode_record_update(&r,&cfg,clock,true,dark,&result);
-            if (r.state==S3_REC_QUIET) { pending=true; }
+            if (r.state==S3_REC_PROCESSING || r.state==S3_REC_QUIET) { pending=true; }
             if (status==S3_BARCODE_DECODED) {
                 decoded++; assert(result.letter=='Y');
                 assert(t>=finish+cfg.quiet_modules*s.narrow_us-s.period_us);
@@ -823,6 +927,7 @@ int main(void)
     test_merged_wide_bar_dip();
     test_white_gap_spikes_never_wrong_letter();
     test_never_a_wrong_letter();
+    test_dense_wide_bar_ripples();
     test_cut_pass_is_not_read();
     test_short_quiet_zones();
     test_line_crossing();

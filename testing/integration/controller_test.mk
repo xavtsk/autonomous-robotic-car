@@ -20,6 +20,8 @@ test:
 	$(BUILD)/ir_debug_test
 	$(CC) $(CFLAGS) control_debug_test.c $(APP)/controller/control_debug.c -o $(BUILD)/control_debug_test
 	$(BUILD)/control_debug_test
+	$(CC) -DAPP_H -DAPP_TEST=0 -DAPP_S3_MOTION=1 -DTM_MQTT=1 -include ../subsystem1/host_kernel.h -I$(ROOT)/lib/liblwip/sysdepend/pico_rp2040 $(CFLAGS) remote_bridge_test.c $(APP)/subsystem1/mqtt_bridge.c $(APP)/subsystem1/telemetry_codec.c -o $(BUILD)/remote_bridge_test
+	$(BUILD)/remote_bridge_test
 	$(CC) -Ifakes $(CFLAGS) runtime_test.c $(APP)/controller/barcode_capture.c $(APP)/controller/integration_codec.c $(APP)/controller/s3_drive.c $(APP)/subsystem3/navigation_codec.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/runtime_test
 	$(BUILD)/runtime_test
 	$(CC) -Ifakes -DTM_MQTT=1 -I$(ROOT)/lib/liblwip/sysdepend/pico_rp2040 $(CFLAGS) runtime_test.c $(APP)/controller/barcode_capture.c $(APP)/controller/integration_codec.c $(APP)/controller/s3_drive.c $(APP)/subsystem3/navigation_codec.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/runtime_mqtt_test
@@ -34,6 +36,8 @@ test:
 	$(BUILD)/builtin_test
 	$(CC) -I$(APP)/subsystem2 -I$(APP)/subsystem3 -I$(APP)/controller $(CFLAGS) course_test.c $(APP)/controller/s3_drive.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/course_test
 	$(BUILD)/course_test
+	$(CC) -DS3_STRAIGHT_TEST=1 -I$(APP)/subsystem2 -I$(APP)/subsystem3 -I$(APP)/controller $(CFLAGS) course_test.c $(APP)/controller/s3_drive.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c barcode_decoder.c line_navigation.c) -o $(BUILD)/straight_test
+	$(BUILD)/straight_test
 	$(CC) -I$(APP)/controller $(CFLAGS) bcap_test.c $(APP)/controller/barcode_capture.c -o $(BUILD)/bcap_test
 	$(BUILD)/bcap_test
 	$(CC) -I$(APP)/controller $(CFLAGS) bcap_wire_test.c $(APP)/controller/barcode_capture.c -o $(BUILD)/bcap_wire_test

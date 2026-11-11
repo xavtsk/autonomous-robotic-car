@@ -34,6 +34,13 @@ The Make workflow validates task/transport and controller logic with fake RTOS,
 I2C and telemetry boundaries. It does not measure physical I2C timing, calibration,
 height accuracy, impact sensitivity, RTOS latency or live Wi-Fi delivery.
 
+The controller integration test also injects rejected hump reports (`E_TMOUT`):
+unchanged values must retry, newer cumulative count/height replaces the pending
+value, and `E_OK` stops duplicate retries. It checks retry after operator STOP
+and excludes a previous run's pending values during the next START/reset.
+The fake reports distinguish enqueue attempts from accepted reports; these
+checks do not establish MQTT delivery to the dashboard.
+
 If Windows Application Control blocks the executable in your terminal, retain
 that error and use a development environment where locally compiled C programs
 are permitted, or ask the device administrator for the supported approval path.
@@ -41,6 +48,13 @@ Do not disable Application Control to run the tests.
 
 ## Physical handoff still required
 
+- For the current right-wheel profile, drive the right wheel over a measured
+  10 mm obstacle with the left wheel on the level surface. Confirm live
+  `on_hump`/height while elevated, then one completed hump and a retained peak
+  after returning to level. Repeat and verify START clears the previous run.
+  The configured 116 mm wheel spacing is a geometry input, not proof of measured
+  height accuracy. A front-lift angle check and host tests cannot replace this
+  crossing test. Stationary tilts and left-wheel-only bumps must not count.
 - Verify GP2/GP3 I2C1 wiring and mounted axes; keep the car level/still through
   startup calibration. Confirm START is rejected before calibration completes.
 - Run known-height humps, repeat runs and verify count and highest peak reset.

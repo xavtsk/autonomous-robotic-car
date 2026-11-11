@@ -29,6 +29,8 @@ static bool fb_fault, reset_clears_fault=true;
 static uint8_t fb_command_id;
 static unsigned reset_calls;
 static unsigned cancel_calls;
+static unsigned velocity_requests;
+static void (*during_start)(void);
 static bool test_mutex_busy;
 static uint32_t debug_motion_advance, debug_motion_age;
 static bool debug_motion_out_of_range;
@@ -67,7 +69,7 @@ bool motion_try_debug_snapshot(motion_debug_snapshot_t *m)
   if(debug_motion_out_of_range){m->measured_mps[0]=10.0f;}
   return true; }
 motion_result_t motion_request_velocity(float l,float r)
-{ (void)l;(void)r;assert(!locked);fb_command_id=1;return MOTION_OK; }
+{ (void)l;(void)r;assert(!locked);velocity_requests++;fb_command_id=1;return MOTION_OK; }
 motion_result_t motion_request_drive(float m,float v) { (void)m;(void)v;return MOTION_OK; }
 motion_result_t motion_request_manoeuvre(manoeuvre_t m)
 { (void)m;assert(!locked);return MOTION_OK; }
@@ -77,7 +79,7 @@ uint8_t motion_command_id(void) { return 1; }
 bool motion_reset(void) { assert(!locked);reset_calls++;if(reset_clears_fault)fb_fault=false;return true; }
 void motion_navigation_heartbeat(bool enabled) { (void)enabled;assert(!locked); }
 bool vehicle_controller_prepare_start(s3_navigation_t *n)
-{ (void)n;assert(!locked);freeze_calls++;return true; }
+{ (void)n;assert(!locked);freeze_calls++;if(during_start)during_start();return true; }
 bool vehicle_controller_apply_mapping(const s3_nav_action_t m[26])
 { (void)m;assert(!locked);return true; }
 void vehicle_controller_cancel_start(void)
@@ -88,6 +90,22 @@ void vehicle_controller_observe(const s3_integration_status_t *s)
 #include "../../app_program/controller/s3_integration.c"
 static void cycle(void)
 { sleeps=0;clock_value+=S3_SAMPLE_PERIOD_US;if(setjmp(boundary)==0)sample(0,NULL);assert(!locked); }
+static void remote_send(uint8_t action,uint32_t id,uint32_t epoch,uint32_t timestamp)
+{
+    uint8_t p[REMOTE_COMMAND_SIZE]={REMOTE_VERSION,action};
+    remote_put32(p+2,id);remote_put32(p+6,epoch);remote_put32(p+10,timestamp);
+    s3_remote_receive(p,sizeof p);
+}
+static void remote_expect(uint32_t id,uint8_t result,uint8_t reason)
+{
+    uint8_t p[REMOTE_REPLY_SIZE];
+    assert(s3_remote_reply_take(p,sizeof p)==sizeof p);
+    assert(p[0]==REMOTE_VERSION&&remote_get32(p+2)==id&&p[6]==result&&p[7]==reason);
+}
+static void stop_during_start(void)
+{ during_start=0;remote_send(REMOTE_STOP,5,0x87654321U,clock_value); }
+static void reconnect_during_start(void)
+{ during_start=0;s3_remote_link(0,false);s3_remote_link(0xabcddcbaU,true); }
 int main(void)
 {
     s3_integration_status_t status;
@@ -283,6 +301,123 @@ int main(void)
         }
     }
 #endif
+    /* Remote commands share the physical owner/gates, but never acknowledge
+     * somebody else's GP command_sequence. No network callback moves motors. */
+    s3_remote_link(0x12345678U,true);
+    sequence=status.command_sequence;
+    remote_send(REMOTE_START,1,0x12345678U,clock_value);
+    remote_expect(1,REMOTE_QUEUED,REMOTE_NONE);cycle();
+    remote_expect(1,REMOTE_REJECTED,REMOTE_NOT_READY); /* FAULT cannot START */
+    reset_clears_fault=true;
+    remote_send(REMOTE_RESET,2,0x12345678U,clock_value);
+    remote_expect(2,REMOTE_QUEUED,REMOTE_NONE);cycle();
+    assert(g_reset_waiting);cycle();remote_expect(2,REMOTE_EXECUTED,REMOTE_NONE);
+    assert(g_drive.state==S3_DRIVE_OFF&&s3_integration_status(&status));
+    sequence=status.command_sequence;
+    remote_send(REMOTE_START,3,0x12345678U,clock_value);
+    remote_expect(3,REMOTE_QUEUED,REMOTE_NONE);
+    assert(g_drive.state==S3_DRIVE_OFF);cycle();remote_expect(3,REMOTE_EXECUTED,REMOTE_NONE);
+    assert(g_drive.state==S3_DRIVE_FOLLOW&&s3_integration_status(&status));
+    assert(status.command_sequence==sequence);
+    remote_send(REMOTE_START,3,0x12345678U,clock_value);
+    remote_expect(3,REMOTE_REJECTED,REMOTE_REPLAY);
+    remote_send(REMOTE_STOP,4,0x12345678U,0); /* STOP ignores stale time */
+    remote_expect(4,REMOTE_QUEUED,REMOTE_NONE);cycle();remote_expect(4,REMOTE_EXECUTED,REMOTE_NONE);
+    remote_send(REMOTE_START,5,0x12345678U,clock_value);
+    remote_expect(5,REMOTE_QUEUED,REMOTE_NONE);
+    remote_send(REMOTE_STOP,6,0x12345678U,clock_value);
+    remote_expect(5,REMOTE_CANCELLED,REMOTE_SUPERSEDED);remote_expect(6,REMOTE_QUEUED,REMOTE_NONE);
+    cycle();remote_expect(6,REMOTE_EXECUTED,REMOTE_NONE);assert(g_drive.state==S3_DRIVE_OFF);
+    remote_send(REMOTE_START,5,0x12345678U,clock_value);
+    remote_expect(5,REMOTE_REJECTED,REMOTE_REPLAY); /* late START after STOP */
+    remote_send(REMOTE_START,7,0x12345678U,clock_value);
+    remote_expect(7,REMOTE_QUEUED,REMOTE_NONE);
+    cmd.kind=S3_CONTROL_STOP;assert(s3_integration_submit(&cmd));
+    remote_expect(7,REMOTE_CANCELLED,REMOTE_SUPERSEDED);cycle();assert(g_drive.state==S3_DRIVE_OFF);
+    remote_send(REMOTE_START,8,0x12345678U,clock_value);
+    remote_expect(8,REMOTE_QUEUED,REMOTE_NONE);
+    clock_value+=REMOTE_MAX_AGE_US;cycle();remote_expect(8,REMOTE_REJECTED,REMOTE_STALE);
+    assert(g_drive.state==S3_DRIVE_OFF);
+    remote_send(REMOTE_START,9,0x12345678U,clock_value-REMOTE_MAX_AGE_US-1);
+    remote_expect(9,REMOTE_REJECTED,REMOTE_STALE);
+    remote_send(REMOTE_START,10,0x12345678U,clock_value);
+    remote_expect(10,REMOTE_QUEUED,REMOTE_NONE);
+    s3_remote_link(0,false);remote_expect(10,REMOTE_CANCELLED,REMOTE_SUPERSEDED);
+    s3_remote_link(0x87654321U,true);cycle();assert(g_drive.state==S3_DRIVE_OFF);
+    remote_send(REMOTE_START,11,0x12345678U,clock_value);
+    remote_expect(11,REMOTE_REJECTED,REMOTE_STALE);
+    {
+        uint8_t p[REMOTE_STATUS_SIZE];
+        assert(s3_remote_status_take(p,sizeof p)==sizeof p&&remote_get32(p+1)==0x87654321U);
+        assert((p[13]&REMOTE_AVAILABLE)!=0U);
+        assert(s3_remote_status_take(p,sizeof p)==0U);
+        clock_value+=500000U;
+        assert(s3_remote_status_take(p,sizeof p)==sizeof p&&p[13]==0); /* stalled owner unavailable */
+    }
+    s3_remote_physical_stop(true);
+    remote_send(REMOTE_START,1,0x87654321U,clock_value);
+    remote_expect(1,REMOTE_REJECTED,REMOTE_NOT_READY);
+    remote_send(REMOTE_RESET,2,0x87654321U,clock_value);
+    remote_expect(2,REMOTE_REJECTED,REMOTE_NOT_READY);
+    s3_remote_physical_stop(false);
+    remote_send(REMOTE_START,3,0x87654321U,clock_value);
+    remote_expect(3,REMOTE_QUEUED,REMOTE_NONE);
+    s3_remote_physical_stop(true);cycle();remote_expect(3,REMOTE_REJECTED,REMOTE_STALE);
+    assert(g_drive.state==S3_DRIVE_OFF);s3_remote_physical_stop(false);
+    /* STOP between precheck and execute's state change: no success reply or
+     * wheel request is allowed to escape before the next STOP sampling tick. */
+    const unsigned before_velocity=velocity_requests;
+    during_start=stop_during_start;
+    remote_send(REMOTE_START,4,0x87654321U,clock_value);
+    remote_expect(4,REMOTE_QUEUED,REMOTE_NONE);cycle();
+    remote_expect(5,REMOTE_QUEUED,REMOTE_NONE);remote_expect(4,REMOTE_REJECTED,REMOTE_STALE);
+    assert(g_drive.state==S3_DRIVE_OFF&&velocity_requests==before_velocity);
+    cycle();remote_expect(5,REMOTE_EXECUTED,REMOTE_NONE);
+    during_start=reconnect_during_start;
+    remote_send(REMOTE_START,6,0x87654321U,clock_value);
+    remote_expect(6,REMOTE_QUEUED,REMOTE_NONE);cycle();
+    {
+        uint8_t p[REMOTE_REPLY_SIZE];
+        assert(s3_remote_reply_take(p,sizeof p)==sizeof p&&remote_get32(p+2)==6);
+        assert(p[6]==REMOTE_REJECTED&&p[7]==REMOTE_STALE&&remote_get32(p+8)==0x87654321U);
+    }
+    assert(g_drive.state==S3_DRIVE_OFF&&velocity_requests==before_velocity);
+    /* An asynchronous RESET cancelled on reconnect stays a remote operation
+     * during safe owner housekeeping, never a spurious GP acknowledgement. */
+    remote_send(REMOTE_START,1,0xabcddcbaU,clock_value);
+    remote_expect(1,REMOTE_QUEUED,REMOTE_NONE);cycle();remote_expect(1,REMOTE_EXECUTED,REMOTE_NONE);
+    fb_fault=true;cycle();assert(g_drive.state==S3_DRIVE_FAULT);
+    remote_send(REMOTE_RESET,2,0xabcddcbaU,clock_value);
+    remote_expect(2,REMOTE_QUEUED,REMOTE_NONE);cycle();assert(g_reset_waiting&&g_reset_remote);
+    assert(s3_integration_status(&status));sequence=status.command_sequence;
+    s3_remote_link(0,false);
+    {
+        uint8_t p[REMOTE_REPLY_SIZE];
+        assert(s3_remote_reply_take(p,sizeof p)==sizeof p&&remote_get32(p+2)==2);
+        assert(p[6]==REMOTE_CANCELLED&&remote_get32(p+8)==0xabcddcbaU);
+    }
+    s3_remote_link(0x43211234U,true);cycle();
+    assert(s3_integration_status(&status)&&status.command_sequence==sequence);
+    assert(g_drive.state==S3_DRIVE_OFF&&!g_reset_waiting&&!g_reset_remote);
+    {
+        uint8_t p[REMOTE_REPLY_SIZE];assert(s3_remote_reply_take(p,sizeof p)==0);
+        uint8_t vector[REMOTE_COMMAND_SIZE]={3,REMOTE_START};
+        const uint8_t expected[]={0x03,0x01,0x78,0x56,0x34,0x12,0x44,0x33,0x22,0x11,0xdd,0xcc,0xbb,0xaa};
+        remote_put32(vector+2,0x12345678U);remote_put32(vector+6,0x11223344U);remote_put32(vector+10,0xaabbccddU);
+        assert(!memcmp(vector,expected,sizeof vector));
+        const uint8_t reply_vector[]={0x03,0x01,0x78,0x56,0x34,0x12,0x01,0x00,0x44,0x33,0x22,0x11};
+        const remote_request_t r={.action=REMOTE_START,.id=0x12345678U,.epoch=0x11223344U,.valid=true};
+        remote_reply(&r,REMOTE_EXECUTED,REMOTE_NONE);
+        assert(s3_remote_reply_take(p,sizeof p)==sizeof p&&!memcmp(p,reply_vector,sizeof p));
+        assert(remote_newer(1U,0xffffffffU)&&!remote_newer(0xfffffffeU,1U));
+        uint8_t status_vector[REMOTE_STATUS_SIZE];
+        const uint8_t status_expected[]={0x03,0x44,0x33,0x22,0x11,0xdd,0xcc,0xbb,0xaa,0x78,0x56,0x34,0x12,0x03};
+        clock_value=0xaabbccddU;g_remote.epoch=0x11223344U;g_remote.last_id=0x12345678U;
+        g_remote.flags=3;g_remote.sampled_us=clock_value;g_remote.published=false;
+        assert(s3_remote_status_take(status_vector,sizeof status_vector)==sizeof status_vector);
+        assert(!memcmp(status_vector,status_expected,sizeof status_vector));
+    }
+    puts("PASS: remote queued/executed/fault gates, RESET acknowledgement, duplicate/late/expired START, remote/GP STOP priority and reconnect cancellation");
     puts("PASS: production runtime STOP precedence, packed status, calibration, signed errors, map freeze, per-run timing/fault interval, one-press asynchronous RESET, cancellation and timeout");
     return 0;
 }

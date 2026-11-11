@@ -2,6 +2,7 @@
 #define BUDDY3_BARCODE_DECODER_H
 #include <stdbool.h>
 #include <stdint.h>
+#include "barcode_quiet.h"
 #define S3_BARCODE_RUNS (29U) /* * + gap + letter + gap + * */
 #define S3_BARCODE_WIDTH_MIN_PERCENT (65U)
 #define S3_BARCODE_WIDTH_MAX_PERCENT (135U)
@@ -86,8 +87,34 @@ s3_barcode_status_t s3_barcode_update(s3_barcode_decoder_t *decoder,
 #define S3_REC_FAINT_DIP_US (30000U) /* bridge brief low dips inside one bar */
 #define S3_REC_STEP_US (500U)     /* time-step unit of a stored reading     */
 #define S3_REC_STEP_MAX (63U)     /* 6 bits: 31.5 ms > 30 ms sample-age limit */
-#define S3_REC_EXT_MAX (63U)      /* bumps+dips found before wiggles are trimmed */
-typedef enum { S3_REC_WAITING = 0, S3_REC_RECORDING, S3_REC_QUIET } s3_rec_state_t;
+/* Retain plateau ripples until the complete frame can be pruned globally.
+ * The noisy W capture needs 71 extrema for its 15 real bars. Keeping 127
+ * bounds the scratch array at 254 bytes without changing width/quiet rules. */
+#define S3_REC_EXT_MAX (127U)
+#define S3_REC_WORK_UNITS (128U)
+#define S3_REC_FIT_TICKS (32U)
+/* Per-record workspace: no shared job, no unbounded work in the sample task.
+ * Extrema timestamps make each pruning comparison constant-time. */
+typedef struct {
+    uint16_t ext[S3_REC_EXT_MAX];
+    uint32_t ext_us[S3_REC_EXT_MAX];
+    uint32_t runs[S3_BARCODE_RUNS];
+    uint32_t total_us, best_us, peak_us, dip_us, low_us;
+    uint32_t first_us, last_us, max_step_us, edge_us, integral_us;
+    uint32_t segment_us, edge_previous_us;
+    uint32_t minimum, best_score, narrow[2], required_us, quiet_required_us;
+    uint64_t smallest;
+    int32_t bound, best_bias, chosen[2], trial_bias[2];
+    uint16_t frozen_count, cursor, n, best, peak, dip;
+    uint16_t scan, cut, copy, segment, edge_cursor, edges;
+    int16_t tick;
+    uint8_t phase, orientation, star_index, found;
+    bool faint, rising, crossed, strong, varying;
+    bool good, allow_noise, ambiguous, provisional, strict_broken;
+    s3_barcode_stored_result_t candidate;
+} s3_barcode_work_t;
+typedef enum { S3_REC_WAITING = 0, S3_REC_RECORDING, S3_REC_QUIET,
+               S3_REC_PROCESSING } s3_rec_state_t;
 typedef struct {
     uint16_t sample[S3_REC_MAX];  /* darkness:10 | step:6 (S3_REC_STEP_US) */
     uint16_t pre[S3_REC_PRE_MAX]; /* waiting ring: same packed darkness/time format */
@@ -99,6 +126,7 @@ typedef struct {
     uint32_t leading_us;          /* white before retained history; see rec_pre_drop */
     uint32_t frame_us;            /* recording length                       */
     uint32_t required_us;         /* earliest frame_us with enough trailing white */
+    uint32_t quiet_required_us;   /* uninterrupted qualified background after ink */
     uint16_t prev;                /* last waiting reading (becomes sample 0) */
     uint16_t residual_us;         /* rounding carried into the next step    */
     uint16_t noise_q4;            /* quiet-paper absolute differences, /16  */
@@ -112,6 +140,10 @@ typedef struct {
     uint16_t falling : 1;         /* 1 = looking for a dip, 0 = for a bump  */
     uint16_t blocked : 1;         /* after a failure: wait for white first  */
     uint32_t turn_us;             /* time since the last bump/dip turn      */
+    s3_barcode_quiet_t quiet;
+    s3_barcode_work_t work;
+    uint16_t work_units, fit_ticks; /* work used by the most recent update */
+    bool quiet_tolerant, retry_blocked;
 } s3_barcode_record_t;
 void s3_barcode_record_reset(s3_barcode_record_t *record);
 bool s3_barcode_record_active(const s3_barcode_record_t *record);

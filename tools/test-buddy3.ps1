@@ -43,6 +43,35 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Varying barcode correction test compilation failed.' }
     & $varyingExe
     if ($LASTEXITCODE -ne 0) { throw 'Varying barcode correction tests failed.' }
+    $scoreExe = Join-Path $testDir 'test_barcode_fit_error.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\testing\subsystem3\test_barcode_fit_error.c" -o $scoreExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode fit-score test compilation failed.' }
+    & $scoreExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode fit-score tests failed.' }
+    $quietExe = Join-Path $testDir 'test_barcode_quiet.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\testing\subsystem3\test_barcode_quiet.c" -o $quietExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode quiet-clock test compilation failed.' }
+    & $quietExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode quiet-clock tests failed.' }
+    $quietRecordExe = Join-Path $testDir 'test_barcode_quiet_record.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\testing\subsystem3\test_barcode_quiet_record.c" -o $quietRecordExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode quiet-record test compilation failed.' }
+    & $quietRecordExe
+    if ($LASTEXITCODE -ne 0) { throw 'Barcode quiet-record tests failed.' }
+    $incrementalExe = Join-Path $testDir 'test_barcode_incremental.exe'
+    & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        "-I$repoRoot\app_program\subsystem3" `
+        "$repoRoot\testing\subsystem3\test_barcode_incremental.c" -o $incrementalExe
+    if ($LASTEXITCODE -ne 0) { throw 'Incremental barcode test compilation failed.' }
+    & $incrementalExe
+    if ($LASTEXITCODE -ne 0) { throw 'Incremental barcode tests failed.' }
     $wideExe = Join-Path $testDir 'test_barcode_wide.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `

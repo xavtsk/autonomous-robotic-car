@@ -395,19 +395,103 @@ static void test_control_preview(void)
     control_frames=ir_frames=1;
     assert(buddy1_report_heading(42)==E_OK);
     poll_after(20);assert(!strcmp(published_topic,"car/telemetry/heading")&&control_frames==1);
-    poll_after(20);assert(!strcmp(published_topic,MQTT_UTK_DEBUG_TOPIC)&&control_frames==1);
-    poll_after(20);assert(!strcmp(published_topic,MQTT_UTK_CONTROL_DEBUG_TOPIC)&&control_frames==0&&ir_frames==1);
+    poll_after(200);assert(!strcmp(published_topic,MQTT_UTK_CONTROL_DEBUG_TOPIC)&&control_frames==0&&ir_frames==1);
     assert(published_len==70&&published_qos==0&&published_retain==0);
+    poll_after(20);assert(!strcmp(published_topic,MQTT_UTK_DEBUG_TOPIC)&&published_len==sizeof debug_end&&
+                         !memcmp(published,debug_end,sizeof debug_end));
     poll_after(20);assert(!strcmp(published_topic,MQTT_UTK_IR_DEBUG_TOPIC)&&ir_frames==0);
     unsigned count=publish_count;
-    control_frames=1;publish_result=ERR_MEM;poll_after(20);assert(control_frames==0&&publish_count==count);
+    control_frames=1;publish_result=ERR_MEM;poll_after(200);assert(control_frames==0&&publish_count==count);
     publish_result=ERR_OK;poll_after(100);assert(publish_count==count);
-    control_frames=1;defer_completion=1;poll_after(20);
+    control_frames=1;defer_completion=1;poll_after(200);
     assert(publish_count==count+1&&published_len==70);
     ir_frames=1;poll_after(20);assert(publish_count==count+1&&ir_frames==1);
     defer_completion=0;complete_publish(ERR_OK);poll_after(20);assert(ir_frames==0&&publish_count==count+2);
     debug_head=debug_count=0;
-    puts("HOST PASS: control diagnostics below telemetry/BCAP, before IR, exact 70 bytes, drop-on-reject and stable in-flight buffer");
+    puts("HOST PASS: bounded control diagnostics after events, staged BCAP intact, exact 70 bytes, drop-on-reject and one in-flight buffer");
+}
+static void test_control_preview_fairness(unsigned completion_ms)
+{
+    unsigned apps=0, captures=0, previews=0, data_since=2;
+    u32_t previous_preview=0;
+    BUDDY1_SNAPSHOT decoded;
+    empty_outbox(); control_frames=ir_frames=0;
+    /* Establish a capture turn boundary and two completed data packets. */
+    queue_debug(2,debug_summary,sizeof debug_summary);
+    poll_after(200); poll_after(20);
+    assert(!strcmp(published_topic,MQTT_UTK_DEBUG_TOPIC));
+    queue_debug(1,debug_summary,sizeof debug_summary);
+    for(unsigned i=1;i<=4;++i) assert(buddy1_report_motion((H)(2*i),0)==E_OK);
+    control_frames=100;
+    defer_completion=completion_ms!=0;
+    for(unsigned i=0;i<60;++i) {
+        unsigned before=publish_count;
+        poll_after(20);
+        assert(publish_count==before+1);
+        if(!strcmp(published_topic,MQTT_UTK_CONTROL_DEBUG_TOPIC)) {
+            assert(data_since>=2);
+            if(previews) assert((u32_t)(fake_now-previous_preview)>=200U);
+            previous_preview=fake_now; ++previews; data_since=0;
+        } else if(!strcmp(published_topic,"car/telemetry/motion")) {
+            ++apps; ++data_since;
+            assert(buddy1_decode(BUDDY1_TOPIC_MOTION,published,published_len,&decoded));
+            assert(decoded.left_mms==(H)(2*apps));
+            assert(buddy1_report_motion((H)(2*(apps+4)),0)==E_OK);
+        } else {
+            assert(!strcmp(published_topic,MQTT_UTK_DEBUG_TOPIC));
+            assert(published_len==sizeof debug_summary &&
+                   !memcmp(published,debug_summary,sizeof debug_summary));
+            ++captures; ++data_since;
+            queue_debug(1,debug_summary,sizeof debug_summary);
+        }
+        if(completion_ms) {
+            unsigned attempts=publish_attempts;
+            poll_after(completion_ms);
+            assert(publish_attempts==attempts); /* no second in-flight packet */
+            complete_publish(ERR_OK);
+        }
+    }
+    assert(previews>0 && apps>0 && captures>0);
+    assert(apps==captures || apps==captures+1);
+    if(completion_ms>=250) assert(previews==20 && apps==20 && captures==20);
+    else assert(previews<=6 && apps>=27 && captures>=27);
+    /* A fresh preview must not bypass a FIFO-head event, even when overdue. */
+    control_frames=0; debug_head=debug_count=0; empty_outbox();
+    defer_completion=0; poll_after(200); empty_outbox();
+    assert(buddy1_report_heading(43)==E_OK); poll_after(20);
+    assert(buddy1_report_heading(44)==E_OK); poll_after(20);
+    control_frames=1;
+    assert(buddy1_report_heading(45)==E_OK); poll_after(200);
+    assert(!strcmp(published_topic,"car/telemetry/heading") && control_frames==1);
+    poll_after(20); assert(!strcmp(published_topic,MQTT_UTK_CONTROL_DEBUG_TOPIC));
+    control_frames=0;
+    printf("HOST PASS: controller preview progresses with saturated routine/BCAP, >=2 data packets and <=5Hz; completion=%ums\n",completion_ms);
+}
+static void test_control_preview_waits_for_retry(void)
+{
+    unsigned char full[MQTT_UTK_DEBUG_PAYLOAD_MAX];
+    unsigned attempts;
+    memset(full,0xa7,sizeof full); full[5]=0;
+    empty_outbox(); control_frames=ir_frames=0;
+    queue_debug(1,full,sizeof full);
+    publish_result=ERR_MEM; poll_after(200);
+    assert(!strcmp(attempted.topic,MQTT_UTK_DEBUG_TOPIC));
+    control_frames=1;
+    assert(buddy1_report_heading(46)==E_OK);
+    attempts=publish_attempts;
+    poll_after(99); assert(publish_attempts==attempts && control_frames==1);
+    publish_result=ERR_OK; defer_completion=1; poll_after(1);
+    assert(publish_attempts==attempts+1 && !strcmp(published_topic,MQTT_UTK_DEBUG_TOPIC) &&
+           published_len==sizeof full && !memcmp(published,full,sizeof full) && control_frames==1);
+    poll_after(250); assert(publish_attempts==attempts+1 && control_frames==1);
+    complete_publish(ERR_TIMEOUT); poll_after(100);
+    assert(publish_attempts==attempts+2 && !strcmp(published_topic,MQTT_UTK_DEBUG_TOPIC) &&
+           published_len==sizeof full && !memcmp(published,full,sizeof full) && control_frames==1);
+    complete_publish(ERR_OK); defer_completion=0;
+    poll_after(20); assert(!strcmp(published_topic,"car/telemetry/heading") && control_frames==1);
+    poll_after(20); assert(!strcmp(published_topic,MQTT_UTK_CONTROL_DEBUG_TOPIC) && control_frames==0);
+    debug_head=debug_count=0;
+    puts("HOST PASS: overdue controller preview waits for exact BCAP retries, in-flight completion and queued event");
 }
 #endif
 static void test_publish_backpressure(void)
@@ -783,6 +867,9 @@ int main(void)
 #if APP_IR_DEBUG
     test_ir_preview();
     test_control_preview();
+    test_control_preview_fairness(0);
+    test_control_preview_fairness(250);
+    test_control_preview_waits_for_retry();
 #endif
     emit_vectors();
     puts("HOST PASS: binary FIFO, full speed range, 64 fault masks, eight concurrent producers, real MQTT callbacks and bridge");

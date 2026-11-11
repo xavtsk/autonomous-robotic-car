@@ -10,6 +10,10 @@
 #define TERRAIN_PEAK_VALID 4U
 #define TERRAIN_CALIBRATED 8U
 #define TERRAIN_FAULT 16U
+typedef enum {
+    TERRAIN_HUMP_LONGITUDINAL=0,
+    TERRAIN_HUMP_RIGHT_WHEEL
+} terrain_hump_geometry_t;
 typedef struct {
     uint32_t timestamp_us;
     float pitch_deg, roll_deg, turn_dps, peak_m;
@@ -32,9 +36,16 @@ typedef struct {
     uint32_t previous_us, heading_us, epoch;
     unsigned stable_count;
     terrain_state_t candidate;
+    terrain_hump_geometry_t hump_geometry;
+    float wheel_track_m;
     bool seen, odometry_seen, heading_seen, magnetic_calibrated;
 } terrain_monitor_t;
 void terrain_monitor_init(terrain_monitor_t *t);
+/* Portable default is longitudinal. Right-wheel mode assumes the left wheel
+ * stays on level ground; track is the wheel-centre spacing in metres.
+ * Selecting a geometry clears run statistics and retains IMU calibration. */
+bool terrain_monitor_set_hump_geometry(terrain_monitor_t *t,
+                                      terrain_hump_geometry_t geometry,float track_m);
 /* New run clears peaks/history but retains calibration. Owner task only. */
 void terrain_monitor_reset_run(terrain_monitor_t *t);
 /* Vehicle-axis hard-iron offsets and diagonal soft-iron scale. Must come from

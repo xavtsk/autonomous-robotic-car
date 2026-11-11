@@ -1,4 +1,4 @@
-/* Browser display only. All robot commands use the existing MQTT setup APIs. */
+/* Browser display and controls. The local service validates all robot commands. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -16,6 +16,9 @@
   let traceLoading = false;
   let importing = false;
   let activePosts = new Set();
+  const activeControlPosts = new Set();
+  let controlRequest = 0;
+  let localControlFeedback = null;
   let lastEventKey = '';
   let lastRunsKey = '';
   let lastMapResult = '';
@@ -113,6 +116,44 @@
     }
   }
 
+  async function sendControl(action) {
+    const control = state?.control;
+    if (!['start', 'stop', 'reset'].includes(action) || transportError ||
+        !control?.[`can_${action}`] || activeControlPosts.has(action)) return;
+    // STOP must be able to overtake an in-flight START or RESET HTTP request.
+    if (action !== 'stop' && (activeControlPosts.size || control.pending)) return;
+    const request = ++controlRequest;
+    const previousRequestId = control.last_request?.id;
+    activeControlPosts.add(action);
+    localControlFeedback = {status: 'pending', detail: `Sending ${action.toUpperCase()} request…`};
+    renderRobotControls();
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 5000);
+    try {
+      const result = await api('/api/control', {
+        method: 'POST', signal: controller.signal,
+        headers: {'Content-Type': 'application/json', 'X-Dashboard-Token': token},
+        body: JSON.stringify({action})
+      });
+      // A late START response must not replace feedback for a newer STOP.
+      if (request !== controlRequest) return;
+      localControlFeedback = null;
+      if (result.state) { state = result.state; transportError = ''; render(); }
+    } catch (error) {
+      if (request !== controlRequest) return;
+      localControlFeedback = {
+        status: 'error', action, previousRequestId,
+        detail: error.name === 'AbortError'
+          ? `${action.toUpperCase()} request timed out. Its outcome is unconfirmed; check the reported robot state.`
+          : `${action.toUpperCase()} request: ${error.message}`
+      };
+    } finally {
+      clearTimeout(deadline);
+      activeControlPosts.delete(action);
+      renderRobotControls();
+    }
+  }
+
   function feedback(id, status, message) {
     $(id).dataset.status = status;
     $(id).textContent = message;
@@ -172,15 +213,22 @@
   }
 
   function renderOverview() {
-    const reported = field('state', 'state');
+    const observed = state?.control?.observed;
+    const liveController = !transportError && observed?.fresh && observed.state;
+    // Controller previews are periodic; the historical state topic only sends
+    // transitions and may be absent after the laptop service restarts.
+    const reported = liveController ? observed.state : field('state', 'state');
     const stateSection = section('state');
     $('robot-state').textContent = reported ? titleCase(reported) : 'Waiting for data';
-    $('robot-state').className = reported === 'error' ? 'error-text' : '';
-    $('robot-state').dataset.active = String(['line_following', 'turning_left', 'turning_right', 'uturn', 'avoiding_obstacle'].includes(reported));
+    $('robot-state').className = ['error', 'fault'].includes(reported) ? 'error-text' : '';
+    $('robot-state').dataset.active = String(liveController ? Boolean(observed.running)
+      : ['line_following', 'turning_left', 'turning_right', 'uturn', 'avoiding_obstacle'].includes(reported));
     const diagnostic=state?.diagnostics?.controller;
     const diagnosticReason=diagnostic?.latest?.data?.reason;
     const detailedReasons=['OK','IR sensor fault','Motor / encoder fault','Motion request rejected','Line lost','Missing direction / duplicate barcode','Barcode not mapped','Controller timeout','Motion report fault','Bad input','Terrain / IMU fault'];
-    $('robot-state-detail').textContent = reported ? `${received(stateSection)}. ${diagnostic?.received ? `Controller: ${detailedReasons[diagnosticReason]} · ${diagnostic.stale?'stale · ':''}${age(diagnostic.age_s)}.` : 'Detailed controller reason requires updated diagnostic firmware.'}` : 'No valid state message received yet.';
+    $('robot-state-detail').textContent = liveController
+      ? `Live controller report${number(diagnostic?.age_s) ? ` · ${age(diagnostic.age_s).toLowerCase()}` : ''}.${observed.reason ? ` Reason: ${observed.reason}.` : ''}${observed.stopped ? ' Motors stopped and braked.' : ''}`
+      : reported ? `${received(stateSection)}. ${diagnostic?.received ? `Controller: ${detailedReasons[diagnosticReason]} · ${diagnostic.stale?'stale · ':''}${age(diagnostic.age_s)}.` : 'Detailed controller reason requires updated diagnostic firmware.'}` : 'No valid state message received yet.';
     const rows = [
       ['Left wheel speed', field('motion', 'left_mms'), 'mm/s', 'motion'],
       ['Right wheel speed', field('motion', 'right_mms'), 'mm/s', 'motion'],
@@ -213,7 +261,60 @@
     if (new Set(letters).size !== 4) return 'Each action needs a different letter.';
     return '';
   }
+
+  function renderRobotControls() {
+    const control = state?.control || {};
+    const observed = control.observed || {};
+    const offline = Boolean(transportError);
+    const busy = activeControlPosts.size > 0 || Boolean(control.pending);
+    $('control-start').disabled = offline || !control.can_start || busy;
+    $('control-reset').disabled = offline || !control.can_reset || busy;
+    // A stale car or another pending action does not block a broker-connected STOP.
+    $('control-stop').disabled = offline || !control.can_stop || activeControlPosts.has('stop');
+    $('control-start').textContent = activeControlPosts.has('start') ? 'Sending start…' : 'Start';
+    $('control-stop').textContent = activeControlPosts.has('stop') ? 'Sending stop…' : 'Stop';
+    $('control-reset').textContent = activeControlPosts.has('reset') ? 'Resetting…' : 'Reset fault';
+    $('control-reset').hidden = !control.can_reset && !['fault', 'error'].includes(observed.state) &&
+      !activeControlPosts.has('reset') && !(control.pending && control.last_request?.action === 'reset');
+    for (const action of ['start', 'stop', 'reset']) {
+      const button = $(`control-${action}`);
+      button.setAttribute('aria-busy', String(activeControlPosts.has(action)));
+      button.title = control.reasons?.[action] || '';
+    }
+    const fresh = observed.fresh && !offline;
+    $('control-observed').textContent = observed.state
+      ? `${fresh ? 'Robot reports' : 'Last reported'}: ${titleCase(observed.state)}${fresh ? '' : ' · state unconfirmed'}`
+      : 'Robot state not yet received';
+    $('control-observed').classList.toggle('warning-text', !fresh);
+    const request = control.last_request;
+    if (localControlFeedback?.status === 'error' && request?.action === localControlFeedback.action &&
+        request.id !== localControlFeedback.previousRequestId) {
+      // Polling can recover the outcome even if the POST response was lost.
+      localControlFeedback = null;
+    }
+    if (offline) {
+      feedback('control-feedback', 'error', 'Local service unavailable. Remote commands cannot be sent; use GP21 or the power switch to stop.');
+    } else if (localControlFeedback) {
+      feedback('control-feedback', localControlFeedback.status, localControlFeedback.detail);
+    } else if (request) {
+      const labels = {
+        sending: 'sending', sent: 'sent; awaiting robot', queued: 'queued; awaiting robot',
+        executed: 'executed; awaiting observed state', cancelled: 'cancelled',
+        rejected: 'rejected', observed: 'confirmed by robot', timeout: 'unconfirmed', error: 'failed'
+      };
+      const status = request.status === 'observed' ? 'accepted'
+        : ['sending', 'sent', 'queued', 'executed'].includes(request.status) ? 'pending' : request.status;
+      feedback('control-feedback', status, `${titleCase(request.action)} request · ${labels[request.status] || readable(request.status)}. ${request.detail || ''}`.trim());
+    } else {
+      feedback('control-feedback', 'idle', state?.control ? 'No control request sent from this dashboard.' : 'Waiting for robot control status.');
+    }
+    $('control-guidance').textContent = `${control.reason || 'Start needs recent robot readings.'} ${state?.mode === 'demo'
+      ? 'Simulation only. These controls do not send commands to a car.'
+      : 'GP21 and the power switch remain available on the car.'}`;
+  }
+
   function renderControls() {
+    renderRobotControls();
     const online = connected() && state?.car?.status === 'online';
     const commands = state?.commands || {};
     const mapping = commands.map || {};
@@ -625,6 +726,9 @@
     try { await post('/api/demo', {scenario: $('demo-scenario').value}); }
     catch (error) { feedback('snapshot-feedback', 'error', error.message); }
   });
+  for (const action of ['start', 'stop', 'reset']) {
+    $(`control-${action}`).addEventListener('click', () => sendControl(action));
+  }
   actions.forEach(action => {
     const input = $(`map-${action}`);
     input.addEventListener('input', () => { input.value = input.value.toUpperCase(); mapDirty = true; renderControls(); });

@@ -91,7 +91,10 @@ void terrain_control_report(void)
         if(!control.hump_sent || control.sent_run!=control.run ||
            control.sent_humps!=control.humps || control.sent_height!=height) {
             ER er=buddy1_report_hump(control.humps,height);
-            if(er==E_OK || er==E_TMOUT) {
+            /* E_TMOUT updates the snapshot cache but does not enqueue the
+             * live report. Keep it pending until a later nonblocking attempt
+             * succeeds, using the latest count/peak from this run. */
+            if(er==E_OK) {
                 control.hump_sent=true; control.hump_invalidated=false; control.sent_humps=control.humps;
                 control.sent_height=height; control.sent_run=control.run;
             }

@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import threading
 
-COMMAND_TOPICS = {"car/cmd/barcode_map", "car/cmd/snapshot"}
+COMMAND_TOPICS = {"car/cmd/barcode_map", "car/cmd/snapshot", "car/cmd/control"}
 
 
 def validate_address(host, port):
@@ -128,7 +128,7 @@ class MqttTransport:
             host, port = self.host, self.port
         try:
             result = subprocess.run(["mosquitto_pub", "-h", host, "-p", str(port),
-                                     "-t", topic, "-q", "1", "-s"], input=bytes(payload),
+                                     "-t", topic, "-q", "0" if topic == "car/cmd/control" else "1", "-s"], input=bytes(payload),
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     timeout=5, check=False)
         except (OSError, subprocess.TimeoutExpired) as exc:
@@ -242,7 +242,9 @@ class NativeMqttTransport:
         try:
             sender.connect(host, port, keepalive=20)
             sender.loop_start()
-            info = sender.publish(topic, bytes(payload), qos=1, retain=False)
+            # Motion commands are one-shot QoS 0: never queued/replayed on a
+            # reconnect. A separate correlated firmware reply confirms queueing.
+            info = sender.publish(topic, bytes(payload), qos=0 if topic == "car/cmd/control" else 1, retain=False)
             info.wait_for_publish(timeout=5)
             if not info.is_published():
                 raise RuntimeError("MQTT publish timed out; command outcome unknown")
