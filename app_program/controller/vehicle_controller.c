@@ -34,7 +34,54 @@ static struct {
     uint16_t scan;
     unsigned route:2, invalidated:1;
     signed echo:2; /* -1 unknown, 0 healthy, 1 no echo */
+    uint16_t profile_scan;       /* last scan id sent on car/telemetry/scan */
+    unsigned profile_sent:1;
+    unsigned divider:5;          /* car/telemetry/avoidance every 20 cycles */
 } obstacle_report;
+/* Everything Buddy 5 knows, for the laptop: live range, servo angle and
+ * bypass progress at 5 Hz (phase-shifted from the other 200 ms reports so the
+ * four-message outbox is not filled in one cycle), and the full FR6 profile
+ * once per finished scan or side peek. Unusable values are sent as zero with
+ * their validity cleared, never as a plausible number. */
+#define S5_LIVE_PERIOD 20U
+static void obstacle_live_report(const s5_observation_t *o, bool have, unsigned control)
+{
+    BUDDY1_AVOIDANCE a = {0};
+    if (++obstacle_report.divider < S5_LIVE_PERIOD) return;
+    obstacle_report.divider = 0U;
+    if (have) {
+        a.no_echo = o->no_echo ? 1U : 0U;
+        if (o->range_valid && !o->no_echo && o->range_mm >= BUDDY1_OBSTACLE_MIN_MM &&
+            o->range_mm <= BUDDY1_OBSTACLE_MAX_MM) { a.range_valid = 1U; a.range_mm = o->range_mm; }
+    }
+    a.servo_deg = subsystem5_servo_angle();
+    if (a.servo_deg > BUDDY1_SERVO_MAX_DEG) a.servo_deg = 0U;
+    a.state = (uint8_t)(control & 7U); a.fault = (uint8_t)((control >> 3) & 7U);
+    a.route = (uint8_t)((control >> 6) & 3U); a.leg = (uint8_t)((control >> 8) & 15U);
+    a.pass = (uint8_t)((control >> 12) & 7U); a.swapped = (uint8_t)((control >> 15) & 1U);
+    if (a.state > BUDDY1_S5_STATE_MAX) a.state = 0U;
+    if (a.route > BUDDY1_ROUTE_RIGHT) a.route = 0U;
+    if (a.pass > BUDDY1_S5_PASS_MAX) a.pass = 0U;
+    (void)buddy1_report_avoidance(&a);   /* QoS 0: the next report follows */
+}
+static void obstacle_profile_report(const s5_observation_t *o)
+{
+    const s5_profile_t *p = &o->profile;
+    BUDDY1_SCAN q = {0};
+    ER er;
+    if (!o->scan_done || (obstacle_report.profile_sent && obstacle_report.profile_scan == o->scan_id)) return;
+    q.scan_id = (uint8_t)(o->scan_id & 0xFFU);
+    if (p->valid) {
+        q.valid = 1U; q.closest_mm = p->closest_mm; q.width_mm = p->width_mm;
+        q.left_clear_mm = p->left_clear_mm; q.right_clear_mm = p->right_clear_mm;
+        q.forward_mm = p->forward_mm; q.left_edge_mm = p->left_edge_mm; q.right_edge_mm = p->right_edge_mm;
+    }
+    er = buddy1_report_scan(&q);
+    if (er == E_PAR && q.valid) { q = (BUDDY1_SCAN){0}; q.scan_id = (uint8_t)(o->scan_id & 0xFFU); er = buddy1_report_scan(&q); }
+    if (er == E_OK || er == E_TMOUT || er == E_PAR) {
+        obstacle_report.profile_scan = o->scan_id; obstacle_report.profile_sent = 1U;
+    }
+}
 #endif
 /* True only between a prepare_start() that newly froze the Buddy 1 map and
  * the end of that same START attempt. Only the sampling owner touches it. */
@@ -158,6 +205,8 @@ ER vehicle_controller_init(void)
 #if APP_S5
     obstacle_report.scan=0; obstacle_report.route=0;
     obstacle_report.echo=-1; obstacle_report.invalidated=false;
+    obstacle_report.profile_scan=0U; obstacle_report.profile_sent=0U;
+    obstacle_report.divider=S5_LIVE_PERIOD/4U;
 #endif
     return E_OK;
 }
@@ -273,10 +322,14 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
     {
         s5_observation_t obstacle;
         unsigned control=subsystem5_controller_status();
-        unsigned obstacle_state=control&7U,route=control>>6;
+        unsigned obstacle_state=control&7U,route=(control>>6)&3U;
+        bool have_obstacle;
         if (status->state==S3_DRIVE_MANOEUVRE && obstacle_state>=S5_WAIT_STOP && obstacle_state<=S5_FINISH)
             state=BUDDY1_STATE_AVOIDING_OBSTACLE;
-        if (subsystem5_snapshot(&obstacle)) {
+        have_obstacle=subsystem5_snapshot(&obstacle);
+        obstacle_live_report(&obstacle, have_obstacle, control);
+        if (have_obstacle) {
+            obstacle_profile_report(&obstacle);
             if (obstacle_report.echo!=(int)obstacle.no_echo) {
                 ER er=buddy1_update_faults(BUDDY1_FAULT_NO_ECHO,obstacle.no_echo?BUDDY1_FAULT_NO_ECHO:0U);
                 if(er==E_OK || er==E_TMOUT) { obstacle_report.echo=(int)obstacle.no_echo; }

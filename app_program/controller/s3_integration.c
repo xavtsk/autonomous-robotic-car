@@ -801,7 +801,7 @@ static void report(INT code, void *unused)
         if (subsystem5_snapshot(&obstacle)) {
             unsigned status=subsystem5_controller_status();
             tm_printf((UB *)"[S5] state=%u fault=%u route=%u range_mm=%u valid=%u no_echo=%u scan=%u profile=%u width_mm=%u left_mm=%u right_mm=%u\n",
-                status&7U,(status>>3)&7U,status>>6,(unsigned)obstacle.range_mm,
+                status&7U,(status>>3)&7U,(status>>6)&3U,(unsigned)obstacle.range_mm,
                 (unsigned)obstacle.range_valid,(unsigned)obstacle.no_echo,(unsigned)obstacle.scan_id,
                 (unsigned)obstacle.profile.valid,(unsigned)obstacle.profile.width_mm,
                 (unsigned)obstacle.profile.left_clear_mm,(unsigned)obstacle.profile.right_clear_mm);

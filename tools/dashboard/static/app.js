@@ -78,6 +78,36 @@
     if (!section('terrain')?.valid) return null;
     return field('terrain', 'peak_valid') ? String(field('terrain', 'peak_mm')) : 'No hump yet this run';
   }
+  // Buddy 5: an unusable value is a state ("No echo", "No profile"), never 0.
+  function avoidField(key, unit, missing) {
+    if (!section('avoidance')?.valid) return '—';
+    const value = field('avoidance', key);
+    return value === null ? missing : `${value} ${unit}`;
+  }
+  function avoidText(key) {
+    const value = field('avoidance', key);
+    return value === null ? '—' : titleCase(String(value).replaceAll('_', ' '));
+  }
+  function bypassStep() {
+    if (!section('avoidance')?.valid) return '—';
+    const state = field('avoidance', 'state');
+    if (!['moving', 'finishing'].includes(state)) return '—';
+    const leg = field('avoidance', 'leg');
+    const pass = leg === 3 ? `, ${String(field('avoidance', 'pass_step')).replaceAll('_', ' ')}` : '';
+    return `Leg ${leg}${pass}, ${field('avoidance', 'route')} side${field('avoidance', 'swapped') ? ' (switched)' : ''}`;
+  }
+  function scanField(key, unit, missing = 'No profile') {
+    if (!section('scan')?.valid) return '—';
+    if (key !== 'scan_id' && !field('scan', 'valid')) return missing;
+    const value = field('scan', key);
+    if (key === 'scan_id') return field('scan', 'valid') ? `#${value}` : `#${value} · ${missing}`;
+    return value === null ? missing : `${value} ${unit}`;
+  }
+  function scanEdges() {
+    if (!section('scan')?.valid) return '—';
+    if (!field('scan', 'valid')) return 'No profile';
+    return `${field('scan', 'left_edge_mm')} / ${field('scan', 'right_edge_mm')} mm`;
+  }
   function connected() {
     return !transportError && state?.connection?.status === 'connected';
   }
@@ -239,7 +269,9 @@
     if (section('heading')?.received_at) rows.push(['Heading', field('heading', 'heading_deg'), '°', 'heading']);
     if (section('terrain')?.received_at) rows.push(['Pitch (+ nose up)', tiltAngle('pitch_deg'), field('terrain', 'pitch_deg') === null ? '' : '°', 'terrain'], ['Roll (+ right side up)', tiltAngle('roll_deg'), field('terrain', 'roll_deg') === null ? '' : '°', 'terrain'], ['Terrain', field('terrain', 'state') === null ? null : titleCase(field('terrain', 'state')), '', 'terrain'], ['Climb on current hump', climbText(), field('terrain', 'on_hump') ? 'mm' : '', 'terrain'], ['Highest hump this run', peakText(), field('terrain', 'peak_valid') ? 'mm' : '', 'terrain']);
     if (section('hump')?.received_at) rows.push(['Humps reported', field('hump', 'count'), '', 'hump'], ['Reported hump height', field('hump', 'height_mm'), 'mm', 'hump']);
+    if (section('avoidance')?.received_at) rows.push(['Front range', field('avoidance', 'range_mm') ?? (field('avoidance', 'no_echo') ? 'No echo' : 'Unavailable'), field('avoidance', 'range_mm') === null ? '' : 'mm', 'avoidance'], ['Obstacle avoidance', titleCase(String(field('avoidance', 'state') ?? '').replaceAll('_', ' ')), '', 'avoidance']);
     if (section('obstacle')?.received_at) rows.push(['Obstacle distance', field('obstacle', 'distance_mm'), 'mm', 'obstacle'], ['Obstacle width', field('obstacle', 'width_mm'), 'mm', 'obstacle'], ['Selected route', readable(field('obstacle', 'route')), '', 'obstacle']);
+    if (section('scan')?.received_at && field('scan', 'valid')) rows.push(['Clearance left / right', `${field('scan', 'left_clear_mm')} / ${field('scan', 'right_clear_mm')}`, 'mm', 'scan']);
     const body = document.createDocumentFragment();
     for (const [label, value, unit, source] of rows) {
       const tr = element('tr');
@@ -437,15 +469,25 @@
         unavailable: 'Firmware built with S4=1 publishes car/telemetry/terrain every 200 ms, also while stopped: pitch/roll, terrain state (an impact anywhere in the 200 ms is reported), the height climbed so far on a hump being crossed, and the highest completed hump since START. It also publishes the completed-hump count (car/telemetry/hump, during runs) and the IMU fault bit; default builds (S4=0) publish none of them. "Unavailable" tilt means the IMU gave no usable angle (not calibrated, moving too hard, stale), not 0°. Heights need the wheels to turn (they come from wheel distance × tilt). The heading topic stays empty and reserved for Buddy 4: the encoder heading used for the route map is in car/telemetry/pose. Raw accelerometer/compass and calibration details are not published. Empty graphs do not mean zero height or a healthy IMU.'
       },
       '5': {
-        title: 'Buddy 5 · Obstacle / recovery', description: 'Obstacle summary, no-echo fault and avoidance state, published by firmware built with S5=1.',
+        title: 'Buddy 5 · Obstacle / recovery', description: 'Live front range, servo angle and bypass progress (5 Hz), the full obstacle profile of every scan or side peek, the no-echo fault and the avoidance state, published by firmware built with S5=1.',
         rows: [
-          ['Reported distance', valueUnit('obstacle', 'distance_mm', 'mm'), source('obstacle'), 'obstacle'],
-          ['Reported width', valueUnit('obstacle', 'width_mm', 'mm'), source('obstacle'), 'obstacle'],
+          ['Front range (live)', avoidField('range_mm', 'mm', field('avoidance', 'no_echo') ? 'No echo' : 'Unavailable'), source('avoidance'), 'avoidance'],
+          ['Servo angle (90° = ahead)', avoidField('servo_deg', '°', 'Not positioned yet'), source('avoidance'), 'avoidance'],
+          ['Bypass state', avoidText('state'), source('avoidance'), 'avoidance'],
+          ['Bypass step', bypassStep(), source('avoidance'), 'avoidance'],
+          ['Buddy 5 fault reason', avoidText('fault'), source('avoidance'), 'avoidance'],
+          ['Last scan', scanField('scan_id', '', 'No profile (scan failed)'), source('scan'), 'scan'],
+          ['Closest distance', scanField('closest_mm', 'mm'), source('scan'), 'scan'],
+          ['Obstacle width', scanField('width_mm', 'mm'), source('scan'), 'scan'],
+          ['Obstacle position (left / right edge, + = left)', scanEdges(), source('scan'), 'scan'],
+          ['Depth to far face', scanField('forward_mm', 'mm'), source('scan'), 'scan'],
+          ['Left-side clearance', scanField('left_clear_mm', 'mm'), source('scan'), 'scan'],
+          ['Right-side clearance', scanField('right_clear_mm', 'mm'), source('scan'), 'scan'],
           ['Selected route', field('obstacle', 'route') === null ? '—' : titleCase(field('obstacle', 'route')), source('obstacle'), 'obstacle'],
           ['No-echo fault bit', faultGroup(['no_echo']), source('faults'), 'faults'],
           commonState
         ],
-        unavailable: 'Firmware built with S5=1 (and S5_HARDWARE_CONFIRMED=1) publishes the closest distance, width and chosen route of each completed scan, the no-echo fault bit and the "avoiding obstacle" state; default builds (S5=0) publish none of them. Servo angles, individual scan samples and left/right clearance are not published. No scan profile is invented from one summary distance. Detecting a line alone does not prove it is the original line.'
+        unavailable: 'Firmware built with S5=1 (and S5_HARDWARE_CONFIRMED=1) publishes car/telemetry/avoidance every 200 ms (front range, no-echo, last commanded servo angle, bypass state, fault reason, route, leg, leg-3 step and side swap) and car/telemetry/scan after every finished scan or side peek (closest distance, width, left/right edge position, depth, left/right clearance; a failed scan is shown as "no profile"). Also the per-scan summary (car/telemetry/obstacle), the no-echo fault bit and the "avoiding obstacle" state. Default builds (S5=0) publish none of them. The servo angle is the last commanded angle, not a measured one. Individual scan samples stay USB-only ([S5SCAN]). Detecting a line alone does not prove it is the original line.'
       }
     };
     return definitions[buddy];

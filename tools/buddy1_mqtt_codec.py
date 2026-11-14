@@ -22,6 +22,14 @@ POSE_DISTANCE_MOD = 1 << POSE_DISTANCE_BITS
 TILT_BITS = 11            # signed 0.1 degree, -90.0..+90.0 (Buddy 4 widths)
 TILT_LIMIT_X10 = 900
 TERRAIN_BITS = 1 + 2 * TILT_BITS + 3 + 10 + 10  # 46: tilt, state, climb, run peak
+# Buddy 5 (car/telemetry/avoidance and car/telemetry/scan, live only).
+S5_STATES = ("idle", "waiting_for_stop", "scanning", "moving", "finishing", "complete", "fault")
+S5_FAULTS = ("none", "bad_range", "no_path", "scan_failed", "deadline", "no_line",
+             "motion_error", "interrupted")
+S5_PASSES = ("approach", "peek", "peeking", "step", "extra")
+S5_ROUTES = ("unknown", "left", "right")
+AVOIDANCE_BITS = 38
+SCAN_BITS = 95
 TERRAIN_STATES = ("unknown", "stationary", "moving", "accelerating", "turning",
                   "climbing", "descending", "impact")
 
@@ -134,6 +142,50 @@ def decode(topic, payload):
         if heading > 359:
             raise ValueError("invalid heading")
         return dict(distance_cm_mod=value & (POSE_DISTANCE_MOD - 1), heading_deg=heading)
+    if topic == "car/telemetry/avoidance":
+        value = _check(payload, AVOIDANCE_BITS)
+        fields, shift = {}, 0
+        for name, width in (("range_valid", 1), ("no_echo", 1), ("range_mm", 12), ("servo_deg", 8),
+                            ("state", 3), ("fault", 3), ("route", 2), ("leg", 4), ("pass", 3),
+                            ("swapped", 1)):
+            fields[name] = (value >> shift) & ((1 << width) - 1)
+            shift += width
+        if fields["range_mm"] > 4000 or (fields["range_valid"] and (
+                fields["range_mm"] < 30 or fields["no_echo"])) or (
+                not fields["range_valid"] and fields["range_mm"]):
+            raise ValueError("invalid front range")
+        if fields["servo_deg"] > 180 or fields["state"] >= len(S5_STATES) or \
+                fields["route"] >= len(S5_ROUTES) or fields["pass"] >= len(S5_PASSES):
+            raise ValueError("Buddy 5 field out of range")
+        return dict(range_mm=fields["range_mm"] if fields["range_valid"] else None,
+                    no_echo=bool(fields["no_echo"]),
+                    servo_deg=fields["servo_deg"] or None,
+                    state=S5_STATES[fields["state"]], fault=S5_FAULTS[fields["fault"]],
+                    route=S5_ROUTES[fields["route"]], leg=fields["leg"],
+                    pass_step=S5_PASSES[fields["pass"]], swapped=bool(fields["swapped"]))
+    if topic == "car/telemetry/scan":
+        value = _check(payload, SCAN_BITS)
+        fields, shift = {}, 0
+        for name, width in (("valid", 1), ("scan_id", 8), ("closest_mm", 12), ("width_mm", 12),
+                            ("left_clear_mm", 12), ("right_clear_mm", 12), ("forward_mm", 12),
+                            ("left_edge_mm", 13), ("right_edge_mm", 13)):
+            fields[name] = (value >> shift) & ((1 << width) - 1)
+            shift += width
+        fields["left_edge_mm"] -= 4000
+        fields["right_edge_mm"] -= 4000
+        values = ("closest_mm", "width_mm", "left_clear_mm", "right_clear_mm", "forward_mm",
+                  "left_edge_mm", "right_edge_mm")
+        if any(fields[k] > 4000 for k in values if k != "width_mm"):
+            raise ValueError("scan field out of range")
+        if fields["valid"]:
+            if fields["closest_mm"] < 30 or fields["left_edge_mm"] < fields["right_edge_mm"]:
+                raise ValueError("inconsistent obstacle profile")
+            out = {k: fields[k] for k in values}
+        else:
+            if any(fields[k] for k in values):
+                raise ValueError("invalid profile with nonzero values")
+            out = {k: None for k in values}
+        return dict(valid=bool(fields["valid"]), scan_id=fields["scan_id"], **out)
     if topic == "car/telemetry/terrain":
         value = _check(payload, TERRAIN_BITS)
         valid = bool(value & 1)

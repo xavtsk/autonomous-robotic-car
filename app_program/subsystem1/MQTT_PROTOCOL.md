@@ -42,6 +42,8 @@ Bit positions below are relative to the body, excluding the version byte.
 | `car/telemetry/faults` | shared fault mask bits 0–5 | 2 |
 | `car/telemetry/pose` | distance since START, cm modulo 4096, bits 0–11; heading since START bits 12–20 | 4 |
 | `car/telemetry/terrain` | tilt-available bit 0; pitch bits 1–11; roll bits 12–22 (signed, 0.1°); terrain state bits 23–25; on-hump bit 26; climb height bits 27–35 (0–500 mm); peak-valid bit 36; run peak bits 37–45 (0–500 mm); two zero padding bits | 7 |
+| `car/telemetry/avoidance` | range-valid bit 0; no-echo bit 1; front range bits 2–13 (30–4000 mm, 0 if not valid); servo angle bits 14–21 (1–180°, 0 unknown); Buddy 5 state bits 22–24; fault bits 25–27; route bits 28–29; leg bits 30–33; leg-3 step bits 34–36; side-swapped bit 37; two zero padding bits | 6 |
+| `car/telemetry/scan` | profile-valid bit 0; scan id bits 1–8; closest bits 9–20; width bits 21–32; left clearance bits 33–44; right clearance bits 45–56; depth bits 57–68; left edge bits 69–81 and right edge bits 82–94 (−4000…+4000 mm, sent +4000); one zero padding bit | 13 |
 | `car/reply/snapshot` | validity and all seven sections, described below | 14 |
 | `car/reply/barcode_map` | result bits 0–1: 0 OK, 1 invalid, 2 configuration closed, 3 internal error | 2 |
 | `car/status` | alive bit 0; faults-valid bit 1; fault mask bits 2–7 | 2 |
@@ -109,6 +111,41 @@ height in mm, and validity for each value.
 
 `car/telemetry/hump` is unchanged: count + height of completed humps, sent
 during runs when either changes.
+
+### Buddy 5 (`car/telemetry/avoidance`, `car/telemetry/scan`, added 13 Nov 2026)
+
+Both are live only: no snapshot section, never cached. `car/telemetry/obstacle`
+(closest distance, width, route per scan) is unchanged. Together they carry what
+the Week 6 design and Tribunal 1 assign to Buddy 5: the FR6 obstacle profile
+(position, width, closest distance, left/right clearance), the servo angle, and
+the avoidance state, request progress and unsafe-route / timeout / fault reasons.
+
+**Avoidance**, every 200 ms (S5=1 builds), with or without a run:
+- **Front range**: latest front ultrasonic reading, 30–4000 mm. Range-valid = 0
+  when there is no usable reading (servo facing elsewhere, stale, invalid); the
+  value is then zero. No-echo = 1 is the confirmed no-echo condition (never
+  together with a valid range). Show either as unavailable, never as 0 mm.
+- **Servo angle**: last commanded angle, 90 = straight ahead, 0 = not yet
+  positioned. Commanded, not measured.
+- **State**: idle=0, waiting for stop, scanning, moving, finishing, complete,
+  fault=6. **Fault**: none=0, bad range, no path, scan failed, deadline, no line,
+  motion error, interrupted=7. **Route**: unknown=0, left, right.
+- **Leg** (0–15) and **leg-3 step** (approach=0, peek, peeking, step, extra=4)
+  of the bypass; **swapped** = the first side was blocked and the other side
+  is being used.
+- Example `03 71 86 e5 e0 2c` = front 412 mm, servo 150°, moving, right side,
+  leg 3, step, switched sides.
+
+**Scan**, once per finished full scan or side peek (a new scan id):
+- **Profile valid** = 0 for a failed scan; every value is then zero (edges are
+  sent as +4000 = 0 mm). Only the low 8 bits of Buddy 5's scan id are sent.
+- **Closest** 30–4000 mm, **width** 0–4095 mm, **left/right clearance** and
+  **depth** (to the far face) 0–4000 mm, **left/right edge** −4000…+4000 mm
+  across the car's centreline (+ = left). Left edge ≥ right edge.
+- Example `03 0f f4 01 32 68 01 28 f8 c2 06 9a 3a` = scan 7, closest 250 mm,
+  width 400 mm, clearance L 180 / R 320 mm, depth 380 mm, edges +150 / −250 mm.
+
+Individual scan samples (distance per angle) stay on USB (`[S5SCAN]`).
 
 Letter is A=0 through Z=25. Action is unknown=0, forward=1, left=2, right=3,
 uturn=4. Route is unknown=0, left=1, right=2. State is stopped=0,

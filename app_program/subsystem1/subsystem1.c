@@ -93,8 +93,10 @@ LOCAL ER report(UB type, const BUDDY1_SNAPSHOT *v)
     unsigned length = buddy1_encode(type, v, payload, sizeof(payload));
     ER er;
     if (!length) return E_PAR;
-    /* Pose and terrain are live-only: no snapshot section, so skip the cache. */
-    if (type != BUDDY1_TOPIC_POSE && type != BUDDY1_TOPIC_TERRAIN) {
+    /* Pose, terrain, avoidance and scan are live-only: no snapshot section,
+     * so skip the cache. */
+    if (type != BUDDY1_TOPIC_POSE && type != BUDDY1_TOPIC_TERRAIN &&
+        type != BUDDY1_TOPIC_AVOIDANCE && type != BUDDY1_TOPIC_SCAN) {
         er = tk_loc_mtx(mtx_buddy1_state, TMO_FEVR);
         if (er < E_OK) return er;
         er = store_section(type, v);
@@ -136,6 +138,20 @@ EXPORT ER buddy1_report_pose(UH distance_cm_mod, H heading_deg)
     BUDDY1_SNAPSHOT v = {0};
     v.pose_distance_cm = distance_cm_mod; v.pose_heading_deg = heading_deg;
     return report(BUDDY1_TOPIC_POSE, &v);
+}
+EXPORT ER buddy1_report_avoidance(const BUDDY1_AVOIDANCE *avoidance)
+{
+    BUDDY1_SNAPSHOT v = {0};
+    if (!avoidance) return E_PAR;
+    v.avoidance = *avoidance;
+    return report(BUDDY1_TOPIC_AVOIDANCE, &v);
+}
+EXPORT ER buddy1_report_scan(const BUDDY1_SCAN *scan)
+{
+    BUDDY1_SNAPSHOT v = {0};
+    if (!scan) return E_PAR;
+    v.scan = *scan;
+    return report(BUDDY1_TOPIC_SCAN, &v);
 }
 EXPORT ER buddy1_report_terrain(const BUDDY1_TERRAIN *terrain)
 {

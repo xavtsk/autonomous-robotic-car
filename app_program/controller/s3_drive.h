@@ -117,6 +117,10 @@ typedef struct
     bool obstacle_snapshot_valid;
     uint16_t obstacle_scan_id;
     bool obstacle_active;
+    /* Bend detection for Buddy 5: (right-left)/(right+left) of the line
+     * follower's wheel speeds, averaged over ~0.5 s; latched at detection. */
+    float turn_ratio, obstacle_turn;
+    uint32_t turn_us;
 #endif
 } s3_drive_t;
 /* External sensor fault, called only by the same controller owner. */

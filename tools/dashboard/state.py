@@ -17,7 +17,9 @@ from .run_control_protocol import (COMMAND_TOPIC as RUN_COMMAND_TOPIC, REPLY_TOP
 
 POSE_TOPIC = "car/telemetry/pose"
 TERRAIN_TOPIC = "car/telemetry/terrain"
-LIVE_SECTIONS = ("motion", "terrain")  # periodic 5 Hz streams: stale after MOTION_TIMEOUT
+AVOIDANCE_TOPIC = "car/telemetry/avoidance"
+SCAN_TOPIC = "car/telemetry/scan"
+LIVE_SECTIONS = ("motion", "terrain", "avoidance")  # periodic 5 Hz streams: stale after MOTION_TIMEOUT
 
 HEARTBEAT_TOPIC = "mtk3smp-pico/heartbeat"
 COMMAND_TIMEOUT = 8.0
@@ -43,7 +45,7 @@ class DashboardState:
         self.last_car = self.last_heartbeat = None
         self.sections = {name: dict(valid=False, data={}, received_at=None,
                                     source="unavailable", mono=None)
-                         for name in NAMES + ("terrain",)}
+                         for name in NAMES + ("terrain", "avoidance", "scan")}
         self.commands = {"map": self._idle(), "snapshot": self._idle(),
                          "map_lock": "unknown"}
         self.events = deque(maxlen=160)
@@ -269,6 +271,38 @@ class DashboardState:
                 if decoded["peak_valid"] and decoded["peak_mm"] != previous.get("peak_mm"):
                     self.add_event(4, "info", f"Buddy 4: highest hump this run {decoded['peak_mm']} mm")
                 self._update("terrain", decoded)
+                return
+            if topic in (AVOIDANCE_TOPIC, SCAN_TOPIC):
+                try:
+                    decoded = decode(topic, payload)
+                except (ValueError, TypeError) as exc:
+                    self.counters["malformed"] += 1
+                    self.add_event(5, "warning", f"Rejected {topic}: {exc}")
+                    return
+                self.last_car = self.clock()
+                self.counters["received"] += 1
+                self.counters["bytes_received"] += len(payload)
+                self.debug.receive(len(payload))
+                self.history.appendleft(dict(time=timestamp(), topic=topic,
+                                              hex=payload.hex(), decoded=decoded))
+                if topic == SCAN_TOPIC:
+                    if decoded["valid"]:
+                        self.add_event(5, "info", (
+                            f"Buddy 5 scan {decoded['scan_id']}: closest {decoded['closest_mm']} mm, "
+                            f"width {decoded['width_mm']} mm, clearance L {decoded['left_clear_mm']} / "
+                            f"R {decoded['right_clear_mm']} mm"))
+                    else:
+                        self.add_event(5, "warning", f"Buddy 5 scan {decoded['scan_id']}: no valid profile")
+                    self._update("scan", decoded)
+                else:
+                    previous = self.sections["avoidance"]["data"]
+                    if decoded["state"] != previous.get("state"):
+                        level = "warning" if decoded["state"] == "fault" else "info"
+                        reason = f" ({decoded['fault'].replace('_', ' ')})" if decoded["fault"] != "none" else ""
+                        self.add_event(5, level, f"Buddy 5: {decoded['state'].replace('_', ' ')}{reason}")
+                    if decoded["swapped"] and not previous.get("swapped"):
+                        self.add_event(5, "info", "Buddy 5: first side blocked, switched sides")
+                    self._update("avoidance", decoded)
                 return
             is_heartbeat = topic in ("car/status", self.heartbeat_topic)
             if not is_heartbeat and topic not in {"car/reply/snapshot", "car/reply/barcode_map"} and not (
@@ -582,6 +616,7 @@ class DashboardState:
                 self._demo_control_last = t
                 self._demo_pose(t, active)
                 self._demo_terrain(t, active)
+                self._demo_avoidance(t, active)
                 following = self.demo_scenario in {"following","barcode"}
                 fault = self.demo_scenario == "fault"
                 self.ingest(RUN_STATUS_TOPIC, encode_status(epoch=1, robot_time_us=int(t*1e6)&0xffffffff,
@@ -620,6 +655,30 @@ class DashboardState:
         body = (1 | (pitch & 0x7ff) << 1 | (roll & 0x7ff) << 12 | state << 23 |
                 int(on) << 26 | climb << 27 | int(peak is not None) << 36 | (peak or 0) << 37)
         self.ingest(TERRAIN_TOPIC, bytes([VERSION]) + body.to_bytes(6, "little"))
+
+    def _demo_avoidance(self, t, active):
+        """Simulated Buddy 5: an obstacle approaches, is scanned, then bypassed."""
+        phase = t % 20.0
+        ahead = active and phase < 10
+        mm = max(30, int(1200 - phase * 100)) if ahead else 0
+        state = 0
+        servo = 90
+        leg = 0
+        if active and 10 <= phase < 12:
+            state, servo = 2, 30 + int((phase - 10) / 2 * 120)
+        elif active and 12 <= phase < 18:
+            state, leg = 3, 1 + int(phase - 12)
+        body = (int(ahead) | (mm if ahead else 0) << 2 | servo << 14 | state << 22 |
+                (1 if active and phase >= 10 else 0) << 28 | leg << 30)
+        self.ingest(AVOIDANCE_TOPIC, bytes([VERSION]) + body.to_bytes(5, "little"))
+        if active and 12 <= phase < 12.2:
+            fields = (1, int(t) & 255, 200, 160, 230, 340, 260, 4000 + 70, 4000 - 90)
+            widths = (1, 8, 12, 12, 12, 12, 12, 13, 13)
+            value, shift = 0, 0
+            for f, w in zip(fields, widths):
+                value |= f << shift
+                shift += w
+            self.ingest(SCAN_TOPIC, bytes([VERSION]) + value.to_bytes(12, "little"))
 
     def _demo_pose(self, t, active):
         """Simulated pose on an oval: 60 cm straights, 15 cm radius ends, 4 cm/s."""

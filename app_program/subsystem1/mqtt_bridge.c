@@ -97,7 +97,8 @@ int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out)
 	 * names or application enums in the network layer. */
 	out->routine = (message.type == BUDDY1_TOPIC_MOTION ||
 	                message.type == BUDDY1_TOPIC_POSE ||
-	                message.type == BUDDY1_TOPIC_TERRAIN);
+	                message.type == BUDDY1_TOPIC_TERRAIN ||
+	                message.type == BUDDY1_TOPIC_AVOIDANCE);
 	return 1;
 }
 

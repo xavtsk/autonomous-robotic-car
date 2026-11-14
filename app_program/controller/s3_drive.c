@@ -3,6 +3,13 @@
 #include "s3_drive.h"
 #if APP_S5
 #include "../subsystem5/s5_api.h"
+/* Publish the bypass status (state, fault, route, leg, leg-3 step, swap) for
+ * telemetry; the controller task is the only writer. */
+static void report_obstacle_status(const s3_drive_t *d)
+{
+    subsystem5_set_controller_status(d->obstacle.state, d->obstacle.fault, d->obstacle.plan.route,
+                                     d->obstacle.leg, d->obstacle.pass, d->obstacle.swapped);
+}
 #endif
 #define S3_BRAKE_WAIT_US (500000U)
 #define S3_MANOEUVRE_WAIT_US (10000000U)
@@ -36,7 +43,7 @@ static void halt(s3_drive_t *d, s3_drive_state_t state,
     }
     d->obstacle_active = false;
     if (state != S3_DRIVE_FAULT) { s5_avoidance_abort(&d->obstacle); }
-    subsystem5_set_controller_status(d->obstacle.state, d->obstacle.fault, d->obstacle.plan.route);
+    report_obstacle_status(d);
 #endif
     d->external_hold = false;
     d->port.stop();
@@ -130,7 +137,7 @@ bool s3_drive_start(s3_drive_t *d, uint32_t now)
     d->obstacle_snapshot_valid=s5_observation_pack(&obstacle,d->obstacle_snapshot);
     d->obstacle_snapshot_us=now;
     s5_avoidance_abort(&d->obstacle);d->obstacle.fault=S5_OK;
-    subsystem5_set_controller_status(S5_IDLE,S5_OK,S5_ROUTE_NONE);
+    subsystem5_set_controller_status(S5_IDLE,S5_OK,S5_ROUTE_NONE,0U,0U,0U);
 #endif
     d->state = S3_DRIVE_FOLLOW;
     d->reason = S3_DRIVE_OK;
@@ -391,6 +398,24 @@ static void search_step(s3_drive_t *d, uint32_t now)
         halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
     }
 }
+#if APP_S5
+/* How hard the line follower is turning (+ = left), time-averaged, tau 0.5 s. */
+static void turn_track(s3_drive_t *d, float left, float right, uint32_t now)
+{
+    const float sum = left + right;
+    const uint32_t dt = d->turn_us ? (uint32_t)(now - d->turn_us) : 0U;
+    d->turn_us = now;
+    if (sum < 0.01f || dt == 0U || dt > 200000U)
+    {
+        return;
+    }
+    {
+        const float a = (float)dt / (500000.0f + (float)dt);
+        d->turn_ratio += a * ((right - left) / sum - d->turn_ratio);
+    }
+}
+#endif
+
 static void follow(s3_drive_t *d, uint32_t now)
 {
     const s3_navigation_output_t *out = &d->output;
@@ -472,6 +497,9 @@ static void follow(s3_drive_t *d, uint32_t now)
         request_stop(d, now);
         return;
     }
+#if APP_S5
+    turn_track(d, left, right, now);
+#endif
     if (d->port.velocity(left, right) != MOTION_OK)
     {
         halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
@@ -533,6 +561,7 @@ static bool obstacle_control(s3_drive_t *d,uint32_t now,bool done)
             d->pending=d->output.action;d->pending_us=now;
         }
         s5_avoidance_begin(&d->obstacle,now);d->obstacle_active=true;
+        d->obstacle_turn=d->turn_ratio;   /* bend or straight, at detection */
         request_stop(d,now);d->state=S3_DRIVE_MANOEUVRE;
         (void)s3_navigation_set_mode(&d->navigation,S3_MODE_SUPPRESSED);
     }
@@ -545,6 +574,7 @@ static bool obstacle_control(s3_drive_t *d,uint32_t now,bool done)
         .tape=d->navigation.config.line.between?d->output.line.touching:d->output.line.present,
         .junction=d->output.line.junction_candidate,
         .line_ready=d->output.steering_preview.valid,
+        .turn_ratio=(double)d->obstacle_turn,
         .observation=observation};
     s5_action_t request=s5_avoidance_step(&d->obstacle,&input);
     motion_result_t result=MOTION_OK;
@@ -585,7 +615,7 @@ static bool obstacle_control(s3_drive_t *d,uint32_t now,bool done)
         d->obstacle.state=S5_FAULT;d->obstacle.fault=S5_MOTION_ERROR;
         halt(d,S3_DRIVE_FAULT,S3_DRIVE_REJECTED);
     }
-    subsystem5_set_controller_status(d->obstacle.state,d->obstacle.fault,d->obstacle.plan.route);
+    report_obstacle_status(d);
     return true;
 }
 #endif

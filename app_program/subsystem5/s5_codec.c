@@ -14,14 +14,13 @@ bool s5_observation_pack(const s5_observation_t *v,uint8_t out[S5_PACKET_BYTES])
        (!v->range_valid && v->range_mm) || (v->no_echo && v->range_valid)) { return false; }
     const s5_profile_t *q=&v->profile;
     if(q->closest_mm>4000U || q->width_mm>4095U || q->left_clear_mm>4000U ||
-       q->right_clear_mm>4000U || q->forward_mm>4000U || q->front_mm>q->forward_mm || q->left_edge_mm < -4000 ||
+       q->right_clear_mm>4000U || q->forward_mm>4000U || q->left_edge_mm < -4000 ||
        q->left_edge_mm>4000 || q->right_edge_mm < -4000 || q->right_edge_mm>4000 ||
        (q->valid && (!v->scan_done || q->closest_mm<30U || q->left_edge_mm<q->right_edge_mm))) { return false; }
     put(p,&at,v->range_us,32); put(p,&at,v->scan_us,32); put(p,&at,v->scan_id,16);
     put(p,&at,v->range_mm,12); put(p,&at,v->range_valid,1); put(p,&at,v->no_echo,1); put(p,&at,v->scan_done,1);
     put(p,&at,q->valid,1); put(p,&at,q->closest_mm,12); put(p,&at,q->width_mm,12);
     put(p,&at,q->left_clear_mm,12); put(p,&at,q->right_clear_mm,12); put(p,&at,q->forward_mm,12);
-    put(p,&at,q->front_mm,12);
     put(p,&at,(uint32_t)(q->left_edge_mm+4000),13); put(p,&at,(uint32_t)(q->right_edge_mm+4000),13);
     for(unsigned i=0;i<S5_PACKET_BYTES;i++) { out[i]=p[i]; } return true;
 }
@@ -33,7 +32,6 @@ bool s5_observation_unpack(const uint8_t in[S5_PACKET_BYTES],s5_observation_t *v
     t.range_mm=(uint16_t)get(in,&at,12);t.range_valid=get(in,&at,1)!=0;t.no_echo=get(in,&at,1)!=0;t.scan_done=get(in,&at,1)!=0;
     t.profile.valid=get(in,&at,1)!=0;t.profile.closest_mm=(uint16_t)get(in,&at,12);t.profile.width_mm=(uint16_t)get(in,&at,12);
     t.profile.left_clear_mm=(uint16_t)get(in,&at,12);t.profile.right_clear_mm=(uint16_t)get(in,&at,12);t.profile.forward_mm=(uint16_t)get(in,&at,12);
-    t.profile.front_mm=(uint16_t)get(in,&at,12);
     t.profile.left_edge_mm=(int16_t)((int)get(in,&at,13)-4000);t.profile.right_edge_mm=(int16_t)((int)get(in,&at,13)-4000);
     if(!s5_observation_pack(&t,check)) { return false; }
     for(unsigned i=0;i<S5_PACKET_BYTES;i++) { if(check[i]!=in[i]) { return false; } }

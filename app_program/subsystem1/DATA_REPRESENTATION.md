@@ -23,6 +23,13 @@ values only: their compiler-dependent representation is never the wire format.
 | Terrain state | Buddy 4 states 0–7 (unknown…impact) | one state | 3 | sent even when the angles are unavailable; impact latched over the 200 ms period |
 | On hump / run peak valid | Boolean each | Boolean | 1 each | unavailable height is sent as zero; zero alone never means unavailable |
 | Live climb height, run peak height | 0–500 mm each | 1 mm | 9 each | same range/width as the hump packet; 501–511 rejected; live-only `car/telemetry/terrain` (46 bits, 7 bytes) |
+| Front range / valid / no-echo | 30–4000 mm; Boolean; Boolean | 1 mm | 12 + 1 + 1 | invalid range sent as zero; never both valid and no-echo; live-only `car/telemetry/avoidance` (38 bits, 6 bytes) |
+| Servo angle | 1–180 degrees, 0 = not positioned | 1 degree | 8 | last commanded angle |
+| Buddy 5 state / fault / route | 7 states / 8 reasons / 3 routes | one value | 3 / 3 / 2 | from the controller's 16-bit Buddy 5 status word |
+| Bypass leg / leg-3 step / side swapped | 0–15 / 5 steps / Boolean | one value | 4 / 3 / 1 | same word |
+| Scan profile valid, scan id | Boolean; low 8 bits of the scan id | — | 1 + 8 | live-only `car/telemetry/scan` (95 bits, 13 bytes) |
+| Closest, width, left/right clearance, depth | 30–4000 / 0–4095 / 0–4000 mm | 1 mm | 12 each | same ranges as Buddy 5's packed observation; failed scan = zero values |
+| Left/right edge (obstacle position) | −4000…+4000 mm, + = left | 1 mm | 13 each, offset +4000 | left edge ≥ right edge |
 | Obstacle distance | 30–4000 mm | 1 mm | 12 | matches Buddy 5; invalid uses snapshot validity, not zero distance |
 | Obstacle width | 0–4095 mm | 1 mm | 12 | conservative profile width, not exact physical width |
 | Obstacle route | unknown/left/right (0–2) | one route | 2 | code 3 rejected |

@@ -23,7 +23,7 @@
     }
     if(buddy==='3') return [controller('Line-position error',[series('Error','line_error')],'±100',d=>d.line_flags&1,[-100,100])];
     if(buddy==='4') return [{...report('Pitch and roll','terrain',[series('Pitch','pitch_deg'),series('Roll','roll_deg','target')],'°',[-45,45]),clock:'Laptop receive time · 5 Hz terrain reports; gaps = tilt unavailable'},{...report('Hump height','terrain',[series('Climb on current hump','climb_mm'),series('Highest this run','peak_mm','target')],'mm',[0,100]),clock:'Laptop receive time · 5 Hz terrain reports; gaps = not on a hump / no hump yet'},report('Heading reports','heading',[series('Heading','heading_deg')],'°',[0,360]),report('Reported hump height','hump',[series('Height','height_mm')],'mm',null,true)];
-    return [report('Obstacle distance reports','obstacle',[series('Distance','distance_mm')],'mm',null,true),report('Obstacle width reports','obstacle',[series('Width','width_mm')],'mm',null,true)];
+    return [{...report('Front range','avoidance',[series('Range','range_mm')],'mm',[0,1500]),clock:'Laptop receive time · 5 Hz avoidance reports; gaps = no echo / unavailable'},{...report('Servo angle','avoidance',[series('Commanded angle','servo_deg')],'°',[0,180]),clock:'Laptop receive time · last commanded angle, 90° = straight ahead'},report('Clearance per scan','scan',[series('Left','left_clear_mm'),series('Right','right_clear_mm','target')],'mm',null,true),report('Obstacle distance reports','obstacle',[series('Distance','distance_mm')],'mm',null,true),report('Obstacle width reports','obstacle',[series('Width','width_mm')],'mm',null,true)];
   }
   function layout(defs) {
     const key=buddy+':'+defs.map(d=>d.title).join('|');
@@ -101,7 +101,7 @@
       target.append(make('p',`${d.collecting?'Collecting':'Last collection'} · ${name}: white ${d.white_count?`${d.white_min}–${d.white_max}`:'not sampled'} (n=${d.white_count}), black ${d.black_count?`${d.black_min}–${d.black_max}`:'not sampled'} (n=${d.black_count}). Active references are not the full observed ranges.`, 'buddy-chart-note'));
       target.append(make('p','Line error: negative = line left, positive = line right. Both white can be normal in the current between-sensors mounting. Diagnostic states are sampled at 5 Hz; event counters preserve brief events but are not exact event timestamps.', 'buddy-chart-note'));
     }else if(buddy==='4')target.append(make('p','Raw acceleration / gyro and calibration diagnostics: not published. Hump height is shown as individual reports, not a continuous height signal. Pitch/roll beyond ±45° is clipped on this chart only; the readings table shows the reported value.', 'future-signal'));
-    else target.append(make('p','Distance versus scan angle, per-angle no-echo, avoidance/recovery state and original-line confirmation: not published. A summary distance cannot be turned into a scan profile. No-echo is shown separately in the fault table, never guessed from a zero distance.', 'future-signal'));
+    else target.append(make('p','Individual scan samples (distance versus angle) and original-line confirmation: not published (samples are USB-only, [S5SCAN]). The servo angle is the last commanded angle. Gaps in the range graph are no-echo or unavailable readings, never drawn as 0 mm; no-echo also appears in the fault table.', 'future-signal'));
   }
   function draw(){
     if(!active())return;

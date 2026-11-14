@@ -637,6 +637,91 @@ static void test_pose(void)
 }
 /* Buddy 4 terrain: live-only, 46 bits/7 bytes, every pitch/roll and height
  * code round-trips, unavailable means canonical zero, never cached. */
+/* Buddy 5: live avoidance (38 bits/6 bytes) and FR6 scan profile (95 bits/
+ * 13 bytes); every field boundary round-trips, unusable values are zero,
+ * out-of-range and noncanonical packets are rejected, never cached. */
+static void test_buddy5(void)
+{
+    BUDDY1_SNAPSHOT v, d, before, after;
+    BUDDY1_AVOIDANCE a;
+    BUDDY1_SCAN q;
+    UB p[16];
+    unsigned mm, deg;
+    int e;
+    assert(buddy1_payload_size(BUDDY1_TOPIC_AVOIDANCE) == 6U && buddy1_payload_bits(BUDDY1_TOPIC_AVOIDANCE) == 38U);
+    assert(buddy1_payload_size(BUDDY1_TOPIC_SCAN) == 13U && buddy1_payload_bits(BUDDY1_TOPIC_SCAN) == 95U);
+    assert(buddy1_payload_size(BUDDY1_TOPIC_SCAN) <= BUDDY1_PAYLOAD_MAX);
+    for (mm = 30; mm <= 4000; mm += 1) {
+        deg = mm % 181U;
+        v = (BUDDY1_SNAPSHOT){0};
+        v.avoidance = (BUDDY1_AVOIDANCE){1, 0, (uint16_t)mm, (uint8_t)deg, (uint8_t)(mm % 7U), (uint8_t)(mm % 8U),
+                                         (uint8_t)(mm % 3U), (uint8_t)(mm % 16U), (uint8_t)(mm % 5U), (uint8_t)(mm % 2U)};
+        assert(buddy1_encode(BUDDY1_TOPIC_AVOIDANCE, &v, p, sizeof p) == 6U && (p[5] >> 6) == 0U);
+        assert(buddy1_decode(BUDDY1_TOPIC_AVOIDANCE, p, 6U, &d) && d.avoidance_valid &&
+               memcmp(&d.avoidance, &v.avoidance, sizeof d.avoidance) == 0);
+    }
+    v = (BUDDY1_SNAPSHOT){0};
+    v.avoidance = (BUDDY1_AVOIDANCE){0, 1, 0, 0, 0, 0, 0, 0, 0, 0};          /* no echo */
+    assert(buddy1_encode(BUDDY1_TOPIC_AVOIDANCE, &v, p, sizeof p) == 6U &&
+           buddy1_decode(BUDDY1_TOPIC_AVOIDANCE, p, 6U, &d) && d.avoidance.no_echo && !d.avoidance.range_valid);
+    {
+        const BUDDY1_AVOIDANCE bad[] = {
+            {1, 0, 29, 90, 0, 0, 0, 0, 0, 0}, {1, 0, 4001, 90, 0, 0, 0, 0, 0, 0}, {0, 0, 500, 90, 0, 0, 0, 0, 0, 0},
+            {1, 1, 500, 90, 0, 0, 0, 0, 0, 0}, {1, 0, 500, 181, 0, 0, 0, 0, 0, 0}, {1, 0, 500, 90, 7, 0, 0, 0, 0, 0},
+            {1, 0, 500, 90, 0, 0, 3, 0, 0, 0}, {1, 0, 500, 90, 0, 0, 0, 0, 5, 0}, {1, 0, 500, 90, 0, 0, 0, 16, 0, 0},
+            {1, 0, 500, 90, 0, 0, 0, 0, 0, 2}};
+        for (unsigned i = 0; i < sizeof bad / sizeof bad[0]; ++i) {
+            v.avoidance = bad[i]; assert(buddy1_encode(BUDDY1_TOPIC_AVOIDANCE, &v, p, sizeof p) == 0U);
+        }
+    }
+    p[0] = 3; p[1] = 0x04; p[2] = 0; p[3] = 0; p[4] = 0; p[5] = 0;         /* invalid range with mm */
+    assert(!buddy1_decode(BUDDY1_TOPIC_AVOIDANCE, p, 6U, &d));
+    p[1] = 0; p[2] = 0; p[5] = 0x40; assert(!buddy1_decode(BUDDY1_TOPIC_AVOIDANCE, p, 6U, &d)); /* padding */
+    p[5] = 0; assert(!buddy1_decode(BUDDY1_TOPIC_AVOIDANCE, p, 5U, &d));                       /* length */
+    for (e = -4000; e <= 4000; e += 1) {
+        v = (BUDDY1_SNAPSHOT){0};
+        v.scan = (BUDDY1_SCAN){1, (uint8_t)(e & 0xFF), (uint16_t)(30 + (unsigned)(e + 4000) % 3971U),
+                               (uint16_t)((unsigned)(e + 4000) % 4096U), (uint16_t)((unsigned)(e + 4000) % 4001U),
+                               (uint16_t)((unsigned)(4000 - e) % 4001U), (uint16_t)((unsigned)(e + 4000) / 2U),
+                               4000, (int16_t)e};
+        assert(buddy1_encode(BUDDY1_TOPIC_SCAN, &v, p, sizeof p) == 13U && (p[12] >> 7) == 0U);
+        assert(buddy1_decode(BUDDY1_TOPIC_SCAN, p, 13U, &d) && d.scan_valid &&
+               memcmp(&d.scan, &v.scan, sizeof d.scan) == 0);
+    }
+    v = (BUDDY1_SNAPSHOT){0}; v.scan.scan_id = 9;                             /* failed scan */
+    assert(buddy1_encode(BUDDY1_TOPIC_SCAN, &v, p, sizeof p) == 13U &&
+           buddy1_decode(BUDDY1_TOPIC_SCAN, p, 13U, &d) && !d.scan.valid && d.scan.scan_id == 9U);
+    {
+        const BUDDY1_SCAN bad[] = {
+            {1, 0, 29, 0, 0, 0, 0, 0, 0}, {1, 0, 4001, 0, 0, 0, 0, 0, 0}, {1, 0, 100, 4096, 0, 0, 0, 0, 0},
+            {1, 0, 100, 0, 4001, 0, 0, 0, 0}, {1, 0, 100, 0, 0, 4001, 0, 0, 0}, {1, 0, 100, 0, 0, 0, 4001, 0, 0},
+            {1, 0, 100, 0, 0, 0, 0, 4001, 0}, {1, 0, 100, 0, 0, 0, 0, 0, -4001}, {1, 0, 100, 0, 0, 0, 0, -10, 10},
+            {0, 0, 100, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 5, 0}, {2, 0, 100, 0, 0, 0, 0, 0, 0}};
+        for (unsigned i = 0; i < sizeof bad / sizeof bad[0]; ++i) {
+            v.scan = bad[i]; assert(buddy1_encode(BUDDY1_TOPIC_SCAN, &v, p, sizeof p) == 0U);
+        }
+    }
+    v.scan = (BUDDY1_SCAN){0}; assert(buddy1_encode(BUDDY1_TOPIC_SCAN, &v, p, sizeof p) == 13U);
+    p[12] = 0x80U; assert(!buddy1_decode(BUDDY1_TOPIC_SCAN, p, 13U, &d));                     /* padding */
+    p[12] = 0; p[2] = 0x02U; assert(!buddy1_decode(BUDDY1_TOPIC_SCAN, p, 13U, &d));          /* invalid with mm */
+    assert(!buddy1_decode(BUDDY1_TOPIC_SCAN, p, 12U, &d));
+    assert(buddy1_invalidate(BUDDY1_TOPIC_AVOIDANCE) == E_PAR && buddy1_invalidate(BUDDY1_TOPIC_SCAN) == E_PAR);
+    empty_outbox();
+    assert(buddy1_snapshot(&before));
+    assert(buddy1_report_avoidance(0) == E_PAR && buddy1_report_scan(0) == E_PAR);
+    a = (BUDDY1_AVOIDANCE){1, 0, 20, 90, 0, 0, 0, 0, 0, 0}; assert(buddy1_report_avoidance(&a) == E_PAR);
+    a = (BUDDY1_AVOIDANCE){1, 0, 412, 150, 3, 0, 2, 3, 3, 1}; assert(buddy1_report_avoidance(&a) == E_OK);
+    poll_after(20);
+    assert(strcmp(published_topic, "car/telemetry/avoidance") == 0 && published_len == 6U &&
+           buddy1_decode(BUDDY1_TOPIC_AVOIDANCE, published, published_len, &d) &&
+           memcmp(&d.avoidance, &a, sizeof a) == 0);
+    q = (BUDDY1_SCAN){1, 7, 250, 400, 180, 320, 380, 150, -250}; assert(buddy1_report_scan(&q) == E_OK);
+    poll_after(20);
+    assert(strcmp(published_topic, "car/telemetry/scan") == 0 && published_len == 13U &&
+           buddy1_decode(BUDDY1_TOPIC_SCAN, published, published_len, &d) && memcmp(&d.scan, &q, sizeof q) == 0);
+    assert(buddy1_snapshot(&after) && memcmp(&before, &after, sizeof before) == 0);
+    puts("HOST PASS: Buddy 5 avoidance 38 bits/6 bytes and FR6 scan 95 bits/13 bytes: all range/edge codes, servo/state/route/leg/pass limits, unavailable=zero, padding/length rejection, live-only, own topics");
+}
 static int same_terrain(const BUDDY1_TERRAIN *a, const BUDDY1_TERRAIN *b)
 {
     return a->tilt_valid == b->tilt_valid && a->pitch_x10 == b->pitch_x10 &&
@@ -715,6 +800,8 @@ static void emit_vectors(void)
     v.robot_state = BUDDY1_STATE_LINE_FOLLOWING; v.faults = 0x31;
     v.pose_distance_cm = 2049; v.pose_heading_deg = 90;
     v.terrain = (BUDDY1_TERRAIN){1, 123, -51, 5, 1, 23, 1, 41};
+    v.avoidance = (BUDDY1_AVOIDANCE){1, 0, 412, 150, 3, 0, 2, 3, 3, 1};
+    v.scan = (BUDDY1_SCAN){1, 7, 250, 400, 180, 320, 380, 150, -250};
     for (topic = 0; topic < BUDDY1_TOPIC_COUNT; ++topic) {
         if (topic == BUDDY1_TOPIC_MAP_REPLY) continue;
         len = buddy1_encode((UB)topic, &v, packet, sizeof(packet)); assert(len);
@@ -863,6 +950,7 @@ int main(void)
     test_capture_mixed_retries();
     test_pose();
     test_terrain();
+    test_buddy5();
     test_terrain_widths();
 #if APP_IR_DEBUG
     test_ir_preview();

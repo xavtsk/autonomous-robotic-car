@@ -1,6 +1,6 @@
 # Buddy 5 — ultrasonic scanning, profiling, avoidance and recovery
 
-45-degree route revision: 11 November 2026.
+Implemented on `xavier/development` over `6225b04`, 27 October 2026.
 **Software implementation and simulated tests; no physical success claimed.**
 Tribunal 1 changes still require implementation AND demonstration in Week 13.
 
@@ -30,10 +30,8 @@ The resulting `_s5_UNCONFIGURED` image refuses subsystem startup and cannot arm
 navigation. Once hardware/geometry settings have been checked, explicitly set
 `S5_HARDWARE_CONFIRMED=1`. That is configuration, not evidence of physical testing.
 For network builds also set `WIFI=cyw43 NET=lwip MQTT=1` and use the actual local
-Wi-Fi configuration. The hardware-enabled compact 30 cm Wi-Fi candidate was
-built and flashed on 11 November 2026 at 18:58 +08. Post-flash telemetry and
-valid ultrasonic readings were received; obstacle-avoidance validation remains
-pending.
+Wi-Fi configuration. The compile-only image made during this session uses public
+placeholder credentials and is not a deployment image. Nothing is auto-flashed.
 
 Normal local START still requires the existing IR readiness and braked-motion
 checks, plus a fresh valid ultrasonic reading. GP21 STOP remains the controller
@@ -50,7 +48,7 @@ stop path. Enabling S5 does not automatically start the motors.
 - The existing `s3_drive` controller is still the ONLY motion requester and
   report consumer. The pure S5 state machine returns proposals, and the
   controller authorises the corresponding Buddy 2 commands.
-- Source-timed observations cross the task boundary as a 25-byte packet under
+- Source-timed observations cross the task boundary as a 23-byte packet under
   one priority-inheritance mutex. Scan requests use one identified token;
   cancellation takes precedence. No new unbounded queues or application heap.
 - Buddy 3 remains the IR owner. Its normal action generation is suppressed during
@@ -60,97 +58,93 @@ Flow: monitor → request STOP → fresh stopped/cancel acknowledgement → coar
 scan → fine scan/profile → choose route → bounded bypass → line recovery →
 original-heading/stopped/healthy-line confirmation → normal following.
 
-Coarse angles are 30/45/60/90/120/135/150 degrees. Fine scans refine both
-near-obstacle to farther-return boundaries at 5 degree intervals, with no
-duplicate coarse samples (at most 17 angles). Each angle settles for 250 ms;
-the median of three valid readings is retained, including during side peeks.
-Measurements remain at least 70 ms apart. Three consecutive invalid readings
-fail the scan. Echo timeout is 25 ms; the whole scan remains limited to 10 s.
+Coarse angles are 30/60/90/120/150 degrees; fine scans use 5 degree steps in a
+bounded ±15 degree sector around the nearest coarse return. Each angle settles
+250 ms, measurements are at least 70 ms apart, and invalid returns get at most
+three attempts. Echo timeout is 25 ms; the whole scan is limited to 10 s.
 Neither no echo nor a failed scan is converted into open space.
 
-The profile reports nearest return, near/far forward bounds, left/right
-clearance and a lateral obstacle envelope over an assumed +/-15-degree bearing
-uncertainty. It no longer shifts returns inward before estimating width.
-Only the contiguous near-front component containing the centre return defines
-this obstacle. A nearer foreign object or a missing farther-return bracket
-makes the edge unknown; it is not silently discarded. Other observed objects
-still reduce route clearance. This prevents a distant wall from automatically
-becoming part of the obstacle's width. This is not an exact measurement of an
+The profile reports nearest return, estimated forward extent, left/right
+clearance and a conservative lateral obstacle envelope. Angular/beam uncertainty
+inflates the observed lateral extent. This is not an exact measurement of an
 obstacle's physical width or proof that every surface reflects ultrasound.
 
 ## Route and recovery limits — physical tuning required
 
-Configuration is in `s5_config.h`. Dimensions use the user's approximate
-11 November measurements; margins and sensor uncertainty still need testing:
+Initial configuration is in `s5_config.h`, NOT a set of agreed physical tolerances:
 
 | Setting | Initial value |
 |---|---:|
-| Obstacle detection / moving emergency distance | 300 / 80 mm |
-| Absolute profile obstacle cutoff | 500 mm, also checked against the centre-front slab |
-| Robot half width / additional margin | 63 / 30 mm |
-| Axle to front / rear / sonar | 125 / 55 / 75 mm |
-| Available floor from the line, left / right | 450 / 450 mm |
-| Maximum side-search travel | 500 mm |
+| Obstacle detection / moving emergency distance | 350 / 150 mm |
+| Profile obstacle cutoff | 700 mm |
+| Robot half width / additional margin | 90 / 70 mm |
+| Assumed maximum obstacle depth | 500 mm |
 | Maximum lateral detour | 700 mm |
 | Recovery corridor half-width | 100 mm |
-| Front IR sensor-to-axle offset | 135 mm, inherited from the course setting; verify mounting |
+| Sensor-to-axle offset | 0 mm: MUST measure and update |
 | Drive/turn wheel speed | 80 mm/s |
-| Complete avoidance deadline | 120 s |
+| Complete avoidance deadline | 60 s |
 
-The axle extents total 180 mm, larger than the user's separate overall-length
-estimate of 165 mm; the larger extents are retained. The turn envelope also
-includes sensing heads protruding beyond the body.
+A front-facing scan cannot see the hidden rear edge. **The configured maximum
+depth and robot footprint must bound the actual demonstration obstacles.**
+The route is turn out, move sideways, turn parallel, pass the bounded obstacle,
+turn toward the original corridor, return, then restore the original heading.
+Bypass geometry (13 Nov 2026): **45-degree legs** instead of 90. Turn 45° out,
+drive the diagonal (sideways offset × 1.414, which also moves the car the
+offset forward), turn back parallel, pass the obstacle with side peeks (the
+approach is shortened by the offset already gained), turn 45° in, drive the
+diagonal back to the line, turn 45° to realign. A blocked first side turns
+2 × 45° to the other diagonal. Before the out-leg, both the measured range along
+the diagonal and the forward sweep of the car's inner front corner (face
+distance vs. obstacle edge + 1.414 × half width + margin) must be clear; a wide
+obstacle close ahead therefore needs more stopping distance than with 90° legs.
 
-Both sides are evaluated against their floor allowance, sonar clearance and
-the room ahead. The route with the greater minimum reserve wins, with shorter
-offset breaking ties. There is no left-first setting. The complete diagonal
-is checked against the near corner using the rectangle's transverse separating
-axis. Initial and final turns use exact swept-corner extents, rather than
-requiring the whole circumscribed circle to finish turning before the obstacle.
-For one side, the near-corner condition is `front_from_axle - edge >=
-ceil(sqrt(2)*half_width) + 2*margin`. The initial pivot and floor limits are
-checked separately. A too-close or blocked route still stops.
+Shorter pass and line search (13 Nov 2026): measured car size (half width 63,
+ultrasonic 75 mm ahead of the axle, body 55 mm behind it) replaces the 90/100 mm
+placeholders; side-peek steps are 25 mm; after the peek reads clear the car only
+drives until its back is past the obstacle's rear edge (0.577 × (half width +
+margin) + 75 + 55 + margin, ≈ 214 mm, was ≈ 330+).
 
-Detection is now 300 mm, the upper end of the requested 200--300 mm range.
-Some wide obstacles can still be too close at 200 mm; lowering the trigger
-alone does not make their diagonal path fit.
-
-The route turns out 45 degrees, drives a diagonal of `ceil(offset * sqrt(2))`,
-turns 45 degrees back to parallel, passes the obstacle, then returns through
-the matching diagonal and restores the original heading. Side observations
-begin immediately after the outbound turn to parallel; there is no blind
-approach to the old far-front estimate. If the selected
-heading is blocked before translation, the other prevalidated route can be
-tried through two separately checked 45-degree turns, once.
-
-A front-facing scan cannot see the hidden rear edge. While parallel, stop and
-peek 60 degrees toward the obstacle. An occupied reading causes a 25 mm step,
-bounded by `max_depth_mm`. Require two distinct fresh clear scans before the
-final clearance move. The full opposite obstacle edge, beam uncertainty,
-75 mm sonar offset and inward-turn corner clearance determine that move; encoder
-travel must confirm it before the inward turn. This also handles a short
-obstacle already behind the first side ray using a conservative rear bound.
-It assumes a static, continuously reflecting obstacle; holes, acoustic misses
-and wheel slip need physical validation. It does not claim exact hidden depth.
-
-A clear side ray can also pass through empty space before the obstacle. Early
-clear readings therefore cause another bounded step until actual encoder
-travel puts the sonar beyond the observed far-front bound. Only then may two
-fresh clear scans establish the rear bound. This gate is recomputed for the
-chosen side and increased if the outbound diagonal travelled short.
-
-For the measured car, the body needs 36 mm beyond the proven rear bound for
-the inward turn and diagonal return, replacing the old 179 mm circle allowance.
-This is **not** a 36 mm total move after the first clear echo: the forward-looking
-60-degree sensor still needs its full-width/beam look-ahead allowance and
-75 mm axle offset. Actual outbound undertravel increases the corner allowance.
-The return diagonal also advances forward by approximately the lateral offset;
-unknown remaining straight-track length cannot be guaranteed from sonar width.
-
-The 450 mm floor allowance is an external course assumption. Ultrasound cannot
-see a flat mat edge. Some wide or uncertain profiles will still be rejected
-even when the route looks usable. Do not increase floor limits or shrink the
-uncalibrated acoustic uncertainty merely to make a route pass.
+Track run 2 fixes (13 Nov 2026):
+- Left only (`S5_ALLOW_OTHER_SIDE 0`): the car never goes round the right. If the
+  left path is blocked it stops with NO_PATH. Run 2 went right because the old
+  code swapped sides when the left looked blocked.
+- Out diagonal length: scan edge padding is sin 10° (`S5_EDGE_INFLATE_PERMIL
+  173`; sin 15° was too long, sin 5° too short in run 3). For a 10 cm box at
+  20 cm the out diagonal is ≈ 262 mm (≈ 289 at sin 15°, ≈ 237 at sin 5°).
+- Aim first: on a bend the car stops crooked, so 45° from its heading is too
+  shallow against the track. After the first scan it turns to face the
+  obstacle centre (atan(centre x / (closest + 75 mm)), once, only if ≥ 5°,
+  at most 30°: `S5_AIM_MIN_DEG`/`S5_AIM_MAX_DEG`), scans again and plans from
+  that square-on view. Example: centre 70 mm left at 25 cm → turn 12° left.
+- Bend only (13 Nov 2026, run 5): the controller averages how hard the line
+  follower was turning just before the obstacle ((right − left) / (right + left)
+  wheel speed, ~0.5 s). At ≥ 0.10 (radius under ~0.6 m) the car is on a bend;
+  below that nothing changes from the straight behaviour. On a bend: the aim
+  turn is 2× the bearing (track direction at the obstacle on a curve, cap 40°)
+  when the obstacle is on the side the car was turning to; tape on the return
+  diagonal stops the car (now on a straight too, run 7), which then drives
+  135 mm (IR heads to axle) so the axle is on the line before turning back; no tape by the end of the diagonal:
+  up to 100 mm more along it. Settings: `S5_BEND_*`, `S5_IR_AXLE_MM`,
+  `S5_RETURN_EXTRA_MM`.
+- Run 7 (13 Nov 2026): the run-6 bend realign gauge is reverted (straight broke).
+  Kept: worst case 20 cm – the planned sideways offset is never less than for
+  a 20 cm wide obstacle about the scanned centre (`S5_OBSTACLE_MAX_MM`), wider
+  readings still win (offset ≥ 193 mm, out diagonal ≥ 273 mm). New: tape on
+  the return diagonal stops the car on a straight too, then it drives only
+  135 mm (IR to axle) before turning back, so it never runs on past the line
+  when the turns are not exactly 45°. Bend threshold 0.20 (was 0.10) so
+  straight-line wobble is not taken for a bend.
+- Trigger distance 25 cm (`detect_mm` 250, was 200): more room for the 45° out
+  leg when the car is not square to the obstacle. The straight-leg clearance
+  check stays at 200 mm (`S5_LEG_CLEAR_MM`).
+- Too close for the 45° out-leg: reverse the shortfall first (≤ 100 mm,
+  `S5_BACKUP_MAX_MM`) instead of switching side.
+- Return diagonal is exactly as long as the out diagonal. Tape crossed on it at
+  45° no longer counts (the car used to hand back there, already past the line,
+  and drive straight off the path). No straight creeping. After turning back to
+  the heading it sweeps +45 / −90 / +45° and stops as soon as tape is confirmed.
+  No tape after that is still STOP/NO_LINE.
 
 Every move requires a new valid centre reading after the previous phase;
 ongoing movement, including turns, stops on stale/invalid range or emergency distance.
@@ -159,9 +153,7 @@ It does not reverse blindly into unobserved space or repeatedly retry an unsafe
 route. A reverse-and-reattempt policy requires verified rear clearance first.
 
 Recovery requires sustained actual tape evidence (30 ms) near the predicted
-original corridor, rejecting junction candidates. The corridor uses the
-45-degree lateral projection of actual wheel travel and the IR offset; return
-distance is based on the achieved outbound travel. With the current wide-spaced
+original corridor, rejecting junction candidates. With the current wide-spaced
 IR mounting, both-white tracking alone is never accepted as recovery evidence.
 If the return leg does not see tape, a bounded +20/−40/+20 degree search at the
 predicted corridor restores the original heading. Failure to confirm tape
@@ -188,11 +180,9 @@ changed-mask update. Invalid profiles invalidate the cached obstacle section.
 The full clearance/profile details and source timestamps are available through
 `subsystem5_snapshot()`. The controller uses `subsystem5_read_snapshot()` to
 separate a busy snapshot mutex from unavailable/corrupt data. Only BUSY may reuse
-its owner-local 25-byte packed cache, for at most 250 ms since a successful read.
+its owner-local 23-byte packed cache, for at most 250 ms since a successful read.
 Original source timestamps stay unchanged, so moving range data must also pass
-its 250 ms source-age check. A sonar publication up to 30 ms newer than the
-controller's ADC-frame timestamp is allowed to avoid a concurrent-publication
-false fault; larger future skew is rejected. A fresh invalid/no-echo observation replaces
+its existing 250 ms source-age check. A fresh invalid/no-echo observation replaces
 the old cache and still stops motion; unavailable/corrupt data never falls back.
 STOP/fault clears the cache, and START requires a successful fresh snapshot read.
 No queue, task, shared lock or sensor-validity threshold was added. USB `[S5]` lines show FSM state/fault, route, front range,
@@ -212,15 +202,3 @@ make -C testing/subsystem5 test sanitize
 
 See `testing/subsystem5/README.md` and `TEST_LOG.md` for test scope and open
 physical evidence. Software tests/builds do not demonstrate the Week 13 robot.
-
-11 November compact revision: strict host/controller/terrain/runtime,
-profile edge/median and geometric body-sweep test builds compile.
-Windows Application Control blocks execution
-of the new host binaries, so no passing runtime result is claimed for this
-revision. The integrated compact Pico firmware was flashed on 11 November 2026
-at 18:58 +08; its obstacle manoeuvre has not yet been validated physically.
-Servo-settling times now start after the actual
-servo command, and stopped-feedback age uses the clock after the feedback read.
-An independent mathematical check covered 216 return geometries and 75,972
-sampled poses without intersecting margin-expanded obstacles; it does not
-execute the production C state machine or model acoustic/encoder errors.
