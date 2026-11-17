@@ -65,6 +65,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, state.sensor_snapshot())
             elif path == "/api/debug":
                 self._send(200, state.debug_snapshot())
+            elif path.startswith("/api/imu/"):
+                name = path.removeprefix("/api/imu/")
+                self._send(200, state.download_imu(name), "text/csv; charset=utf-8", name)
             elif path.startswith("/api/traces/"):
                 parts = path.split("/")
                 if len(parts) == 4:
@@ -84,6 +87,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, {"error": "Not found"})
         except (KeyError, FileNotFoundError, ValueError):
             self._send(404, {"error": "Trace or file not found"})
+        except OSError:
+            self._send(500, {"error": "Unable to read local file"})
 
     def do_POST(self):
         port = self.server.server_address[1]

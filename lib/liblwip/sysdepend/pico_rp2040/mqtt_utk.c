@@ -66,15 +66,23 @@ static u8_t retry_source, capture_turn;
 static unsigned char debug_line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
 static u16_t debug_len;
 static u8_t debug_valid;
+#if APP_IMU_DEBUG
+static unsigned char preview_line[MQTT_UTK_IMU_DEBUG_MAX];
+#elif APP_IR_DEBUG
+static unsigned char preview_line[MQTT_UTK_CONTROL_DEBUG_MAX];
+#endif
 #if APP_IR_DEBUG
 /* Give fresh controller observations a bounded turn even when motion/terrain
  * fill the application FIFO. On a slow link, two successful data packets must
  * still progress between previews. Never overwrite a staged BCAP packet. */
 #define MQTT_UTK_CONTROL_PERIOD_MS 200U
 #define MQTT_UTK_CONTROL_DATA_GAP 2U
-static unsigned char preview_line[MQTT_UTK_CONTROL_DEBUG_MAX];
 static u32_t last_control_ms;
 static u8_t control_seen, control_data_since = MQTT_UTK_CONTROL_DATA_GAP;
+#endif
+#if APP_IMU_DEBUG
+#define MQTT_UTK_IMU_DATA_GAP 2U
+static u8_t imu_data_since = MQTT_UTK_IMU_DATA_GAP;
 #endif
 
 static void heartbeat_timeout(void *arg);
@@ -95,6 +103,16 @@ static void warn_pending(err_t result)
 	}
 }
 
+static void data_publish_completed(void)
+{
+#if APP_IR_DEBUG
+	if(control_data_since < MQTT_UTK_CONTROL_DATA_GAP) ++control_data_since;
+#endif
+#if APP_IMU_DEBUG
+	if(imu_data_since < MQTT_UTK_IMU_DATA_GAP) ++imu_data_since;
+#endif
+}
+
 static void application_publish_done_cb(void *arg, err_t result)
 {
 	(void)arg;
@@ -104,9 +122,7 @@ static void application_publish_done_cb(void *arg, err_t result)
 		pending_warned = 0;
 		retry_source = PUBLISH_NONE;
 		capture_turn = 1;
-#if APP_IR_DEBUG
-		if(control_data_since < MQTT_UTK_CONTROL_DATA_GAP) ++control_data_since;
-#endif
+		data_publish_completed();
 	} else {
 		/* A request timeout is not proof that the broker never received it.
 		 * Retry is at-least-once best effort; consumers must tolerate repeats. */
@@ -123,9 +139,7 @@ static void debug_publish_done_cb(void *arg, err_t result)
 		debug_valid = 0;
 		retry_source = PUBLISH_NONE;
 		capture_turn = 0;
-#if APP_IR_DEBUG
-		if(control_data_since < MQTT_UTK_CONTROL_DATA_GAP) ++control_data_since;
-#endif
+		data_publish_completed();
 	} else {
 		pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
 	}
@@ -149,12 +163,26 @@ __attribute__((weak)) unsigned int mqtt_utk_control_debug_take(unsigned char *by
 	(void)bytes; (void)size; return 0U;
 }
 
-#if APP_IR_DEBUG
-static void ir_debug_publish_done_cb(void *arg, err_t result)
+__attribute__((weak)) unsigned int mqtt_utk_imu_debug_take(unsigned char *bytes, unsigned int size)
+{
+	(void)bytes; (void)size; return 0U;
+}
+
+#if APP_IR_DEBUG || APP_IMU_DEBUG
+static void preview_publish_done_cb(void *arg, err_t result)
 {
 	(void)arg;
 	(void)result;
 	pending_inflight = 0; /* best effort: never retry an old preview */
+}
+
+static void publish_preview(const char *topic, unsigned int size)
+{
+	pending_inflight = 1;
+	pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+	err_t err = mqtt_publish(client, topic, preview_line, (u16_t)size,
+	                         0, 0, preview_publish_done_cb, NULL);
+	if(err != ERR_OK) pending_inflight = 0;
 }
 #endif
 
@@ -420,20 +448,39 @@ void mqtt_utk_poll(void)
 	 * priority, while recurring samples share slots one-for-one with BCAP.
 	 * Urgent events behind a held sample still wait for the existing FIFO. */
 	if(pending_valid && !pending.routine) goto publish_application;
-#if APP_IR_DEBUG
+#if APP_IR_DEBUG || APP_IMU_DEBUG
 	/* With no queued application packet, check for BCAP before treating the
-	 * link as idle. A preview may hold this fresh capture, so use its own buffer. */
+	 * link as idle. Diagnostics use separate storage from the staged capture. */
 	if(!pending_valid && !debug_valid) {
 		n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
 		capture_checked = 1;
 		if(n > sizeof debug_line) return;
 		if(n != 0U) { debug_len = (u16_t)n; debug_valid = 1; }
 	}
+#endif
+#if APP_IR_DEBUG
 	if((!control_seen || (u32_t)(sys_now() - last_control_ms) >= MQTT_UTK_CONTROL_PERIOD_MS) &&
 	   ((!pending_valid && !debug_valid) || control_data_since >= MQTT_UTK_CONTROL_DATA_GAP)) {
-		n = mqtt_utk_control_debug_take(preview_line, sizeof preview_line);
-		if(n > sizeof preview_line) return;
-		if(n != 0U) goto publish_control;
+		n = mqtt_utk_control_debug_take(preview_line, MQTT_UTK_CONTROL_DEBUG_MAX);
+		if(n > MQTT_UTK_CONTROL_DEBUG_MAX) return;
+		if(n != 0U) {
+			last_control_ms = sys_now();
+			control_seen = 1;
+			control_data_since = 0;
+			publish_preview(MQTT_UTK_CONTROL_DEBUG_TOPIC, n);
+			return;
+		}
+	}
+#endif
+#if APP_IMU_DEBUG
+	if((!pending_valid && !debug_valid) || imu_data_since >= MQTT_UTK_IMU_DATA_GAP) {
+		n = mqtt_utk_imu_debug_take(preview_line, MQTT_UTK_IMU_DEBUG_MAX);
+		if(n > MQTT_UTK_IMU_DEBUG_MAX) return;
+		if(n != 0U) {
+			imu_data_since = 0;
+			publish_preview(MQTT_UTK_IMU_DEBUG_TOPIC, n);
+			return;
+		}
 	}
 #endif
 	if(pending_valid && !capture_turn) goto publish_application;
@@ -449,33 +496,11 @@ void mqtt_utk_poll(void)
 	if(pending_valid) goto publish_application;
 
 #if APP_IR_DEBUG
-	/* IR remains spare-capacity only. Controller diagnostics above get a
-	 * bounded turn; neither preview retries a stale sample. */
-	{
-		n = mqtt_utk_ir_debug_take(preview_line, MQTT_UTK_IR_DEBUG_MAX);
-		if(n > MQTT_UTK_IR_DEBUG_MAX) return;
-		if(n == 0U) return;
-		pending_inflight = 1;
-		pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-		err = mqtt_publish(client, MQTT_UTK_IR_DEBUG_TOPIC, preview_line, (u16_t)n,
-		                   0, 0, ir_debug_publish_done_cb, NULL);
-		if(err != ERR_OK) pending_inflight = 0;
-	}
+	/* IR remains spare-capacity only. */
+	n = mqtt_utk_ir_debug_take(preview_line, MQTT_UTK_IR_DEBUG_MAX);
+	if(n != 0U && n <= MQTT_UTK_IR_DEBUG_MAX) publish_preview(MQTT_UTK_IR_DEBUG_TOPIC, n);
 #endif
 	return;
-
-#if APP_IR_DEBUG
-publish_control:
-	last_control_ms = sys_now();
-	control_seen = 1;
-	control_data_since = 0;
-	pending_inflight = 1;
-	pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-	err = mqtt_publish(client, MQTT_UTK_CONTROL_DEBUG_TOPIC, preview_line, (u16_t)n,
-	                   0, 0, ir_debug_publish_done_cb, NULL);
-	if(err != ERR_OK) pending_inflight = 0;
-	return;
-#endif
 
 publish_capture:
 	retry_source = PUBLISH_CAPTURE;

@@ -17,7 +17,7 @@ test: $(BUILD)/host_test
 
 ir-debug:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) -DAPP_IR_DEBUG=1 $(CFLAGS) $(SOURCES) -o $(BUILD)/host_ir_debug
+	$(CC) $(CPPFLAGS) -DAPP_IR_DEBUG=1 -DAPP_IMU_DEBUG=1 $(CFLAGS) $(SOURCES) -o $(BUILD)/host_ir_debug
 	$(BUILD)/host_ir_debug
 
 $(BUILD)/host_test: $(SOURCES) $(APP)/telemetry_codec.h $(APP)/subsystem1.h $(MQTT)/mqtt_utk.h host_kernel.h

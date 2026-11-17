@@ -47,7 +47,9 @@
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
     context.setTransform(ratio, 0, 0, ratio, 0, 0); context.clearRect(0, 0, width, height);
-    $('route-empty').hidden = Boolean(run && run.points.length);
+    const empty = $('route-empty');
+    empty.hidden = Boolean(run?.points.length);
+    empty.textContent = run ? 'Waiting for wheel position data for this run.' : 'Waiting for the next drive.';
     if (!run || !run.points.length) { canvas.setAttribute('aria-label', 'Route map: no route received'); return; }
     const c = colours(), pad = 34;
     const xs = run.points.map(p => p.x).concat(run.markers.map(m => m.x));
@@ -105,11 +107,11 @@
     }) : [Object.assign(document.createElement('option'), {textContent: 'None yet'})]));
     runSelect.disabled = route.runs.length < 2;
     if (run) runSelect.value = String(run.id);
-    $('route-summary').textContent = run
-      ? `${run.active ? 'Live' : 'Ended'} · ${run.path_m.toFixed(2)} m driven · net ${run.distance_m.toFixed(2)} m along the route · heading ${run.heading_deg}° from START` +
+    $('route-summary').textContent = run?.points.length
+      ? `${run.active ? 'Live' : run.ended_at ? 'Ended' : 'End unconfirmed'} · ${run.path_m.toFixed(2)} m driven · net ${run.distance_m.toFixed(2)} m along the route · heading ${run.heading_deg}° from START` +
         (run.joined_mid_run ? ' · dashboard joined mid-run, earlier path unknown' : '') +
         (run.dropped_points ? ` · ${run.dropped_points} later points not stored` : '')
-      : 'Waiting for car/telemetry/pose. The route starts at the next START.';
+      : run ? 'Drive observed. Wheel position unavailable.' : 'Waiting for the next drive.';
     const rows = run ? run.markers.slice().reverse().map(m => {
       const tr = document.createElement('tr');
       for (const text of [m.label, metres(m.d), clock(m.time)]) {

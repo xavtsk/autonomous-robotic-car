@@ -494,6 +494,85 @@ static void test_control_preview_waits_for_retry(void)
     puts("HOST PASS: overdue controller preview waits for exact BCAP retries, in-flight completion and queued event");
 }
 #endif
+
+#if APP_IMU_DEBUG
+static unsigned imu_batches;
+
+unsigned int mqtt_utk_imu_debug_take(unsigned char *bytes, unsigned int size)
+{
+    if (imu_batches == 0U) return 0U;
+    assert(size == MQTT_UTK_IMU_DEBUG_MAX);
+    memset(bytes, 0, size);
+    bytes[0] = 1U;
+    bytes[1] = 8U;
+    bytes[size - 1U] = 0x5aU;
+    --imu_batches;
+    return size;
+}
+
+static void test_imu_stream(void)
+{
+    unsigned apps = 0, captures = 0, batches = 0, data_since = 0;
+    empty_outbox();
+    debug_head = debug_count = 0;
+    imu_batches = 1;
+    assert(buddy1_report_heading(64) == E_OK);
+    poll_after(200);
+    assert(!strcmp(published_topic, "car/telemetry/heading") && imu_batches == 1);
+#if APP_IR_DEBUG
+    control_frames = 1;
+    poll_after(200);
+    assert(!strcmp(published_topic, MQTT_UTK_CONTROL_DEBUG_TOPIC) && imu_batches == 1);
+#endif
+    poll_after(20);
+    assert(!strcmp(published_topic, MQTT_UTK_IMU_DEBUG_TOPIC) && imu_batches == 0);
+    assert(published_len == MQTT_UTK_IMU_DEBUG_MAX && published_qos == 0 && published_retain == 0);
+    assert(published[0] == 1U && published[1] == 8U && published[2] == 0U &&
+           published[published_len - 1U] == 0x5aU);
+
+    /* A busy link grants no more than one IMU slot per two data publishes,
+     * preserving the app/capture alternation and progress for all sources. */
+    imu_batches = 12;
+    queue_debug(4, debug_summary, sizeof debug_summary);
+    for (unsigned i = 0; i < 4; ++i) assert(buddy1_report_motion(40, 41) == E_OK);
+    unsigned before = publish_count;
+    for (unsigned i = 0; i < 12; ++i) {
+        poll_after(20);
+        assert(publish_count == before + i + 1U);
+        if (!strcmp(published_topic, MQTT_UTK_IMU_DEBUG_TOPIC)) {
+            assert(data_since >= 2U);
+            ++batches;
+            data_since = 0;
+        } else if (!strcmp(published_topic, MQTT_UTK_DEBUG_TOPIC)) {
+            ++captures;
+            ++data_since;
+        } else {
+            assert(!strcmp(published_topic, "car/telemetry/motion"));
+            assert(buddy1_report_motion(40, 41) == E_OK);
+            ++apps;
+            ++data_since;
+        }
+    }
+    assert(apps == 4U && captures == 4U && batches == 4U);
+
+    /* Drain any already staged routine packet then demonstrate that a
+     * rejected IMU packet never delays a later FIFO-head event with a retry. */
+    imu_batches = 0;
+    empty_outbox();
+    poll_after(20);
+    imu_batches = 1;
+    publish_result = ERR_MEM;
+    poll_after(20);
+    assert(!strcmp(attempted.topic, MQTT_UTK_IMU_DEBUG_TOPIC) && imu_batches == 0);
+    publish_result = ERR_OK;
+    assert(buddy1_report_heading(65) == E_OK);
+    poll_after(20);
+    assert(!strcmp(published_topic, "car/telemetry/heading"));
+    debug_head = debug_count = 0;
+    puts("HOST PASS: bounded raw IMU batches, legacy traffic priority and fairness, no diagnostic retry");
+}
+#endif
+
 static void test_publish_backpressure(void)
 {
     BUDDY1_COMMAND_MSG command = {.kind = BUDDY1_COMMAND_SNAPSHOT,
@@ -973,6 +1052,9 @@ int main(void)
     test_control_preview_fairness(0);
     test_control_preview_fairness(250);
     test_control_preview_waits_for_retry();
+#endif
+#if APP_IMU_DEBUG
+    test_imu_stream();
 #endif
     emit_vectors();
     puts("HOST PASS: binary FIFO, full speed range, 64 fault masks, eight concurrent producers, real MQTT callbacks and bridge");

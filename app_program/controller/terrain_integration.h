@@ -9,6 +9,7 @@ void terrain_control_poll(s3_drive_t *drive, uint32_t now);
 bool terrain_control_ready(uint32_t now);
 bool terrain_control_begin(uint32_t now);
 bool terrain_control_reset_ready(uint32_t now);
+/* Clear the latch only after the drive owner acknowledges a successful RESET. */
 void terrain_control_clear_fault(void);
 void terrain_control_report(void);
 #else

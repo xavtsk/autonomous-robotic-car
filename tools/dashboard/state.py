@@ -11,7 +11,9 @@ from buddy1_mqtt_codec import NAMES, WIDTHS, VERSION, SNAPSHOT_BYTES, decode, en
 from .ir_protocol import IRBuffer, IR_TOPIC, decode_ir, encode_ir
 from .control_protocol import TOPIC as CONTROL_TOPIC, decode_control, encode_control
 from .debug_history import DebugHistory
-from .route import RouteTracker
+from .imu_capture import ImuCaptures, TOPIC as IMU_TOPIC, decode_imu
+from .route import ACTIVE_STATES, RouteTracker
+from .run_log import RunLog
 from .run_control_protocol import (COMMAND_TOPIC as RUN_COMMAND_TOPIC, REPLY_TOPIC as RUN_REPLY_TOPIC,
     STATUS_TOPIC as RUN_STATUS_TOPIC, encode_request, decode_reply, encode_reply, decode_status, encode_status)
 
@@ -25,8 +27,6 @@ HEARTBEAT_TOPIC = "mtk3smp-pico/heartbeat"
 COMMAND_TIMEOUT = 8.0
 CAR_TIMEOUT = 15.0
 MOTION_TIMEOUT = 3.0
-ACTIVE_STATES = {"line_following", "turning_left", "turning_right", "uturn",
-                 "avoiding_obstacle"}
 RUN_PENDING = {"sending", "sent", "queued", "executed"}
 
 
@@ -36,7 +36,7 @@ def timestamp():
 
 class DashboardState:
     def __init__(self, traces, mode="live", clock=time.monotonic,
-                 heartbeat_topic=HEARTBEAT_TOPIC):
+                 heartbeat_topic=HEARTBEAT_TOPIC, *, capture_imu=False):
         self.lock = threading.RLock()
         self.clock, self.mode, self.traces = clock, mode, traces
         self.heartbeat_topic = heartbeat_topic
@@ -63,9 +63,12 @@ class DashboardState:
         self._demo_encoders = [0,0]
         self._demo_epoch = self.clock()
         self._demo_sequence = 0
-        self.route = RouteTracker(clock)
+        self.run_log = RunLog(traces.folder)
+        self.imu_captures = ImuCaptures(traces.folder) if capture_imu and mode == "live" else None
+        self.route = RouteTracker(clock, self.run_log.record)
         self._demo_pose_t0 = None
         self._demo_barcode_last = None
+        self._demo_humps = 0
         self._run_request = None
         self._run_id = 0
         self._run_lease = None
@@ -87,13 +90,16 @@ class DashboardState:
 
     def set_connection(self, status, host=None, port=None, error=None):
         with self.lock:
-            changed = status != self.connection["status"] or error != self.connection["error"]
+            previous_status = self.connection["status"]
+            changed = status != previous_status or error != self.connection["error"]
             self.connection.update(status=status, error=error)
             if host is not None:
                 self.connection["host"] = host
             if port is not None:
                 self.connection["port"] = port
             if status != "connected":
+                if previous_status == "connected":
+                    self.route.interrupt()
                 self._run_sample = None
                 self._run_lease = None
                 if self._run_request and self._run_request["status"] in RUN_PENDING:
@@ -168,6 +174,8 @@ class DashboardState:
                     return
                 prior_epoch = (self._run_lease["epoch"] if self._run_lease else
                                self._run_request["epoch"] if self._run_request else None)
+                if self._run_lease and prior_epoch != lease["epoch"]:
+                    self.route.interrupt()
                 if prior_epoch != lease["epoch"]:
                     if prior_epoch is not None:
                         # A reconnect token cannot make a previous connection's
@@ -181,6 +189,8 @@ class DashboardState:
                 elif 0 < ((lease["last_id"] - self._run_id) & 0xffffffff) < 0x80000000:
                     self._run_id = lease["last_id"]
                 self._run_lease = dict(lease, received_mono=self.clock())
+                if lease["available"]:
+                    self.route.controller_status(lease["running"], timestamp())
                 self.last_car = self.clock()
                 self.counters["received"] += 1
                 self.counters["bytes_received"] += len(payload)
@@ -198,6 +208,21 @@ class DashboardState:
                     self.counters["received"] += 1
                     self.counters["bytes_received"] += len(payload)
                     self.debug.receive(len(payload))
+                return
+            if topic == IMU_TOPIC:
+                if self.imu_captures is None:
+                    return
+                try:
+                    batch = decode_imu(payload)
+                except ValueError as exc:
+                    self.counters["malformed"] += 1
+                    self.add_event(4, "warning", str(exc))
+                    return
+                self.last_car = self.clock()
+                self.counters["received"] += 1
+                self.counters["bytes_received"] += len(payload)
+                self.debug.receive(len(payload))
+                self.imu_captures.record(batch, timestamp())
                 return
             if topic == CONTROL_TOPIC:
                 try:
@@ -271,6 +296,7 @@ class DashboardState:
                 if decoded["peak_valid"] and decoded["peak_mm"] != previous.get("peak_mm"):
                     self.add_event(4, "info", f"Buddy 4: highest hump this run {decoded['peak_mm']} mm")
                 self._update("terrain", decoded)
+                self.route.terrain(decoded)
                 return
             if topic in (AVOIDANCE_TOPIC, SCAN_TOPIC):
                 try:
@@ -534,6 +560,8 @@ class DashboardState:
                                  heartbeat_age_s=None if self.last_heartbeat is None else round(now - self.last_heartbeat, 2)),
                         sections=sections, commands=deepcopy(self.commands),
                         control=self._run_view(),
+                        run_log=self.run_log.snapshot(self.route.current_log_id, not self.route.ended),
+                        imu_captures=self.imu_captures.snapshot() if self.imu_captures is not None else None,
                         events=list(self.events), counters=dict(self.counters),
                         traces=self.traces.list(), diagnostics={"raw_messages": list(self.history),
                             "ir": self.ir.snapshot(self.connection["status"] == "connected", False),
@@ -549,6 +577,7 @@ class DashboardState:
             self.demo_scenario = scenario
             if scenario == "ready":
                 # Explicit simulation reboot, never applied to a real connection.
+                self.route.end(timestamp())
                 self.commands = {"map": self._idle(), "snapshot": self._idle(), "map_lock": "unknown"}
                 self._demo_pending = None
                 self._demo_epoch = self.clock()
@@ -558,10 +587,10 @@ class DashboardState:
                 self._last_control_event = None
                 self._demo_control_last = -1
                 self._demo_encoders = [0,0]
-                self.route = RouteTracker(self.clock)
+                self.route = RouteTracker(self.clock, self.run_log.record)
                 self._demo_pose_t0 = None
                 self._demo_barcode_last = None
-                self._demo_peak = None
+                self._demo_humps = 0
                 self._run_request = None
                 self._run_sample = None
                 self._run_lease = None
@@ -582,6 +611,12 @@ class DashboardState:
     def debug_snapshot(self):
         with self.lock:
             return self.debug.snapshot(self.connection["status"] == "connected")
+
+    def download_imu(self, name):
+        with self.lock:
+            if self.imu_captures is None:
+                raise KeyError(name)
+            return self.imu_captures.download(name)
 
     def demo_ir_tick(self):
         with self.lock:
@@ -643,15 +678,19 @@ class DashboardState:
 
     def _demo_terrain(self, t, active):
         """Simulated Buddy 4: a gentle 30 mm hump every 15 s while following."""
-        phase = t % 15.0
+        elapsed = t - self._demo_pose_t0 if active else 0
+        phase = elapsed % 15.0
         on = active and 5 < phase < 8
         pitch = round(80 * math.sin((phase - 5) / 3 * 2 * math.pi)) if on else 0
         roll = round(15 * math.sin(t * 0.7)) if active else 0
         state = (5 if pitch > 40 else 6 if pitch < -40 else 2) if active else 1
         climb = round(30 * math.sin((phase - 5) / 3 * math.pi)) if on else 0
-        if on and phase > 7.8:
-            self._demo_peak = 30
-        peak = getattr(self, "_demo_peak", None) if active else None
+        if active:
+            count = min(65535, int((elapsed + 7) // 15))
+            if count > self._demo_humps:
+                self._demo_humps = count
+                self.ingest("car/telemetry/hump", bytes([VERSION]) + (count | 30 << 16).to_bytes(4, "little"))
+        peak = 30 if self._demo_humps else None
         body = (1 | (pitch & 0x7ff) << 1 | (roll & 0x7ff) << 12 | state << 23 |
                 int(on) << 26 | climb << 27 | int(peak is not None) << 36 | (peak or 0) << 37)
         self.ingest(TERRAIN_TOPIC, bytes([VERSION]) + body.to_bytes(6, "little"))
@@ -687,6 +726,7 @@ class DashboardState:
             return
         if self._demo_pose_t0 is None:
             self._demo_pose_t0 = t
+            self._demo_humps = 0
         straight, radius = 60.0, 15.0
         arc = math.pi * radius
         lap = 2 * (straight + arc)

@@ -24,12 +24,13 @@ async function dashboard(initial = robotState()) {
     constructor() {
       this.value = ''; this.dataset = {}; this.style = {}; this.listeners = {};
       this.attributes = {}; this.disabled = false; this.hidden = false; this.open = false;
+      this.children = [];
       this.classList = {toggle() {}, add() {}};
     }
     addEventListener(type, fn) { this.listeners[type] = fn; }
     setAttribute(key, value) { this.attributes[key] = value; }
-    append() {}
-    replaceChildren() {}
+    append(...children) { this.children.push(...children); }
+    replaceChildren(...children) { this.children = children; }
     click() { return this.disabled ? undefined : this.listeners.click?.(); }
   }
   const get = id => { if (!nodes.has(id)) nodes.set(id, new Node()); return nodes.get(id); };
@@ -67,6 +68,37 @@ async function dashboard(initial = robotState()) {
       timer[1].fn(); await flush();
     }};
 }
+
+test('Buddy 4 run logs show counts, peaks and unavailable values without barcode captures', async () => {
+  const started_at = '2026-11-13T07:34:22Z';
+  const runs = [
+    {started_at, active: true, ended_at: null, hump_count: 0, peak_mm: null},
+    {started_at, active: false, ended_at: '2026-11-13T07:34:25Z', hump_count: 2, peak_mm: 14},
+    {started_at, active: false, ended_at: null, hump_count: null, peak_mm: 10},
+  ];
+  const state = robotState();
+  state.run_log = {runs, current_id: null, error: null};
+  const ui = await dashboard(state);
+  const rows = ui.get('run-log-body').children[0].children;
+  assert.equal(ui.get('imu-captures').hidden, true);
+  assert.equal(ui.get('run-count').textContent, '3');
+  assert.deepEqual(rows.map(row => [1, 3, 4].map(i => row.children[i].textContent)),
+    [['Running', '0', '—'], ['Ended', '2', '14'], ['End unconfirmed', 'Unavailable', '10']]);
+});
+
+test('raw IMU captures expose a CSV download for each firmware run', async () => {
+  const name = 'imu-20261117T080000000Z-10203040-r00012-12345678.csv';
+  const state = robotState();
+  state.imu_captures = {captures: [{name, run: 12, received_at: '2026-11-17T08:00:00Z', limited: true}]};
+  const ui = await dashboard(state);
+  const row = ui.get('imu-capture-body').children[0].children[0];
+  const download = row.children[3].children[0];
+  assert.equal(ui.get('imu-captures').hidden, false);
+  assert.equal(row.children[1].textContent, '12');
+  assert.equal(row.children[2].textContent, 'Size limit reached');
+  assert.equal(download.href, `/api/imu/${name}`);
+  assert.equal(download.download, name);
+});
 
 test('STOP overtakes in-flight START; a late START response cannot replace STOP', async () => {
   const ui = await dashboard();
