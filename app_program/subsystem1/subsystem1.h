@@ -39,6 +39,10 @@ IMPORT ER buddy1_report_pose(UH distance_cm_mod, H heading_deg);
  * run's highest hump (see MQTT_PROTOCOL.md). Unavailable values must be zero;
  * out-of-range values are rejected (E_PAR). Not cached. */
 IMPORT ER buddy1_report_terrain(const BUDDY1_TERRAIN *terrain);
+/* Live Buddy 5 status (5 Hz) and obstacle profile (per scan/peek); see
+ * MQTT_PROTOCOL.md. Out-of-range values are rejected (E_PAR). Not cached. */
+IMPORT ER buddy1_report_avoidance(const BUDDY1_AVOIDANCE *avoidance);
+IMPORT ER buddy1_report_scan(const BUDDY1_SCAN *scan);
 IMPORT ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state);
 /* Central protected telemetry fault mirror. Each caller updates only its
  * owned bits; active is a subset of changed. Task context only. Controller

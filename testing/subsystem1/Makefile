@@ -31,5 +31,5 @@ sanitize:
 
 sizes:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -fshort-enums size_report.c $(APP)/telemetry_codec.c -o $(BUILD)/size_report
+	$(CC) $(CPPFLAGS) $(CFLAGS) -fshort-enums -Wno-type-limits size_report.c $(APP)/telemetry_codec.c -o $(BUILD)/size_report
 	$(BUILD)/size_report

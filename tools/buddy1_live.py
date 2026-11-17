@@ -89,6 +89,21 @@ def describe(topic, d):
         hump = f", on hump {d['climb_mm']} mm" if d["on_hump"] else ""
         peak = f", highest this run {d['peak_mm']} mm" if d["peak_valid"] else ", no hump yet"
         return f"TERRAIN   {tilt}, {d['state']}{hump}{peak}"
+    if name == "avoidance":
+        rng = f"{d['range_mm']} mm" if d["range_mm"] is not None else ("no echo" if d["no_echo"] else "unavailable")
+        servo = f"servo {d['servo_deg']} deg" if d["servo_deg"] else "servo not positioned"
+        step = ""
+        if d["state"] in ("moving", "finishing"):
+            step = f", leg {d['leg']}" + (f" ({d['pass_step']})" if d["leg"] == 3 else "")
+            step += f", {d['route']} side" + (" (switched)" if d["swapped"] else "")
+        fault = f", fault {d['fault']}" if d["fault"] != "none" else ""
+        return f"AVOID     front {rng}, {servo}, {d['state']}{step}{fault}"
+    if name == "scan":
+        if not d["valid"]:
+            return f"SCAN      #{d['scan_id']} no valid profile"
+        return (f"SCAN      #{d['scan_id']} closest {d['closest_mm']} mm, width {d['width_mm']} mm, "
+                f"edges L {d['left_edge_mm']:+d} / R {d['right_edge_mm']:+d} mm, depth {d['forward_mm']} mm, "
+                f"clearance L {d['left_clear_mm']} / R {d['right_clear_mm']} mm")
     return str(d)
 
 
@@ -101,6 +116,7 @@ class Folder:
         self.heartbeats = 0
         self.last_speed = None
         self.last_tilt = None  # last printed terrain report
+        self.last_avoid = None  # last printed avoidance report
 
     def keep(self, topic, d):
         if self.show_all:
@@ -127,6 +143,15 @@ class Folder:
                     abs(a - b) < 1.0 for a, b in zip(key[5:], last[5:]))):
                 self.last_tilt = last
                 return False
+        if name == "avoidance":
+            # 5 Hz: print only state/step/servo changes or >= 20 mm range changes.
+            key = (d["state"], d["fault"], d["leg"], d["pass_step"], d["swapped"], d["no_echo"],
+                   d["servo_deg"], d["range_mm"])
+            last = self.last_avoid
+            if last is not None and key[:7] == last[:7] and (
+                    key[7] is None) == (last[7] is None) and (key[7] is None or abs(key[7] - last[7]) < 20):
+                return False
+            self.last_avoid = key
         return True
 
 

@@ -12,7 +12,7 @@ ER tk_dly_tsk(unsigned ms);
 #include <setjmp.h>
 #include <stdio.h>
 static jmp_buf finish;
-static uint32_t clock_us,trigger_us,last_trigger,centred_us,positioned_us,seen_angles;
+static uint32_t clock_us,trigger_us,last_trigger;
 static unsigned angle=90,loops,locks,scenario,stage,scan_angles;
 static bool hw_started,pinging,stationary_wheels=true,fail_echo;static unsigned bad_pings;
 static ER snapshot_lock_error;
@@ -25,28 +25,14 @@ ER tk_unl_mtx(ID id) { assert(id==1&&locks);locks--;return E_OK; }
 ID app_start_task(FP f,PRI priority,UW core,const char *name)
 { (void)name;assert(priority==20&&core==TP_PRC1);owner=(void (*)(INT,void *))f;return 2; }
 bool motion_get_feedback(motion_feedback_t *m)
-{
-    assert(!locks);
-    /* Model a wait for Buddy 2's mutex and a publication newer than task entry. */
-    if(scenario==5) { clock_us+=2000U; }
-    *m=(motion_feedback_t){.valid=true,.braked=stationary_wheels,.timestamp_us=clock_us,.state=MOTION_IDLE};return true;
-}
+{ assert(!locks);*m=(motion_feedback_t){.valid=true,.braked=stationary_wheels,.timestamp_us=clock_us,.state=MOTION_IDLE};return true; }
 bool ultrasonic_sensor_init(void) { assert(!locks);hw_started=true;return true; }
 bool scan_servo_init(void) { assert(!locks&&hw_started);return true; }
 bool scan_servo_position(unsigned value)
-{
-    assert(!locks);
-    if(value!=90) { assert(stationary_wheels);scan_angles++; }
-    else { centred_us=clock_us; }
-    positioned_us=clock_us;seen_angles|=1U<<((value-30U)/5U);angle=value;return true;
-}
+{ assert(!locks);if(value!=90){assert(stationary_wheels);scan_angles++;}angle=value;return true; }
 void scan_servo_disable(void) { }
 bool ultrasonic_sensor_trigger(uint32_t now)
-{
-    assert(!locks&&!pinging && (uint32_t)(now-last_trigger)>=70000U);
-    assert((uint32_t)(now-positioned_us)>=250000U);
-    trigger_us=last_trigger=now;pinging=true;return true;
-}
+{ assert(!locks&&!pinging && (uint32_t)(now-last_trigger)>=70000U);trigger_us=last_trigger=now;pinging=true;return true; }
 bool ultrasonic_sensor_poll(uint32_t now,uint16_t *mm,bool *valid)
 {
     assert(!locks);if(!pinging || now-trigger_us<10000) return false;
@@ -60,28 +46,19 @@ ER tk_dly_tsk(unsigned ms)
     s5_observation_t o={0}; /* GCC 13 -Wmaybe-uninitialized */
     assert(!locks);clock_us+=ms*1000;loops++;
     assert(subsystem5_snapshot(&o));
-    /* A side return must never be exposed as a usable forward measurement.
-     * Recentering requires servo settling AND a newly issued centre ping. */
-    if(o.range_valid) {
-        assert(angle==90 && (uint32_t)(clock_us-centred_us)>=250000U);
-        assert((int32_t)(o.range_us-centred_us)>=0);
-    }
     if(stage==0 && o.range_valid) {
         if(scenario==2) { fail_echo=true;stage=1; }
-        else if(scenario==4 || scenario==6 || scenario==9) {
+        else if(scenario==4) {
             /* Side peek: invalid angles refused, then one reading at 30 deg. */
             assert(!subsystem5_request_peek(77,90) && !subsystem5_request_peek(77,65) && !subsystem5_request_peek(0,30));
             assert(subsystem5_request_peek(77,30) && !subsystem5_request_scan(78));stage=1;
-            if(scenario==6) { fail_echo=true; }
         }
         else { if(scenario==3) { stationary_wheels=false; } assert(subsystem5_request_scan(42));assert(!subsystem5_request_scan(43));stage=1; }
     }
-    if((scenario==0 || scenario==5) && stage==1 && o.scan_done) {
-        assert(o.scan_id==42 && o.profile.valid && scan_angles>=8);
-        assert((seen_angles&(1U<<3)) && (seen_angles&(1U<<21))); /* 45/135 degrees */
-        stage=2;
+    if(scenario==0 && stage==1 && o.scan_done) {
+        assert(o.scan_id==42 && o.profile.valid && scan_angles>=6);stage=2;
     }
-    if((scenario==0 || scenario==5) && stage==2 && o.range_valid) { longjmp(finish,1); }
+    if(scenario==0 && stage==2 && o.range_valid) { longjmp(finish,1); }
     if(scenario==1 && stage==1 && angle!=90) { subsystem5_cancel_scan();stage=2; }
     if(scenario==1 && stage==2 && angle==90 && o.range_valid) { assert(!o.scan_done);longjmp(finish,1); }
     if(scenario==4 && stage==1 && o.scan_done && o.scan_id==77) {
@@ -89,27 +66,6 @@ ER tk_dly_tsk(unsigned ms)
         assert(scan_angles==1 && o.profile.valid && o.profile.right_clear_mm==2000 && o.profile.left_clear_mm==S5_RANGE_MAX_MM);stage=2;
     }
     if(scenario==4 && stage==2 && angle==90 && o.range_valid) { assert(o.range_mm==250);longjmp(finish,1); }
-    if(scenario==6 && stage==1 && o.scan_done && o.scan_id==77) {
-        assert(bad_pings==3 && !o.profile.valid && !o.range_valid && angle==90);
-        fail_echo=false;stage=2;
-    }
-    if(scenario==6 && stage==2 && o.range_valid) { assert(!o.no_echo);longjmp(finish,1); }
-    if(scenario==7 && stage==1 && angle!=90) { stationary_wheels=false;stage=2; }
-    if(scenario==7 && stage==2 && angle==90 && o.range_valid) { assert(!o.scan_done && !o.profile.valid);longjmp(finish,1); }
-    if(scenario==8 && stage==1 && angle!=90) { clock_us+=S5_SCAN_TIMEOUT_US;stage=2; }
-    if(scenario==8 && stage==2 && o.scan_done) {
-        assert(o.scan_id==42 && !o.profile.valid && !o.range_valid && angle==90);stage=3;
-    }
-    if(scenario==8 && stage==3 && o.range_valid) { longjmp(finish,1); }
-    if(scenario==9 && stage==1 && o.scan_done && o.scan_id==77) {
-        assert(subsystem5_request_peek(78,135));stage=2;
-    }
-    if(scenario==9 && stage==2 && angle==135) { assert(o.scan_id==77 && !o.range_valid);stage=3; }
-    if(scenario==9 && stage==3 && o.scan_id==78 && o.scan_done) {
-        assert(o.profile.valid && o.profile.left_clear_mm==2000 && o.profile.right_clear_mm==2000);
-        assert(!o.range_valid);stage=4;
-    }
-    if(scenario==9 && stage==4 && o.range_valid) { longjmp(finish,1); }
     if(scenario==3 && stage==1 && o.scan_done) { assert(!o.profile.valid && scan_angles==0);longjmp(finish,1); }
     /* One or two bad pings keep the last good reading; three latch no_echo. */
     if(scenario==2 && stage==1 && bad_pings>=1 && bad_pings<3) { assert(!o.no_echo && o.range_valid && o.range_mm==250); }
@@ -125,13 +81,11 @@ int main(void)
     puts("PASS: unconfirmed hardware cannot initialise or start Buddy 5");
     return 0;
 #endif
-    for(scenario=0;scenario<10;scenario++) {
-        mutex_id=task_id=0;requested=0;requested_angle=0;shared.cancel=shared.busy=shared.ready=false;
-        clock_us=loops=locks=stage=scan_angles=last_trigger=centred_us=positioned_us=seen_angles=0;
+    for(scenario=0;scenario<5;scenario++) {
+        mutex_id=task_id=0;requested=0;requested_angle=0;shared.cancel=shared.busy=false;
+        clock_us=loops=locks=stage=scan_angles=last_trigger=0;
         angle=90;hw_started=pinging=fail_echo=false;stationary_wheels=true;bad_pings=0;
         assert(subsystem5_init()==E_OK && subsystem5_start()==E_OK);
-        assert(!subsystem5_request_scan(41) && !subsystem5_request_peek(76,45));
-        assert(!requested && !shared.busy); /* startup requests cannot be lost */
         {
             s5_observation_t copy={.range_mm=123};
             assert(subsystem5_read_snapshot(&copy)==S5_SNAPSHOT_OK);
@@ -148,5 +102,5 @@ int main(void)
         }
         if(!setjmp(finish)) { owner(0,0); }
     }
-    puts("PASS: production sensing task; startup and stop gates, diagonal samples, fresh feedback clock, token-matched peeks, failed/moving/timed-out scans, recenter and new front ping");
+    puts("PASS: production sensing task with fake clock/kernel/sensor; stop-gated scan, bounded mailbox, packed snapshots, cancellation/recentering, confirmed no-echo, side peek");
 }

@@ -5,8 +5,8 @@ separate from zero; binary shared data; synchronise actual shared updates.
 
 ## Encoded task snapshot (same-firmware internal format)
 
-Least-significant bit first; fields follow in this order. **194 meaningful bits,
-25 bytes, six zero padding bits**. Exact re-encoding rejects noncanonical padding
+Least-significant bit first; fields follow in this order. **182 meaningful bits,
+23 bytes, six zero padding bits**. Exact re-encoding rejects noncanonical padding
 and invalid values. Decoding leaves the destination unchanged on failure.
 This internal format is not a new MQTT packet/version.
 
@@ -25,7 +25,6 @@ This internal format is not a new MQTT packet/version.
 | Left clearance | 0–4000 mm | 12 |
 | Right clearance | 0–4000 mm | 12 |
 | Estimated forward extent | 0–4000 mm | 12 |
-| Near-front bound | 0–4000 mm; no greater than forward extent; route planning requires nonzero | 12 |
 | Left/right lateral edge, each | −4000..4000 mm; encoded +4000 | 13 each |
 
 The conservative width includes angular/beam allowance; do not label it an exact
@@ -37,14 +36,29 @@ minimum. Invalid/stale values do not become clearance.
 
 - Scan sample: 12 distance bits, 5 angle-index bits (30–150 degrees in 5 degree
   steps), one validity bit = **18 bits / 3 bytes**, upper six padding bits zero.
-  Capacity 18 samples (54 bytes); the coarse+two-edge refinement schedule uses
-  at most 17 unique angles. Three raw readings form each retained median.
+  Capacity 16 samples (48 bytes); the current coarse+fine schedule uses at most 12.
 - Scan request ID: one 16-bit mailbox slot, with separate protected cancel/busy
   flags; no queue of old route requests.
-- Controller diagnostic status: 3 state bits + 3 fault bits + 2 route bits =
-  **one byte**. Only controller writes; report/telemetry readers copy under mutex.
+- Controller diagnostic status: 3 state + 3 fault + 2 route + 4 leg + 3
+  leg-3 step + 1 side-swapped bits = **one 16-bit word** (13 Nov 2026: leg,
+  step and swap added for telemetry). Only the controller writes; telemetry
+  readers copy under the mutex.
+- Servo angle for telemetry: one byte, last commanded 1..180 degrees (0 = not
+  positioned). Written only by the S5 task, read whole (single aligned byte).
 - Private FSM state/fault/leg/issued use 3/3/4/1 bits; configuration distances
-  use 12-bit fields and speed 9 bits. Full-width microsecond timers preserve
+  use 12-bit fields and speed 9 bits. Bypass flags added 13 Nov 2026 (reverse
+  checked/running, aim done/running, bend, tape tail, extra drive) are 1 bit
+  each; the aim turn is a 7-bit field (-40..40 degrees, 81 values).
+- Bypass state added 17 Nov 2026 (one owner, the controller task): heading vs
+  the passing heading 8 bits (-90..90), pending side turn 4 bits (0..10 deg),
+  side turns made 2 bits (0..3), hand-back tries 2 bits (0..2), consecutive
+  blocked readings 2 bits (0..2), sideways travel after turning away 9 bits
+  (0..511 mm, saturating), distance from the line at the last side peek 12 bits
+  (0..4095 mm). Checked by `testing/change_requirement_1/check_widths.py`.
+- Bend measure from the controller (14 Nov 2026): whole percent -100..100 in an
+  `int8_t` (201 values, 8 bits), latched when the obstacle is detected. The
+  controller's private averaging filter keeps 1/10000 steps in an `int16_t` so
+  the slow average does not stall; it was a `float` before. Full-width microsecond timers preserve
   wrapping-clock semantics. Full-precision odometry is retained for calculations.
 - Public decoded views and temporary geometry arithmetic are not wire structs.
   No raw C struct/bit-field layout crosses the task boundary.
@@ -57,13 +71,13 @@ controller's request. PIO MMIO uses per-SM control and atomic set/clear aliases;
 no encoder FIFO reader is added.
 
 Buddy 1 owns the global fault word. The controller updates only NO_ECHO using its
-existing changed-mask API; it never writes a copied global word back. The existing
-MQTT obstacle fields remain 16-bit for protocol-v2 compatibility; their final
-minimum-width contract with Buddy 1 still requires coordinated versioning/team
-agreement. This implementation does not silently change the laptop protocol or
-claim complete whole-project minimum-bit sign-off.
+existing changed-mask API; it never writes a copied global word back. Buddy 5's
+MQTT data (obstacle, avoidance and scan topics, protocol v3) uses the same
+12/13-bit distance widths as this snapshot; see Buddy 1's data representation.
 
-There was no functional Buddy 5 baseline, so no invented before/after RAM saving
-is claimed. Record linked target size and runtime stack/heap/timing separately.
+There was no older Buddy 5 firmware. The before/after in
+[`docs/CHANGE_REQUIREMENT_1_EVIDENCE.md`](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)
+compares these packed formats with the same data in the decoded-view structs,
+measured by the Arm compiler. Runtime stack/heap/timing are recorded separately.
 Physical width, clearance margins, maximum depth, scan latency and recovery
 accuracy still need real-car validation and Week 13 demonstration evidence.

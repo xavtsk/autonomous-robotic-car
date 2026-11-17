@@ -33,7 +33,9 @@ class StateTests(unittest.TestCase):
         packets = {"motion": "033c7602", "barcode": "0356",
                    "hump": "0302002d00", "heading": "036701",
                    "obstacle": "03b4c00801", "state": "0301", "faults": "0331",
-                   "terrain": "03f7d0fcbe3005"}
+                   "terrain": "03f7d0fcbe3005",
+                   "avoidance": "037186e5e02c",
+                   "scan": "030ff40132680128f8c2069a3a"}
         for name, value in packets.items():
             self.state.ingest("car/telemetry/" + name, bytes.fromhex(value))
         sections = self.state.snapshot()["sections"]
@@ -46,6 +48,27 @@ class StateTests(unittest.TestCase):
         self.assertEqual(sections["terrain"]["data"],
                          dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, state="climbing",
                               on_hump=True, climb_mm=23, peak_valid=True, peak_mm=41))
+
+    def test_buddy5_live_status_and_scan_profile(self):
+        self.state.ingest("car/telemetry/avoidance", bytes.fromhex("037186e5e02c"))
+        live = self.state.snapshot()["sections"]["avoidance"]
+        self.assertEqual((live["freshness"], live["stale"]), ("live", False))
+        self.assertEqual((live["data"]["range_mm"], live["data"]["servo_deg"], live["data"]["leg"]), (412, 150, 3))
+        self.now += 3.5
+        self.assertTrue(self.state.snapshot()["sections"]["avoidance"]["stale"])
+        self.state.ingest("car/telemetry/avoidance", bytes.fromhex("030200000000"))  # no echo, idle
+        live = self.state.snapshot()["sections"]["avoidance"]["data"]
+        self.assertIsNone(live["range_mm"]); self.assertTrue(live["no_echo"])
+        self.state.ingest("car/telemetry/scan", bytes.fromhex("030ff40132680128f8c2069a3a"))
+        scan = self.state.snapshot()["sections"]["scan"]["data"]
+        self.assertEqual((scan["left_clear_mm"], scan["right_clear_mm"], scan["left_edge_mm"]), (180, 320, 150))
+        messages = [e["message"] for e in self.state.snapshot()["events"]]
+        self.assertTrue(any("Buddy 5 scan 7: closest 250 mm" in m for m in messages))
+        self.assertTrue(any("Buddy 5: moving" in m for m in messages))
+        self.state.ingest("car/telemetry/scan", bytes.fromhex("03" + "00" * 12))  # malformed
+        self.assertEqual(self.state.snapshot()["counters"]["malformed"], 1)
+        reports = self.state.debug_snapshot()["telemetry"]["avoidance"]
+        self.assertEqual([r["data"]["range_mm"] for r in reports], [412, None])
 
     def test_terrain_is_live_and_unavailable_is_not_zero(self):
         self.state.ingest("car/telemetry/terrain", bytes.fromhex("03f7d0fcbe3005"))

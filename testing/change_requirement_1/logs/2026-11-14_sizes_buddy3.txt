@@ -1,0 +1,7 @@
+Decoded navigation / copied packet: 128 / 60 bytes
+Decoded barcode / copied packet: 8 / 5 bytes
+Decoded raw frame / copied packet: 52 / 34 bytes
+Private navigation context: 6344 bytes
+Calibration collector: 18 bytes; per surface 9 bytes
+Reflectance state per sensor: 7 bytes
+Decoded/raw validation types intentionally remain wide; no ADC precision is discarded.

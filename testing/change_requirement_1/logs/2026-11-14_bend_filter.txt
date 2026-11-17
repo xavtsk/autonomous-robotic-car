@@ -1,0 +1,2 @@
+runs=20000 same bend decision=19972 differ=28 (all within 0.19..0.21 of threshold: 28) max |float-fixed|=0.00414
+RESULT: PASS

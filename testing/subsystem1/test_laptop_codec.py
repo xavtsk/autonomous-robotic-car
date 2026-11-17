@@ -41,6 +41,28 @@ class LaptopCodecTests(unittest.TestCase):
                          dict(distance_cm_mod=2049, heading_deg=90))
         self.assertNotIn("pose", snapshot)
 
+    def test_buddy5_wire(self):
+        self.assertEqual(codec.decode("car/telemetry/avoidance", self.vectors["car/telemetry/avoidance"]),
+                         dict(range_mm=412, no_echo=False, servo_deg=150, state="moving", fault="none",
+                              route="right", leg=3, pass_step="step", swapped=True))
+        self.assertEqual(codec.decode("car/telemetry/avoidance", bytes.fromhex("030200000000")),
+                         dict(range_mm=None, no_echo=True, servo_deg=None, state="idle", fault="none",
+                              route="unknown", leg=0, pass_step="approach", swapped=False))
+        self.assertEqual(codec.decode("car/telemetry/scan", self.vectors["car/telemetry/scan"]),
+                         dict(valid=True, scan_id=7, closest_mm=250, width_mm=400, left_clear_mm=180,
+                              right_clear_mm=320, forward_mm=380, left_edge_mm=150, right_edge_mm=-250))
+        failed = bytes([3]) + ((9 << 1) | (4000 << 69) | (4000 << 82)).to_bytes(12, "little")
+        self.assertEqual(codec.decode("car/telemetry/scan", failed)["valid"], False)
+        self.assertIsNone(codec.decode("car/telemetry/scan", failed)["closest_mm"])
+        for topic, bad in (("car/telemetry/avoidance", "030400000000"),   # mm without a valid range
+                           ("car/telemetry/avoidance", "034306000000"),   # valid 400 mm + no echo
+                           ("car/telemetry/avoidance", "030000000040"),   # padding
+                           ("car/telemetry/avoidance", "0300000000"),     # length
+                           ("car/telemetry/scan", "03" + "00" * 12),      # invalid but edges -4000
+                           ("car/telemetry/scan", "03" + "00" * 11)):     # length
+            with self.subTest(topic=topic, bad=bad), self.assertRaises(ValueError):
+                codec.decode(topic, bytes.fromhex(bad))
+
     def test_terrain_wire(self):
         full = dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, state="climbing",
                     on_hump=True, climb_mm=23, peak_valid=True, peak_mm=41)

@@ -8,13 +8,16 @@ static const uint8_t body_bits[BUDDY1_TOPIC_COUNT] = {
     18, 8, 25, 9, 26, 3, BUDDY1_FAULT_BITS,
     96U + BUDDY1_FAULT_BITS, 2, 2U + BUDDY1_FAULT_BITS,
     BUDDY1_POSE_DISTANCE_BITS + 9U,
-    1U + 2U * BUDDY1_TILT_BITS + 3U + 1U + 9U + 1U + 9U
+    1U + 2U * BUDDY1_TILT_BITS + 3U + 1U + 9U + 1U + 9U,
+    1U + 1U + 12U + 8U + 3U + 3U + 2U + 4U + 3U + 1U,
+    1U + 8U + 5U * 12U + 2U * 13U
 };
 static const char *const topics[BUDDY1_TOPIC_COUNT] = {
     "car/telemetry/motion", "car/telemetry/barcode", "car/telemetry/hump",
     "car/telemetry/heading", "car/telemetry/obstacle", "car/telemetry/state",
     "car/telemetry/faults", "car/reply/snapshot", "car/reply/barcode_map", "car/status",
-    "car/telemetry/pose", "car/telemetry/terrain"
+    "car/telemetry/pose", "car/telemetry/terrain", "car/telemetry/avoidance",
+    "car/telemetry/scan"
 };
 _Static_assert(BUDDY1_TOPIC_COUNT <= 16U, "outbox topic selector is four bits");
 
@@ -135,6 +138,39 @@ static int write_fields(uint8_t topic, const BUDDY1_SNAPSHOT *v,
         put(p, bit, t->peak_valid != 0U, 1); put(p, bit, t->peak_mm, 9);
         return 1;
     }
+    case BUDDY1_TOPIC_AVOIDANCE: {
+        const BUDDY1_AVOIDANCE *a = &v->avoidance;
+        if (a->range_mm > BUDDY1_OBSTACLE_MAX_MM ||
+            (a->range_valid && (a->range_mm < BUDDY1_OBSTACLE_MIN_MM || a->no_echo)) ||
+            (!a->range_valid && a->range_mm) || a->servo_deg > BUDDY1_SERVO_MAX_DEG ||
+            a->state > BUDDY1_S5_STATE_MAX || a->fault > 7U || a->route > BUDDY1_ROUTE_RIGHT ||
+            a->leg > 15U || a->pass > BUDDY1_S5_PASS_MAX || a->swapped > 1U ||
+            a->range_valid > 1U || a->no_echo > 1U) return 0;
+        put(p, bit, a->range_valid, 1); put(p, bit, a->no_echo, 1); put(p, bit, a->range_mm, 12);
+        put(p, bit, a->servo_deg, 8); put(p, bit, a->state, 3); put(p, bit, a->fault, 3);
+        put(p, bit, a->route, 2); put(p, bit, a->leg, 4); put(p, bit, a->pass, 3);
+        put(p, bit, a->swapped, 1);
+        return 1;
+    }
+    case BUDDY1_TOPIC_SCAN: {
+        const BUDDY1_SCAN *q = &v->scan;
+        if (q->closest_mm > BUDDY1_OBSTACLE_MAX_MM || q->width_mm > BUDDY1_OBSTACLE_WIDTH_MAX_MM ||
+            q->left_clear_mm > BUDDY1_OBSTACLE_MAX_MM || q->right_clear_mm > BUDDY1_OBSTACLE_MAX_MM ||
+            q->forward_mm > BUDDY1_OBSTACLE_MAX_MM ||
+            q->left_edge_mm < -BUDDY1_SCAN_EDGE_MAX_MM || q->left_edge_mm > BUDDY1_SCAN_EDGE_MAX_MM ||
+            q->right_edge_mm < -BUDDY1_SCAN_EDGE_MAX_MM || q->right_edge_mm > BUDDY1_SCAN_EDGE_MAX_MM ||
+            q->valid > 1U) return 0;
+        if (q->valid ? (q->closest_mm < BUDDY1_OBSTACLE_MIN_MM || q->left_edge_mm < q->right_edge_mm)
+                     : (q->closest_mm || q->width_mm || q->left_clear_mm || q->right_clear_mm ||
+                        q->forward_mm || q->left_edge_mm || q->right_edge_mm)) return 0;
+        put(p, bit, q->valid, 1); put(p, bit, q->scan_id, 8);
+        put(p, bit, q->closest_mm, 12); put(p, bit, q->width_mm, 12);
+        put(p, bit, q->left_clear_mm, 12); put(p, bit, q->right_clear_mm, 12);
+        put(p, bit, q->forward_mm, 12);
+        put(p, bit, (uint32_t)(q->left_edge_mm + BUDDY1_SCAN_EDGE_MAX_MM), 13);
+        put(p, bit, (uint32_t)(q->right_edge_mm + BUDDY1_SCAN_EDGE_MAX_MM), 13);
+        return 1;
+    }
     default: return 0;
     }
 }
@@ -198,6 +234,35 @@ static int read_fields(uint8_t topic, const uint8_t *p, unsigned *bit,
         if (!t->tilt_valid) return t->pitch_x10 == 0 && t->roll_x10 == 0;
         return t->pitch_x10 >= -BUDDY1_TILT_LIMIT_X10 && t->pitch_x10 <= BUDDY1_TILT_LIMIT_X10 &&
                t->roll_x10 >= -BUDDY1_TILT_LIMIT_X10 && t->roll_x10 <= BUDDY1_TILT_LIMIT_X10;
+    }
+    case BUDDY1_TOPIC_AVOIDANCE: {
+        BUDDY1_AVOIDANCE *a = &v->avoidance;
+        a->range_valid = (uint8_t)get(p, bit, 1); a->no_echo = (uint8_t)get(p, bit, 1);
+        a->range_mm = (uint16_t)get(p, bit, 12); a->servo_deg = (uint8_t)get(p, bit, 8);
+        a->state = (uint8_t)get(p, bit, 3); a->fault = (uint8_t)get(p, bit, 3);
+        a->route = (uint8_t)get(p, bit, 2); a->leg = (uint8_t)get(p, bit, 4);
+        a->pass = (uint8_t)get(p, bit, 3); a->swapped = (uint8_t)get(p, bit, 1);
+        v->avoidance_valid = 1;
+        return a->range_mm <= BUDDY1_OBSTACLE_MAX_MM &&
+               (a->range_valid ? (a->range_mm >= BUDDY1_OBSTACLE_MIN_MM && !a->no_echo) : !a->range_mm) &&
+               a->servo_deg <= BUDDY1_SERVO_MAX_DEG && a->state <= BUDDY1_S5_STATE_MAX &&
+               a->route <= BUDDY1_ROUTE_RIGHT && a->pass <= BUDDY1_S5_PASS_MAX;
+    }
+    case BUDDY1_TOPIC_SCAN: {
+        BUDDY1_SCAN *q = &v->scan;
+        q->valid = (uint8_t)get(p, bit, 1); q->scan_id = (uint8_t)get(p, bit, 8);
+        q->closest_mm = (uint16_t)get(p, bit, 12); q->width_mm = (uint16_t)get(p, bit, 12);
+        q->left_clear_mm = (uint16_t)get(p, bit, 12); q->right_clear_mm = (uint16_t)get(p, bit, 12);
+        q->forward_mm = (uint16_t)get(p, bit, 12);
+        q->left_edge_mm = (int16_t)((int32_t)get(p, bit, 13) - BUDDY1_SCAN_EDGE_MAX_MM);
+        q->right_edge_mm = (int16_t)((int32_t)get(p, bit, 13) - BUDDY1_SCAN_EDGE_MAX_MM);
+        v->scan_valid = 1;
+        if (q->closest_mm > BUDDY1_OBSTACLE_MAX_MM || q->left_clear_mm > BUDDY1_OBSTACLE_MAX_MM ||
+            q->right_clear_mm > BUDDY1_OBSTACLE_MAX_MM || q->forward_mm > BUDDY1_OBSTACLE_MAX_MM ||
+            q->left_edge_mm > BUDDY1_SCAN_EDGE_MAX_MM || q->right_edge_mm > BUDDY1_SCAN_EDGE_MAX_MM) return 0;
+        return q->valid ? (q->closest_mm >= BUDDY1_OBSTACLE_MIN_MM && q->left_edge_mm >= q->right_edge_mm)
+                        : !(q->closest_mm || q->width_mm || q->left_clear_mm || q->right_clear_mm ||
+                            q->forward_mm || q->left_edge_mm || q->right_edge_mm);
     }
     default: return 0;
     }

@@ -7,8 +7,6 @@ They do not access a sensor, serial port, broker or robot.
 | Test | Actual production logic exercised | Replaced boundary |
 |---|---|---|
 | host_test | Packed codecs, range conversion, coarse/fine scan, profile, plan, recovery, finite-state controller | Synthetic measurements and motion completions |
-| geometry_test | Planner distances and body/sensor footprint through both 45-degree routes | Static rectangular obstacles, exact wheel travel, known floor bounds; no acoustic or slip model |
-| profile_scan_test | Both-edge refinement, median filtering, centre-front component and unknown-edge rejection | Synthetic angular echoes, including short/long outliers and failed returns |
 | controller_test | S5 + S3 controller/navigation + real Buddy 2 controller/PID/estimator | Encoder counts, PWM and sensor observations |
 | terrain_controller_test | S4 arbitration + S5 bypass + S3 + real Buddy 2 motion controller | IMU/ultrasonic/IR observations, encoder counts, PWM; verifies impact cancellation/braking |
 | course_clear_test | Upstream course simulator with S5 arbitration enabled, including left/right turn undershoot and overshoot recovery | Simulated wheels/IR and a fresh clear ultrasonic reading |
@@ -19,27 +17,6 @@ They do not access a sensor, serial port, broker or robot.
 
 Passing those is software evidence only. The existing Buddies 1–4, controller,
 startup and course simulation suites are also regression checks.
-
-## 11 November 2026 revision status
-
-New regressions cover both route directions, 45-degree fallback turns, actual
-outbound/step/rear-clearance travel, two distinct clear peeks, stale completions,
-unknown/insufficient floor, protruding sensors and near-corner collision checks.
-The compact revision adds 200/250/300 mm approaches, exact inward-turn corner
-clearance, both-side median scans, and the front-position gate that prevents
-mistaking empty floor before the obstacle for rear clearance.
-The runtime harness checks feedback-clock publication races, actual servo-settle
-time, startup requests, cancel/failure/timeout and recentering before front use.
-
-All current host test targets compile with strict warnings. Windows Application
-Control blocked the attempted new host, controller, terrain-controller, runtime
-and geometry executables. Execution and sanitizers are **not verified** for this
-revision. Historical PASS logs below this directory are from older source.
-The hardware-enabled compact 30 cm Pico Wi-Fi/S4/S5 firmware was built and
-flashed on 11 November 2026 at 18:58 +08. Post-flash telemetry and valid
-ultrasonic readings were received; physical obstacle-avoidance validation is
-pending. User-confirmed floor allowance is 450 mm each side,
-not the unlimited/1500 mm synthetic space used by some test cases.
 
 ## Required physical records (NOT RUN by this implementation)
 

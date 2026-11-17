@@ -204,7 +204,7 @@ MQTT framing and do not measure the Pico's RAM or network bandwidth.
 | 2 | Wheel speeds/fault bits; updated optional diagnostics add ramped PID setpoints, measured speed, signed motor duty, encoder counts, motion state and brake acknowledgement | PID component terms, measured stop latency |
 | 3 | Barcode/action, state, IR fault, recorded captures and 20 Hz IR preview; updated diagnostics add calibration references/ranges, line error, pending action, event counts and controller reason | Exact per-event timestamps, original-line identity after recovery |
 | 4 | With `S4=1`: every 200 ms (also while stopped) pitch/roll, terrain state incl. impact, climb height on the current hump and highest hump since START; completed-hump count; IMU fault bit. The heading topic stays reserved (empty) | Raw accelerometer/gyro and calibration details are USB-only |
-| 5 | With `S5=1 S5_HARDWARE_CONFIRMED=1`: closest distance, width and route per completed scan, no-echo fault, "avoiding obstacle" state | Servo angles, scan samples and left/right clearance are not published |
+| 5 | With `S5=1 S5_HARDWARE_CONFIRMED=1`: every 200 ms the front range (or no-echo), commanded servo angle, bypass state, fault reason, route, leg/step and side swap; after every scan or side peek the full profile (closest, width, edge position, depth, left/right clearance); the per-scan summary, no-echo fault and "avoiding obstacle" state | Individual scan samples are USB-only |
 
 The debug pages include rolling histories, graph pause/window selection and
 **Save debug evidence**, which exports bounded JSON with source/validity metadata.

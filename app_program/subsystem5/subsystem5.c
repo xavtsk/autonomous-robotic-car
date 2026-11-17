@@ -6,11 +6,18 @@
 #include <sys/sysdef.h>
 #include "../subsystem2/motion.h"
 static ID mutex_id,task_id;
-static uint8_t published[S5_PACKET_BYTES],controller_status;
+static uint8_t published[S5_PACKET_BYTES];
+static uint16_t controller_status;
+/* Single aligned byte: written only by the S5 task, read whole by telemetry. */
+static volatile uint8_t servo_deg;
 static uint16_t requested;
 static uint8_t requested_angle; /* 0 = full scan, else side peek angle */
-static struct { unsigned cancel:1,busy:1,ready:1; } shared;
+static struct { unsigned cancel:1,busy:1; } shared;
 static uint32_t now_us(void) { return in_w(TIMER_TIMERAWL); }
+static void servo_to(unsigned angle)
+{
+    if(scan_servo_position(angle) && angle>=1U && angle<=180U) { servo_deg=(uint8_t)angle; }
+}
 #ifndef S5_SCAN_LOG
 #define S5_SCAN_LOG 1 /* TEMP (28 Oct): print every full-scan reading on USB */
 #endif
@@ -22,9 +29,9 @@ static void scan_log(const s5_scan_t *s,const s5_profile_t *p)
         unsigned a,mm;bool v;
         if(s5_sample_unpack(&s->sample[i],&a,&mm,&v)) { tm_printf((UB *)" %u:%u",a,mm); }
     }
-    tm_printf((UB *)" | valid=%u width=%u L=%d R=%d fwd=%u front=%u lclear=%u rclear=%u\n",(unsigned)p->valid,
+    tm_printf((UB *)" | valid=%u width=%u L=%d R=%d fwd=%u lclear=%u rclear=%u\n",(unsigned)p->valid,
         (unsigned)p->width_mm,(int)p->left_edge_mm,(int)p->right_edge_mm,(unsigned)p->forward_mm,
-        (unsigned)p->front_mm,(unsigned)p->left_clear_mm,(unsigned)p->right_clear_mm);
+        (unsigned)p->left_clear_mm,(unsigned)p->right_clear_mm);
 #else
     (void)s;(void)p;
 #endif
@@ -37,13 +44,11 @@ static void publish(const s5_observation_t *o)
         tk_unl_mtx(mutex_id);
     }
 }
-static bool stationary(void)
+static bool stationary(uint32_t now)
 {
     motion_feedback_t m={0};
-    /* The feedback mutex can wait for a newer publication. Read the clock
-     * afterwards so its timestamp cannot appear to be in the future. */
     return motion_get_feedback(&m) && m.valid && m.braked && m.fault==MOTION_FAULT_NONE &&
-        (uint32_t)(now_us()-m.timestamp_us)<=30000U;
+        (uint32_t)(now-m.timestamp_us)<=30000U;
 }
 static void task(INT code,void *unused)
 {
@@ -60,46 +65,39 @@ static void task(INT code,void *unused)
             req_angle=requested_angle;requested_angle=0;
             tk_unl_mtx(mutex_id);
         }
-        now=now_us();
         /* Buddy 2 starts first and owns PIO0 instructions 0..23. Wait for its
          * actual publication, not task creation, before enabling SM2. */
         if(!initialized) {
             motion_feedback_t m={0};
             if(motion_get_feedback(&m) && m.valid) {
                 initialized=ultrasonic_sensor_init() && scan_servo_init();
-                if(initialized) {
-                    positioned=now_us();last_ping=positioned;
-                    if(tk_loc_mtx(mutex_id,TMO_FEVR)==E_OK) { shared.ready=true;tk_unl_mtx(mutex_id); }
-                }
+                if(initialized) { positioned=now;last_ping=now; }
             }
             publish(&obs);tk_dly_tsk(10);continue;
         }
-        if(cancel || (scanning && !stationary())) {
+        if(cancel || (scanning && !stationary(now))) {
             ultrasonic_sensor_cancel();pinging=false;scanning=false;
-            (void)scan_servo_position(90);angle=90;positioned=now_us();
+            servo_to(90);angle=90;positioned=now;
             obs.scan_done=false;obs.profile=(s5_profile_t){0};peek_id=0;
             if(tk_loc_mtx(mutex_id,TMO_FEVR)==E_OK) { shared.busy=false;tk_unl_mtx(mutex_id); }
         }
         if(req && req_angle && !cancel) {
             /* Side peek: the last profile stays published (telemetry) until the
              * reading completes under the new id; moving = failed peek. */
-            bool stopped=stationary();now=now_us();
-            if(!stopped || !s5_scan_begin_at(&scan,now,req_angle)) {
+            if(!stationary(now) || !s5_scan_begin_at(&scan,now,req_angle)) {
                 obs.scan_id=req;obs.scan_done=true;obs.scan_us=now;obs.profile=(s5_profile_t){0};
             } else {
                 ultrasonic_sensor_cancel();pinging=false;scanning=true;peek_id=req;
-                angle=scan.angle;(void)scan_servo_position(angle);positioned=now_us();
+                angle=scan.angle;servo_to(angle);positioned=now;
             }
         } else if(req && !cancel) {
             obs.scan_id=req;obs.scan_done=false;obs.profile=(s5_profile_t){0};
-            bool stopped=stationary();now=now_us();
-            if(!stopped) { obs.scan_done=true;obs.scan_us=now; }
+            if(!stationary(now)) { obs.scan_done=true;obs.scan_us=now; }
             else {
-                ultrasonic_sensor_cancel();pinging=false;s5_scan_begin_profile(&scan,now,&config);scanning=true;
-                angle=scan.angle;(void)scan_servo_position(angle);positioned=now_us();
+                ultrasonic_sensor_cancel();pinging=false;s5_scan_begin(&scan,now);scanning=true;
+                angle=scan.angle;servo_to(angle);positioned=now;
             }
         }
-        now=now_us();
         if(pinging) {
             result=ultrasonic_sensor_poll(now,&mm,&valid);
             if(result) { pinging=false; }
@@ -123,9 +121,9 @@ static void task(INT code,void *unused)
                         if(!scan.failed) { (void)s5_profile_build(scan.sample,scan.count,&config,&obs.profile); }
                         scan_log(&scan,&obs.profile);
                     }
-                    scanning=false;angle=90;(void)scan_servo_position(angle);positioned=now_us();
+                    scanning=false;angle=90;servo_to(angle);positioned=now;
                 } else if(scan.angle!=old) {
-                    angle=scan.angle;(void)scan_servo_position(angle);positioned=now_us();
+                    angle=scan.angle;servo_to(angle);positioned=now;
                 }
             } else if(angle==90U) {
                 /* A single bad ping keeps the last good reading (still timestamped
@@ -135,16 +133,14 @@ static void task(INT code,void *unused)
                 else if(obs.no_echo) { obs.range_mm=0U;obs.range_valid=false; }
             }
         }
-        now=now_us();
         if(scanning && (uint32_t)(now-scan.started_us)>=S5_SCAN_TIMEOUT_US) {
             ultrasonic_sensor_cancel();pinging=false;scanning=false;
             if(peek_id) { obs.scan_id=peek_id;peek_id=0; }
             obs.scan_done=true;obs.scan_us=now;obs.profile=(s5_profile_t){0};
-            angle=90;(void)scan_servo_position(angle);positioned=now_us();
+            angle=90;servo_to(angle);positioned=now;
         }
         if(!scanning && tk_loc_mtx(mutex_id,TMO_FEVR)==E_OK) { shared.busy=false;tk_unl_mtx(mutex_id); }
         /* Front ranging is unavailable while the servo faces elsewhere. */
-        now=now_us();
         if(scanning || (uint32_t)(now-positioned)<250000U) { obs.range_valid=false;obs.range_mm=0; }
         publish(&obs);tk_dly_tsk(10);
     }
@@ -181,14 +177,14 @@ bool subsystem5_request_scan(uint16_t id)
 {
     bool ok=false;
     if(!id || mutex_id<=0 || tk_loc_mtx(mutex_id,TMO_POL)!=E_OK) { return false; }
-    if(shared.ready && !requested && !shared.busy && !shared.cancel) { requested=id;shared.busy=true;ok=true; }
+    if(!requested && !shared.busy && !shared.cancel) { requested=id;shared.busy=true;ok=true; }
     tk_unl_mtx(mutex_id);return ok;
 }
 bool subsystem5_request_peek(uint16_t id,unsigned angle)
 {
     bool ok=false;
     if(!id || !s5_peek_angle_valid(angle) || mutex_id<=0 || tk_loc_mtx(mutex_id,TMO_POL)!=E_OK) { return false; }
-    if(shared.ready && !requested && !shared.busy && !shared.cancel) {
+    if(!requested && !shared.busy && !shared.cancel) {
         requested=id;requested_angle=(uint8_t)angle;shared.busy=true;ok=true;
     }
     tk_unl_mtx(mutex_id);return ok;
@@ -199,15 +195,19 @@ void subsystem5_cancel_scan(void)
         shared.cancel=true;requested=0;requested_angle=0;tk_unl_mtx(mutex_id);
     }
 }
-void subsystem5_set_controller_status(unsigned state,unsigned fault,unsigned route)
+void subsystem5_set_controller_status(unsigned state,unsigned fault,unsigned route,
+                                      unsigned leg,unsigned pass,unsigned swapped)
 {
     if(mutex_id>0 && tk_loc_mtx(mutex_id,TMO_POL)==E_OK) {
-        controller_status=(uint8_t)((state&7U)|((fault&7U)<<3)|((route&3U)<<6));tk_unl_mtx(mutex_id);
+        controller_status=(uint16_t)((state&7U)|((fault&7U)<<3)|((route&3U)<<6)|
+                                     ((leg&15U)<<8)|((pass&7U)<<12)|((swapped&1U)<<15));
+        tk_unl_mtx(mutex_id);
     }
 }
-uint8_t subsystem5_controller_status(void)
+uint8_t subsystem5_servo_angle(void) { return servo_deg; }
+uint16_t subsystem5_controller_status(void)
 {
-    uint8_t value=0;
+    uint16_t value=0;
     if(mutex_id>0 && tk_loc_mtx(mutex_id,TMO_POL)==E_OK) { value=controller_status;tk_unl_mtx(mutex_id); }
     return value;
 }
@@ -220,6 +220,9 @@ s5_snapshot_result_t subsystem5_read_snapshot(s5_observation_t *out)
 bool subsystem5_request_scan(uint16_t id) { (void)id;return false; }
 bool subsystem5_request_peek(uint16_t id,unsigned angle) { (void)id;(void)angle;return false; }
 void subsystem5_cancel_scan(void) { }
-void subsystem5_set_controller_status(unsigned state,unsigned fault,unsigned route) { (void)state;(void)fault;(void)route; }
-uint8_t subsystem5_controller_status(void) { return 0; }
+void subsystem5_set_controller_status(unsigned state,unsigned fault,unsigned route,
+                                      unsigned leg,unsigned pass,unsigned swapped)
+{ (void)state;(void)fault;(void)route;(void)leg;(void)pass;(void)swapped; }
+uint16_t subsystem5_controller_status(void) { return 0; }
+uint8_t subsystem5_servo_angle(void) { return 0; }
 #endif

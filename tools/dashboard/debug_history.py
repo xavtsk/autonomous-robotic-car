@@ -8,7 +8,7 @@ class DebugHistory:
         self.clock, self.mode, self.origin = clock, mode, clock()
         self.controller = IRBuffer(clock,mode)
         self.controller.samples = deque(maxlen=300)  # one minute at 5 Hz
-        self.telemetry = {k:deque(maxlen=300) for k in ("motion","heading","hump","obstacle","terrain")}
+        self.telemetry = {k:deque(maxlen=300) for k in ("motion","heading","hump","obstacle","terrain","avoidance","scan")}
         self.traffic = deque(maxlen=120)
         self.connections = deque(maxlen=60)
 

@@ -26,9 +26,11 @@ bool subsystem5_request_peek(uint16_t id, unsigned angle)
     return false;
 }
 void subsystem5_cancel_scan(void) {}
-void subsystem5_set_controller_status(unsigned state, unsigned fault, unsigned route)
-{ (void)state; (void)fault; (void)route; }
-uint8_t subsystem5_controller_status(void) { return 0U; }
+void subsystem5_set_controller_status(unsigned state, unsigned fault, unsigned route,
+                                      unsigned leg, unsigned pass, unsigned swapped)
+{ (void)state; (void)fault; (void)route; (void)leg; (void)pass; (void)swapped; }
+uint16_t subsystem5_controller_status(void) { return 0U; }
+uint8_t subsystem5_servo_angle(void) { return 0U; }
 motion_result_t motion_request_turn(float degrees, float speed)
 {
     (void)degrees; (void)speed;
