@@ -54,17 +54,20 @@ int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out);
 #define MQTT_UTK_DEBUG_PAYLOAD_MAX 164 /* 24-sample capture */
 unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size);
 
-/* Optional IR_DEBUG=1 latest-only diagnostics. IR uses spare capacity after
- * telemetry/captures. Controller observations get at most 5 Hz, with at least
- * two successful application/capture packets between them on a busy link.
- * FIFO-head events and exact pending retries retain priority. Previews are
- * dropped on rejection, never retried. No new incoming robot command. */
+/* Best-effort diagnostics. IR uses spare capacity. Controller observations
+ * get at most 5 Hz, then raw IMU batches get a turn. On a busy link each
+ * requires two successful application/capture packets between its own sends.
+ * FIFO-head events and exact pending retries keep priority. A rejected
+ * diagnostic is dropped; the receiver uses the IMU sequence to find gaps. */
 #define MQTT_UTK_IR_DEBUG_TOPIC "car/debug/ir"
 #define MQTT_UTK_IR_DEBUG_MAX 16U
 unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size);
 #define MQTT_UTK_CONTROL_DEBUG_TOPIC "car/debug/controller"
 #define MQTT_UTK_CONTROL_DEBUG_MAX 70U
 unsigned int mqtt_utk_control_debug_take(unsigned char *bytes, unsigned int size);
+#define MQTT_UTK_IMU_DEBUG_TOPIC "car/debug/imu"
+#define MQTT_UTK_IMU_DEBUG_MAX 156U
+unsigned int mqtt_utk_imu_debug_take(unsigned char *bytes, unsigned int size);
 
 /* Called after a complete inbound MQTT payload has arrived. The weak default
  * ignores it; Buddy 1 overrides it and copies permitted commands into its

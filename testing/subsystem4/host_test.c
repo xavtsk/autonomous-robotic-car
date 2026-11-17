@@ -19,7 +19,7 @@ static void right_samples(hump_detector_t *h,uint32_t *now,float height,float ds
 {
  for(unsigned i=0;i<count;i++) {
   *now+=20000;
-  hump_update_right_wheel(h,0,roll_for_height(height,0,0.116f),0.116f,ds,true,*now);
+  hump_update_right_wheel(h,0,roll_for_height(height,0,0.116f),0.116f,ds,HUMP_SAMPLE_VALID,*now);
  }
 }
 typedef struct {
@@ -28,21 +28,28 @@ typedef struct {
  terrain_odometry_t odometry;
  unsigned completed,max_live_mm;
 } terrain_fixture_t;
-static void terrain_step(terrain_fixture_t *f,float pitch,float roll,float ds,uint32_t gap)
+static terrain_safety_t terrain_accel(terrain_fixture_t *f,float x,float y,float z,
+                                      float ds,uint32_t gap)
 {
- const float p=pitch*0.01745329252f,r=roll*0.01745329252f;
  uint8_t packet[TERRAIN_PACKET_SIZE];terrain_result_t decoded;
  f->sample.timestamp_us+=gap;
- f->sample.accel_g[0]=sinf(p);f->sample.accel_g[1]=-sinf(r)*cosf(p);
- f->sample.accel_g[2]=cosf(r)*cosf(p);
+ f->sample.accel_g[0]=x;f->sample.accel_g[1]=y;f->sample.accel_g[2]=z;
  f->odometry.distance_m+=ds;f->odometry.stationary=ds==0;
  terrain_monitor_process(&f->monitor,&f->sample,&f->odometry);
  terrain_pack(&f->monitor.result,packet);terrain_unpack(packet,&decoded);
+ assert(decoded.safety==f->monitor.result.safety);
  if(decoded.hump_completed) { ++f->completed; }
  if(decoded.hump_active) {
   unsigned mm=(unsigned)lroundf(decoded.hump_height_m*1000);
   if(mm>f->max_live_mm) { f->max_live_mm=mm; }
  }
+ return decoded.safety;
+}
+static terrain_safety_t terrain_step(terrain_fixture_t *f,float pitch,float roll,float ds,
+                                     uint32_t gap)
+{
+ const float p=pitch*0.01745329252f,r=roll*0.01745329252f;
+ return terrain_accel(f,sinf(p),-sinf(r)*cosf(p),cosf(r)*cosf(p),ds,gap);
 }
 static void terrain_fixture_init(terrain_fixture_t *f,terrain_hump_geometry_t geometry)
 {
@@ -74,33 +81,33 @@ static void right_wheel_tests(void)
  assert(h.completed && fabsf(h.highest_m-0.015f)<0.000001f);
  /* Invalid/reverse/timeout cancels the candidate, preserving prior peaks. */
  right_samples(&h,&now,0.02f,0.001f,10);
- hump_update_right_wheel(&h,0,5,0.116f,-0.001f,true,now+=20000);
+ hump_update_right_wheel(&h,0,5,0.116f,-0.001f,HUMP_SAMPLE_VALID,now+=20000);
  assert(!h.active && !h.armed && fabsf(h.highest_m-0.015f)<0.000001f);
  right_samples(&h,&now,0,0.001f,5);right_samples(&h,&now,0.02f,0.001f,10);
- hump_update_right_wheel(&h,0,5,0.116f,0.001f,false,now+=20000);
+ hump_update_right_wheel(&h,0,5,0.116f,0.001f,HUMP_SAMPLE_INVALID,now+=20000);
  assert(!h.active && !h.armed && h.highest_valid);
  right_samples(&h,&now,0,0.001f,5);right_samples(&h,&now,0.01f,0.001f,10);
  now=h.started_us+10000001U;
- hump_update_right_wheel(&h,0,5,0.116f,0.001f,true,now);
+ hump_update_right_wheel(&h,0,5,0.116f,0.001f,HUMP_SAMPLE_VALID,now);
  assert(!h.active && !h.armed);
  right_samples(&h,&now,0.01f,0.001f,20);assert(!h.active); /* no restart on same plateau */
  /* Left-only elevation, pitch-only humps, brief roll spikes and steep roll do not count. */
  hump_reset(&h);right_samples(&h,&now,0,0.001f,5);
  right_samples(&h,&now,-0.01f,0.001f,20);right_samples(&h,&now,0,0.001f,5);
  assert(!h.highest_valid);
- for(unsigned i=0;i<20;i++) { hump_update_right_wheel(&h,15,0,0.116f,0.001f,true,now+=20000); }
+ for(unsigned i=0;i<20;i++) { hump_update_right_wheel(&h,15,0,0.116f,0.001f,HUMP_SAMPLE_VALID,now+=20000); }
  assert(!h.active && !h.highest_valid);
  right_samples(&h,&now,0.01f,0.0008f,1);right_samples(&h,&now,0,0.001f,5);
  assert(!h.highest_valid && !h.completed);
- hump_update_right_wheel(&h,0,10,0.116f,0.001f,true,now+=20000);
+ hump_update_right_wheel(&h,0,10,0.116f,0.001f,HUMP_SAMPLE_VALID,now+=20000);
  assert(!h.active && !h.armed);
  /* Width and pitch affect the calculation; the result is not fixed at 1 cm. */
  for(unsigned variant=0;variant<3;variant++) {
   const float track=variant==0?0.116f:0.2f,pitch=variant==2?20:0;
   const float roll=roll_for_height(0.012f,pitch,track);
   hump_reset(&h);
-  for(unsigned i=0;i<5;i++) { hump_update_right_wheel(&h,0,0,track,0.001f,true,now+=20000); }
-  for(unsigned i=0;i<10;i++) { hump_update_right_wheel(&h,pitch,roll,track,0.001f,true,now+=20000); }
+  for(unsigned i=0;i<5;i++) { hump_update_right_wheel(&h,0,0,track,0.001f,HUMP_SAMPLE_VALID,now+=20000); }
+  for(unsigned i=0;i<10;i++) { hump_update_right_wheel(&h,pitch,roll,track,0.001f,HUMP_SAMPLE_VALID,now+=20000); }
   assert(h.active && fabsf(h.height_m-0.012f)<0.000001f);
  }
  {
@@ -108,9 +115,18 @@ static void right_wheel_tests(void)
   const float roll=roll_for_height(0.01f,0,0.116f);
   terrain_fixture_init(&f,TERRAIN_HUMP_RIGHT_WHEEL);
   for(unsigned pass=0;pass<2;pass++) {
-   for(unsigned i=0;i<40;i++) { terrain_step(&f,0,roll,0.0008f,20000); }
+   for(unsigned i=0;i<40;i++) {
+    assert(terrain_step(&f,0,roll,0.0008f,20000)==TERRAIN_SAFETY_NONE);
+   }
    assert(f.monitor.result.hump_active && f.completed==pass);
-   for(unsigned i=0;i<25;i++) { terrain_step(&f,0,0,0.0008f,20000); }
+   /* A brief forward jolt must preserve the crossing and its trusted peak. */
+   float peak=f.monitor.hump.peak_m, travel=f.monitor.hump.travel_m;
+   terrain_accel(&f,-0.13f,-0.01f/0.116f,0.9963f,0.0008f,40000);
+   assert(f.monitor.hump.active && f.monitor.hump.skipped_acceleration);
+   assert(f.monitor.hump.peak_m==peak && f.monitor.hump.travel_m==travel);
+   for(unsigned i=0;i<25;i++) {
+    assert(terrain_step(&f,0,0,0.0008f,20000)==TERRAIN_SAFETY_NONE);
+   }
    assert(f.completed==pass+1 && (f.monitor.result.flags&TERRAIN_PEAK_VALID));
   }
   assert(f.max_live_mm==10 && fabsf(f.monitor.result.peak_m-0.01f)<0.0001f);
@@ -143,9 +159,12 @@ static void right_wheel_tests(void)
   for(unsigned i=0;i<25;i++) { terrain_step(&f,0,0,0.0008f,20000); }
   for(unsigned i=0;i<40;i++) { terrain_step(&f,0,roll,0.0008f,20000); }
   assert(f.monitor.hump.active);
-  /* The low-pass angle is still plausible, but the abrupt lateral change
-   * must cancel the estimate rather than create an artificial taller peak. */
-  terrain_step(&f,0,20,0.0008f,20000);
+  /* Two consecutive lateral disturbances cancel a crossing even with
+   * plausible filtered roll. The first cannot inflate the peak. */
+  float peak=f.monitor.hump.peak_m;
+  terrain_step(&f,0,14,0.0008f,20000);
+  assert(f.monitor.hump.active && f.monitor.hump.peak_m==peak);
+  terrain_step(&f,0,14,0.0008f,20000);
   assert((f.monitor.result.flags&TERRAIN_TILT_VALID) && fabsf(f.monitor.result.roll_deg)<10);
   assert(!f.monitor.hump.active && !f.monitor.hump.armed && f.completed==0);
  }
@@ -165,6 +184,135 @@ static void right_wheel_tests(void)
   assert(legacy.completed==1 && legacy.monitor.hump.highest_valid);
   assert(right.completed==0 && !right.monitor.hump.highest_valid);
  }
+}
+#if APP_IMU_DEBUG
+static void hump_debug_tests(void)
+{
+ hump_detector_t h={0};
+ uint32_t now=0;
+ right_samples(&h,&now,0,0,5);
+ assert(h.debug.flags==(HUMP_DEBUG_ARMED|HUMP_DEBUG_IS_ARMED));
+ right_samples(&h,&now,0.01f,0,1);
+ assert(h.debug.flags==HUMP_DEBUG_IS_ARMED && h.debug.reason==HUMP_REASON_NO_FORWARD_TRAVEL);
+ right_samples(&h,&now,0.01f,0.002f,1);
+ assert(h.debug.flags==(HUMP_DEBUG_STARTED|HUMP_DEBUG_ACTIVE));
+ assert(fabsf(h.debug.travel_m-0.002f)<0.000001f);
+ hump_update_right_wheel(&h,0,5,0.116f,0.002f,HUMP_SAMPLE_ACCELERATION_SPIKE,now+=20000);
+ assert(h.debug.flags==(HUMP_DEBUG_SKIPPED|HUMP_DEBUG_ACTIVE) && h.debug.reason==HUMP_REASON_ACCELERATION_SPIKE);
+ assert(fabsf(h.debug.travel_m-0.002f)<0.000001f);
+ hump_update_right_wheel(&h,0,5,0.116f,-0.001f,HUMP_SAMPLE_VALID,now+=20000);
+ assert(h.debug.flags==HUMP_DEBUG_DISCARDED && h.debug.reason==HUMP_REASON_REVERSE_TRAVEL);
+ assert(fabsf(h.debug.travel_m-0.002f)<0.000001f && h.travel_m==0);
+
+ right_samples(&h,&now,0,0,5);
+ right_samples(&h,&now,0.01f,0.001f,1);
+ right_samples(&h,&now,0,0.001f,5);
+ assert(h.debug.flags==(HUMP_DEBUG_DISCARDED|HUMP_DEBUG_ARMED|HUMP_DEBUG_IS_ARMED));
+ assert(h.debug.reason==HUMP_REASON_INSUFFICIENT_CROSSING_TRAVEL);
+ assert(fabsf(h.debug.travel_m-0.001f)<0.000001f);
+ right_samples(&h,&now,0.01f,0.002f,4);
+ right_samples(&h,&now,0,0.002f,5);
+ assert(h.debug.flags==(HUMP_DEBUG_COMPLETED|HUMP_DEBUG_ARMED|HUMP_DEBUG_IS_ARMED));
+ assert(h.debug.reason==HUMP_REASON_NONE && fabsf(h.debug.travel_m-0.008f)<0.000001f);
+ right_samples(&h,&now,0,0,1);
+ assert(h.debug.flags==HUMP_DEBUG_IS_ARMED && h.debug.travel_m==0);
+
+ terrain_fixture_t f;
+ terrain_fixture_init(&f,TERRAIN_HUMP_RIGHT_WHEEL);
+ assert(f.monitor.hump.debug.wheel_delta_valid && f.monitor.hump.debug.wheel_delta_m==0);
+ const float roll=roll_for_height(0.01f,0,0.116f);
+ for(unsigned i=0;i<20;i++) { terrain_step(&f,0,roll,0.001f,20000); }
+ assert(f.monitor.hump.active && f.monitor.hump.debug.wheel_delta_valid);
+ const float travel=f.monitor.hump.travel_m;
+ terrain_step(&f,0,roll,0.051f,20000);
+ assert(f.monitor.hump.debug.flags==HUMP_DEBUG_DISCARDED);
+ assert(f.monitor.hump.debug.reason==HUMP_REASON_ODOMETRY_STEP_OUT_OF_RANGE);
+ assert(f.monitor.hump.debug.wheel_delta_valid && fabsf(f.monitor.hump.debug.wheel_delta_m-0.051f)<0.000001f);
+ assert(f.monitor.hump.debug.travel_m==travel);
+ f.odometry.valid=false;
+ terrain_step(&f,0,0,0,20000);
+ assert(!f.monitor.hump.debug.wheel_delta_valid && f.monitor.hump.debug.reason==HUMP_REASON_ODOMETRY_UNAVAILABLE);
+ f.odometry.valid=true;
+ terrain_step(&f,0,0,0,20000);
+ assert(!f.monitor.hump.debug.wheel_delta_valid && f.monitor.hump.debug.reason==HUMP_REASON_ODOMETRY_BASELINE);
+ terrain_step(&f,0,0,0,120000);
+ assert(!f.monitor.hump.debug.wheel_delta_valid && f.monitor.hump.debug.reason==HUMP_REASON_IMU_GAP);
+}
+#endif
+static void level_pickup_rules_tests(void)
+{
+ terrain_fixture_t f;
+ terrain_fixture_init(&f,TERRAIN_HUMP_RIGHT_WHEEL);
+ /* Just below the gentle vertical cutoff. */
+ for(unsigned i=0;i<4;i++) {
+  assert(terrain_accel(&f,0.03f,0,1.149f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ }
+ /* This diagonal motion exceeds the horizontal limit even though each
+  * individual axis is within it. */
+ for(unsigned i=0;i<4;i++) {
+  assert(terrain_accel(&f,0.11f,0.11f,1.18f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ }
+ /* Run 10's highest recorded peak fails the firm directional ratio. */
+ for(unsigned i=0;i<4;i++) {
+  assert(terrain_accel(&f,-0.385f,0.144f,1.801f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ }
+
+ /* Run 9, using the first two recorded calibrated samples of the gentle pickup. */
+ assert(terrain_accel(&f,-0.037f,0.018f,1.165f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ assert(terrain_accel(&f,-0.043f,0.002f,1.199f,0.001f,40019)==TERRAIN_SAFETY_LIFTED);
+
+ /* Run 10's firm pickup still needs 40 ms of continuous qualification. */
+ terrain_fixture_init(&f,TERRAIN_HUMP_RIGHT_WHEEL);
+ assert(terrain_accel(&f,-0.247f,0.028f,1.545f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ assert(terrain_accel(&f,-0.319f,0.042f,1.763f,0.001f,39999)==TERRAIN_SAFETY_NONE);
+ assert(terrain_accel(&f,-0.247f,0.028f,1.545f,0.001f,50001)==TERRAIN_SAFETY_NONE);
+ assert(terrain_accel(&f,-0.319f,0.042f,1.763f,0.001f,40110)==TERRAIN_SAFETY_LIFTED);
+}
+static void pickup_and_overturn_tests(void)
+{
+ terrain_fixture_t f;
+ terrain_fixture_init(&f,TERRAIN_HUMP_RIGHT_WHEEL);
+ /* Horizontal acceleration/braking and a single vertical jolt must not end a drive. */
+ for(unsigned i=0;i<10;i++) {
+  assert(terrain_accel(&f,0.20f,0,1.0f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ }
+ for(unsigned i=0;i<10;i++) {
+  assert(terrain_accel(&f,-0.20f,0,1.0f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ }
+ assert(terrain_accel(&f,0,0,1.32f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ assert(terrain_step(&f,0,0,0.001f,20000)==TERRAIN_SAFETY_NONE);
+
+ /* Upward acceleration while still level and while the encoders report motion. */
+ for(unsigned i=0;i<2;i++) {
+  assert(terrain_accel(&f,0,0,1.32f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ }
+ assert(terrain_accel(&f,0,0,1.32f,0.001f,20000)==TERRAIN_SAFETY_LIFTED);
+ assert(!f.monitor.result.hump_active && !f.monitor.result.hump_completed);
+ terrain_monitor_reset_run(&f.monitor);
+ for(unsigned i=0;i<5;i++) {
+  assert(terrain_step(&f,0,0,0,20000)==TERRAIN_SAFETY_LIFTED);
+ }
+ f.sample.valid=false;
+ assert(terrain_step(&f,0,0,0,20000)==TERRAIN_SAFETY_LIFTED);
+ f.sample.valid=true;
+ for(unsigned i=0;i<15;i++) {
+  assert(terrain_step(&f,0,0,0,20000)==TERRAIN_SAFETY_LIFTED);
+ }
+ terrain_step(&f,0,0,0,20000);
+ assert(f.monitor.result.safety==TERRAIN_SAFETY_NONE);
+
+ /* An angled pickup and an upside-down gravity vector are distinct hazards. */
+ for(unsigned i=0;i<2;i++) {
+  assert(terrain_step(&f,0,30,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ }
+ assert(terrain_step(&f,0,30,0.001f,20000)==TERRAIN_SAFETY_LIFTED);
+ assert(terrain_accel(&f,0,0,-1.0f,0.001f,20000)==TERRAIN_SAFETY_OVERTURNED);
+ for(unsigned i=0;i<20;i++) {
+  assert(terrain_accel(&f,0,0,-1.0f,0,20000)==TERRAIN_SAFETY_OVERTURNED);
+ }
+ for(unsigned i=0;i<25;i++) { terrain_step(&f,0,0,0,20000); }
+ assert(f.monitor.result.safety==TERRAIN_SAFETY_NONE);
+ assert(terrain_accel(&f,0,0,0.10f,0,20000)==TERRAIN_SAFETY_LIFTED);
 }
 int main(void)
 {
@@ -234,6 +382,11 @@ int main(void)
   assert(h.active && h.height_m>0.04f);
  }
  right_wheel_tests();
- puts("Buddy 4 host tests PASS: driver, calibration, tilt, longitudinal/right-wheel hump geometry, rejection/rearm, packing, repeat/reset and live height");
+#if APP_IMU_DEBUG
+ hump_debug_tests();
+#endif
+ level_pickup_rules_tests();
+ pickup_and_overturn_tests();
+ puts("Buddy 4 host tests PASS: driver, calibration, tilt, hump geometry, packing, pickup, overturn and recovery");
  return 0;
 }

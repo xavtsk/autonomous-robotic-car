@@ -7,7 +7,15 @@ import shutil
 import subprocess
 import threading
 
+from .imu_capture import TOPIC as IMU_TOPIC
+
 COMMAND_TOPICS = {"car/cmd/barcode_map", "car/cmd/snapshot", "car/cmd/control"}
+
+
+def telemetry_topics(state, heartbeat_topic):
+    topics = ("car/telemetry/+", "car/reply/+", "car/status", "car/debug/barcode",
+              "car/debug/ir", "car/debug/controller", heartbeat_topic)
+    return topics if state.imu_captures is None else topics + (IMU_TOPIC,)
 
 
 def validate_address(host, port):
@@ -38,8 +46,7 @@ class MqttTransport:
             self.state.set_connection("connecting", host, port)
             args = ["mosquitto_sub", "-h", host, "-p", str(port), "-R", "-d",
                     "-F", "%t %x", "-q", "1"]
-            for topic in ("car/telemetry/+", "car/reply/+", "car/status",
-                          "car/debug/barcode", "car/debug/ir", "car/debug/controller", self.heartbeat_topic):
+            for topic in telemetry_topics(self.state, self.heartbeat_topic):
                 args.extend(("-t", topic))
             master, slave = pty.openpty()
             try:
@@ -171,8 +178,7 @@ class NativeMqttTransport:
                 if reason.is_failure:
                     self.state.set_connection("error", error=f"MQTT connection refused: {reason}")
                     return
-                topics = ("car/telemetry/+", "car/reply/+", "car/status",
-                          "car/debug/barcode", "car/debug/ir", "car/debug/controller", self.heartbeat_topic)
+                topics = telemetry_topics(self.state, self.heartbeat_topic)
                 result, _ = current.subscribe([(topic, 1) for topic in topics])
                 if result != mqtt.MQTT_ERR_SUCCESS:
                     self.state.set_connection("error", error="MQTT subscribe failed")

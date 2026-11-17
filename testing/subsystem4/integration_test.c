@@ -134,6 +134,42 @@ static void test_hump_report_retry(void)
     assert(reports==attempts+1U && accepted_reports==accepted+1U);
     assert(accepted_count==1U && accepted_height==9U);
 }
+
+static void test_pickup_and_overturn_stop(void)
+{
+    unsigned previous_stops=stops, previous_velocities=velocity_requests;
+    fresh(); imu.safety=TERRAIN_SAFETY_LIFTED;
+    cycle(); terrain_control_report();
+    assert(g_drive.state==S3_DRIVE_FAULT && g_drive.reason==S3_DRIVE_TERRAIN_FAULT);
+    assert(stops>previous_stops && fb_command_id==0 && velocity_requests==previous_velocities);
+    assert(faults&BUDDY1_FAULT_IMU);
+
+    /* While still unsafe, RESET cannot clear the fault. Setting the car down
+     * also cannot restart the run by itself or by sending START alone. */
+    assert(s3_integration_submit(&(s3_control_request_t){.kind=S3_CONTROL_RESET}));
+    fresh(); imu.safety=TERRAIN_SAFETY_LIFTED; cycle();
+    assert(g_drive.state==S3_DRIVE_FAULT && s3_drive_reset_result(&g_drive)!=S3_RESET_PENDING);
+    step(); command(S3_CONTROL_START);
+    assert(g_drive.state==S3_DRIVE_FAULT && fb_command_id==0);
+    assert(velocity_requests==previous_velocities);
+
+    /* A new unsafe sample during the motor reset handshake aborts it. */
+    command(S3_CONTROL_RESET);
+    assert(s3_drive_reset_result(&g_drive)==S3_RESET_PENDING);
+    fresh(); imu.safety=TERRAIN_SAFETY_LIFTED; cycle();
+    assert(g_drive.state==S3_DRIVE_FAULT && s3_drive_reset_result(&g_drive)==S3_RESET_FAILED);
+    reset_fault(); assert(fb_command_id==0);
+    begin(); ack();
+
+    /* Even if the current snapshot is already clear, an observed safety
+     * event stops the drive before the next velocity request. */
+    previous_stops=stops; previous_velocities=velocity_requests;
+    queued=(terrain_result_t){.safety=TERRAIN_SAFETY_OVERTURNED};
+    event_pending=true; step();
+    assert(g_drive.state==S3_DRIVE_FAULT && g_drive.reason==S3_DRIVE_TERRAIN_FAULT);
+    assert(stops>previous_stops && fb_command_id==0 && velocity_requests==previous_velocities);
+    reset_fault(); begin(); ack();
+}
 int main(void)
 {
     s3_calibration_collector_t cal;
@@ -149,6 +185,9 @@ int main(void)
     imu.flags=0; imu.timestamp_us=clock_value+10000; cycle();
     assert(!execute(&(s3_control_request_t){.kind=S3_CONTROL_START},clock_value));
     assert(begins==0 && freeze_calls==0);
+    assert(s3_integration_submit(&(s3_control_request_t){.kind=S3_CONTROL_START}));
+    fresh(); imu.safety=TERRAIN_SAFETY_OVERTURNED; cycle();
+    assert(g_drive.state==S3_DRIVE_OFF && begins==0 && freeze_calls==0 && fb_command_id==0);
     step(); reject_begin=true; command(S3_CONTROL_START);
     assert(g_drive.state==S3_DRIVE_OFF && cancel_calls==1 && begins==0);
     reject_begin=false; begin();
@@ -160,6 +199,7 @@ int main(void)
     assert(reports==1 && sent_count==3 && sent_height==123);
     terrain_control_report(); assert(reports==1);
     test_hump_report_retry();
+    test_pickup_and_overturn_stop();
     /* An impact event survives even when the latest sample is normal. */
     queued=(terrain_result_t){.impact=true}; event_pending=true; step();
     assert(g_drive.state==S3_DRIVE_FAULT && g_drive.reason==S3_DRIVE_TERRAIN_FAULT);
@@ -223,6 +263,7 @@ int main(void)
       assert(tilt_state==TERRAIN_STATIONARY); }
     puts("PASS: live terrain every 20 cycles: tilt valid/invalid/out-of-range/stale, state, climb height, run peak, latched impact");
     puts("PASS: hump reports retry repeated timeouts with latest count/height, stop retrying on acceptance, survive STOP and discard pending prior-run data on START reset");
+    puts("PASS: pickup and overturn brake before further velocity commands and require safe IMU data, RESET and START");
     puts("PASS: IMU START/reset acknowledgement and timeout, STOP priority, stale data, lost/impact events, latched reset, cumulative humps and owned fault bit");
     return 0;
 }

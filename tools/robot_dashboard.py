@@ -19,6 +19,7 @@ def main():
     parser.add_argument("--broker", default="127.0.0.1", help="MQTT hostname/IP (default this laptop)")
     parser.add_argument("--mqtt-port", type=int, default=1883)
     parser.add_argument("--connect", action="store_true", help="Connect to the broker immediately")
+    parser.add_argument("--imu-captures", action="store_true", help="Record raw IMU telemetry in live mode")
     parser.add_argument("--heartbeat-topic", default=HEARTBEAT_TOPIC)
     parser.add_argument("--data-dir", type=Path, default=Path(__file__).resolve().parents[1] / ".dashboard-data")
     args = parser.parse_args()
@@ -30,7 +31,8 @@ def main():
             raise ValueError("Use an exact heartbeat topic, without wildcards")
         # Demo captures never mix with real car captures.
         traces = TraceStore(args.data_dir / ("demo" if args.demo else "live"))
-        state = DashboardState(traces, "demo" if args.demo else "live", heartbeat_topic=args.heartbeat_topic)
+        state = DashboardState(traces, "demo" if args.demo else "live",
+                               heartbeat_topic=args.heartbeat_topic, capture_imu=args.imu_captures)
         state.connection.update(host=args.broker, port=args.mqtt_port)
         transport = MqttTransport(state, args.heartbeat_topic)
         state.transport = transport

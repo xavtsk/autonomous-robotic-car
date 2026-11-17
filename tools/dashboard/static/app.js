@@ -20,6 +20,8 @@
   let controlRequest = 0;
   let localControlFeedback = null;
   let lastEventKey = '';
+  let lastRunLogKey = '';
+  let lastImuCaptureKey = '';
   let lastRunsKey = '';
   let lastMapResult = '';
   let lastConnection = '';
@@ -371,6 +373,9 @@
       return Array.isArray(active) ? active.filter(name => names.includes(name)).map(readable).join(', ') || 'None reported' : 'Unknown';
     };
     const commonState = ['Reported robot state', field('state', 'state') === null ? '—' : titleCase(field('state', 'state')), source('state'), 'state'];
+    const runLog = state?.run_log;
+    const terrainRun = runLog?.runs.find(run => run.id === runLog.current_id);
+    const humpCount = runLog ? terrainRun?.hump_count : field('hump', 'count');
     const definitions = {
       '1': {
         title: 'Buddy 1 · Wi-Fi / MQTT', description: 'Check whether messages and command replies are reaching the laptop.',
@@ -430,11 +435,10 @@
           ['Climb on current hump', climbText() === null ? '—' : `${climbText()}${field('terrain','on_hump') ? ' mm' : ''}`, source('terrain'), 'terrain'],
           ['Highest hump this run (resets at START)', peakText() === null ? '—' : `${peakText()}${field('terrain','peak_valid') ? ' mm' : ''}`, source('terrain'), 'terrain'],
           ['Heading', valueUnit('heading', 'heading_deg', '°'), source('heading'), 'heading'],
-          ['Hump count', shown(field('hump', 'count')), source('hump'), 'hump'],
-          ['Reported hump height', valueUnit('hump', 'height_mm', 'mm'), source('hump'), 'hump'],
+          ['Hump count', shown(humpCount), terrainRun ? 'Recorded for this drive' : source('hump'), 'hump'],
           ['IMU fault bit', faultGroup(['imu_fault']), source('faults'), 'faults']
         ],
-        unavailable: 'Firmware built with S4=1 publishes car/telemetry/terrain every 200 ms, also while stopped: pitch/roll, terrain state (an impact anywhere in the 200 ms is reported), the height climbed so far on a hump being crossed, and the highest completed hump since START. It also publishes the completed-hump count (car/telemetry/hump, during runs) and the IMU fault bit; default builds (S4=0) publish none of them. "Unavailable" tilt means the IMU gave no usable angle (not calibrated, moving too hard, stale), not 0°. Heights need the wheels to turn (they come from wheel distance × tilt). The heading topic stays empty and reserved for Buddy 4: the encoder heading used for the route map is in car/telemetry/pose. Raw accelerometer/compass and calibration details are not published. Empty graphs do not mean zero height or a healthy IMU.'
+        unavailable: 'Firmware built with S4=1 reports tilt and terrain about every 200 ms, including while stopped. A completed hump requires valid wheel travel and a return to level. The right-wheel detector estimates height from roll, pitch and wheel spacing. Open Runs to see the reported count and highest completed hump for each drive.'
       },
       '5': {
         title: 'Buddy 5 · Obstacle / recovery', description: 'Obstacle summary, no-echo fault and avoidance state, published by firmware built with S5=1.',
@@ -519,9 +523,79 @@
     renderEventList('debug-events', newest.filter(event => buddyMatches(event) && ($('event-level').value === 'all' || ['warning', 'warn', 'error'].includes(event.level))).slice(0, 70));
   }
 
+  function renderRunLog() {
+    const log = state?.run_log;
+    const runs = log?.runs || [];
+    const online = connected() && state?.car?.status === 'online';
+    const message = transportError || log?.error || (state && !log
+      ? 'Restart the dashboard service to start recording Buddy 4 runs.'
+      : online ? 'Waiting for the next drive.' : 'Waiting for live car telemetry.');
+    const key = JSON.stringify([runs, online, message, log?.error]);
+    if (key === lastRunLogKey) return;
+    lastRunLogKey = key;
+    $('run-count').textContent = String(runs.length);
+    $('run-log-feedback').textContent = log?.error || '';
+    $('run-log-feedback').hidden = !log?.error;
+    const rows = document.createDocumentFragment();
+    for (const run of runs) {
+      const row = element('tr');
+      const status = run.active ? (online ? 'Running' : 'Last seen running')
+        : run.ended_at ? 'Ended' : 'End unconfirmed';
+      row.append(
+        element('td', new Date(run.started_at).toLocaleString()),
+        element('td', status),
+        element('td', run.ended_at ? formatTime(run.ended_at) : '—'),
+        element('td', run.hump_count ?? 'Unavailable'),
+        element('td', run.peak_mm ?? (run.hump_count === 0 ? '—' : 'Unavailable')),
+      );
+      rows.append(row);
+    }
+    if (!runs.length) {
+      const row = element('tr');
+      const cell = element('td', message, 'empty-line');
+      cell.colSpan = 5;
+      row.append(cell);
+      rows.append(row);
+    }
+    $('run-log-body').replaceChildren(rows);
+  }
+
+  function renderImuCaptures() {
+    const log = state?.imu_captures;
+    $('imu-captures').hidden = !log;
+    if (!log) return;
+    const captures = log.captures;
+    const key = JSON.stringify([captures, log.error]);
+    if (key === lastImuCaptureKey) return;
+    lastImuCaptureKey = key;
+    $('imu-capture-feedback').textContent = log.error || '';
+    $('imu-capture-feedback').hidden = !log.error;
+    const rows = document.createDocumentFragment();
+    for (const capture of captures) {
+      const row = element('tr');
+      const action = element('td');
+      const link = element('a', 'Download CSV');
+      link.href = `/api/imu/${encodeURIComponent(capture.name)}`;
+      link.download = capture.name;
+      link.setAttribute('aria-label', `Download CSV for firmware run ${capture.run}`);
+      action.append(link);
+      row.append(element('td', new Date(capture.received_at).toLocaleString()),
+        element('td', capture.run), element('td', capture.limited ? 'Size limit reached' : 'Saved',
+          capture.limited ? 'warning-text' : ''), action);
+      rows.append(row);
+    }
+    if (!captures.length) {
+      const row = element('tr');
+      const cell = element('td', 'Waiting for raw IMU telemetry.', 'empty-line');
+      cell.colSpan = 4;
+      row.append(cell);
+      rows.append(row);
+    }
+    $('imu-capture-body').replaceChildren(rows);
+  }
+
   function renderRuns() {
     const traces = Array.isArray(state?.traces) ? state.traces : [];
-    $('run-count').textContent = String(traces.length);
     const key = JSON.stringify([traces, trace?.id]);
     if (key === lastRunsKey) return;
     lastRunsKey = key;
@@ -554,7 +628,7 @@
   }
 
   function render() {
-    renderHeader(); renderOverview(); renderCommands(); renderDebug(); renderEvents(); renderRuns();
+    renderHeader(); renderOverview(); renderCommands(); renderDebug(); renderEvents(); renderRunLog(); renderImuCaptures(); renderRuns();
     window.dispatchEvent(new CustomEvent('dashboard:state', {detail: state}));
   }
 

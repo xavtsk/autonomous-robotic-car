@@ -6,12 +6,26 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 from dashboard.route import RouteTracker, MAX_SENT_POINTS
+from dashboard.run_control_protocol import STATUS_TOPIC, encode_status
 from dashboard.state import DashboardState, POSE_TOPIC
 from dashboard.traces import TraceStore
 
 
 def pose_bytes(cm, heading):
     return bytes([3]) + ((cm % 4096) | (heading << 12)).to_bytes(3, "little")
+
+
+def terrain_bytes(peak=None, *, tilt=True, climb=None):
+    bits = int(tilt) | (2 if tilt else 0) << 23
+    if climb is not None:
+        bits |= 1 << 26 | climb << 27
+    if peak is not None:
+        bits |= 1 << 36 | peak << 37
+    return bytes([3]) + bits.to_bytes(6, "little")
+
+
+def hump_bytes(count, peak):
+    return bytes([3]) + (count | peak << 16).to_bytes(4, "little")
 
 
 class RouteTrackerTests(unittest.TestCase):
@@ -126,7 +140,8 @@ class RouteTrackerTests(unittest.TestCase):
 class DashboardRouteTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.state = DashboardState(TraceStore(Path(self.tmp.name)), clock=lambda: 100.0)
+        self.now = 100.0
+        self.state = DashboardState(TraceStore(Path(self.tmp.name)), clock=lambda: self.now)
         self.state.set_connection("connected")
 
     def tearDown(self):
@@ -150,6 +165,91 @@ class DashboardRouteTests(unittest.TestCase):
         snapshot = self.state.snapshot()
         self.assertEqual(snapshot["counters"]["malformed"], before + 2)
         self.assertEqual(snapshot["route"]["runs"], [])
+
+    def test_hump_logs_survive_stop_next_start_and_service_restart(self):
+        ingest = self.state.ingest
+        state_topic = "car/telemetry/state"
+        terrain_topic = "car/telemetry/terrain"
+        hump_topic = "car/telemetry/hump"
+        ingest(terrain_topic, terrain_bytes(peak=90))  # previous drive, no boundary observed
+        self.assertEqual(self.state.snapshot()["run_log"]["runs"], [])
+        ingest(state_topic, b"\x03\x01")
+        ingest(POSE_TOPIC, pose_bytes(0, 0))  # state and pose describe the same drive
+        ingest(terrain_topic, terrain_bytes(climb=8))
+        run, = self.state.snapshot()["run_log"]["runs"]
+        self.assertEqual((run["hump_count"], run["peak_mm"]), (0, None))
+
+        ingest(terrain_topic, terrain_bytes(peak=10))
+        run, = self.state.snapshot()["run_log"]["runs"]
+        self.assertEqual((run["hump_count"], run["peak_mm"]), (None, 10))
+        ingest(hump_topic, hump_bytes(1, 10))
+        ingest(hump_topic, hump_bytes(1, 10))  # repeat, not a second detection
+        ingest(terrain_topic, terrain_bytes(peak=14))
+        ingest(state_topic, b"\x03\x00")
+        self.now += 0.5
+        ingest(hump_topic, hump_bytes(2, 14))  # latest cumulative report arrived after STOP
+        ingest(hump_topic, hump_bytes(1, 10))  # an older cumulative report cannot roll it back
+
+        ingest(state_topic, b"\x03\x01")
+        ingest(terrain_topic, terrain_bytes(tilt=False))
+        newest, previous = self.state.snapshot()["run_log"]["runs"]
+        self.assertEqual((newest["hump_count"], newest["peak_mm"]), (None, None))
+        self.assertEqual((previous["hump_count"], previous["peak_mm"]), (2, 14))
+        ingest(terrain_topic, terrain_bytes())
+        ingest(state_topic, b"\x03\x07")  # fault ends the run too
+        self.now += 3
+        ingest(terrain_topic, terrain_bytes(peak=99))  # idle after the stopped run
+        self.assertEqual(self.state.snapshot()["traces"], [])
+        reopened = DashboardState(TraceStore(Path(self.tmp.name)))
+        newest, previous = reopened.snapshot()["run_log"]["runs"]
+        self.assertEqual((newest["hump_count"], newest["peak_mm"]), (0, None))
+        self.assertEqual((previous["hump_count"], previous["peak_mm"]), (2, 14))
+        self.assertTrue(all(run["ended_at"] and not run["active"] for run in (newest, previous)))
+
+    def test_periodic_controller_status_records_runs_without_pose_or_state_events(self):
+        def status(flags):
+            self.state.ingest(STATUS_TOPIC, encode_status(robot_time_us=int(self.now * 1e6), flags=flags))
+
+        status(3)  # idle before a drive
+        self.assertEqual(self.state.snapshot()["run_log"]["runs"], [])
+        status(9)  # running
+        status(3)  # a stopped status may arrive ahead of the last queued pose
+        self.now += 0.5
+        self.state.ingest(POSE_TOPIC, pose_bytes(5, 0))
+        self.now += 0.5
+        status(3)
+        self.assertTrue(self.state.snapshot()["run_log"]["runs"][0]["active"])
+        self.now += 0.5
+        status(3)
+        run, = self.state.snapshot()["run_log"]["runs"]
+        self.assertFalse(run["active"])
+        self.assertIsNotNone(run["ended_at"])
+        status(9)
+        self.state.set_connection("connecting")
+        run = self.state.snapshot()["run_log"]["runs"][0]
+        self.assertFalse(run["active"])
+        self.assertIsNone(run["ended_at"])
+
+    def test_periodic_start_waits_for_boundary_before_logging_a_peak(self):
+        ingest = self.state.ingest
+        state_topic = "car/telemetry/state"
+        terrain_topic = "car/telemetry/terrain"
+        hump_topic = "car/telemetry/hump"
+        ingest(state_topic, b"\x03\x01")
+        ingest(hump_topic, hump_bytes(3, 20))
+        ingest(state_topic, b"\x03\x00")
+        ingest(STATUS_TOPIC, encode_status(flags=9))
+        ingest(hump_topic, hump_bytes(3, 20))
+        ingest(terrain_topic, terrain_bytes(peak=20))
+        newest, previous = self.state.snapshot()["run_log"]["runs"]
+        self.assertEqual((newest["hump_count"], newest["peak_mm"]), (None, None))
+        self.assertEqual((previous["hump_count"], previous["peak_mm"]), (3, 20))
+
+        ingest(terrain_topic, terrain_bytes())
+        ingest(hump_topic, hump_bytes(1, 10))
+        newest, previous = self.state.snapshot()["run_log"]["runs"]
+        self.assertEqual((newest["hump_count"], newest["peak_mm"]), (1, 10))
+        self.assertEqual((previous["hump_count"], previous["peak_mm"]), (3, 20))
 
     def test_demo_draws_a_route(self):
         now = [0.0]

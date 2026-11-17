@@ -152,7 +152,21 @@
       </section>
 
       <section id="page-runs" role="tabpanel" aria-labelledby="tab-runs" tabindex="0" hidden>
-        <div class="runs-heading"><div><h2>Barcode captures</h2><p class="muted">Inspect incoming captures or open a saved barcode_trace text file.</p></div><div class="import-control"><label class="file-label" for="trace-file">Import trace…</label><input id="trace-file" type="file" accept=".txt,.log,text/plain" aria-label="Import barcode trace"></div></div>
+        <div class="runs-heading"><div><h2>Buddy 4 run logs</h2><p class="muted">Latest reported hump count and highest completed hump for each observed drive.</p></div></div>
+        <p id="run-log-feedback" class="warning-text table-note" role="status" hidden></p>
+        <div class="table-wrap"><table class="runs-table">
+          <thead><tr><th scope="col">First seen</th><th scope="col">Status</th><th scope="col">End seen</th><th scope="col">Hump count</th><th scope="col">Highest hump (mm)</th></tr></thead>
+          <tbody id="run-log-body"><tr><td colspan="5" class="empty-line">Waiting for dashboard data.</td></tr></tbody>
+        </table></div>
+        <div id="imu-captures" hidden>
+          <div class="runs-heading trace-detail"><h2>Raw IMU captures</h2></div>
+          <p id="imu-capture-feedback" class="warning-text table-note" role="status" hidden></p>
+          <div class="table-wrap"><table class="runs-table">
+            <thead><tr><th scope="col">First received</th><th scope="col">Firmware run</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+            <tbody id="imu-capture-body"><tr><td colspan="4" class="empty-line">Waiting for raw IMU telemetry.</td></tr></tbody>
+          </table></div>
+        </div>
+        <div class="runs-heading trace-detail"><div><h2>Barcode captures</h2><p class="muted">Inspect incoming captures or open a saved barcode_trace text file.</p></div><div class="import-control"><label class="file-label" for="trace-file">Import trace…</label><input id="trace-file" type="file" accept=".txt,.log,text/plain" aria-label="Import barcode trace"></div></div>
         <p id="import-feedback" role="status" class="command-feedback"></p>
         <div class="table-wrap"><table class="runs-table"><thead><tr><th scope="col">Capture</th><th scope="col">Letters</th><th scope="col">Decoded</th><th scope="col">Rejected</th><th scope="col">Capture status</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead><tbody id="runs-body"><tr><td colspan="6" class="empty-line">No captures yet. Import a saved trace, or wait for the car to upload one after a run.</td></tr></tbody></table></div>
         <section id="trace-detail" class="trace-detail" hidden aria-labelledby="trace-title">
