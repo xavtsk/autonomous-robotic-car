@@ -22,7 +22,7 @@ static bool healthy(uint32_t now)
     return control.have && (uint32_t)(now-control.sample.timestamp_us)<=TERRAIN_MAX_AGE_US &&
         (control.sample.flags&TERRAIN_CALIBRATED) &&
         !(control.sample.flags&TERRAIN_FAULT) && !control.sample.impact &&
-        control.sample.state!=TERRAIN_IMPACT;
+        control.sample.state!=TERRAIN_IMPACT && control.sample.safety==TERRAIN_SAFETY_NONE;
 }
 void terrain_control_init(void) { control=(terrain_control_t){0}; impact_seen=false; }
 bool terrain_control_ready(uint32_t now)
@@ -45,6 +45,7 @@ void terrain_control_poll(s3_drive_t *drive,uint32_t now)
     terrain_result_t sample,event;
     uint16_t run,humps;
     bool running=drive->state>=S3_DRIVE_FOLLOW && drive->state<=S3_DRIVE_REACQUIRE;
+    bool resetting=s3_drive_reset_result(drive)==S3_RESET_PENDING;
     bool event_fault=false,lost=false;
     control.now=now; drive->external_hold=false;
     if(!running) { control.waiting=false; }
@@ -59,12 +60,13 @@ void terrain_control_poll(s3_drive_t *drive,uint32_t now)
     /* Bound work per control cycle. Completed hump count comes from the
      * coherent cumulative snapshot, not this potentially lossy event queue. */
     for(unsigned i=0;i<TERRAIN_EVENT_BUDGET && subsystem4_event(&event,&lost);++i) {
-        if(lost || event.impact || event.state==TERRAIN_IMPACT || (event.flags&TERRAIN_FAULT)) {
+        if(lost || event.safety!=TERRAIN_SAFETY_NONE || event.impact ||
+           event.state==TERRAIN_IMPACT || (event.flags&TERRAIN_FAULT)) {
             event_fault=true;
         }
         if(event.impact || event.state==TERRAIN_IMPACT) { impact_seen=true; }
     }
-    if(!running) { return; }
+    if(!running && !resetting) { return; }
     if(control.waiting && (uint32_t)(now-control.reset_us)<=TERRAIN_RESET_WAIT_US && !event_fault) {
         drive->external_hold=true; return;
     }
@@ -77,7 +79,8 @@ void terrain_control_report(void)
 {
     bool bad=control.latched || (!control.waiting &&
         (!control.have || (uint32_t)(control.now-control.sample.timestamp_us)>TERRAIN_MAX_AGE_US ||
-         (control.sample.flags&TERRAIN_FAULT) || control.sample.impact));
+         (control.sample.flags&TERRAIN_FAULT) || control.sample.impact ||
+         control.sample.safety!=TERRAIN_SAFETY_NONE));
     if(!control.fault_sent || control.sent_fault!=(int)bad) {
         ER er=buddy1_update_faults(BUDDY1_FAULT_IMU,bad?BUDDY1_FAULT_IMU:0U);
         if(er==E_OK || er==E_TMOUT) { control.fault_sent=true; control.sent_fault=(int)bad; }

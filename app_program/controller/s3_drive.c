@@ -27,6 +27,10 @@ static void halt(s3_drive_t *d, s3_drive_state_t state,
     {
         d->reset_result = S3_RESET_FAILED;
     }
+    /* Brake before obstacle cleanup, which can wait for the scanner mutex. */
+    d->external_hold = false;
+    d->port.stop();
+    d->port.heartbeat(false);
 #if APP_S5
     subsystem5_cancel_scan();
     d->obstacle_snapshot_valid = false;
@@ -38,9 +42,6 @@ static void halt(s3_drive_t *d, s3_drive_state_t state,
     if (state != S3_DRIVE_FAULT) { s5_avoidance_abort(&d->obstacle); }
     subsystem5_set_controller_status(d->obstacle.state, d->obstacle.fault, d->obstacle.plan.route);
 #endif
-    d->external_hold = false;
-    d->port.stop();
-    d->port.heartbeat(false);
     (void)s3_navigation_end_run(
         &d->navigation); /* A sensor latch is retained. */
     d->pending = S3_NAV_NONE;

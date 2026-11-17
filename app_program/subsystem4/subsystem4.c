@@ -10,6 +10,9 @@
 #include <tk/device.h>
 #include "../../device/include/dev_i2c.h"
 #include "../subsystem2/motion.h"
+#if APP_IMU_DEBUG
+#include "../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h"
+#endif
 /* This car's test obstacle raises the right wheel only. Keep the portable
  * monitor's longitudinal default available through an explicit build choice. */
 #ifndef S4_HUMP_GEOMETRY
@@ -20,6 +23,9 @@
 #define S4_WHEEL_TRACK_M (0.116f)
 #endif
 #define S4_QUEUE_LEN 8U
+/* Timed waits add one kernel tick. With the 10 ms tick, request 10 ms
+ * to poll near the accelerometer's 20 ms output period. */
+#define S4_IMU_POLL_MS 10U
 static ID g_mutex, g_task, g_device;
 static uint8_t g_snapshot[TERRAIN_PACKET_SIZE], g_events[S4_QUEUE_LEN][TERRAIN_PACKET_SIZE];
 static unsigned g_head,g_count;
@@ -28,6 +34,182 @@ static bool g_published;
 static bool g_lost,g_reset,g_recalibrate,g_mag_pending;
 static float g_offset[3],g_scale[3];
 static uint32_t now_us(void) { return in_w(TIMER_TIMERAWL); }
+
+#if APP_IMU_DEBUG
+#define IMU_DEBUG_VERSION 2U
+#define IMU_DEBUG_HEADER_BYTES 12U
+#define IMU_DEBUG_ROW_BYTES 28U
+#define IMU_DEBUG_BATCH_ROWS 5U
+#define IMU_DEBUG_PACKET_BYTES (IMU_DEBUG_HEADER_BYTES + IMU_DEBUG_BATCH_ROWS * IMU_DEBUG_ROW_BYTES)
+#define IMU_DEBUG_QUEUE_ROWS 128U
+#define IMU_DEBUG_FLUSH_US 250000U
+
+enum {
+    IMU_DEBUG_VALID = 1U << 0,
+    IMU_DEBUG_EVALUATED = 1U << 1,
+    IMU_DEBUG_OVERRUN = 1U << 2,
+    IMU_DEBUG_IMPACT = 1U << 3,
+    IMU_DEBUG_PENDING = 1U << 4,
+    IMU_DEBUG_UPWARD = 1U << 5,
+    IMU_DEBUG_TILTED = 1U << 6
+};
+
+typedef struct {
+    uint32_t timestamp_us, sequence;
+    int32_t wheel_delta_um, hump_travel_um;
+    int16_t raw_mg[3], calibrated_mg[3];
+    uint16_t run;
+    uint8_t flags, safety;
+    uint8_t hump_flags, hump_reason;
+} imu_debug_row_t;
+
+_Static_assert(IMU_DEBUG_PACKET_BYTES <= MQTT_UTK_IMU_DEBUG_MAX,
+               "IMU debug packet exceeds MQTT staging capacity");
+static ID g_imu_debug_mutex;
+static imu_debug_row_t g_imu_debug_rows[IMU_DEBUG_QUEUE_ROWS];
+static unsigned g_imu_debug_head, g_imu_debug_count;
+static uint32_t g_imu_debug_sequence, g_imu_debug_boot_tag;
+
+static int16_t imu_debug_mg(float g)
+{
+    /* The sensor range is ±4 g, and level calibration adds at most 0.15 g. */
+    float mg = g * 1000.0f;
+    return (int16_t)(mg + (mg < 0.0f ? -0.5f : 0.5f));
+}
+
+static int32_t imu_debug_um(float metres)
+{
+    float um = metres * 1000000.0f;
+    /* Leave INT32_MIN available as a sentinel for an unavailable distance. */
+    if (!(um > -2147483648.0f && um < 2147483648.0f)) { return INT32_MIN; }
+    return (int32_t)(um + (um < 0.0f ? -0.5f : 0.5f));
+}
+
+static void imu_debug_record(const imu_sample_t *sample, const terrain_monitor_t *monitor,
+                             uint16_t run)
+{
+    if (g_imu_debug_mutex <= 0) { return; }
+
+    /* The calibrated flag is set only when this sample reached the detector. */
+    const bool evaluated = (monitor->result.flags & TERRAIN_CALIBRATED) != 0;
+    const bool valid = sample->valid;
+    imu_debug_row_t row = {
+        .timestamp_us = sample->timestamp_us,
+        .sequence = g_imu_debug_sequence++,
+        .wheel_delta_um = INT32_MIN,
+        .hump_travel_um = INT32_MIN,
+        .run = run,
+        .flags = (uint8_t)((valid ? IMU_DEBUG_VALID : 0) |
+                           (evaluated ? IMU_DEBUG_EVALUATED : 0) |
+                           (sample->overrun ? IMU_DEBUG_OVERRUN : 0) |
+                           (monitor->result.impact ? IMU_DEBUG_IMPACT : 0)),
+        .safety = (uint8_t)monitor->result.safety
+    };
+    if (monitor->hump_geometry == TERRAIN_HUMP_RIGHT_WHEEL) {
+        if (monitor->hump.debug.wheel_delta_valid) {
+            row.wheel_delta_um = imu_debug_um(monitor->hump.debug.wheel_delta_m);
+        }
+        row.hump_travel_um = imu_debug_um(monitor->hump.debug.travel_m);
+        row.hump_flags = monitor->hump.debug.flags;
+        row.hump_reason = monitor->hump.debug.reason;
+    }
+    if (evaluated) {
+        if (monitor->safety_tracking && monitor->result.safety == TERRAIN_SAFETY_NONE) {
+            row.flags |= IMU_DEBUG_PENDING;
+        }
+        if (monitor->safety_upward) { row.flags |= IMU_DEBUG_UPWARD; }
+        if (monitor->safety_lift_tilt) { row.flags |= IMU_DEBUG_TILTED; }
+    }
+    for (unsigned axis = 0; axis < 3; ++axis) {
+        if (valid) { row.raw_mg[axis] = imu_debug_mg(sample->accel_g[axis]); }
+        if (evaluated) {
+            /* Match the unfiltered vector used in safety_update(). */
+            row.calibrated_mg[axis] = imu_debug_mg(sample->accel_g[axis] -
+                                                  monitor->calibration.bias_g[axis]);
+        }
+    }
+
+    /* Debug contention may cost a row, detectable by its sequence gap. */
+    if (tk_loc_mtx(g_imu_debug_mutex, TMO_POL) != E_OK) { return; }
+    if (g_imu_debug_boot_tag == 0U) {
+        /* A best-effort session tag from startup timing and the first reading. */
+        uint32_t tag = row.timestamp_us;
+        for (unsigned axis = 0; axis < 3; ++axis) {
+            tag = (tag ^ (uint16_t)row.raw_mg[axis]) * 16777619U;
+        }
+        g_imu_debug_boot_tag = tag | 1U;
+    }
+    if (g_imu_debug_count == IMU_DEBUG_QUEUE_ROWS) {
+        g_imu_debug_head = (g_imu_debug_head + 1U) % IMU_DEBUG_QUEUE_ROWS;
+        --g_imu_debug_count;
+    }
+    unsigned tail = (g_imu_debug_head + g_imu_debug_count) % IMU_DEBUG_QUEUE_ROWS;
+    g_imu_debug_rows[tail] = row;
+    ++g_imu_debug_count;
+    tk_unl_mtx(g_imu_debug_mutex);
+}
+
+static void imu_debug_put16(uint8_t *out, uint16_t value)
+{
+    out[0] = (uint8_t)value;
+    out[1] = (uint8_t)(value >> 8);
+}
+
+static void imu_debug_put32(uint8_t *out, uint32_t value)
+{
+    imu_debug_put16(out, (uint16_t)value);
+    imu_debug_put16(out + 2, (uint16_t)(value >> 16));
+}
+
+unsigned int mqtt_utk_imu_debug_take(unsigned char *bytes, unsigned int size)
+{
+    if (!bytes || size < IMU_DEBUG_PACKET_BYTES || g_imu_debug_mutex <= 0 ||
+        tk_loc_mtx(g_imu_debug_mutex, TMO_POL) != E_OK) { return 0; }
+    if (g_imu_debug_count == 0U) {
+        tk_unl_mtx(g_imu_debug_mutex);
+        return 0;
+    }
+
+    const imu_debug_row_t *first = &g_imu_debug_rows[g_imu_debug_head];
+    unsigned count = 1;
+    while (count < IMU_DEBUG_BATCH_ROWS && count < g_imu_debug_count) {
+        const imu_debug_row_t *next = &g_imu_debug_rows[(g_imu_debug_head + count) % IMU_DEBUG_QUEUE_ROWS];
+        if (next->run != first->run || next->sequence != first->sequence + count) { break; }
+        ++count;
+    }
+    if (count < IMU_DEBUG_BATCH_ROWS && count == g_imu_debug_count &&
+        now_us() - first->timestamp_us < IMU_DEBUG_FLUSH_US) {
+        tk_unl_mtx(g_imu_debug_mutex);
+        return 0;
+    }
+
+    bytes[0] = IMU_DEBUG_VERSION;
+    bytes[1] = (uint8_t)count;
+    imu_debug_put16(bytes + 2, first->run);
+    imu_debug_put32(bytes + 4, first->sequence);
+    imu_debug_put32(bytes + 8, g_imu_debug_boot_tag);
+    uint8_t *out = bytes + IMU_DEBUG_HEADER_BYTES;
+    for (unsigned i = 0; i < count; ++i, out += IMU_DEBUG_ROW_BYTES) {
+        const imu_debug_row_t *row = &g_imu_debug_rows[(g_imu_debug_head + i) % IMU_DEBUG_QUEUE_ROWS];
+        imu_debug_put32(out, row->timestamp_us);
+        for (unsigned axis = 0; axis < 3; ++axis) {
+            imu_debug_put16(out + 4 + 2 * axis, (uint16_t)row->raw_mg[axis]);
+            imu_debug_put16(out + 10 + 2 * axis, (uint16_t)row->calibrated_mg[axis]);
+        }
+        out[16] = row->flags;
+        out[17] = row->safety;
+        imu_debug_put32(out + 18, (uint32_t)row->wheel_delta_um);
+        imu_debug_put32(out + 22, (uint32_t)row->hump_travel_um);
+        out[26] = row->hump_flags;
+        out[27] = row->hump_reason;
+    }
+    g_imu_debug_head = (g_imu_debug_head + count) % IMU_DEBUG_QUEUE_ROWS;
+    g_imu_debug_count -= count;
+    tk_unl_mtx(g_imu_debug_mutex);
+    return IMU_DEBUG_HEADER_BYTES + count * IMU_DEBUG_ROW_BYTES;
+}
+#endif
+
 static bool bus_read(void *ctx,uint8_t addr,uint8_t reg,uint8_t *out,unsigned n)
 {
     SZ actual=0; ER er; T_I2C_EXEC request={0}; (void)ctx;
@@ -42,19 +224,34 @@ static bool bus_write(void *ctx,uint8_t addr,uint8_t reg,uint8_t value)
     er=tk_swri_dev(g_device,addr,data,2,&actual);
     return er==E_OK && actual==2;
 }
-static void publish(const terrain_result_t *r)
+static bool publish(const terrain_result_t *r, uint16_t *run)
 {
-    if(tk_loc_mtx(g_mutex,TMO_FEVR)!=E_OK) { return; }
+    if(tk_loc_mtx(g_mutex,TMO_FEVR)!=E_OK) { return false; }
     terrain_result_t previous;
-    if(g_reset) { tk_unl_mtx(g_mutex); return; }
+    if(g_reset) { tk_unl_mtx(g_mutex); return false; }
     terrain_unpack(g_snapshot,&previous);
-    if(r->state!=previous.state || r->flags!=previous.flags || r->hump_completed || r->impact) {
+    if(r->state!=previous.state || r->flags!=previous.flags || r->safety!=previous.safety ||
+       r->hump_completed || r->impact) {
         if(g_count==S4_QUEUE_LEN) { g_head=(g_head+1)%S4_QUEUE_LEN; --g_count; g_lost=true; }
         terrain_pack(r,g_events[(g_head+g_count)%S4_QUEUE_LEN]); ++g_count;
     }
     if(r->hump_completed && (r->flags&TERRAIN_PEAK_VALID) && g_humps<UINT16_MAX) { ++g_humps; }
     terrain_pack(r,g_snapshot); g_published_run=g_run; g_published=true;
+    if (run) { *run = g_published_run; }
     tk_unl_mtx(g_mutex);
+    return true;
+}
+
+static void process_sample(terrain_monitor_t *monitor, const imu_sample_t *sample,
+                           const terrain_odometry_t *odometry)
+{
+    terrain_monitor_process(monitor, sample, odometry);
+#if APP_IMU_DEBUG
+    uint16_t run;
+    if (publish(&monitor->result, &run)) { imu_debug_record(sample, monitor, run); }
+#else
+    (void)publish(&monitor->result, NULL);
+#endif
 }
 static void task(INT stacd,void *exinf)
 {
@@ -81,7 +278,7 @@ static void task(INT stacd,void *exinf)
         if(!connected && (retry_at==0 || (uint32_t)(now-retry_at)>=1000000U)) {
             retry_at=now; connected=imu_sensor_init(&bus);
             if(connected) { tk_dly_tsk(160); last_good=now_us(); }
-            else { sample.timestamp_us=now; terrain_monitor_process(&monitor,&sample,&odo); publish(&monitor.result); }
+            else { sample.timestamp_us=now; process_sample(&monitor,&sample,&odo); }
         }
         if(connected) {
 #if APP_S4_BENCH
@@ -99,29 +296,36 @@ static void task(INT stacd,void *exinf)
 #endif
             if(imu_sensor_read(&bus,now_us(),&sample)) {
                 last_good=sample.timestamp_us;
-                terrain_monitor_process(&monitor,&sample,&odo); publish(&monitor.result);
+                process_sample(&monitor,&sample,&odo);
             } else if((uint32_t)(now_us()-last_good)>100000U) {
                 sample.valid=false; sample.timestamp_us=now_us();
-                terrain_monitor_process(&monitor,&sample,&odo); publish(&monitor.result); connected=false;
+                process_sample(&monitor,&sample,&odo); connected=false;
             }
         }
 #if APP_S4_BENCH
         if((uint32_t)(now_us()-report_at)>=1000000U) {
             const terrain_result_t *r=&monitor.result; report_at=now_us();
-            tm_printf((UB *)"[S4] connected=%d cal=%d flags=%u pitch_x10=%d roll_x10=%d state=%u peak_mm=%d\n",
+            tm_printf((UB *)"[S4] connected=%d cal=%d flags=%u pitch_x10=%d roll_x10=%d state=%u peak_mm=%d safety=%u\n",
                 connected,monitor.calibration.ready,r->flags,(int)(r->pitch_deg*10),(int)(r->roll_deg*10),
-                (unsigned)r->state,(int)(r->peak_m*1000));
+                (unsigned)r->state,(int)(r->peak_m*1000),(unsigned)r->safety);
         }
 #else
         (void)report_at;
 #endif
-        tk_dly_tsk(20);
+        tk_dly_tsk(S4_IMU_POLL_MS);
     }
 }
 ER subsystem4_init(void)
 {
     T_CMTX m={0}; if(g_mutex>0) { return E_OBJ; }
     m.mtxatr=TA_INHERIT; g_mutex=tk_cre_mtx(&m);
+#if APP_IMU_DEBUG
+    /* Optional logging must never prevent the safety task from starting. */
+    if (g_mutex > 0) {
+        g_imu_debug_mutex = tk_cre_mtx(&m);
+        if (g_imu_debug_mutex < 0) { tm_printf((UB *)"[S4] IMU debug queue unavailable\n"); }
+    }
+#endif
     return g_mutex<0?(ER)g_mutex:E_OK;
 }
 ER subsystem4_start(void)

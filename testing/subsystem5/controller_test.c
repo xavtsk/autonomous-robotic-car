@@ -16,7 +16,7 @@
 static uint32_t now, lease_stamp, epoch = 1U;
 #if APP_S4
 static uint16_t imu_run;
-static bool imu_impact;
+static terrain_result_t imu_event;
 bool subsystem4_read(terrain_result_t *out,uint16_t *run,uint16_t *humps)
 {
     *out=(terrain_result_t){.timestamp_us=now,.flags=TERRAIN_CALIBRATED|TERRAIN_TILT_VALID,
@@ -25,8 +25,12 @@ bool subsystem4_read(terrain_result_t *out,uint16_t *run,uint16_t *humps)
 bool subsystem4_begin_run(uint16_t *run) { *run=++imu_run; return true; }
 bool subsystem4_event(terrain_result_t *out,bool *lost)
 {
-    if(!imu_impact) { return false; }
-    *out=(terrain_result_t){.timestamp_us=now,.impact=true}; *lost=false; imu_impact=false; return true;
+    if(!imu_event.impact && imu_event.safety==TERRAIN_SAFETY_NONE) { return false; }
+    *out=imu_event;
+    out->timestamp_us=now;
+    *lost=false;
+    imu_event=(terrain_result_t){0};
+    return true;
 }
 ER buddy1_update_faults(UB changed,UB active) { (void)changed;(void)active;return E_OK; }
 ER buddy1_report_hump(UH count,UH height) { (void)count;(void)height;return E_OK; }
@@ -254,7 +258,7 @@ static void init(bool calibrated)
     unsigned int i;
     now = 0U; snapshot_result=S5_SNAPSHOT_OK; sample_age_us=0U;
 #if APP_S4
-    imu_run=0; imu_impact=false; terrain_control_init();
+    imu_run=0; imu_event=(terrain_result_t){0}; terrain_control_init();
 #endif
     obstacle=(s5_observation_t){.range_mm=2000,.range_valid=true};
     scan_calls=peek_calls=peek_beside=peek_angle=0;scanning_requested=range_bad=false;recovery_tape=true;
@@ -362,6 +366,28 @@ static void snapshot_contention(void)
     assert(drive.state==S3_DRIVE_FAULT && !drive.obstacle_active);
     puts("PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered");
 }
+#if APP_S4
+static void stop_active_bypass(terrain_result_t event)
+{
+    init(true);start();obstacle.range_mm=250;simulate();
+    for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
+    assert(drive.obstacle_active && drive.obstacle.issued);
+    for(unsigned i=0;i<10 && duty[0]==0.0f && duty[1]==0.0f;i++) { simulate(); }
+    assert(duty[0]!=0.0f || duty[1]!=0.0f);
+
+    unsigned previous_stops=stops, previous_velocities=velocities, previous_turns=route_turns;
+    imu_event=event;simulate();
+    assert(stops>previous_stops && drive.state==S3_DRIVE_FAULT && drive.reason==S3_DRIVE_TERRAIN_FAULT);
+    assert(!drive.obstacle_active && drive.obstacle.fault==S5_INTERRUPTED && !lease);
+    simulate();
+    assert(duty[0]==0.0f && duty[1]==0.0f);
+    for(unsigned i=0;i<100 && !motion_controller_is_stopped();i++) {
+        simulate();
+        assert(duty[0]==0.0f && duty[1]==0.0f);
+    }
+    assert(motion_controller_is_stopped() && velocities==previous_velocities && route_turns==previous_turns);
+}
+#endif
 int main(void)
 {
     snapshot_contention();
@@ -395,16 +421,10 @@ int main(void)
     for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
     assert(drive.obstacle.issued);range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT);
 #if APP_S4
-    init(true);start();obstacle.range_mm=250;simulate();
-    for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
-    assert(drive.obstacle_active && drive.obstacle.issued);
-    imu_impact=true;simulate();
-    assert(drive.state==S3_DRIVE_FAULT && drive.reason==S3_DRIVE_TERRAIN_FAULT);
-    assert(!drive.obstacle_active && drive.obstacle.fault==S5_INTERRUPTED && !lease);
-    simulate();assert(duty[0]==0.0f && duty[1]==0.0f);
-    for(unsigned i=0;i<100 && !motion_controller_is_stopped();i++) { simulate(); }
-    assert(motion_controller_is_stopped());
-    puts("PASS: IMU impact cancels an active S5 bypass through the sole controller and brakes Buddy 2");
+    stop_active_bypass((terrain_result_t){.impact=true});
+    stop_active_bypass((terrain_result_t){.safety=TERRAIN_SAFETY_LIFTED});
+    stop_active_bypass((terrain_result_t){.safety=TERRAIN_SAFETY_OVERTURNED});
+    puts("PASS: impact, pickup and overturn cancel an active S5 bypass and brake both Buddy 2 motors");
 #endif
     puts("PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, bypass with side-peek depth search, real tape gate, STOP, stale range and report loss");
 }

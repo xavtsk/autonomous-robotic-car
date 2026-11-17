@@ -71,11 +71,52 @@ completed-hump count under one mutex. A reset request alone is not acknowledgeme
 While driving, a sample older than 150 ms, sensor fault, loss of calibration,
 unexpected run token, event queue overflow or impact candidate latches a controller
 fault and brakes through Buddy 2. This also interrupts Buddy 5 scanning/avoidance.
-STOP takes priority during reset waiting. Recovery requires healthy IMU data and
-an explicit controller RESET, followed by START. No automatic restart occurs.
-These are conservative integration policies, not instructor-approved numerical
-thresholds. Impact candidates need physical false-positive testing. Tilt, climbing,
-descending and turn-rate observations do not automatically change motor commands.
+STOP takes priority during reset waiting.
+
+### Stop on detected tilt or pickup acceleration
+
+Buddy 4 checks the calibrated accelerometer vector on each fresh sample. About
+45° of tilt or near-free-fall triggers the stop on the first qualifying sample.
+The pickup detector confirms after 40 ms of qualifying samples. The following
+conditions can start or continue that confirmation.
+
+- Nearly level pickup with Z at least 1.15 g and horizontal acceleration at most 0.15 g.
+- Stronger pickup with Z at least 1.30 g and the Z reading above 1 g at least twice the horizontal acceleration.
+- About 25° of tilt with acceleration magnitude near 1 g.
+
+Horizontal acceleration is the magnitude of the combined X and Y readings.
+The controller requests braking for both motors as soon as it observes the
+detection and ends the run with a terrain fault. The USB status includes
+`lifted` and `overturned` flags.
+
+A slow, level pickup can produce the same IMU readings as a stationary car on
+the floor. This detector covers pickups with measurable tilt or acceleration.
+Reliable detection of a slow, level pickup requires a measurement of ground
+clearance or wheel contact.
+
+After a stop, set the car back on a level surface and wait for it to settle.
+Buddy 4 requires 300 ms of fresh, upright samples before a controller RESET can
+succeed. Press GP20 at the fault prompt or use the dashboard RESET, then issue
+START separately for the next run. The controller retains completed hump
+results for the stopped run.
+
+### Record level pickup tests
+
+Build with `S4=1 S3_MOTION=1 MQTT=1 IMU_DEBUG=1` and launch
+`tools/robot_dashboard.py` with `--imu-captures` on the car's broker.
+The dashboard saves raw and bias-corrected acceleration at
+the IMU task's sampling cadence. Download each CSV under **Runs → Raw IMU
+captures**. The firmware run token changes when START resets the terrain monitor.
+Samples with the same token can include time after a stop.
+
+For a level pickup, check `upward_gate` to see whether the sample satisfied
+either upward-acceleration rule. On consecutive qualifying samples, the detector
+compares their sensor timestamps to the 40 ms confirmation time.
+`confirmation_pending` and `safety` show how far it got. Use `sensor_timestamp_us`
+to check the actual cadence. The task requests a 10 ms sleep between polls and
+only processes fresh sensor readings. Check `missing_samples_before` and
+`sensor_overrun` when interpreting a short spike. The
+[packet format](DATA_FORMAT.md#raw-accelerometer-diagnostic-stream) defines the sample fields.
 
 Buddy 1 receives completed-hump count and highest valid peak in millimetres on its
 existing binary v2 hump topic. Only the IMU bit is updated in the shared fault mask;

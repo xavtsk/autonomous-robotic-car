@@ -246,9 +246,7 @@ static bool execute(const s3_control_request_t *c, uint32_t now)
     }
     if (c->kind == S3_CONTROL_RESET)
     {
-        if (!terrain_control_reset_ready(now) || !s3_drive_reset(&g_drive, now)) { return false; }
-        terrain_control_clear_fault();
-        return true;
+        return terrain_control_reset_ready(now) && s3_drive_reset(&g_drive, now);
     }
     if (c->kind == S3_CONTROL_START)
     {
@@ -482,6 +480,7 @@ static void sample(INT code, void *unused)
             (s3_drive_reset_result(&g_drive) != S3_RESET_PENDING))
         {
             const bool ok=s3_drive_reset_result(&g_drive)==S3_RESET_OK;
+            if (ok) { terrain_control_clear_fault(); }
             remote_request_t reset={0};
             if (tk_loc_mtx(g_mutex,TMO_FEVR)==E_OK) {
                 reset=g_remote.reset; g_remote.reset.valid=false;
@@ -811,10 +810,12 @@ static void report(INT code, void *unused)
         terrain_result_t terrain;
         uint16_t terrain_run, terrain_humps;
         if (subsystem4_read(&terrain, &terrain_run, &terrain_humps)) {
-            tm_printf((UB *)"[S4] run=%u state=%u flags=%u pitch_x10=%d roll_x10=%d turn_dps=%d humps=%u peak_mm=%u impact=%u\n",
+            tm_printf((UB *)"[S4] run=%u state=%u flags=%u pitch_x10=%d roll_x10=%d turn_dps=%d humps=%u peak_mm=%u impact=%u lifted=%u overturned=%u\n",
                 (unsigned)terrain_run, (unsigned)terrain.state, (unsigned)terrain.flags,
                 (int)(terrain.pitch_deg*10), (int)(terrain.roll_deg*10), (int)terrain.turn_dps,
-                (unsigned)terrain_humps, (unsigned)(terrain.peak_m*1000), (unsigned)terrain.impact);
+                (unsigned)terrain_humps, (unsigned)(terrain.peak_m*1000), (unsigned)terrain.impact,
+                (unsigned)(terrain.safety==TERRAIN_SAFETY_LIFTED),
+                (unsigned)(terrain.safety==TERRAIN_SAFETY_OVERTURNED));
         } else { tm_printf((UB *)"[S4] waiting for sample/reset acknowledgement\n"); }
 #endif
         tm_printf(

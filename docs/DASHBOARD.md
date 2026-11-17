@@ -316,8 +316,28 @@ fall between 50 ms preview frames. The higher-rate saved barcode capture in Runs
 remains the evidence for individual bar widths and decoding failures. Simulation
 curves demonstrate the UI and are not real sensor or barcode-decoder evidence.
 
-**Runs** accepts saved `barcode_trace_*.txt` files and automatically saves
-incoming binary `car/debug/barcode` captures. Inspect a run to plot raw ADC or
+**Runs** shows the latest 40 Buddy 4 run logs. The dashboard saves observed
+drives in `buddy4-runs.sqlite3` inside the dashboard data folder. Each row shows
+the cumulative hump count received and the highest completed hump in mm. A live
+terrain peak can supply the height while the count is still unavailable. A
+zero count reflects a valid terrain report without a completed hump. Start and
+stop the drive while the dashboard is receiving telemetry to record both
+boundaries. Debug's **Save received log** includes these rows.
+
+Launch `tools/robot_dashboard.py` with `--imu-captures` to show **Raw IMU
+captures** and record raw telemetry from firmware built with `IMU_DEBUG=1`.
+The dashboard stores CSVs in `imu/` under its live data folder and lists the latest 40.
+Each capture contains Pico timestamps, raw and calibrated acceleration in milli-g,
+and the detector's per-sample flags. Firmware using the v2 IMU stream also
+records hump events, wheel-centre distance deltas, qualifying crossing travel,
+and rejection reasons. Filter the CSV by `hump_events` to find arm, start,
+discard, and completion records. The firmware run token advances on START;
+token `0` contains startup readings. A capture can also include readings after
+the run ends. Each capture holds up to 2 MiB, and the list marks captures that
+reached the limit. See [Buddy 4 pickup tests](../app_program/subsystem4/README.md#record-level-pickup-tests).
+
+**Barcode captures** in the same tab accepts saved `barcode_trace_*.txt` files
+and automatically saves incoming binary `car/debug/barcode` captures. Inspect a capture to plot raw ADC or
 normalized darkness by episode and save the reconstructed readable text. Files
 up to 2 MiB are accepted. Missing/duplicate binary records use the same capture
 completeness checks as imported logs; a partial transfer never becomes zero data.

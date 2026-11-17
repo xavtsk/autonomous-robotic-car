@@ -9,11 +9,11 @@ FAKE = -DAPP_H -DAPP_S4=1 -DAPP_TEST=0 -include ../integration/controller_test_k
 .PHONY: test sanitize
 test:
 	mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -I$(APP)/subsystem4 host_test.c $(CORE) -lm -o $(BUILD)/host_test
+	$(CC) $(CFLAGS) -DAPP_IMU_DEBUG=1 -I$(APP)/subsystem4 host_test.c $(CORE) -lm -o $(BUILD)/host_test
 	$(BUILD)/host_test
 	$(CC) $(CFLAGS) $(FAKE) integration_test.c $(CONTROL) $(S3) -lm -o $(BUILD)/integration_test
 	$(BUILD)/integration_test
-	$(CC) $(CFLAGS) $(FAKE) -Ifakes transport_test.c $(CORE) -lm -o $(BUILD)/transport_test
+	$(CC) $(CFLAGS) $(FAKE) -DAPP_IMU_DEBUG=1 -Ifakes transport_test.c $(CORE) -lm -o $(BUILD)/transport_test
 	$(BUILD)/transport_test
 sanitize:
 	$(MAKE) test CFLAGS='$(CFLAGS) -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'
