@@ -640,6 +640,21 @@ static void test_pose(void)
 /* Buddy 5: live avoidance (38 bits/6 bytes) and FR6 scan profile (95 bits/
  * 13 bytes); every field boundary round-trips, unusable values are zero,
  * out-of-range and noncanonical packets are rejected, never cached. */
+/* Field compares: these structs have padding, which memcmp would compare too
+ * (garbage on stack copies; failed with arm64 Linux gcc 11, 14 Nov 2026). */
+static int same_avoidance(const BUDDY1_AVOIDANCE *a, const BUDDY1_AVOIDANCE *b)
+{
+    return a->range_valid == b->range_valid && a->no_echo == b->no_echo && a->range_mm == b->range_mm &&
+           a->servo_deg == b->servo_deg && a->state == b->state && a->fault == b->fault &&
+           a->route == b->route && a->leg == b->leg && a->pass == b->pass && a->swapped == b->swapped;
+}
+static int same_scan(const BUDDY1_SCAN *a, const BUDDY1_SCAN *b)
+{
+    return a->valid == b->valid && a->scan_id == b->scan_id && a->closest_mm == b->closest_mm &&
+           a->width_mm == b->width_mm && a->left_clear_mm == b->left_clear_mm &&
+           a->right_clear_mm == b->right_clear_mm && a->forward_mm == b->forward_mm &&
+           a->left_edge_mm == b->left_edge_mm && a->right_edge_mm == b->right_edge_mm;
+}
 static void test_buddy5(void)
 {
     BUDDY1_SNAPSHOT v, d, before, after;
@@ -658,7 +673,7 @@ static void test_buddy5(void)
                                          (uint8_t)(mm % 3U), (uint8_t)(mm % 16U), (uint8_t)(mm % 5U), (uint8_t)(mm % 2U)};
         assert(buddy1_encode(BUDDY1_TOPIC_AVOIDANCE, &v, p, sizeof p) == 6U && (p[5] >> 6) == 0U);
         assert(buddy1_decode(BUDDY1_TOPIC_AVOIDANCE, p, 6U, &d) && d.avoidance_valid &&
-               memcmp(&d.avoidance, &v.avoidance, sizeof d.avoidance) == 0);
+               same_avoidance(&d.avoidance, &v.avoidance));
     }
     v = (BUDDY1_SNAPSHOT){0};
     v.avoidance = (BUDDY1_AVOIDANCE){0, 1, 0, 0, 0, 0, 0, 0, 0, 0};          /* no echo */
@@ -686,7 +701,7 @@ static void test_buddy5(void)
                                4000, (int16_t)e};
         assert(buddy1_encode(BUDDY1_TOPIC_SCAN, &v, p, sizeof p) == 13U && (p[12] >> 7) == 0U);
         assert(buddy1_decode(BUDDY1_TOPIC_SCAN, p, 13U, &d) && d.scan_valid &&
-               memcmp(&d.scan, &v.scan, sizeof d.scan) == 0);
+               same_scan(&d.scan, &v.scan));
     }
     v = (BUDDY1_SNAPSHOT){0}; v.scan.scan_id = 9;                             /* failed scan */
     assert(buddy1_encode(BUDDY1_TOPIC_SCAN, &v, p, sizeof p) == 13U &&
@@ -714,11 +729,11 @@ static void test_buddy5(void)
     poll_after(20);
     assert(strcmp(published_topic, "car/telemetry/avoidance") == 0 && published_len == 6U &&
            buddy1_decode(BUDDY1_TOPIC_AVOIDANCE, published, published_len, &d) &&
-           memcmp(&d.avoidance, &a, sizeof a) == 0);
+           same_avoidance(&d.avoidance, &a));
     q = (BUDDY1_SCAN){1, 7, 250, 400, 180, 320, 380, 150, -250}; assert(buddy1_report_scan(&q) == E_OK);
     poll_after(20);
     assert(strcmp(published_topic, "car/telemetry/scan") == 0 && published_len == 13U &&
-           buddy1_decode(BUDDY1_TOPIC_SCAN, published, published_len, &d) && memcmp(&d.scan, &q, sizeof q) == 0);
+           buddy1_decode(BUDDY1_TOPIC_SCAN, published, published_len, &d) && same_scan(&d.scan, &q));
     assert(buddy1_snapshot(&after) && memcmp(&before, &after, sizeof before) == 0);
     puts("HOST PASS: Buddy 5 avoidance 38 bits/6 bytes and FR6 scan 95 bits/13 bytes: all range/edge codes, servo/state/route/leg/pass limits, unavailable=zero, padding/length rejection, live-only, own topics");
 }

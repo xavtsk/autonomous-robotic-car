@@ -1,0 +1,29 @@
+## Linked firmware RAM (target build)
+
+| Image | Code+const (text) | .data | .bss | RAM = .data + .bss |
+|---|---:|---:|---:|---:|
+| `mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5` | 453948 | 488 | 110920 | 111408 |
+| `mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug` | 458396 | 488 | 111360 | 111848 |
+
+## RAM per buddy (object files of the IR_DEBUG=1 build, .data + .bss)
+
+| Buddy | Objects | .data + .bss bytes |
+|---|---:|---:|
+| Buddy 1 Wi-Fi/MQTT | 4 | 34 |
+| Buddy 2 motion | 10 | 305 |
+| Buddy 3 line/barcode | 10 | 6 |
+| Buddy 4 IMU/terrain | 7 | 163 |
+| Buddy 5 obstacle | 9 | 47 |
+| Vehicle controller | 10 | 27978 |
+
+## Storage before (unpacked C types) / after (packed), target compiler
+
+| Data | Before bytes | After bytes | Saved |
+|---|---:|---:|---:|
+| Buddy 4 shared terrain measurement | 32 | 12 | 20 (62%) |
+| Buddy 4 event queue, 8 slots | 256 | 96 | 160 (62%) |
+| Buddy 5 shared task snapshot | 32 | 23 | 9 (28%) |
+| Buddy 5 one scan sample | 4 | 3 | 1 (25%) |
+| Buddy 5 scan sample buffer, 16 | 64 | 48 | 16 (25%) |
+| Controller -> telemetry Buddy 5 status | 6 | 2 | 4 (66%) |
+| Controller bend detector (14 Nov fix) | 12 | 8 | 4 (33%) |

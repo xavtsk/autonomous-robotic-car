@@ -88,13 +88,17 @@
     const value = field('avoidance', key);
     return value === null ? '—' : titleCase(String(value).replaceAll('_', ' '));
   }
+  /* Buddy 5 bypass legs (obstacle_avoidance.c, 17 Nov 2026). */
+  const BYPASS_LEGS = ['turn out 45', 'out diagonal', 'turn parallel', 'passing', 'turn back in',
+    'return diagonal', 'swerve 1 (finding line)', 'swerve 2 (finding line)', 'swerve back'];
   function bypassStep() {
     if (!section('avoidance')?.valid) return '—';
     const state = field('avoidance', 'state');
     if (!['moving', 'finishing'].includes(state)) return '—';
     const leg = field('avoidance', 'leg');
-    const pass = leg === 3 ? `, ${String(field('avoidance', 'pass_step')).replaceAll('_', ' ')}` : '';
-    return `Leg ${leg}${pass}, ${field('avoidance', 'route')} side${field('avoidance', 'swapped') ? ' (switched)' : ''}`;
+    const name = state === 'finishing' ? 'on the line, handing back' : (BYPASS_LEGS[leg] || '');
+    const pass = leg === 3 && state === 'moving' ? `, ${String(field('avoidance', 'pass_step')).replaceAll('_', ' ')}` : '';
+    return `Leg ${leg} ${name}${pass}, ${field('avoidance', 'route')} side${field('avoidance', 'swapped') ? ' (switched)' : ''}`;
   }
   function scanField(key, unit, missing = 'No profile') {
     if (!section('scan')?.valid) return '—';

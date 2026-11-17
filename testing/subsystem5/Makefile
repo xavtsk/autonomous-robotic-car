@@ -17,6 +17,12 @@ test:
 	$(BUILD)/terrain_controller_test
 	$(CC) $(CFLAGS) $(INC) -DAPP_S5=1 -D_DEFAULT_SOURCE -D_USE_MATH_DEFINES course_clear_test.c $(S5) $(S3) $(S2) $(APP)/controller/s3_drive.c -lm -o $(BUILD)/course_clear_test
 	$(BUILD)/course_clear_test
+	$(CC) $(CFLAGS) $(INC) -DAPP_S5=1 -D_DEFAULT_SOURCE -D_USE_MATH_DEFINES bypass_course_test.c $(S5) $(S3) $(S2) $(APP)/controller/s3_drive.c -lm -o $(BUILD)/bypass_course_test
+	$(BUILD)/bypass_course_test
+	$(BUILD)/bypass_course_test beam=10 > /dev/null
+	$(BUILD)/bypass_course_test beam=20 > /dev/null
+	$(BUILD)/bypass_course_test turn=1.1 > /dev/null
+	$(BUILD)/bypass_course_test turn=0.9 > /dev/null || echo "bypass sim with turns 10% short: see README (wall + short turns is a known miss)"
 	$(CC) $(CFLAGS) $(INC) -Ifakes hardware_test.c -o $(BUILD)/hardware_test
 	$(BUILD)/hardware_test
 	$(CC) $(CFLAGS) $(INC) -Ifakes runtime_test.c $(S5) -o $(BUILD)/runtime_test

@@ -288,13 +288,17 @@ static void simulate(void)
     motion_state_t state=motion_controller_state();
     if(state==MOTION_DRIVE) { counts[0]++;counts[1]++; }
     if(state==MOTION_TURN) { counts[0]-=turn_sign;counts[1]+=turn_sign; }
-    bool tape=false;
-    if(drive.obstacle_active && drive.obstacle.leg==5 && drive.obstacle.issued) {
+    /* Off the line (white) while going round; the tape is crossed on the
+     * return diagonal and under the IR again during the swerve and hand-back. */
+    bool tape=false, off=drive.obstacle_active && drive.obstacle.state==S5_MOVING && drive.obstacle.leg>=1;
+    if(drive.obstacle_active && drive.obstacle.leg==5 && drive.obstacle.issued && !drive.obstacle.tail) {
         double travelled=motion_estimation_robot_distance()-drive.obstacle.leg_start_m;
         double goal=(double)drive.obstacle.plan.offset_mm/1000.0;
         tape=recovery_tape && travelled>goal-0.07 && travelled<goal+0.07;
     }
-    tick(150,tape?280:202,tape?150:202,true);
+    if(drive.obstacle_active && drive.obstacle.leg>=6) { tape=recovery_tape; }
+    if(drive.obstacle_active && drive.obstacle.state==S5_FINISH) { tape=recovery_tape;off=false; }
+    tick(150,tape?280:(off?150:202),tape?150:(off?150:202),true);
 }
 static void snapshot_contention(void)
 {
@@ -356,8 +360,10 @@ int main(void)
     assert(drive.obstacle.recovery.confirmed && drive.navigation.mode==S3_MODE_TRACK);
     /* Leg 3 measured the depth: 3 side peeks (2 still beside, 1 clear), 2 steps. */
     assert(peek_calls==3 && drive.obstacle.searched_mm==2U*S5_PEEK_STEP_MM);
-    /* 3 turns + out + approach + 2 steps + clearance + back = 10 finite moves, no barcode manoeuvre */
-    assert(polls==10 && turns==0);
+    /* Completed moves: out turn, out diagonal, turn parallel, approach, 2 steps,
+     * clearance, turn in, 135 mm onto the line = 9. The return diagonal and the
+     * swerve turn are stopped at the tape (not completed). No barcode manoeuvre. */
+    assert(polls==9 && turns==0);
     s3_drive_stop(&drive);assert(!drive.obstacle_active && !lease);
     init(true);start();range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT && !lease);
     init(true);start();obstacle.range_mm=120;simulate();s3_drive_stop(&drive);simulate();

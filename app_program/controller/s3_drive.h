@@ -118,8 +118,13 @@ typedef struct
     uint16_t obstacle_scan_id;
     bool obstacle_active;
     /* Bend detection for Buddy 5: (right-left)/(right+left) of the line
-     * follower's wheel speeds, averaged over ~0.5 s; latched at detection. */
-    float turn_ratio, obstacle_turn;
+     * follower's wheel speeds, averaged over ~0.5 s; latched at detection.
+     * Minimum bits (Change Requirement 1): the ratio is -1..+1.
+     * turn_q: filter state, 1/10000 steps, -10000..10000 -> 15 bits + sign
+     *         (internal precision so the slow average does not stall);
+     * obstacle_turn_pct: shared result, 1/100 steps, -100..100 -> int8_t. */
+    int16_t turn_q;
+    int8_t obstacle_turn_pct;
     uint32_t turn_us;
 #endif
 } s3_drive_t;

@@ -12,7 +12,7 @@ void s5_avoidance_begin(s5_avoidance_t *a,uint32_t now)
     a->state=S5_WAIT_STOP;a->fault=S5_OK;a->phase_us=a->started_us=now;
     a->leg=0;a->issued=false;a->plan=(s5_plan_t){0};s5_recovery_reset(&a->recovery);
     a->pass=S5_PASS_APPROACH;a->searched_mm=0;a->swapped=0;a->backed=0;a->backing=0;
-    a->aimed=0;a->aiming=0;a->aim_deg=0;a->bend=0;a->tail=0;a->extended=0;
+    a->aimed=0;a->aiming=0;a->aim_deg=0;a->bend=0;a->tail=0;a->extended=0;a->rel=0;a->side_turn=0;a->side_turns=0;a->centre_dir=0;a->centre_tries=0;a->lat_mm=0;a->peek_lat_mm=0;a->blocked_reads=0;
 }
 void s5_avoidance_abort(s5_avoidance_t *a)
 { a->state=S5_IDLE;a->issued=false;s5_recovery_reset(&a->recovery); }
@@ -27,7 +27,21 @@ static unsigned pass_extra_mm(const s5_avoidance_t *a)
     const unsigned pad=a->config.half_width_mm+a->config.margin_mm;
     const unsigned edge=a->plan.offset_mm>pad?a->plan.offset_mm-pad:0U;
     const unsigned gap=a->plan.offset_mm>edge?a->plan.offset_mm-edge:0U;
+#if S5_PASS_EXTRA_V2
+    /* 17 Nov 2026. The return is a 45-degree turn on the spot, so the car does
+     * not need its whole body past the rear edge first:
+     * - "clear" means nothing in the peek cone (60 +/- 15 deg off the heading),
+     *   so the side face ends before 0.268 x gap ahead of the sensor
+     *   (cot 75 deg = 0.268);
+     * - after turning back 45 degrees the car's line-side edge runs along
+     *   x + y = -1.414 x half width; the rear corner of the obstacle (at the
+     *   pass clearance half width + margin to the side) stays outside it by
+     *   the margin once the axle is 0.414 x (half width + margin) past it.
+     * Example, half width 63, margin 30: 75 + 25 + 39 = 139 mm (was 214). */
+    return S5_SONAR_AXLE_MM+(gap*268U+pad*414U+999U)/1000U;
+#else
     return (gap*577U+999U)/1000U+S5_SONAR_AXLE_MM+S5_REAR_AXLE_MM+a->config.margin_mm;
+#endif
 }
 /* 45-degree legs: travel along the diagonal for a sideways offset d. */
 static unsigned diagonal_mm(unsigned offset_mm) { return (offset_mm*1414U+999U)/1000U; }
@@ -69,21 +83,44 @@ int s5_aim_deg(const s5_profile_t *p)   /* straight: as in the 17:31 version */
 {
     int d;
     if(!p || !p->valid) { return 0; }
+    /* Aiming assumes one obstacle on the line. A picture wider than 1.5 x the
+     * largest obstacle is the obstacle plus something beside the track (a
+     * wall): its middle is not the line, so do not turn toward it. */
+    if(p->width_mm>(S5_OBSTACLE_MAX_MM*3U)/2U) { return 0; }
     d=round_clamp(bearing_deg(p),1000);
     if(d<S5_AIM_MIN_DEG && d>-S5_AIM_MIN_DEG) { return 0; }
     return d>S5_AIM_MAX_DEG?S5_AIM_MAX_DEG:(d<-S5_AIM_MAX_DEG?-S5_AIM_MAX_DEG:d);
 }
-int s5_aim_deg_bend(const s5_profile_t *p,double turn,bool *bend)
+int s5_aim_deg_bend(const s5_profile_t *p,int turn,bool *bend)
 {
     double deg;
-    *bend=turn>=S5_BEND_RATIO || turn<=-S5_BEND_RATIO;
+    *bend=turn>=S5_BEND_PCT || turn<=-S5_BEND_PCT;
     if(!*bend) { return s5_aim_deg(p); }           /* straight: unchanged */
-    if(!p || !p->valid) { return 0; }
+    if(!p || !p->valid || p->width_mm>(S5_OBSTACLE_MAX_MM*3U)/2U) { return 0; }
     deg=bearing_deg(p);
     { int d=round_clamp(deg,1000); if(d<S5_AIM_MIN_DEG && d>-S5_AIM_MIN_DEG) { return 0; } }
     /* Obstacle on the side the bend goes: track direction there is ~2x. */
-    if((deg>0.0)!=(turn>0.0)) { return round_clamp(deg,S5_AIM_MAX_DEG); }
+    if((deg>0.0)!=(turn>0)) { return round_clamp(deg,S5_AIM_MAX_DEG); }
     return round_clamp(deg*(double)S5_BEND_AIM_PCT/100.0,S5_BEND_AIM_MAX_DEG);
+}
+/* Sideways distance to cover on the way back: planned offset plus any turn
+ * away while passing, or what the last side peek measured if that is more
+ * (drifted away). Too long is safe: the line seen on the way stops the car. */
+static unsigned return_lat(const s5_avoidance_t *a)
+{
+    const unsigned planned=a->plan.offset_mm+a->lat_mm;
+    return a->peek_lat_mm>planned?a->peek_lat_mm:planned;
+}
+/* Swerve heading targets (deg vs the heading at the obstacle, + = bypass
+ * side), legs 6, 7, 8. Line already seen (tail driven): look toward the
+ * bypass side first, where it continues. Not seen at all: it can only be on
+ * the line side still (a bend away), so look there first. */
+static int swerve_target(const s5_avoidance_t *a)
+{
+    const int out=S5_SWERVE_OUT_DEG, in=-S5_SWERVE_IN_DEG;
+    if(a->leg==6U) { return a->tail?out:in; }
+    if(a->leg==7U) { return a->tail?in:out; }
+    return 0;
 }
 #ifdef S5_HOST_TEST
 unsigned pass_extra_test(const s5_avoidance_t *a) { return pass_extra_mm(a); }
@@ -102,6 +139,18 @@ static s5_action_t peek_result(s5_avoidance_t *a,const s5_input_t *in,unsigned e
     limit=((a->plan.offset_mm+a->config.margin_mm)*1155U+999U)/1000U;
     a->phase_us=in->now_us;
     if(side<=limit) {
+        /* Still beside it: is the side as far as planned (half width +
+         * margin from the sensor line)? If not, turn away, then peek again. */
+        const unsigned pad=a->config.half_width_mm+a->config.margin_mm, gap=(side*966U)/1000U;
+        const unsigned edge=a->plan.offset_mm>pad?a->plan.offset_mm-pad:0U;
+        /* Measured distance from the original line now (obstacle edge + gap):
+         * catches a car that drifted away while passing (left a bend crooked). */
+        a->peek_lat_mm=edge+gap>4095U?4095U:edge+gap;
+        if(gap+S5_SIDE_TOL_MM<pad && a->side_turns<3U) {
+            unsigned deg=(pad-gap+1U)/2U;
+            a->side_turn=deg>S5_SIDE_TURN_MAX_DEG?S5_SIDE_TURN_MAX_DEG:deg;
+            a->side_turns++;
+        }
         if(a->searched_mm+S5_PEEK_STEP_MM>a->config.max_depth_mm) { return fail(a,S5_NO_PATH); }
         a->pass=S5_PASS_STEP;
     } else { a->pass=S5_PASS_EXTRA; }
@@ -133,10 +182,10 @@ s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
             if(!in->observation.profile.valid) { return fail(a,S5_SCAN_FAILED); }
             if(!a->aimed) {
                 bool bend;
-                int turn=s5_aim_deg_bend(&in->observation.profile,in->turn_ratio,&bend);
+                int turn=s5_aim_deg_bend(&in->observation.profile,in->turn_pct,&bend);
                 a->aimed=1;a->bend=bend;
                 if(turn) {
-                    a->aim_deg=(int8_t)turn;a->aiming=1;a->issued=true;a->phase_us=in->now_us;
+                    a->aim_deg=turn;a->aiming=1;a->issued=true;a->phase_us=in->now_us;
                     return action(S5_ACT_TURN,turn,a->config.speed_mms);
                 }
             }
@@ -153,41 +202,50 @@ s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
         /* Reversing away from the face (leg 0) is exempt: the range only grows. */
         if(a->issued && !a->backing && (!s5_range_ready(&in->observation,in->now_us) ||
             in->observation.range_mm<=a->config.emergency_mm)) { return fail(a,S5_BAD_RANGE); }
-        /* Tape on the return diagonal stops the car (straight or bend); then
-         * it drives only IR-to-axle so the axle is on the line before the
-         * turn back. That tape is not kept: the turn back and sweep must see
-         * it again. */
-        if(a->issued && a->leg==5U && !a->tail &&
+        /* Line seen while passing (leg 3, only after the side reads clear,
+         * so never beside the obstacle: a bend toward the bypass side) or on
+         * the return diagonal (leg 5): stop, then the
+         * IR-to-axle drive puts the axle on the line (as leg 5) before the
+         * swerve. That tape is not kept: the swerve must see it again. */
+        if(a->issued && !a->tail &&
+           (a->leg==5U || (a->leg==3U && a->pass==S5_PASS_EXTRA)) &&
            s5_recovery_observe(&a->recovery,in->now_us,in->healthy,in->tape,in->junction,true)) {
+            if(a->leg==3U) { a->leg=5U; }   /* rel: still the passing heading */
             a->issued=false;a->tail=1;a->phase_us=in->now_us;return action(S5_ACT_STOP,0,0);
         }
-        if(a->issued && a->leg>=6U) {
-            /* Re-align turn and sweep: any confirmed tape counts. A sweep turn
-             * stops as soon as the line is found, instead of turning past it. */
-            if(s5_recovery_observe(&a->recovery,in->now_us,in->healthy,in->tape,in->junction,true) &&
-               a->leg>=7U) {
-                a->issued=false;a->state=S5_FINISH;a->phase_us=in->now_us;return action(S5_ACT_STOP,0,0);
-            }
+        if(a->issued && a->leg>=6U &&
+           s5_recovery_observe(&a->recovery,in->now_us,in->healthy,in->tape,in->junction,true)) {
+            /* Swerve: stop the moment the line is confirmed under the IR. */
+            a->centre_dir=swerve_target(a)>a->rel?1U:0U;a->centre_tries=0;
+            a->issued=false;a->state=S5_FINISH;a->phase_us=in->now_us;return action(S5_ACT_STOP,0,0);
         }
         if(a->issued) {
             if(in->motion_done) {
+                /* Leg-3 drives after a turn away also move the car sideways
+                 * (rel degrees off the passing heading): count it, so the
+                 * return diagonal still ends on the original line. */
+                if(a->leg==3U && a->rel>0 && a->pass!=S5_PASS_APPROACH) {
+                    const double mm=(in->centre_m-a->leg_start_m)*1000.0*(double)a->rel*0.017453;
+                    if(mm>0.0) {
+                        const unsigned sum=a->lat_mm+(unsigned)(mm+0.5);
+                        a->lat_mm=sum>511U?511U:sum;
+                    }
+                }
                 a->issued=false;a->phase_us=in->now_us;
                 /* Leg 3 ends only after the final clearance move. */
                 if(a->leg==3U && a->pass!=S5_PASS_EXTRA) { a->pass=S5_PASS_PEEK;return action(S5_ACT_NONE,0,0); }
                 /* Reverse finished: now the leg-0 turn. */
                 if(a->leg==0U && a->backing) { a->backing=0;return action(S5_ACT_NONE,0,0); }
+                if(a->leg==4U) { a->rel=-S5_BYPASS_DEG; }
                 if(a->leg==5U) {
-                    /* Bend away: no tape by the end, once more along the diagonal. */
-                    if(a->bend && !a->tail && !a->extended) { a->extended=1;return action(S5_ACT_NONE,0,0); }
-                    /* Back on the original line: only tape seen from here counts. */
+                    /* No line by the end (bend away): once more along the diagonal. */
+                    if(S5_RETURN_EXTRA_MM>0U && !a->tail && !a->extended) { a->extended=1;return action(S5_ACT_NONE,0,0); }
+                    /* Only tape seen by the swerve from here counts. */
                     s5_recovery_reset(&a->recovery);
                 }
+                if(a->leg>=6U) { a->rel=swerve_target(a); }
+                if(a->leg==8U) { return fail(a,S5_NO_LINE); }   /* swerved both ways, back on heading */
                 a->leg++;
-                if(a->leg==7U && a->recovery.confirmed) { a->state=S5_FINISH;return action(S5_ACT_STOP,0,0); }
-                if(a->leg==10U) {
-                    if(!a->recovery.confirmed) { return fail(a,S5_NO_LINE); }
-                    a->state=S5_FINISH;return action(S5_ACT_STOP,0,0);
-                }
             }
             return action(S5_ACT_NONE,0,0);
         }
@@ -200,6 +258,15 @@ s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
             /* Too close for the 45-degree out-leg: reverse the shortfall first. */
             unsigned back=diagonal_short(a,a->plan.offset_mm);
             a->backed=1;
+            if(back>S5_BACKUP_MAX_MM && !a->swapped && a->plan.alt_ok &&
+               diagonal_short(a,a->plan.alt_offset_mm)<=S5_BACKUP_MAX_MM) {
+                /* Preferred side needs more room than reversing gives: still
+                 * facing the obstacle, take the other side instead. */
+                const unsigned other=a->plan.alt_offset_mm;
+                a->swapped=1;a->plan.alt_offset_mm=a->plan.offset_mm;a->plan.offset_mm=other;
+                a->plan.route=a->plan.route==S5_ROUTE_LEFT?S5_ROUTE_RIGHT:S5_ROUTE_LEFT;
+                back=diagonal_short(a,a->plan.offset_mm);
+            }
             if(back) {
                 if(back>S5_BACKUP_MAX_MM) { return fail(a,S5_NO_PATH); }
                 a->plan.closest_mm+=back;a->plan.forward_mm+=back;
@@ -213,8 +280,16 @@ s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
             a->pass=S5_PASS_PEEKING;a->phase_us=in->now_us;
             return action(S5_ACT_PEEK,(int)(a->plan.route==S5_ROUTE_LEFT?90U-S5_PEEK_DEG:90U+S5_PEEK_DEG),0);
         }
+        if(a->leg==3U && a->pass==S5_PASS_STEP && a->side_turn) {
+            /* Turn away from the obstacle side, then peek again. rel keeps the
+             * heading vs the one at the obstacle, so the way back still aims
+             * at the original line. */
+            const int deg=(int)a->side_turn;
+            a->side_turn=0;a->issued=true;a->pass=S5_PASS_APPROACH;a->rel+=deg;
+            return action(S5_ACT_TURN,sign*deg,a->config.speed_mms);
+        }
         if(straight) {
-            unsigned mm=diagonal_mm(a->plan.offset_mm);
+            unsigned mm=diagonal_mm(a->leg==5U?return_lat(a):a->plan.offset_mm);
             if(a->leg==5U && (a->tail || a->extended)) { mm=a->tail?S5_IR_AXLE_MM:S5_RETURN_EXTRA_MM; }
             if(a->leg==3U) {
                 /* The diagonal out-leg already moved the car offset forward. */
@@ -237,7 +312,19 @@ s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
                 bool blocked;
                 if(a->leg==1U && mm+a->config.margin_mm>need) { need=mm+a->config.margin_mm; }
                 blocked=in->observation.range_mm<=need || (a->leg==1U && !diagonal_clear(a,a->plan.offset_mm));
+                if(blocked && a->leg==3U && a->side_turns<3U) {
+                    /* Passing but the obstacle's side shows ahead: the car is
+                     * converging on it. Turn away, then peek again. */
+                    a->side_turns++;a->issued=true;a->pass=S5_PASS_APPROACH;a->rel+=(int)S5_SIDE_TURN_MAX_DEG;
+                    return action(S5_ACT_TURN,sign*(int)S5_SIDE_TURN_MAX_DEG,a->config.speed_mms);
+                }
+                if(blocked && a->leg==1U && a->blocked_reads+1U<S5_BLOCK_CONFIRM) {
+                    /* Wait for another fresh reading before believing it. */
+                    a->blocked_reads++;a->phase_us=in->now_us;return action(S5_ACT_NONE,0,0);
+                }
+                if(!blocked) { a->blocked_reads=0; }
                 if(blocked) {
+                    a->blocked_reads=0;
                     /* First side blocked: turn 2 x 45 deg to face the other
                      * diagonal and re-check it as leg 1 (once). */
                     if(a->leg==1U && !a->swapped && a->plan.alt_ok) {
@@ -256,16 +343,36 @@ s5_action_t s5_avoidance_step(s5_avoidance_t *a,const s5_input_t *in)
             return action(S5_ACT_DRIVE,(int)mm,a->config.speed_mms);
         }
         a->issued=true;
-        if(a->leg==0U || a->leg==6U) { return action(S5_ACT_TURN,sign*S5_BYPASS_DEG,a->config.speed_mms); }
-        if(a->leg==2U || a->leg==4U) { return action(S5_ACT_TURN,-sign*S5_BYPASS_DEG,a->config.speed_mms); }
-        /* Bounded search at the predicted original corridor; returns to the
-         * original heading before handing back. No unbounded blind reversing. */
-        return action(S5_ACT_TURN,a->leg==8U?-2*S5_LINE_SWEEP_DEG:S5_LINE_SWEEP_DEG,a->config.speed_mms);
+        if(a->leg==0U) { return action(S5_ACT_TURN,sign*S5_BYPASS_DEG,a->config.speed_mms); }
+        if(a->leg==2U) { return action(S5_ACT_TURN,-sign*S5_BYPASS_DEG,a->config.speed_mms); }
+        /* Turn in to 45 degrees off the passing heading (less any turn away). */
+        if(a->leg==4U) { return action(S5_ACT_TURN,-sign*(S5_BYPASS_DEG+a->rel),a->config.speed_mms); }
+        /* Swerve (legs 6..8), each turn stopped as soon as the line is seen:
+         * toward the bypass side up to S5_SWERVE_OUT_DEG past the heading at
+         * the obstacle, then the other way up to S5_SWERVE_IN_DEG past it,
+         * then back to it. Never more than 90 deg either side, so the car
+         * cannot pick up the line behind it and follow it backwards. */
+        return action(S5_ACT_TURN,sign*(swerve_target(a)-a->rel),a->config.speed_mms);
     } else if(a->state==S5_FINISH) {
-        if(elapsed>1000000U) { return fail(a,S5_NO_LINE); }
-        if(in->stopped && in->line_ready && !in->junction && a->recovery.confirmed) {
+        /* Hand back only with the tape under the IR now. Braking can carry
+         * the IR past the edge it stopped on: then turn back slowly (the way
+         * it came, then the other way), stopping on the tape. */
+        const int side=a->plan.route==S5_ROUTE_LEFT?1:-1, dir=a->centre_dir?side:-side;
+        if(elapsed>3000000U) { return fail(a,S5_NO_LINE); }
+        if(a->issued) {
+            if(in->tape && !in->junction) { a->issued=false;a->phase_us=in->now_us;return action(S5_ACT_STOP,0,0); }
+            if(in->motion_done) { a->issued=false;a->phase_us=in->now_us; }
+            return action(S5_ACT_NONE,0,0);
+        }
+        if(!in->stopped) { return action(S5_ACT_NONE,0,0); }
+        if(in->tape && in->line_ready && !in->junction) {
             a->state=S5_COMPLETE;return action(S5_ACT_RESUME,0,0);
         }
+        if(a->centre_tries>=2U) { return fail(a,S5_NO_LINE); }
+        a->issued=true;a->phase_us=in->now_us;
+        a->centre_tries++;
+        return action(S5_ACT_TURN,(a->centre_tries==1U?-dir:dir)*(a->centre_tries==1U?S5_CENTRE_DEG:2*S5_CENTRE_DEG),
+                      S5_CENTRE_SPEED_MMS);
     }
     return action(S5_ACT_NONE,0,0);
 }

@@ -99,6 +99,49 @@ the diagonal and the forward sweep of the car's inner front corner (face
 distance vs. obstacle edge + 1.414 × half width + margin) must be clear; a wide
 obstacle close ahead therefore needs more stopping distance than with 90° legs.
 
+### Current bypass (17 Nov 2026), calibrated in the course simulator
+
+`testing/subsystem5/bypass_course_test.c` runs the real line follower, s3_drive,
+Buddy 5 FSM and Buddy 2 motion controller on simulated wheels, IR and
+ultrasonic, with 10–20 cm boxes on a straight and near bends (radius 20/30 cm,
+starting 10/25 cm after the obstacle or ending 15/25 cm before it), plus a wall
+blocking the left. Before this change 8 of 17 cases rejoined the line; now all
+17 do, and 151 of 153 with the sonar cone set to ±10/±20° or the turns 10 %
+short/long (the 2 misses: wall on the left together with 10 % short turns).
+
+1. Side: LEFT unless the left is shown impossible (obstacle too wide on the
+   left, the left diagonal blocked on 3 consecutive readings, or too close for
+   the left out-leg even after reversing); then RIGHT (`S5_ALLOW_OTHER_SIDE 1`,
+   telemetry "switched"). Both routes are the same code with the sign flipped.
+2. Out 45°, diagonal offset × 1.414 (offset ≥ 20 cm obstacle + 63 + 30 mm).
+3. Passing: side peeks every 25 mm; each peek also checks the side gap. If the
+   car has drifted closer than planned (left a bend crooked, inexact turns) it
+   turns away by up to 10° (3 times at most) and peeks again.
+4. After the side reads clear: 214 mm more, so the car's back is past the
+   rear edge + margin. (A shorter 139 mm version, `S5_PASS_EXTRA_V2 1`, hit
+   the obstacle on the real car on 17 Nov evening and is off.)
+5. Turn back in to 45° off the passing heading. Return diagonal long enough
+   for the larger of the planned offset (+ any turn away) and the distance the
+   last side peek measured (a car that drifted outward still reaches the line).
+6. Line seen on the return diagonal, or already while passing after the side
+   reads clear (a bend toward the bypass side): stop, drive 135 mm (IR to
+   axle) so the axle is on the line.
+7. Swerve: turn toward the bypass side (line seen) or toward the line side
+   (not seen: it bent away) up to 80°/90° past the passing heading, then the
+   other way, then back; every swerve turn stops the moment the IR confirms
+   tape. Never more than 90° either side, so it cannot follow the line backwards.
+8. Hand back only with the tape under the IR now: if braking carried it past,
+   turn back slowly by 12° (then 24° the other way) stopping on the tape.
+9. No driving on past the end of the diagonal (`S5_RETURN_EXTRA_MM 0`, was
+   100) and no double aim on bends (`S5_BEND_AIM_PCT 100`, was 200): both made
+   bend cases worse in the simulator.
+
+On a straight with the box centred the path is the old one; the side check
+never fires there. The simulator's wheel/IR/sonar constants are guesses
+(see course_sim.c): this shows the logic, not the real car.
+
+### History (13 Nov 2026, superseded where the list above differs)
+
 Shorter pass and line search (13 Nov 2026): measured car size (half width 63,
 ultrasonic 75 mm ahead of the axle, body 55 mm behind it) replaces the 90/100 mm
 placeholders; side-peek steps are 25 mm; after the peek reads clear the car only

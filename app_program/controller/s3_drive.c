@@ -410,9 +410,20 @@ static void turn_track(s3_drive_t *d, float left, float right, uint32_t now)
         return;
     }
     {
-        const float a = (float)dt / (500000.0f + (float)dt);
-        d->turn_ratio += a * ((right - left) / sum - d->turn_ratio);
+        /* Fixed point, 1/10000: s += (x - s) * dt / (tau + dt), tau 0.5 s. */
+        float r = (right - left) / sum;
+        int32_t x, s = d->turn_q;
+        r = r > 1.0f ? 1.0f : (r < -1.0f ? -1.0f : r);
+        x = (int32_t)(r * 10000.0f);
+        s += (int32_t)(((int64_t)(x - s) * (int64_t)dt) / (int64_t)(500000U + dt));
+        d->turn_q = (int16_t)(s > 10000 ? 10000 : (s < -10000 ? -10000 : s));
     }
+}
+/* Latched shared value: whole percent toward zero, -100..100 (so 19.99 % is
+ * still below the 20 % bend threshold, as with the old float compare). */
+static int8_t turn_pct(int16_t q)
+{
+    return (int8_t)(q / 100);
 }
 #endif
 
@@ -561,7 +572,7 @@ static bool obstacle_control(s3_drive_t *d,uint32_t now,bool done)
             d->pending=d->output.action;d->pending_us=now;
         }
         s5_avoidance_begin(&d->obstacle,now);d->obstacle_active=true;
-        d->obstacle_turn=d->turn_ratio;   /* bend or straight, at detection */
+        d->obstacle_turn_pct=turn_pct(d->turn_q);   /* bend or straight, at detection */
         request_stop(d,now);d->state=S3_DRIVE_MANOEUVRE;
         (void)s3_navigation_set_mode(&d->navigation,S3_MODE_SUPPRESSED);
     }
@@ -574,7 +585,7 @@ static bool obstacle_control(s3_drive_t *d,uint32_t now,bool done)
         .tape=d->navigation.config.line.between?d->output.line.touching:d->output.line.present,
         .junction=d->output.line.junction_candidate,
         .line_ready=d->output.steering_preview.valid,
-        .turn_ratio=(double)d->obstacle_turn,
+        .turn_pct=d->obstacle_turn_pct,
         .observation=observation};
     s5_action_t request=s5_avoidance_step(&d->obstacle,&input);
     motion_result_t result=MOTION_OK;
