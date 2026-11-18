@@ -22,7 +22,7 @@ static void safety_update(terrain_monitor_t *t,const float a[3],float norm,
     bool lift_tilt=near_gravity && a[2]<=0.9063078f*norm; /* 25 deg */
     const float horizontal_sq = a[0]*a[0] + a[1]*a[1];
     const float upward_excess = a[2] - 1.0f;
-    const bool gentle_pickup = a[2] >= 1.15f && horizontal_sq <= 0.15f*0.15f;
+    const bool gentle_pickup = a[2] >= 1.10f && horizontal_sq <= 0.15f*0.15f;
     /* For a firm pickup, upward acceleration above 1 g must be at least
      * twice the horizontal acceleration. Compare squared magnitudes. */
     const bool firm_pickup = a[2] >= 1.30f && upward_excess*upward_excess >= 4.0f*horizontal_sq;

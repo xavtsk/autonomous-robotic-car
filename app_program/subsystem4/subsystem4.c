@@ -23,10 +23,9 @@
 #define S4_WHEEL_TRACK_M (0.116f)
 #endif
 #define S4_QUEUE_LEN 8U
-/* Timed waits add one kernel tick. With the 10 ms tick, request 10 ms
- * to poll near the accelerometer's 20 ms output period. */
+/* Wake every kernel tick to check for the accelerometer's 50 Hz output. */
 #define S4_IMU_POLL_MS 10U
-static ID g_mutex, g_task, g_device;
+static ID g_mutex, g_task, g_cycle, g_device;
 static uint8_t g_snapshot[TERRAIN_PACKET_SIZE], g_events[S4_QUEUE_LEN][TERRAIN_PACKET_SIZE];
 static unsigned g_head,g_count;
 static uint16_t g_run,g_published_run,g_humps;
@@ -253,6 +252,12 @@ static void process_sample(terrain_monitor_t *monitor, const imu_sample_t *sampl
     (void)publish(&monitor->result, NULL);
 #endif
 }
+static void imu_poll_tick(void *unused)
+{
+    (void)unused;
+    (void)tk_wup_tsk(g_task);
+}
+
 static void task(INT stacd,void *exinf)
 {
     terrain_monitor_t monitor; imu_bus_t bus={NULL,bus_read,bus_write};
@@ -260,10 +265,18 @@ static void task(INT stacd,void *exinf)
     (void)stacd; (void)exinf;
     terrain_monitor_init(&monitor);
     if(!terrain_monitor_set_hump_geometry(&monitor,S4_HUMP_GEOMETRY,S4_WHEEL_TRACK_M)) {
-        tm_printf((UB *)"[S4] invalid hump geometry configuration\n"); tk_ext_tsk(); return;
+        tm_printf((UB *)"[S4] invalid hump geometry configuration\n");
+        (void)tk_stp_cyc(g_cycle);
+        tk_ext_tsk();
+        return;
     }
     g_device=tk_opn_dev((UB *)"iicb",TD_UPDATE);
-    if(g_device<0) { tm_printf((UB *)"[S4] iicb open failed: %d\n",g_device); tk_ext_tsk(); }
+    if(g_device<0) {
+        tm_printf((UB *)"[S4] iicb open failed: %d\n",g_device);
+        (void)tk_stp_cyc(g_cycle);
+        tk_ext_tsk();
+        return;
+    }
     for(;;) {
         uint32_t now=now_us(); imu_sample_t sample={0}; terrain_odometry_t odo={0};
         if(tk_loc_mtx(g_mutex,TMO_FEVR)==E_OK) {
@@ -312,7 +325,9 @@ static void task(INT stacd,void *exinf)
 #else
         (void)report_at;
 #endif
-        tk_dly_tsk(S4_IMU_POLL_MS);
+        /* Skip ticks accumulated while busy, including during sensor startup. */
+        (void)tk_can_wup(TSK_SELF);
+        (void)tk_slp_tsk(TMO_FEVR);
     }
 }
 ER subsystem4_init(void)
@@ -330,15 +345,34 @@ ER subsystem4_init(void)
 }
 ER subsystem4_start(void)
 {
-    T_CTSK c={0}; ER er;
+    T_CTSK c={0};
+    T_CCYC cycle={0};
+    ER er;
     if(g_mutex<=0 || g_task>0) { return E_OBJ; }
     c.task=(FP)task; c.itskpri=S4_PRI_MAIN; c.stksz=4096; c.tskatr=TA_HLNG|TA_RNG3;
 #if TK_SUPPORT_SMP
     c.tskatr|=TA_ASSPRC; c.assprc=TP_PRC1;
 #endif
     g_task=tk_cre_tsk(&c); if(g_task<0) { return (ER)g_task; }
-    er=tk_sta_tsk(g_task,0);
-    if(er<0) { tk_del_tsk(g_task); g_task=0; }
+    cycle.cycatr=TA_HLNG;
+    cycle.cychdr=(FP)imu_poll_tick;
+    cycle.cyctim=S4_IMU_POLL_MS;
+    cycle.cycphs=S4_IMU_POLL_MS;
+    g_cycle=tk_cre_cyc(&cycle);
+    if (g_cycle>0) {
+        er=tk_sta_cyc(g_cycle);
+        if (er==E_OK) {
+            er=tk_sta_tsk(g_task,0);
+            if (er==E_OK) { return E_OK; }
+            (void)tk_stp_cyc(g_cycle);
+        }
+        (void)tk_del_cyc(g_cycle);
+    } else {
+        er=(ER)g_cycle;
+    }
+    (void)tk_del_tsk(g_task);
+    g_task=0;
+    g_cycle=0;
     return er;
 }
 bool subsystem4_read(terrain_result_t *out,uint16_t *token,uint16_t *humps)

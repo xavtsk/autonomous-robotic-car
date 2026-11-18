@@ -87,3 +87,11 @@
 .robot-control-status .form-note{font-size:11px}
 @media(max-width:900px){.robot-controls{padding-inline:20px;gap:16px}}
 @media(max-width:680px){.robot-controls{padding:15px 16px;align-items:flex-start;flex-direction:column;gap:10px}.robot-control-actions{width:100%;gap:8px}.robot-control-actions .control-start,.robot-control-actions .control-stop{flex:1}.robot-control-actions .control-reset{min-width:0}.robot-control-status .form-note{font-size:12px}}
+
+.buddy-run-logs>.inline-label{gap:10px;flex-wrap:wrap}
+.buddy-run-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin:12px 0 20px}
+.buddy-run-card{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--line);border-radius:3px}
+.buddy-run-card .muted{font-size:12px;line-height:1.45}
+.buddy-run-card .table-note{margin-top:auto;padding-top:4px}
+.buddy-run-card a{align-self:flex-start;font-size:13px}
+.run-history-title{margin-bottom:6px}

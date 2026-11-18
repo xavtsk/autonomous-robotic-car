@@ -80,7 +80,7 @@ Buddy 4 checks the calibrated accelerometer vector on each fresh sample. About
 The pickup detector confirms after 40 ms of qualifying samples. The following
 conditions can start or continue that confirmation.
 
-- Nearly level pickup with Z at least 1.15 g and horizontal acceleration at most 0.15 g.
+- Nearly level pickup with Z at least 1.10 g and horizontal acceleration at most 0.15 g.
 - Stronger pickup with Z at least 1.30 g and the Z reading above 1 g at least twice the horizontal acceleration.
 - About 25° of tilt with acceleration magnitude near 1 g.
 
@@ -113,8 +113,8 @@ For a level pickup, check `upward_gate` to see whether the sample satisfied
 either upward-acceleration rule. On consecutive qualifying samples, the detector
 compares their sensor timestamps to the 40 ms confirmation time.
 `confirmation_pending` and `safety` show how far it got. Use `sensor_timestamp_us`
-to check the actual cadence. The task requests a 10 ms sleep between polls and
-only processes fresh sensor readings. Check `missing_samples_before` and
+to check the actual cadence. A 10 ms RTOS cyclic timer wakes the task to check
+for fresh readings from the 50 Hz accelerometer. Check `missing_samples_before` and
 `sensor_overrun` when interpreting a short spike. The
 [packet format](DATA_FORMAT.md#raw-accelerometer-diagnostic-stream) defines the sample fields.
 

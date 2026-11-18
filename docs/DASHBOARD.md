@@ -316,13 +316,38 @@ fall between 50 ms preview frames. The higher-rate saved barcode capture in Runs
 remains the evidence for individual bar widths and decoding failures. Simulation
 curves demonstrate the UI and are not real sensor or barcode-decoder evidence.
 
-**Runs** shows the latest 40 Buddy 4 run logs. The dashboard saves observed
-drives in `buddy4-runs.sqlite3` inside the dashboard data folder. Each row shows
-the cumulative hump count received and the highest completed hump in mm. A live
-terrain peak can supply the height while the count is still unavailable. A
-zero count reflects a valid terrain report without a completed hump. Start and
-stop the drive while the dashboard is receiving telemetry to record both
-boundaries. Debug's **Save received log** includes these rows.
+**Run history** shows start and end times, end reasons, and Buddy 4 hump results
+for the latest five drives. Click **Show more** to see up to 20 recent drives.
+Select one of those drives in **Run for CSV downloads** to get its five CSVs.
+Keep the dashboard connected to MQTT during the run.
+If telemetry is lost before a stop is observed, the log shows an unconfirmed end.
+
+| Buddy | Saved telemetry when available |
+| --- | --- |
+| 1 | Heartbeat and reported faults, control status, and command replies received during the drive |
+| 2 | Left/right wheel speeds, encoder pose and heading, and optional setpoints, motor duty, and brake/fault state |
+| 3 | Raw ADC and normalized darkness from the left, right, and barcode IR channels, accepted barcode letters and actions, optional controller barcode status and line tracking |
+| 4 | Pitch and roll in degrees, terrain state, impacts, cumulative hump count and peak height in mm |
+| 5 | Obstacles, range and servo angle, bypass side and progress, faults, and scan results |
+
+Most periodic streams are sampled about once per second, with selected state
+and fault changes recorded as they arrive. Buddy 3's IR preview is sampled up
+to five times per second. Each stream keeps its newest 1,200
+entries per run. Each CSV reports how many older entries were discarded across the run.
+Available fields depend on the flashed firmware and received packets. For
+example, firmware built with `S5=0` supplies no Buddy 5 entries.
+CSV cells are blank when a measurement is unavailable. Buddy 2's unwrapped
+distance is relative to the first observed encoder pose. Buddy 3's darkness
+is on a 0–1000 scale, and its controller status shows the latest decoder
+outcome. Controller event counters are cumulative since firmware startup.
+Use the separately saved barcode capture for high-rate samples and individual
+attempt details.
+
+Run logs are saved automatically in `buddy4-runs.sqlite3` under the dashboard
+data folder, with separate databases for live and demo mode. Older Buddy 4
+records still show their hump summaries. Debug's **Save received log** includes
+the recent run summary rows. A live terrain report can supply the highest hump
+while the count is still unavailable.
 
 Launch `tools/robot_dashboard.py` with `--imu-captures` to show **Raw IMU
 captures** and record raw telemetry from firmware built with `IMU_DEBUG=1`.
@@ -341,7 +366,8 @@ and automatically saves incoming binary `car/debug/barcode` captures. Inspect a 
 normalized darkness by episode and save the reconstructed readable text. Files
 up to 2 MiB are accepted. Missing/duplicate binary records use the same capture
 completeness checks as imported logs; a partial transfer never becomes zero data.
-The recent list holds 40 captures in memory; older capture files stay on disk.
+The list shows the latest five captures by default. Click **Show more** to see up
+to 20 recent captures. Older capture files stay on disk.
 The archive location is printed at startup; the default is `.dashboard-data/live`
 or `.dashboard-data/demo` in the repository, both ignored by Git. Original
 imported files are never modified. Use `--data-dir /path/to/folder` for another

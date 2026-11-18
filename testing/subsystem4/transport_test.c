@@ -7,8 +7,10 @@
 #define TMO_POL 0
 #define TA_HLNG 2
 #define TA_RNG3 0
+#define TSK_SELF 0
 #define EXPORT
 typedef struct { FP task; unsigned itskpri,stksz,tskatr; } T_CTSK;
+typedef struct { FP cychdr; unsigned cycatr,cyctim,cycphs; } T_CCYC;
 static uint32_t clock_us=1000;
 static uint32_t feedback_read_delay_us,feedback_age_us,feedback_future_us;
 static unsigned owner_cycles_left;
@@ -16,12 +18,27 @@ static bool locked[3],fail_lock,fail_debug_lock;
 static ID next_mutex;
 static jmp_buf finish;
 static void (*entry)(INT,void *);
+static void (*cycle_handler)(void *);
+static unsigned cycle_ms;
+static bool cycle_running, wake_pending;
 ER tk_dly_tsk(unsigned ms);
 void tk_ext_tsk(void) { assert(!"Unexpected task exit"); }
 ID tk_cre_tsk(const T_CTSK *c)
 { assert(c->itskpri==18 && c->stksz==4096);entry=(void (*)(INT,void *))c->task;return 2; }
 ER tk_sta_tsk(ID id,INT value) { (void)id;(void)value;return E_OK; }
 ER tk_del_tsk(ID id) { (void)id;return E_OK; }
+ID tk_cre_cyc(const T_CCYC *cycle)
+{
+    assert(cycle->cycatr==TA_HLNG && cycle->cyctim==10 && cycle->cycphs==10);
+    cycle_handler=(void (*)(void *))cycle->cychdr;
+    cycle_ms=cycle->cyctim;
+    return 3;
+}
+ER tk_sta_cyc(ID id) { assert(id==3); cycle_running=true; return E_OK; }
+ER tk_stp_cyc(ID id) { assert(id==3); cycle_running=false; return E_OK; }
+ER tk_del_cyc(ID id) { assert(id==3 && !cycle_running); return E_OK; }
+ER tk_wup_tsk(ID id) { assert(id==2); wake_pending=true; return E_OK; }
+INT tk_can_wup(ID id) { assert(id==TSK_SELF); wake_pending=false; return 0; }
 ID tk_cre_mtx(const T_CMTX *m) { assert(m->mtxatr==TA_INHERIT && next_mutex<2);return ++next_mutex; }
 ER tk_loc_mtx(ID id,TMO timeout)
 {
@@ -77,9 +94,20 @@ ER tk_swri_dev(ID id,int start,const void *buffer,SZ length,SZ *actual)
 ID tk_opn_dev(UB *name,unsigned mode) { assert(!strcmp((char *)name,"iicb"));(void)mode;return 3; }
 ER tk_dly_tsk(unsigned ms)
 {
-    assert(!locked[1]&&!locked[2]);
+    assert(!locked[1]&&!locked[2] && ms==160);
     clock_us+=ms*1000;
-    if(ms==S4_IMU_POLL_MS && --owner_cycles_left==0) { longjmp(finish,1); }
+    cycle_handler(NULL); /* A wake queued during sensor startup. */
+    return E_OK;
+}
+ER tk_slp_tsk(TMO timeout)
+{
+    assert(timeout==TMO_FEVR && !locked[1] && !locked[2]);
+    assert(cycle_running && !wake_pending);
+    clock_us+=cycle_ms*1000;
+    cycle_handler(NULL);
+    assert(wake_pending);
+    wake_pending=false;
+    if(--owner_cycles_left==0) { longjmp(finish,1); }
     return E_OK;
 }
 static void owner_cycles(unsigned count)

@@ -5,6 +5,7 @@
   const token = document.querySelector('meta[name="dashboard-token"]').content;
   const actions = ['forward', 'left', 'right', 'uturn'];
   const pageNames = ['overview', 'sensors', 'debug', 'runs'];
+  const collapsedListCount = 5;
   let state = null;
   let page = 'overview';
   let buddy = '1';
@@ -21,8 +22,12 @@
   let localControlFeedback = null;
   let lastEventKey = '';
   let lastRunLogKey = '';
+  let runHistoryExpanded = false;
+  let lastBuddyRunOptions = '';
+  let selectedBuddyRunId = '';
   let lastImuCaptureKey = '';
   let lastRunsKey = '';
+  let barcodeCapturesExpanded = false;
   let lastMapResult = '';
   let lastConnection = '';
   let initialConnectionFields = false;
@@ -572,38 +577,82 @@
   function renderRunLog() {
     const log = state?.run_log;
     const runs = log?.runs || [];
+    const hasMore = runs.length > collapsedListCount;
+    const expanded = hasMore && runHistoryExpanded;
+    const visibleRuns = expanded ? runs : runs.slice(0, collapsedListCount);
     const online = connected() && state?.car?.status === 'online';
     const message = transportError || log?.error || (state && !log
-      ? 'Restart the dashboard service to start recording Buddy 4 runs.'
+      ? 'Restart the dashboard service to start recording runs.'
       : online ? 'Waiting for the next drive.' : 'Waiting for live car telemetry.');
-    const key = JSON.stringify([runs, online, message, log?.error]);
+    const key = JSON.stringify([visibleRuns, runs.length, expanded, online, message, log?.error]);
     if (key === lastRunLogKey) return;
     lastRunLogKey = key;
     $('run-count').textContent = String(runs.length);
     $('run-log-feedback').textContent = log?.error || '';
     $('run-log-feedback').hidden = !log?.error;
+    const toggle = $('run-history-toggle');
+    toggle.hidden = !hasMore;
+    toggle.textContent = expanded ? 'Show less' : 'Show more';
+    toggle.setAttribute('aria-expanded', String(expanded));
     const rows = document.createDocumentFragment();
-    for (const run of runs) {
+    for (const run of visibleRuns) {
       const row = element('tr');
       const status = run.active ? (online ? 'Running' : 'Last seen running')
         : run.ended_at ? 'Ended' : 'End unconfirmed';
+      const startedAt = new Date(run.started_at).toLocaleString();
       row.append(
-        element('td', new Date(run.started_at).toLocaleString()),
+        element('td', startedAt),
         element('td', status),
         element('td', run.ended_at ? formatTime(run.ended_at) : '—'),
         element('td', run.hump_count ?? 'Unavailable'),
         element('td', run.peak_mm ?? (run.hump_count === 0 ? '—' : 'Unavailable')),
+        element('td', run.end_reason || '—'),
       );
       rows.append(row);
     }
     if (!runs.length) {
       const row = element('tr');
       const cell = element('td', message, 'empty-line');
-      cell.colSpan = 5;
+      cell.colSpan = 6;
       row.append(cell);
       rows.append(row);
     }
     $('run-log-body').replaceChildren(rows);
+  }
+
+  function renderBuddyRunLogs() {
+    const runs = (state?.run_log?.runs || []).filter(run => typeof run.id === 'string' && run.id);
+    const picker = $('buddy-run-picker');
+    $('buddy-run-logs').hidden = !runs.length;
+    if (!runs.length) {
+      selectedBuddyRunId = '';
+      return;
+    }
+    const selected = runs.find(run => run.id === selectedBuddyRunId);
+    if (!selected) selectedBuddyRunId = '';
+    const run = selected || runs[0];
+    const optionsKey = JSON.stringify(runs.map(entry => [entry.id, entry.started_at]));
+    if (optionsKey !== lastBuddyRunOptions) {
+      lastBuddyRunOptions = optionsKey;
+      const times = runs.map(entry => new Date(entry.started_at).toLocaleString());
+      picker.replaceChildren(...runs.map((entry, index) => {
+        const time = times[index];
+        const label = times.indexOf(time) === times.lastIndexOf(time) ? time : `${time} · ${entry.id.slice(0, 8)}`;
+        const option = element('option', label);
+        option.value = entry.id;
+        return option;
+      }));
+    }
+    if (picker.value !== run.id) picker.value = run.id;
+    for (let index = 1; index <= 5; index++) {
+      const count = run.buddy_entries?.[index] || 0;
+      const humpSummary = index === 4 && (number(run.hump_count) || number(run.peak_mm));
+      const description = count ? `${count} ${count === 1 ? 'entry' : 'entries'}`
+        : humpSummary ? 'Hump summary available' : 'No samples recorded';
+      const status = $(`buddy-run-count-${index}`);
+      if (status.textContent !== description) status.textContent = description;
+      $(`buddy-run-download-${index}`).href = `/api/runs/${encodeURIComponent(run.id)}/buddy/${index}.csv`;
+    }
   }
 
   function renderImuCaptures() {
@@ -640,11 +689,18 @@
     $('imu-capture-body').replaceChildren(rows);
   }
 
-  function renderRuns() {
+  function renderBarcodeCaptures() {
     const traces = Array.isArray(state?.traces) ? state.traces : [];
-    const key = JSON.stringify([traces, trace?.id]);
+    const hasMore = traces.length > collapsedListCount;
+    const expanded = hasMore && barcodeCapturesExpanded;
+    const visibleTraces = expanded ? traces : traces.slice(0, collapsedListCount);
+    const key = JSON.stringify([traces, trace?.id, expanded]);
     if (key === lastRunsKey) return;
     lastRunsKey = key;
+    const toggle = $('barcode-captures-toggle');
+    toggle.hidden = !hasMore;
+    toggle.textContent = expanded ? 'Show less' : 'Show more';
+    toggle.setAttribute('aria-expanded', String(expanded));
     const body = document.createDocumentFragment();
     if (!traces.length) {
       const row = element('tr');
@@ -652,7 +708,7 @@
       cell.colSpan = 6;
       row.append(cell); body.append(row);
     }
-    for (const entry of traces) {
+    for (const entry of visibleTraces) {
       const row = element('tr');
       row.classList.toggle('selected', entry.id === trace?.id);
       const summary = entry.summary || {};
@@ -674,7 +730,8 @@
   }
 
   function render() {
-    renderHeader(); renderOverview(); renderCommands(); renderDebug(); renderEvents(); renderRunLog(); renderImuCaptures(); renderRuns();
+    renderHeader(); renderOverview(); renderCommands(); renderDebug(); renderEvents(); renderRunLog(); renderImuCaptures(); renderBarcodeCaptures();
+    renderBuddyRunLogs();
     window.dispatchEvent(new CustomEvent('dashboard:state', {detail: state}));
   }
 
@@ -710,7 +767,7 @@
       $('trace-episode').disabled = episodes.length <= 1;
       if (priorEpisode && episodes.some(episode => String(episode) === priorEpisode)) $('trace-episode').value = priorEpisode;
       feedback('import-feedback', 'idle', '');
-      renderRuns();
+      renderBarcodeCaptures();
       requestAnimationFrame(drawTrace);
     } catch (error) {
       if (request === traceRequest) feedback('import-feedback', 'error', error.message);
@@ -822,6 +879,18 @@
   $('view-debug-button').addEventListener('click', () => showPage('debug', true));
   $('open-sensors-button').addEventListener('click', () => showPage('sensors', true));
   $('event-level').addEventListener('change', renderEvents);
+  $('run-history-toggle').addEventListener('click', () => {
+    runHistoryExpanded = !runHistoryExpanded;
+    renderRunLog();
+  });
+  $('barcode-captures-toggle').addEventListener('click', () => {
+    barcodeCapturesExpanded = !barcodeCapturesExpanded;
+    renderBarcodeCaptures();
+  });
+  $('buddy-run-picker').addEventListener('change', () => {
+    selectedBuddyRunId = $('buddy-run-picker').value;
+    renderBuddyRunLogs();
+  });
   $('appearance').addEventListener('change', () => applyAppearance($('appearance').value));
   $('packet-inspector').addEventListener('toggle', renderPackets);
   $('packet-pause').addEventListener('click', () => {

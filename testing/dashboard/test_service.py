@@ -1,5 +1,7 @@
 """Local HTTP and isolated Mosquitto integration; never contacts the real car."""
+import csv
 import http.client
+import io
 import json
 from pathlib import Path
 import shutil
@@ -106,6 +108,41 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(content.decode(), text)
         self.assertIn("attachment", headers["Content-Disposition"])
         self.assertEqual(self.request("/api/traces/import", {"name": "../escape", "text": text})[0], 400)
+
+    def test_run_download_is_a_local_json_attachment(self):
+        self.state.ingest("car/telemetry/state", b"\x03\x01")
+        self.state.ingest("car/telemetry/state", b"\x03\x00")
+        run, = self.state.snapshot()["run_log"]["runs"]
+        path = f"/api/runs/{run['id']}/download"
+        status, content, headers = self.request(path)
+        self.assertEqual(status, 200)
+        self.assertIn("application/json", headers["Content-Type"])
+        self.assertIn("attachment", headers["Content-Disposition"])
+        report = json.loads(content)
+        self.assertEqual(report["run"]["id"], run["id"])
+        self.assertTrue(report["entries"])
+        self.assertEqual(self.request(path, host="elsewhere.invalid")[0], 403)
+        self.assertEqual(self.request("/api/runs/" + "0" * 32 + "/download")[0], 404)
+        self.assertEqual(self.request("/api/runs/../../config/wifi_secrets.h/download")[0], 404)
+
+    def test_runs_have_separate_buddy_csv_downloads(self):
+        self.state.ingest("car/telemetry/state", b"\x03\x01")
+        self.state.ingest("car/telemetry/barcode", b"\x03\x59")
+        self.state.ingest("car/telemetry/state", b"\x03\x00")
+        run, = self.state.snapshot()["run_log"]["runs"]
+        self.assertEqual(run["buddy_entries"], {"3": 3})
+        for buddy in range(1, 6):
+            path = f"/api/runs/{run['id']}/buddy/{buddy}.csv"
+            status, content, headers = self.request(path)
+            self.assertEqual(status, 200)
+            self.assertEqual(headers["Content-Type"], "text/csv; charset=utf-8")
+            self.assertIn(f'buddy-{buddy}.csv', headers["Content-Disposition"])
+            rows = list(csv.DictReader(io.StringIO(content.decode("utf-8-sig"))))
+            self.assertTrue(rows)
+            self.assertTrue(all(row["run_id"] == run["id"] for row in rows))
+            self.assertEqual(self.request(path, host="elsewhere.invalid")[0], 403)
+        self.assertEqual(self.request(f"/api/runs/{run['id']}/buddy/6.csv")[0], 404)
+        self.assertEqual(self.request("/api/runs/missing/buddy/1.csv")[0], 404)
 
 
 class TransportTests(unittest.TestCase):

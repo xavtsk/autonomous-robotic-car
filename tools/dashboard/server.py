@@ -7,6 +7,8 @@ import secrets
 import threading
 from urllib.parse import urlsplit
 
+from .run_csv import encode_run_csv
+
 STATIC = Path(__file__).with_name("static")
 MAX_BODY = 4 * 1024 * 1024
 
@@ -68,6 +70,21 @@ class Handler(BaseHTTPRequestHandler):
             elif path.startswith("/api/imu/"):
                 name = path.removeprefix("/api/imu/")
                 self._send(200, state.download_imu(name), "text/csv; charset=utf-8", name)
+            elif path.startswith("/api/runs/") and path.endswith("/download"):
+                parts = path.split("/")
+                if len(parts) != 5 or not parts[3]:
+                    raise KeyError(path)
+                ident = parts[3]
+                archive = json.dumps(state.download_run(ident), ensure_ascii=False, indent=2, allow_nan=False)
+                self._send(200, (archive + "\n").encode("utf-8"), filename=f"robot-run-{ident}.json")
+            elif path.startswith("/api/runs/") and path.endswith(".csv"):
+                parts = path.split("/")
+                if len(parts) != 6 or not parts[3] or parts[4] != "buddy" or parts[5] not in (
+                        "1.csv", "2.csv", "3.csv", "4.csv", "5.csv"):
+                    raise KeyError(path)
+                ident, buddy = parts[3], int(parts[5][0])
+                data = encode_run_csv(state.download_run(ident, buddy=buddy), buddy)
+                self._send(200, data, "text/csv; charset=utf-8", f"run-{ident}-buddy-{buddy}.csv")
             elif path.startswith("/api/traces/"):
                 parts = path.split("/")
                 if len(parts) == 4:

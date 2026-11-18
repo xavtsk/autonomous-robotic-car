@@ -22,11 +22,12 @@ MAX_SENT_POINTS = 1500     # decimated for the browser
 # sample; a normal pass through a multiple of 40.96 m at heading 0 is a 1-step.
 RESTART_JUMP_CM = 60
 STOP_CONFIRM_S = 1.0  # allow queued poses to arrive before a fallback stop
-HUMP_DRAIN_S = 2.0    # allow a late count/peak report from the stopped run
+FINAL_TELEMETRY_S = 2.0  # allow terminal reports from the stopped run
 TURN_STATES = {"turning_left": "Left turn", "turning_right": "Right turn",
                "uturn": "U-turn", "avoiding_obstacle": "Avoiding obstacle"}
 ACTIVE_STATES = {"line_following", *TURN_STATES}
 END_STATES = {"stopped", "complete", "error"}
+END_REASONS = {"stopped": "Stopped", "complete": "Completed", "error": "Controller error"}
 
 
 def _heading_step(previous, current):
@@ -90,7 +91,7 @@ class RouteTracker:
             return
         distance = unwrap_distance(run["distance_cm"], wrapped_cm)
         if wrapped_cm == 0 and heading == 0 and abs(distance - run["distance_cm"]) > RESTART_JUMP_CM:
-            self.end(received_at)
+            self.interrupt("New run detected before stop was observed")
             self._first_pose(self._new_run(received_at), wrapped_cm, heading)
             return
         step = distance - run["distance_cm"]
@@ -106,15 +107,18 @@ class RouteTracker:
         else:
             run["dropped_points"] += 1
 
-    def end(self, received_at):
+    def end(self, received_at, reason="Stopped"):
         if self.current is not None and not self.ended:
-            self.current["log"]["ended_at"] = received_at
+            self.current["log"].update(ended_at=received_at, end_reason=reason)
             self.ended = True
             self.ended_mono = self.clock()
             self._save_run()
 
-    def interrupt(self):
+    def interrupt(self, reason):
         # Keep the observed results when the link drops without an observed STOP.
+        if self.current is not None and not self.ended:
+            self.current["log"]["end_reason"] = reason
+            self._save_run()
         self.current = None
         self.ended = True
         self.idle_since = None
@@ -135,7 +139,7 @@ class RouteTracker:
             self.idle_since = now
         elif now - max(self.idle_since, self.last_activity) >= STOP_CONFIRM_S:
             self.marker("end", "Run stopped", received_at)
-            self.end(received_at)
+            self.end(received_at, "Controller reported stopped")
 
     def _update_humps(self, count, peak_mm):
         log = self.current["log"]
@@ -147,24 +151,26 @@ class RouteTracker:
         self._save_run()
         return True
 
-    def _accept_humps(self):
+    def accepts_final_telemetry(self):
         return self.current is not None and (
-            not self.ended or self.clock() - self.ended_mono <= HUMP_DRAIN_S)
+            not self.ended or self.clock() - self.ended_mono <= FINAL_TELEMETRY_S)
 
     def terrain(self, data):
-        if not self._accept_humps():
-            return
+        if not self.accepts_final_telemetry():
+            return False
         if self.awaiting_hump_boundary:
             if data["peak_valid"]:
-                return
+                return False
             self.awaiting_hump_boundary = False
         log = self.current["log"]
         if data["peak_valid"]:
             # Live terrain can prove a completed hump even if the count packet was lost.
-            self._update_humps(log["hump_count"] or None, data["peak_mm"])
+            changed = self._update_humps(log["hump_count"] or None, data["peak_mm"])
+            return not self.ended or changed
         elif (not self.ended and data["tilt_valid"] and data["state"] not in ("unknown", "impact")
               and log["hump_count"] is None and log["peak_mm"] is None):
             self._update_humps(0, None)
+        return not self.ended
 
     def marker(self, kind, label, received_at):
         """Place an event at the latest pose. Ignored when no run is active."""
@@ -176,16 +182,17 @@ class RouteTracker:
                                    d=run["distance_cm"] - run["start_cm"]))
 
     def telemetry(self, name, data, received_at):
-        """Turn decoded Buddy 1 telemetry into route markers or run boundaries."""
+        """Update the route. Return true for accepted hump and terminal reports."""
         if name == "barcode":
             self.marker("barcode", f"Barcode {data['letter']} → {data['action']}", received_at)
-        elif name == "hump" and self._accept_humps() and not self.awaiting_hump_boundary:
+        elif name == "hump" and self.accepts_final_telemetry() and not self.awaiting_hump_boundary:
             # The firmware can retry this cumulative report after STOP.
             count, height = data["count"], data["height_mm"]
             log = self.current["log"]
             if count >= (log["hump_count"] or 0) and (count or log["peak_mm"] is None):
                 if self._update_humps(count, height if count else None) and count:
                     self.marker("hump", f"Hump {count} · peak {height} mm", received_at)
+                return True
         elif name == "obstacle":
             self.marker("obstacle", f"Obstacle {data['width_mm']} mm wide at {data['distance_mm']} mm · "
                                     f"route {data['route']}", received_at)
@@ -199,8 +206,16 @@ class RouteTracker:
             if state in TURN_STATES:
                 self.marker("turn", TURN_STATES[state], received_at)
             elif state in END_STATES:
-                self.marker("end", "Run " + state, received_at)
-                self.end(received_at)
+                if not self.ended:
+                    self.marker("end", "Run " + state, received_at)
+                    self.end(received_at, END_REASONS[state])
+                    return True
+                if (self.accepts_final_telemetry() and
+                        self.current["log"]["end_reason"] == "Controller reported stopped"):
+                    self.current["log"]["end_reason"] = END_REASONS[state]
+                    self._save_run()
+                    return True
+        return False
 
     def snapshot(self):
         runs = []

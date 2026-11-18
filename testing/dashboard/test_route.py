@@ -5,6 +5,8 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+from dashboard.control_protocol import TOPIC as CONTROL_TOPIC, encode_control
+from dashboard.ir_protocol import IR_TOPIC, encode_ir
 from dashboard.route import RouteTracker, MAX_SENT_POINTS
 from dashboard.run_control_protocol import STATUS_TOPIC, encode_status
 from dashboard.state import DashboardState, POSE_TOPIC
@@ -250,6 +252,130 @@ class DashboardRouteTests(unittest.TestCase):
         newest, previous = self.state.snapshot()["run_log"]["runs"]
         self.assertEqual((newest["hump_count"], newest["peak_mm"]), (1, 10))
         self.assertEqual((previous["hump_count"], previous["peak_mm"]), (3, 20))
+
+    def test_run_download_keeps_telemetry_from_all_five_buddies(self):
+        ingest = self.state.ingest
+        state_topic = "car/telemetry/state"
+        barcode_topic = "car/telemetry/barcode"
+        ingest("car/telemetry/motion", bytes.fromhex("033c7602"))  # before START
+        ingest(POSE_TOPIC, pose_bytes(0, 0), retained=True)
+        self.assertEqual(self.state.snapshot()["run_log"]["runs"], [])
+
+        ingest(state_topic, b"\x03\x01")
+        ingest("car/status", bytes.fromhex("0303"))
+        ingest(POSE_TOPIC, pose_bytes(0, 0))
+        ingest(barcode_topic, bytes.fromhex("0359"), retained=True)  # old Z, left
+        ingest(barcode_topic, bytes.fromhex("0356"))  # W, left
+        ingest("car/telemetry/terrain", terrain_bytes(climb=8))
+        ingest("car/telemetry/avoidance", bytes.fromhex("037186e5e02c"))
+        ingest("car/telemetry/scan", bytes.fromhex("030ff40132680128f8c2069a3a"))
+        ingest(state_topic, b"\x03\x00")
+        self.now += 0.5
+        ingest("car/telemetry/hump", hump_bytes(1, 14))
+        self.now += 3
+        ingest(barcode_topic, bytes.fromhex("0359"))  # idle Z, left
+
+        first, = self.state.snapshot()["run_log"]["runs"]
+        self.assertIsNotNone(first["ended_at"])
+        self.assertTrue(first["end_reason"])
+        self.assertTrue(first["has_details"])
+        archive = self.state.download_run(first["id"])
+        self.assertEqual(archive["schema_version"], 1)
+        self.assertEqual(archive["run"]["id"], first["id"])
+        self.assertEqual((archive["run"]["hump_count"], archive["run"]["peak_mm"]), (1, 14))
+        entries = archive["entries"]
+        self.assertEqual({entry["buddy"] for entry in entries}, {1, 2, 3, 4, 5})
+        self.assertTrue(all(entry["received_at"] for entry in entries))
+        details = {entry["kind"]: entry["data"] for entry in entries}
+        self.assertTrue(details["heartbeat"]["alive"])
+        self.assertEqual(details["pose"]["distance_cm_mod"], 0)
+        self.assertEqual(details["terrain"]["climb_mm"], 8)
+        self.assertEqual(details["hump"], {"count": 1, "height_mm": 14})
+        self.assertEqual(details["scan"]["left_clear_mm"], 180)
+        self.assertEqual([entry["data"]["state"] for entry in entries if entry["kind"] == "state"],
+                         ["line_following", "stopped"])
+        self.assertEqual([entry["data"]["letter"] for entry in entries if entry["kind"] == "barcode"], ["W"])
+        self.assertNotIn("motion", details)
+
+        ingest(state_topic, b"\x03\x01")
+        ingest(barcode_topic, bytes.fromhex("0359"))
+        self.state.set_connection("connecting")
+        second, _ = self.state.snapshot()["run_log"]["runs"]
+        self.assertFalse(second["active"])
+        self.assertIsNone(second["ended_at"])
+        self.assertTrue(second["end_reason"])
+        reopened = DashboardState(TraceStore(Path(self.tmp.name)))
+        self.assertEqual(reopened.download_run(first["id"])["entries"], entries)
+        new_entries = reopened.download_run(second["id"])["entries"]
+        self.assertEqual([entry["data"]["letter"] for entry in new_entries if entry["kind"] == "barcode"], ["Z"])
+
+    def test_run_download_samples_periodic_motion_and_keeps_stop_event(self):
+        self.state.ingest("car/telemetry/state", b"\x03\x01")
+        for _ in range(5):
+            self.state.ingest("car/telemetry/motion", bytes.fromhex("033c7602"))
+            self.now += 0.1
+        self.now += 1
+        self.state.ingest("car/telemetry/motion", bytes.fromhex("033c7602"))
+        self.state.ingest("car/telemetry/state", b"\x03\x00")
+        run, = self.state.snapshot()["run_log"]["runs"]
+        entries = self.state.download_run(run["id"])["entries"]
+        motion = [entry["data"] for entry in entries if entry["kind"] == "motion"]
+        self.assertEqual(motion, [{"left_mms": 120, "right_mms": -118}] * 2)
+        self.assertIn({"state": "stopped"}, [entry["data"] for entry in entries if entry["kind"] == "state"])
+
+    def test_buddy3_archive_records_sampled_darkness_and_decoder_changes(self):
+        def ir(sequence, validity=7):
+            return encode_ir(sequence * 50_000, sequence, (400, 800, 3200), (61, 207, 928),
+                             surfaces=(1, 1, 2), normalised_valid=validity)
+
+        ingest = self.state.ingest
+        ingest(IR_TOPIC, ir(1))  # idle preview is available live but isn't part of a run
+        ingest("car/telemetry/state", b"\x03\x01")
+        ingest(IR_TOPIC, ir(2))
+        self.now += 0.1
+        ingest(IR_TOPIC, ir(3))  # inside the logging interval
+        self.now += 0.15
+        ingest(IR_TOPIC, ir(3))  # duplicate stays excluded even when the interval has passed
+        ingest(IR_TOPIC, ir(4, validity=3))
+
+        for sequence, (status, count) in enumerate(((0, 20), (2, 20), (2, 20), (3, 20), (1, 21))):
+            self.now += 0.05
+            ingest(CONTROL_TOPIC, encode_control(timestamp_us=sequence * 200_000, sequence=sequence,
+                                               drive_state=1, barcode_status=status,
+                                               barcode_events=count))
+        ingest("car/telemetry/barcode", bytes.fromhex("0356"))  # W decoded, left
+        ingest("car/telemetry/state", b"\x03\x00")
+        ingest(IR_TOPIC, ir(5))
+
+        run, = self.state.snapshot()["run_log"]["runs"]
+        entries = self.state.download_run(run["id"])["entries"]
+        previews = [entry["data"] for entry in entries if entry["kind"] == "ir_preview"]
+        self.assertEqual([frame["sequence"] for frame in previews], [2, 4])
+        self.assertEqual([previews[0]["sensors"][channel]["darkness"] for channel in ("left", "right", "barcode")],
+                         [61, 207, 928])
+        barcode_sensor = previews[1]["sensors"]["barcode"]
+        self.assertIsNone(barcode_sensor["darkness"])
+        self.assertFalse(barcode_sensor["valid"])
+        self.assertEqual(barcode_sensor["raw"], 3200)
+        outcomes = [entry["data"]["barcode_status"] for entry in entries if entry["kind"] == "navigation"]
+        self.assertEqual(outcomes, ["none", "rejected", "timing error", "decoded"])
+        self.assertIn({"letter": "W", "action": "left"},
+                      [entry["data"] for entry in entries if entry["kind"] == "barcode"])
+
+    def test_run_download_keeps_short_hump_and_avoidance_transitions(self):
+        ingest = self.state.ingest
+        ingest("car/telemetry/state", b"\x03\x01")
+        ingest("car/telemetry/terrain", terrain_bytes())
+        ingest("car/telemetry/terrain", terrain_bytes(climb=8))
+        first_avoidance = int.from_bytes(bytes.fromhex("7186e5e02c"), "little")
+        next_avoidance = (first_avoidance & ~(7 << 34)) | 4 << 34  # leg pass changed to extra
+        for bits in (first_avoidance, next_avoidance):
+            ingest("car/telemetry/avoidance", b"\x03" + bits.to_bytes(5, "little"))
+        run, = self.state.snapshot()["run_log"]["runs"]
+        entries = self.state.download_run(run["id"])["entries"]
+        self.assertEqual([entry["data"]["climb_mm"] for entry in entries if entry["kind"] == "terrain"], [None, 8])
+        passes = [entry["data"]["pass_step"] for entry in entries if entry["kind"] == "avoidance"]
+        self.assertEqual(passes, ["step", "extra"])
 
     def test_demo_draws_a_route(self):
         now = [0.0]

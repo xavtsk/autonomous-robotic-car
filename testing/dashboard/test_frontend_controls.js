@@ -69,12 +69,13 @@ async function dashboard(initial = robotState()) {
     }};
 }
 
-test('Buddy 4 run logs show counts, peaks and unavailable values without barcode captures', async () => {
+test('run history shows run summaries and keeps downloads in the Buddy sections', async () => {
   const started_at = '2026-11-13T07:34:22Z';
   const runs = [
-    {started_at, active: true, ended_at: null, hump_count: 0, peak_mm: null},
-    {started_at, active: false, ended_at: '2026-11-13T07:34:25Z', hump_count: 2, peak_mm: 14},
-    {started_at, active: false, ended_at: null, hump_count: null, peak_mm: 10},
+    {id: 'active', started_at, active: true, ended_at: null, hump_count: 0, peak_mm: null, has_details: true},
+    {id: 'pickup', started_at, active: false, ended_at: '2026-11-13T07:34:25Z', hump_count: 2, peak_mm: 14,
+      end_reason: 'Lift detected', has_details: true},
+    {id: 'legacy', started_at, active: false, ended_at: null, hump_count: null, peak_mm: 10, has_details: false},
   ];
   const state = robotState();
   state.run_log = {runs, current_id: null, error: null};
@@ -82,8 +83,86 @@ test('Buddy 4 run logs show counts, peaks and unavailable values without barcode
   const rows = ui.get('run-log-body').children[0].children;
   assert.equal(ui.get('imu-captures').hidden, true);
   assert.equal(ui.get('run-count').textContent, '3');
-  assert.deepEqual(rows.map(row => [1, 3, 4].map(i => row.children[i].textContent)),
-    [['Running', '0', '—'], ['Ended', '2', '14'], ['End unconfirmed', 'Unavailable', '10']]);
+  assert.deepEqual(rows.map(row => [1, 3, 4, 5].map(i => row.children[i].textContent)),
+    [['Running', '0', '—', '—'], ['Ended', '2', '14', 'Lift detected'], ['End unconfirmed', 'Unavailable', '10', '—']]);
+  assert.ok(rows.every(row => row.children.length === 6));
+  assert.equal(ui.get('run-history-toggle').hidden, true);
+});
+
+test('run history expands from five rows to the full recent list and collapses again', async () => {
+  const runs = Array.from({length: 20}, (_, index) => ({
+    id: String(index), started_at: '2026-11-13T07:34:22Z', hump_count: index,
+  }));
+  const state = {...robotState(), run_log: {runs}};
+  const ui = await dashboard(state);
+  const toggle = ui.get('run-history-toggle');
+  const rows = () => ui.get('run-log-body').children[0].children;
+  assert.equal(rows().length, 5);
+  assert.equal(toggle.hidden, false);
+  assert.equal(toggle.textContent, 'Show more');
+  assert.equal(toggle.attributes['aria-expanded'], 'false');
+
+  toggle.click();
+  assert.equal(rows().length, 20);
+  assert.equal(toggle.textContent, 'Show less');
+  assert.equal(toggle.attributes['aria-expanded'], 'true');
+  await ui.poll({...state, run_log: {runs: [{...runs[0], hump_count: 8}, ...runs.slice(1)]}});
+  assert.equal(rows().length, 20);
+  assert.equal(rows()[0].children[3].textContent, '8');
+  toggle.click();
+  assert.equal(rows().length, 5);
+});
+
+test('barcode captures expand independently of run history', async () => {
+  const captures = Array.from({length: 20}, (_, index) => ({
+    id: String(index), name: `Capture ${index}`, complete: true,
+  }));
+  const state = {...robotState(), traces: captures, run_log: {runs: captures}};
+  const ui = await dashboard(state);
+  const toggle = ui.get('barcode-captures-toggle');
+  const rows = () => ui.get('runs-body').children[0].children;
+  assert.equal(rows().length, 5);
+  assert.equal(toggle.textContent, 'Show more');
+
+  toggle.click();
+  assert.equal(rows().length, 20);
+  assert.equal(rows()[19].children[0].textContent, 'Capture 19');
+  assert.equal(toggle.attributes['aria-expanded'], 'true');
+  assert.equal(ui.get('run-log-body').children[0].children.length, 5);
+  toggle.click();
+  assert.equal(rows().length, 5);
+  await ui.poll({...state, traces: captures.slice(0, 4)});
+  assert.equal(toggle.hidden, true);
+});
+
+test('buddy CSV sections follow the selected run and show missing telemetry', async () => {
+  const started_at = '2026-11-13T07:34:22Z';
+  const current = {id: 'new run', started_at, buddy_entries: {1: 3, 2: 6, 3: 12, 4: 1}};
+  const older = {id: 'older', started_at, hump_count: 2, peak_mm: 14, has_details: false};
+  const state = robotState();
+  state.run_log = {runs: [current, older]};
+  const ui = await dashboard(state);
+  const picker = ui.get('buddy-run-picker');
+  const buddies = [1, 2, 3, 4, 5];
+  assert.equal(ui.get('buddy-run-logs').hidden, false);
+  assert.equal(picker.value, 'new run');
+  assert.notEqual(picker.children[0].textContent, picker.children[1].textContent);
+  assert.deepEqual(buddies.map(id => ui.get(`buddy-run-download-${id}`).href),
+    buddies.map(id => `/api/runs/new%20run/buddy/${id}.csv`));
+  assert.deepEqual(buddies.map(id => ui.get(`buddy-run-count-${id}`).textContent),
+    ['3 entries', '6 entries', '12 entries', '1 entry', 'No samples recorded']);
+
+  picker.value = 'older';
+  picker.listeners.change();
+  assert.equal(ui.get('buddy-run-count-4').textContent, 'Hump summary available');
+  assert.equal(ui.get('buddy-run-download-4').href, '/api/runs/older/buddy/4.csv');
+  await ui.poll({...state, run_log: {runs: [{id: 'next', started_at}, current, older]}});
+  assert.equal(picker.value, 'older');
+  assert.equal(ui.get('buddy-run-download-5').href, '/api/runs/older/buddy/5.csv');
+  await ui.poll({...state, run_log: {runs: [current]}});
+  assert.equal(picker.value, 'new run');
+  await ui.poll({...state, run_log: {runs: []}});
+  assert.equal(ui.get('buddy-run-logs').hidden, true);
 });
 
 test('raw IMU captures expose a CSV download for each firmware run', async () => {

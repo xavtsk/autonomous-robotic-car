@@ -27,7 +27,7 @@ import uuid
 from .barcode_protocol import decode_barcode
 
 MAX_INPUT_BYTES = 2 * 1024 * 1024
-MAX_TRACES = 40
+MAX_TRACES = 20
 MAX_SAMPLES = 30000
 MAX_EPISODES = 256
 _ID = re.compile(r"^[a-f0-9]{32}$")
@@ -223,7 +223,7 @@ class _Record:
 
 
 class TraceStore:
-    """Thread-safe local capture archive. Stores at most 40 bounded captures.
+    """Thread-safe local capture archive with a bounded recent list.
 
     Only trace-<uuid>.json/txt files owned by this store are read. Older records
     leave the recent in-memory list but stay on disk as test evidence.

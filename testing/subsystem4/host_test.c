@@ -245,7 +245,7 @@ static void level_pickup_rules_tests(void)
  terrain_fixture_init(&f,TERRAIN_HUMP_RIGHT_WHEEL);
  /* Just below the gentle vertical cutoff. */
  for(unsigned i=0;i<4;i++) {
-  assert(terrain_accel(&f,0.03f,0,1.149f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+  assert(terrain_accel(&f,0.03f,0,1.099f,0.001f,20000)==TERRAIN_SAFETY_NONE);
  }
  /* This diagonal motion exceeds the horizontal limit even though each
   * individual axis is within it. */
@@ -257,7 +257,13 @@ static void level_pickup_rules_tests(void)
   assert(terrain_accel(&f,-0.385f,0.144f,1.801f,0.001f,20000)==TERRAIN_SAFETY_NONE);
  }
 
+ /* A gentler pickup below the old cutoff still needs a full 40 ms. */
+ assert(terrain_accel(&f,0.03f,0,1.11f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ assert(terrain_accel(&f,0.03f,0,1.11f,0.001f,20000)==TERRAIN_SAFETY_NONE);
+ assert(terrain_accel(&f,0.03f,0,1.11f,0.001f,20000)==TERRAIN_SAFETY_LIFTED);
+
  /* Run 9, using the first two recorded calibrated samples of the gentle pickup. */
+ terrain_fixture_init(&f,TERRAIN_HUMP_RIGHT_WHEEL);
  assert(terrain_accel(&f,-0.037f,0.018f,1.165f,0.001f,20000)==TERRAIN_SAFETY_NONE);
  assert(terrain_accel(&f,-0.043f,0.002f,1.199f,0.001f,40019)==TERRAIN_SAFETY_LIFTED);
 

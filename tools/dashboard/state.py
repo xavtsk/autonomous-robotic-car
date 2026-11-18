@@ -9,7 +9,8 @@ import math
 
 from buddy1_mqtt_codec import NAMES, WIDTHS, VERSION, SNAPSHOT_BYTES, decode, encode_map
 from .ir_protocol import IRBuffer, IR_TOPIC, decode_ir, encode_ir
-from .control_protocol import TOPIC as CONTROL_TOPIC, decode_control, encode_control
+from .control_protocol import (TOPIC as CONTROL_TOPIC, ACTIONS, BARCODE_STATUS, DRIVE_STATES,
+                               MOTION_FAULTS, MOTION_STATES, REASONS, decode_control, encode_control)
 from .debug_history import DebugHistory
 from .imu_capture import ImuCaptures, TOPIC as IMU_TOPIC, decode_imu
 from .route import ACTIVE_STATES, RouteTracker
@@ -28,6 +29,21 @@ COMMAND_TIMEOUT = 8.0
 CAR_TIMEOUT = 15.0
 MOTION_TIMEOUT = 3.0
 RUN_PENDING = {"sending", "sent", "queued", "executed"}
+RUN_SECTION_BUDDIES = dict(motion=2, heading=2, state=3, barcode=3, hump=4, obstacle=5, faults=1)
+# Changes in these fields are recorded even inside the sampling interval.
+RUN_SAMPLE_KEYS = {
+    "heartbeat": ("alive", "faults_valid", "faults"),
+    "control_status": ("running", "available", "can_start", "can_reset"),
+    "pose": (), "motion": (), "heading": (),
+    "motor_feedback": ("state", "fault", "braked"),
+    "ir_preview": (),
+    "navigation": ("state", "reason", "pending", "barcode_status", "barcode_events",
+                   "junction_events", "lost_events"),
+    "terrain": ("state", "tilt_valid", "on_hump", "peak_mm"),
+    "avoidance": ("state", "fault", "route", "leg", "pass_step", "swapped", "no_echo", "range_valid"),
+}
+RUN_SAMPLE_INTERVAL_S = {"ir_preview": 0.2}  # 5 Hz preview, most other streams log at 1 Hz
+RUN_DEDUPLICATE = {"state", "faults", "hump"}
 
 
 def timestamp():
@@ -63,9 +79,11 @@ class DashboardState:
         self._demo_encoders = [0,0]
         self._demo_epoch = self.clock()
         self._demo_sequence = 0
-        self.run_log = RunLog(traces.folder)
+        self.run_log = RunLog(traces.folder, clock=clock)
         self.imu_captures = ImuCaptures(traces.folder) if capture_imu and mode == "live" else None
         self.route = RouteTracker(clock, self.run_log.record)
+        self._logged_run_id = None
+        self._logged_samples = {}
         self._demo_pose_t0 = None
         self._demo_barcode_last = None
         self._demo_humps = 0
@@ -88,6 +106,47 @@ class DashboardState:
             self.events.appendleft(dict(id=self.event_id, time=timestamp(),
                                         buddy=buddy, level=level, message=str(message)[:1000]))
 
+    def _log_run(self, buddy, kind, data, received_at, *, final=False):
+        ident = self.route.current_log_id
+        if ident is None or (self.route.ended and not (final and self.route.accepts_final_telemetry())):
+            return
+        if ident != self._logged_run_id:
+            self._logged_run_id = ident
+            self._logged_samples.clear()
+        now = self.clock()
+        previous = self._logged_samples.get(kind)
+        if kind in RUN_SAMPLE_KEYS:
+            key = tuple(data.get(name) for name in RUN_SAMPLE_KEYS[kind])
+            interval = RUN_SAMPLE_INTERVAL_S.get(kind, 1.0)
+            if previous is not None and previous[1] == key and now - previous[0] < interval:
+                return
+            self._logged_samples[kind] = (now, key)
+        elif kind in RUN_DEDUPLICATE:
+            if previous == data:
+                return
+            self._logged_samples[kind] = data
+        self.run_log.append(ident, buddy, kind, received_at, data)
+
+    def _log_controller(self, frame, received_at):
+        d = frame["data"]
+        final = d["drive_state"] in (0, 5, 6)
+        navigation = {key: d[key] for key in ("line_error", "line_flags", "barcode_events",
+                      "junction_events", "lost_events", "sample_gap_us", "run_max_gap_us")}
+        navigation.update(state=DRIVE_STATES[d["drive_state"]], reason=REASONS[d["reason"]],
+                          pending=ACTIONS[d["pending"]], barcode_status=BARCODE_STATUS[d["barcode_status"]],
+                          timestamp_us=frame["timestamp_us"])
+        self._log_run(3, "navigation", navigation, received_at, final=final)
+        if d["motion_available"] and d["motion_valid"]:
+            motion = {key: d[key] for key in ("setpoint_left", "setpoint_right", "measured_left",
+                      "measured_right", "duty_left", "duty_right", "encoder_left", "encoder_right")}
+            motion.update(state=MOTION_STATES[d["motion_state"]], fault=MOTION_FAULTS[d["motion_fault"]],
+                          braked=bool(d["braked"]), timestamp_us=d["motion_timestamp_us"])
+            self._log_run(2, "motor_feedback", motion, received_at, final=final)
+
+    def _expire_run_link(self):
+        if not self.route.ended and self.last_car is not None and self.clock() - self.last_car > CAR_TIMEOUT:
+            self.route.interrupt("Telemetry lost")
+
     def set_connection(self, status, host=None, port=None, error=None):
         with self.lock:
             previous_status = self.connection["status"]
@@ -99,7 +158,7 @@ class DashboardState:
                 self.connection["port"] = port
             if status != "connected":
                 if previous_status == "connected":
-                    self.route.interrupt()
+                    self.route.interrupt("MQTT connection lost")
                 self._run_sample = None
                 self._run_lease = None
                 if self._run_request and self._run_request["status"] in RUN_PENDING:
@@ -147,6 +206,8 @@ class DashboardState:
         with self.lock:
             if retained:
                 return  # retained old packets must not establish liveness/ack
+            self._expire_run_link()
+            received_at = timestamp()
             payload = bytes(payload)
             if len(payload) > 65536:
                 self.counters["malformed"] += 1
@@ -163,7 +224,8 @@ class DashboardState:
                 self.counters["received"] += 1
                 self.counters["bytes_received"] += len(payload)
                 self.debug.receive(len(payload))
-                self._run_reply(reply)
+                if self._run_reply(reply):
+                    self._log_run(1, "control_reply", reply, received_at, final=reply["action"] == "stop")
                 return
             if topic == RUN_STATUS_TOPIC:
                 try:
@@ -175,7 +237,7 @@ class DashboardState:
                 prior_epoch = (self._run_lease["epoch"] if self._run_lease else
                                self._run_request["epoch"] if self._run_request else None)
                 if self._run_lease and prior_epoch != lease["epoch"]:
-                    self.route.interrupt()
+                    self.route.interrupt("Controller connection changed")
                 if prior_epoch != lease["epoch"]:
                     if prior_epoch is not None:
                         # A reconnect token cannot make a previous connection's
@@ -189,8 +251,10 @@ class DashboardState:
                 elif 0 < ((lease["last_id"] - self._run_id) & 0xffffffff) < 0x80000000:
                     self._run_id = lease["last_id"]
                 self._run_lease = dict(lease, received_mono=self.clock())
+                was_active = not self.route.ended
                 if lease["available"]:
-                    self.route.controller_status(lease["running"], timestamp())
+                    self.route.controller_status(lease["running"], received_at)
+                self._log_run(1, "control_status", lease, received_at, final=was_active)
                 self.last_car = self.clock()
                 self.counters["received"] += 1
                 self.counters["bytes_received"] += len(payload)
@@ -208,6 +272,7 @@ class DashboardState:
                     self.counters["received"] += 1
                     self.counters["bytes_received"] += len(payload)
                     self.debug.receive(len(payload))
+                    self._log_run(3, "ir_preview", frame, received_at)
                 return
             if topic == IMU_TOPIC:
                 if self.imu_captures is None:
@@ -241,9 +306,9 @@ class DashboardState:
                     self._run_sample_mono = self.clock()
                     self._run_sample_serial += 1
                     self._observe_run()
+                    self._log_controller(frame, received_at)
                     key = (d["drive_state"],d["reason"],d["pending"])
                     if key != self._last_control_event:
-                        from .control_protocol import DRIVE_STATES, REASONS, ACTIONS
                         self.add_event("controller","warning" if d["reason"] else "info",
                                        f"Controller {DRIVE_STATES[d['drive_state']]}: {REASONS[d['reason']]} · pending {ACTIONS[d['pending']]}")
                         self._last_control_event = key
@@ -275,7 +340,10 @@ class DashboardState:
                 self.debug.receive(len(payload))
                 self.history.appendleft(dict(time=timestamp(), topic=topic,
                                               hex=payload.hex(), decoded=decoded))
-                self.route.pose(decoded["distance_cm_mod"], decoded["heading_deg"], timestamp())
+                self.route.pose(decoded["distance_cm_mod"], decoded["heading_deg"], received_at)
+                run = self.route.current
+                self._log_run(2, "pose", dict(decoded, distance_cm=run["distance_cm"] - run["start_cm"]),
+                              received_at)
                 return
             if topic == TERRAIN_TOPIC:
                 try:
@@ -296,7 +364,8 @@ class DashboardState:
                 if decoded["peak_valid"] and decoded["peak_mm"] != previous.get("peak_mm"):
                     self.add_event(4, "info", f"Buddy 4: highest hump this run {decoded['peak_mm']} mm")
                 self._update("terrain", decoded)
-                self.route.terrain(decoded)
+                if self.route.terrain(decoded):
+                    self._log_run(4, "terrain", decoded, received_at, final=True)
                 return
             if topic in (AVOIDANCE_TOPIC, SCAN_TOPIC):
                 try:
@@ -329,6 +398,11 @@ class DashboardState:
                     if decoded["swapped"] and not previous.get("swapped"):
                         self.add_event(5, "info", "Buddy 5: first side blocked, switched sides")
                     self._update("avoidance", decoded)
+                if topic == SCAN_TOPIC:
+                    self._log_run(5, "scan", decoded, received_at)
+                else:
+                    self._log_run(5, "avoidance", dict(decoded, range_valid=decoded["range_mm"] is not None),
+                                  received_at)
                 return
             is_heartbeat = topic in ("car/status", self.heartbeat_topic)
             if not is_heartbeat and topic not in {"car/reply/snapshot", "car/reply/barcode_map"} and not (
@@ -348,9 +422,11 @@ class DashboardState:
                                           hex=payload.hex(), decoded=decoded))
             if is_heartbeat:
                 self.last_heartbeat = self.clock()
+                self._log_run(1, "heartbeat", decoded, received_at)
                 if decoded["faults_valid"]:
                     self._update("faults", decoded["faults"], source="heartbeat")
             elif topic == "car/reply/barcode_map":
+                self._log_run(1, "barcode_map_reply", decoded, received_at)
                 result = decoded["result"]
                 if result == "busy":
                     self.commands["map_lock"] = "locked"
@@ -360,6 +436,8 @@ class DashboardState:
                           "internal": "Robot reported an internal error."}[result]
                 self._reply("map", "accepted" if decoded["ok"] else "rejected", detail)
             elif topic == "car/reply/snapshot":
+                self._log_run(1, "snapshot_reply", {"valid_sections": [name for name, value in decoded.items()
+                                                                       if value["valid"]]}, received_at)
                 for name, value in decoded.items():
                     self._update(name, {k: v for k, v in value.items() if k != "valid"},
                                  source="snapshot", valid=value["valid"])
@@ -367,7 +445,9 @@ class DashboardState:
             else:
                 name = topic.rsplit("/", 1)[-1]
                 self._update(name, decoded)
-                self.route.telemetry(name, decoded, timestamp())
+                accepted = self.route.telemetry(name, decoded, received_at)
+                if name != "hump" or accepted:
+                    self._log_run(RUN_SECTION_BUDDIES[name], name, decoded, received_at, final=accepted)
 
     def _expire(self):
         request = self._run_request
@@ -381,7 +461,6 @@ class DashboardState:
                 self.add_event(1, "warning", kind + ": " + command["detail"])
 
     def _run_view(self):
-        from .control_protocol import DRIVE_STATES, REASONS
         connected = self.connection["status"] == "connected"
         d = self._run_sample
         fresh = bool(connected and d is not None and self.clock() - self._run_sample_mono <= 1.0)
@@ -452,7 +531,7 @@ class DashboardState:
                 reply["id"] != request["id"] or reply["action"] != request["action"] or
                 (request["action"] != "stop" and reply["epoch"] != request["epoch"])):
             self.add_event("controller", "warning", "Unmatched or late control reply ignored.")
-            return
+            return False
         if reply["result"] in ("queued", "executed"):
             # A delayed queue reply cannot downgrade a later execution reply.
             result = "executed" if request["status"] == "executed" else reply["result"]
@@ -461,6 +540,7 @@ class DashboardState:
         else:
             request.update(status=reply["result"], detail="Firmware " + reply["result"] + " request: " + reply["reason"].replace("_", " ") + ".")
         self.add_event("controller", "info" if reply["result"] in ("queued", "executed") else "warning", request["detail"])
+        return True
 
     def request_control(self, action):
         if not isinstance(action, str) or action not in ("start", "stop", "reset"):
@@ -540,6 +620,7 @@ class DashboardState:
     def snapshot(self):
         with self.lock:
             self._expire()
+            self._expire_run_link()
             now = self.clock()
             age = None if self.last_car is None else max(0, now - self.last_car)
             online = self.connection["status"] == "connected" and age is not None and age <= CAR_TIMEOUT
@@ -577,7 +658,7 @@ class DashboardState:
             self.demo_scenario = scenario
             if scenario == "ready":
                 # Explicit simulation reboot, never applied to a real connection.
-                self.route.end(timestamp())
+                self.route.end(timestamp(), "Simulation restarted")
                 self.commands = {"map": self._idle(), "snapshot": self._idle(), "map_lock": "unknown"}
                 self._demo_pending = None
                 self._demo_epoch = self.clock()
@@ -617,6 +698,14 @@ class DashboardState:
             if self.imu_captures is None:
                 raise KeyError(name)
             return self.imu_captures.download(name)
+
+    def download_run(self, ident, *, buddy=None):
+        with self.lock:
+            self._expire_run_link()
+            archive = self.run_log.download(ident, buddy=buddy)
+            archive["mode"] = self.mode
+            archive["run"]["active"] = ident == self.route.current_log_id and not self.route.ended
+            return archive
 
     def demo_ir_tick(self):
         with self.lock:
