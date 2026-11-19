@@ -759,7 +759,7 @@ static void test_limits_and_faults(void)
     s3_barcode_config_t bad = cfg;
     s3_barcode_result_t res;
     uint32_t t = 0U;
-    unsigned int i, overflow = 0U;
+    unsigned int i, overflow = 0U, max_recorded = 0U;
     /* Recording memory full before the frame-duration timeout: 30 ms stripes
      * sampled every 2.5 ms, including after the 200 Hz capacity increase. */
     s3_barcode_record_reset(&r);
@@ -768,7 +768,11 @@ static void test_limits_and_faults(void)
         t += 2500U;
         if (s3_barcode_record_update(&r, &cfg, t, true, ((i / 12U) % 2U) ? 50U : 900U, &res) ==
             S3_BARCODE_OVERFLOW) { overflow++; }
+        if (r.count > max_recorded) { max_recorded = r.count; }
     }
+    /* The count must represent the full 4096-entry state before refusing the
+     * next sample; a too-small count bitfield must not silently wrap to 0. */
+    assert(max_recorded == S3_REC_MAX);
     assert(overflow >= 1U);
     /* A missing reading (gap > max_gap_us) while recording. */
     s3_barcode_record_reset(&r); t = 0U;

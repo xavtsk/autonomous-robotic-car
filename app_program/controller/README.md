@@ -66,7 +66,7 @@ allows one application request in flight and paces sends (20 ms) and retries
 (100 ms). Existing bounded application queues can still overflow; reconnect
 retries can duplicate delivery. Binary MQTT protocol v2 is unchanged.
 
-The 10 ms sampling period is unchanged. `above10ms` includes ordinary jitter,
+The current sampling period is 5 ms (200 Hz). `above_target` includes ordinary jitter,
 not a count of missed deadlines. Separate RUN timing resets at accepted START,
 includes the gap that caused a halt/fault, then freezes while inactive: start
 timestamp, sample count, maximum gap, above-target count, count above the existing
@@ -76,6 +76,37 @@ reported separately. All six 32-bit diagnostic fields are explicitly packed
 fix or attribute long scheduling delays.
 
 See [implementation and validation](../../docs/SOFTWARE_FIXES_2026-10-27.md).
+
+### 19 November fast small-barcode tests
+
+At the requested 0.10 m/s cruise, the lowered sensor resolves the small F's
+bars, but measured narrow elements are about 29–35 ms. The former 100 Hz
+sampling, with observed 12–13 ms gaps, made the existing three-sample-interval
+validation require 36–39 ms. Sampling and the kernel tick now use 5 ms. The
+absolute narrow-width minimum is 25 ms; the three-interval guard, both stars,
+all 29 widths, quiet zones and ambiguous-result rejection remain enforced.
+
+The reader holds 4096 samples, with a 13-bit count that includes its full state.
+The diagnostic capture pool holds 4000 samples (about 20 s at 200 Hz), within
+the existing 12-bit wireless format. Update/restart the dashboard together with
+this firmware so it accepts the larger captures. Live telemetry retains its
+200 ms cadence. These settings require new on-car validation; old 100 Hz
+captures cannot demonstrate the additional measurements made at 200 Hz.
+
+The next 200 Hz batch exposed a trigger-time logging cost: each capture copied
+300 history entries and converted all their double-precision odometry values
+in the sampling task. Its longest interval repeatedly occurred immediately
+after that copy. Capture history now stores distance in fixed-point units,
+so the trigger copy only subtracts and rounds integers; sensor timestamps and
+the three-interval decoder guard are unchanged.
+
+The recording reader also tries analysis after the minimum possible quiet
+zone (currently 250 ms), instead of always waiting for the maximum allowed
+stripe duration (1 s). An early attempt still needs both stars, all 29 widths,
+and the full measured ten-module quiet zone. An incomplete attempt keeps the
+real recording and can retry after new ink or at the original final deadline.
+New on-car scans are required to verify these changes; two earlier runs ended
+with terrain/IMU faults and cannot be treated as barcode rejection results.
 
 See [operation/calibration API](../subsystem3/MOTION_INTEGRATION.md) and
 [25 October review](../../docs/INTEGRATION_2026-10-25.md) for verification,
@@ -88,7 +119,7 @@ on plain paper/tabletop. The default is `S3_STRAIGHT_TEST=0`, which retains the
 normal track steering. The test profile treats white under both front sensors
 as centred, sets the IR steering gain to zero, and drives straight through
 crossings when no turn command is pending. While following, both requested
-wheel speeds are the existing `S3_COURSE_BASE_MPS` (normally **0.04 m/s**), even
+wheel speeds are the configured `S3_COURSE_BASE_MPS` (currently **0.10 m/s**), even
 if a hump changes the two front sensors' readings differently.
 
 Barcode commands still apply: a mapped LEFT/RIGHT/U-turn can still cause a

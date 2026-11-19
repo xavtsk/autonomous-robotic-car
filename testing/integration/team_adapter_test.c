@@ -1,4 +1,7 @@
 #include "../../app_program/controller/vehicle_controller.h"
+#include "../../app_program/controller/run_timing.h"
+#define LIVE_CYCLES (200U / S3_SAMPLE_PERIOD_MS)
+#define STOPPED_CYCLES (1000U / S3_SAMPLE_PERIOD_MS)
 #include "../../app_program/subsystem1/subsystem1.h"
 #include "../../app_program/subsystem2/motion_pack.h"
 #include <assert.h>
@@ -53,7 +56,7 @@ bool s3_navigation_set_mapping(s3_navigation_t *nav,const s3_nav_action_t map[26
 static void observe_after(uint32_t elapsed_us)
 {runtime.navigation.timestamp_us+=elapsed_us;vehicle_controller_observe(&runtime);}
 static void cycles(unsigned count)
-{for(unsigned i=0;i<count;i++)observe_after(10000U);}
+{for(unsigned i=0;i<count;i++)observe_after(S3_SAMPLE_PERIOD_US);}
 static void motion_cadence_test(void)
 {
     runtime=(s3_integration_status_t){0};status=(motion_status_t){0};
@@ -61,27 +64,27 @@ static void motion_cadence_test(void)
     reports=invalidations=motion_reads=0;
     assert(vehicle_controller_init()==E_OK);
     observe_after(0);assert(reports==1);                 /* initial zero is immediate */
-    cycles(99);observe_after(9999);assert(reports==1);
+    cycles(STOPPED_CYCLES-1U);observe_after(S3_SAMPLE_PERIOD_US-1U);assert(reports==1);
     observe_after(1);assert(reports==2);                 /* stopped heartbeat at 1 s */
     runtime.state=S3_DRIVE_FOLLOW;cycles(1);assert(reports==3);
-    cycles(19);assert(reports==3);cycles(1);assert(reports==4); /* START restores 5 Hz */
+    cycles(LIVE_CYCLES-1U);assert(reports==3);cycles(1);assert(reports==4); /* START restores 5 Hz */
     status.speed_left_mps=0.12f;status.speed_right_mps=-0.12f;
-    cycles(19);assert(reports==4);cycles(1);
+    cycles(LIVE_CYCLES-1U);assert(reports==4);cycles(1);
     assert(reports==5&&left_report==120&&right_report==-120);
     runtime.state=S3_DRIVE_HALTED;status.speed_left_mps=status.speed_right_mps=0.0f;
     cycles(1);assert(reports==6&&left_report==0&&right_report==0); /* final zero */
     /* Filter residue that already reports zero does not defeat the idle rate;
      * a stopped state/brake flag cannot hide representable wheel movement. */
-    status.speed_left_mps=0.0004f;cycles(19);assert(reports==6);
+    status.speed_left_mps=0.0004f;cycles(LIVE_CYCLES-1U);assert(reports==6);
     status.speed_left_mps=0.002f;cycles(1);assert(reports==7&&left_report==2);
-    cycles(19);assert(reports==7);cycles(1);assert(reports==8);
+    cycles(LIVE_CYCLES-1U);assert(reports==7);cycles(1);assert(reports==8);
     status.speed_left_mps=0.0f;status.b_stopped=false;
-    cycles(20);assert(reports==9);                       /* no stopped acknowledgement */
+    cycles(LIVE_CYCLES);assert(reports==9);                       /* no stopped acknowledgement */
     status.b_stopped=true;cycles(1);assert(reports==10);
     runtime.state=S3_DRIVE_FAULT;runtime.navigation.fault_mask=1;
     cycles(1);assert(reports==11&&last_state==BUDDY1_STATE_ERROR&&(mask&BUDDY1_FAULT_IR));
     status_ok=false;cycles(1);assert(invalidations==1);   /* invalidation is immediate */
-    cycles(19);assert(invalidations==1);cycles(1);assert(invalidations==2);
+    cycles(LIVE_CYCLES-1U);assert(invalidations==1);cycles(1);assert(invalidations==2);
     status_ok=true;cycles(1);assert(reports==12);         /* recovery is immediate */
     status.b_busy=true;cycles(1);assert(invalidations==3);
     status.b_busy=false;cycles(1);assert(reports==13);
@@ -111,8 +114,8 @@ int main(void)
     queue_ok=false;assert(vehicle_controller_begin()==E_OBJ);queue_ok=true;
     runtime.state=S3_DRIVE_FOLLOW;status.b_valid=true;
     status.speed_left_mps=0.12f;status.speed_right_mps=-0.12f;
-    cycles(20);assert(reports==1&&left_report==120&&right_report==-120);
-    assert(motion_reads==20); /* one read/cycle, shared by faults/pose/speed */
+    cycles(LIVE_CYCLES);assert(reports==1&&left_report==120&&right_report==-120);
+    assert(motion_reads==LIVE_CYCLES); /* one read/cycle, shared by faults/pose/speed */
     assert(last_state==BUDDY1_STATE_LINE_FOLLOWING&&mask==BUDDY1_FAULT_WIFI);
     status.fault_bits=MOTION_FAULT_BIT(MOTION_FAULT_STALL)|MOTION_FAULT_BIT(MOTION_FAULT_ENCODER);
     runtime.navigation.fault_mask=2;cycles(1);
@@ -132,9 +135,9 @@ int main(void)
     {unsigned s0=states;cycles(3);assert(barcodes==8&&states==s0);}
     assert(last_state==BUDDY1_STATE_TURNING_LEFT);
     runtime.state=S3_DRIVE_FAULT;cycles(1);assert(last_state==BUDDY1_STATE_ERROR);
-    status.speed_left_mps=0.884f;before=invalidations;unsigned reports_before=reports;cycles(20);
+    status.speed_left_mps=0.884f;before=invalidations;unsigned reports_before=reports;cycles(LIVE_CYCLES);
     assert(invalidations>before&&reports==reports_before); /* Never clip into a valid 510. */
-    status.b_valid=false;before=invalidations;cycles(20);assert(invalidations>before);
+    status.b_valid=false;before=invalidations;cycles(LIVE_CYCLES);assert(invalidations>before);
     runtime.navigation.fault_mask=1;mirror_result=E_OBJ;before=updates;cycles(2);assert(updates==before+2);
     /* Full outbox (E_TMOUT): the fault change is retried until it is queued. */
     mirror_result=E_TMOUT;before=updates;cycles(2);assert(updates==before+2);
@@ -161,14 +164,18 @@ int main(void)
     status.distance_m=1.00f;status.heading_deg=350.0f;cycles(5);assert(poses==0); /* not running */
     status.b_valid=false;runtime.state=S3_DRIVE_FOLLOW;cycles(3);assert(poses==0);  /* no reference yet */
     status.b_valid=true;cycles(1);assert(poses==1&&pose_cm==0&&pose_deg==0);      /* START */
-    status.distance_m=1.25f;status.heading_deg=10.0f;cycles(19);assert(poses==1);
+    status.distance_m=1.25f;status.heading_deg=10.0f;
+    { uint32_t started=runtime.navigation.timestamp_us;
+      cycles(LIVE_CYCLES/2U);assert(poses==1); /* no doubled-rate report at 100 ms */
+      assert(runtime.navigation.timestamp_us-started==100000U);
+      cycles(LIVE_CYCLES-LIVE_CYCLES/2U-1U);assert(poses==1); }
     cycles(1);assert(poses==2&&pose_cm==25&&pose_deg==20);                        /* heading wraps */
-    runtime.state=S3_DRIVE_MANOEUVRE;status.distance_m=0.90f;status.heading_deg=260.0f;cycles(20);
+    runtime.state=S3_DRIVE_MANOEUVRE;status.distance_m=0.90f;status.heading_deg=260.0f;cycles(LIVE_CYCLES);
     assert(poses==3&&pose_cm==4096-10&&pose_deg==270);                            /* reverse past START */
-    status.distance_m=42.004f;cycles(20);assert(poses==4&&pose_cm==(4100%4096));  /* 41 m: wraps */
-    status.b_valid=false;cycles(40);assert(poses==4);                              /* unusable: skipped */
+    status.distance_m=42.004f;cycles(LIVE_CYCLES);assert(poses==4&&pose_cm==(4100%4096));  /* 41 m: wraps */
+    status.b_valid=false;cycles(2U*LIVE_CYCLES);assert(poses==4);                              /* unusable: skipped */
     status.b_valid=true;runtime.state=S3_DRIVE_HALTED;cycles(1);assert(poses==5);  /* final pose */
-    cycles(40);assert(poses==5);                                                   /* stopped: silent */
+    cycles(2U*LIVE_CYCLES);assert(poses==5);                                                   /* stopped: silent */
     status.distance_m=5.0f;status.heading_deg=90.0f;runtime.state=S3_DRIVE_FOLLOW;cycles(1);
     assert(poses==6&&pose_cm==0&&pose_deg==0);                                    /* new run, new START */
     motion_cadence_test();

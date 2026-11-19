@@ -1,5 +1,6 @@
 #include "terrain_integration.h"
 #if APP_S4
+#include "run_timing.h"
 #include "../subsystem4/subsystem4.h"
 #include "../subsystem1/subsystem1.h"
 
@@ -116,7 +117,7 @@ void terrain_control_report(void)
     terrain_live_report();
 }
 /* Live Buddy 4 report for the laptop, every TERRAIN_LIVE_PERIOD calls (200 ms
- * at the 10 ms control cycle), with or without a run, so tilting or pushing
+ * at the configured control cycle), with or without a run, so tilting or pushing
  * the car on the bench shows up: pitch/roll, terrain state, the height so far
  * on a hump being crossed, and the highest completed hump since START (reset
  * at START; Buddy 4 retains it for the run). An impact anywhere in the period
@@ -124,7 +125,10 @@ void terrain_control_report(void)
  * Phase-shifted from the 200 ms motion/pose reports so the four-message
  * outbox is not filled in one cycle. QoS 0: a full outbox drops one report.
  * Stale or missing IMU data is "unavailable", never 0 degrees or 0 mm. */
-#define TERRAIN_LIVE_PERIOD 20U
+#define TERRAIN_LIVE_PERIOD (200U / S3_SAMPLE_PERIOD_MS)
+#if (200U % S3_SAMPLE_PERIOD_MS) != 0U || TERRAIN_LIVE_PERIOD == 0U || TERRAIN_LIVE_PERIOD > UINT8_MAX
+#error "200 ms terrain telemetry cadence must fit the eight-bit cycle divider"
+#endif
 static int16_t tilt_x10(float deg, bool *ok)
 {
     float x=deg*10.0f;

@@ -8,7 +8,7 @@ import unittest
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/"tools"))
-from dashboard.barcode_protocol import decode_barcode, encode_barcode
+from dashboard.barcode_protocol import MAX_CAPTURE_SAMPLES, decode_barcode, encode_barcode
 from dashboard.traces import TraceStore
 from dashboard.state import DashboardState
 from buddy1_live import Folder, TraceFile, handle
@@ -24,6 +24,80 @@ V1_PACKETS = [bytes.fromhex(value) for value in (
 V1_BOUNDARY = bytes.fromhex(
     "01f0ffffff0200f4fff5e5ffffffff5f5ffefffffffff5e5ffffffff"
     "5f5ffefffffffff5e5ffffffff5f5ffeffff1f")
+
+
+class BarcodeCapacityTests(unittest.TestCase):
+    """Capacity and compatibility checks without a native C compiler/runtime."""
+
+    def test_4000_sample_header_matches_wire_layout(self):
+        # Fixed vector: v2, capture 0x12345678, episode 12, max start clock,
+        # count 4000. The count starts at bit 69 in the unchanged wire layout.
+        packet = bytes.fromhex("0278563412ed4d6210f401")
+        frame = decode_barcode(packet)
+        self.assertEqual(MAX_CAPTURE_SAMPLES, 4000)
+        self.assertEqual((frame["capture_id"], frame["episode"], frame["start_ms"], frame["count"]),
+                         (0x12345678, 12, 4294967, 4000))
+        self.assertEqual(encode_barcode(0x12345678, "episode", episode=12,
+                                       start_ms=4294967, count=4000), packet)
+
+    def test_last_full_packet_and_final_sample_fit_capacity(self):
+        rows = [(i, 0, 0, i, 5) for i in range(3976, 4000)]
+        packet = encode_barcode(1, "samples", episode=1, index=3976, samples=rows)
+        self.assertEqual(len(packet), 164)
+        self.assertEqual(decode_barcode(packet)["index"], 3976)
+        self.assertEqual(decode_barcode(packet)["samples"], rows)
+        for version in (1, 2):
+            packet = encode_barcode(1, "samples", version=version, episode=1,
+                                    index=3999, samples=[rows[-1]])
+            self.assertEqual(decode_barcode(packet)["index"], 3999)
+
+    def test_complete_4000_sample_capture_reaches_trace_store(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = TraceStore(Path(tmp))
+            store.ingest_binary(encode_barcode(17, "summary", episodes=1))
+            store.ingest_binary(encode_barcode(17, "episode", episode=1, start_ms=0, count=4000))
+            for index in range(0, 4000, 24):
+                rows = [(i, 0, 1, i, 5) for i in range(index, min(index+24, 4000))]
+                store.ingest_binary(encode_barcode(17, "samples", episode=1, index=index, samples=rows))
+            store.ingest_binary(encode_barcode(17, "end"))
+            record = store.list()[0]
+            self.assertTrue(record["complete"])
+            self.assertFalse(record["truncated"])
+            self.assertEqual(record["sample_count"], 4000)
+            self.assertEqual(store.get(record["id"])["samples"][-1]["raw"], 3999)
+
+    def test_out_of_capacity_headers_and_slices_are_rejected(self):
+        for version in (1, 2):
+            header = encode_barcode(1, "episode", version=version, episode=1, start_ms=0, count=4000)
+            for count in (4001, 4095):
+                with self.subTest(version=version, count=count):
+                    with self.assertRaises(ValueError):
+                        encode_barcode(1, "episode", version=version, episode=1, start_ms=0, count=count)
+                    bits = (int.from_bytes(header, "little") & ~(4095 << 69)) | count << 69
+                    with self.assertRaises(ValueError):
+                        decode_barcode(bits.to_bytes(len(header), "little"))
+            for index, count in ((3999, 2), (4000, 1), (4095, 1), (-1, 1)):
+                with self.subTest(version=version, index=index, count=count), self.assertRaises(ValueError):
+                    encode_barcode(1, "samples", version=version, episode=1, index=index,
+                                   samples=[(0, 0, 1, 0, 5)]*count)
+            tail = encode_barcode(1, "samples", version=version, episode=1, index=3999,
+                                  samples=[(0, 0, 1, 0, 5)])
+            for index in (4000, 4095):
+                bits = (int.from_bytes(tail, "little") & ~(4095 << 46)) | index << 46
+                with self.assertRaises(ValueError):
+                    decode_barcode(bits.to_bytes(len(tail), "little"))
+
+    def test_legacy_v1_vectors_and_2400_sample_captures_still_decode(self):
+        for packet in V1_PACKETS + [V1_BOUNDARY]:
+            frame = decode_barcode(packet)
+            fields = {k:v for k,v in frame.items() if k not in ("capture_id", "kind", "text")}
+            self.assertEqual(encode_barcode(frame["capture_id"], frame["kind"], version=1, **fields), packet)
+        for version in (1, 2):
+            header = encode_barcode(1, "episode", version=version, episode=1, start_ms=0, count=2400)
+            self.assertEqual(decode_barcode(header)["count"], 2400)
+            tail = encode_barcode(1, "samples", version=version, episode=1, index=2399,
+                                  samples=[(123, 0, 1, 0, 5)])
+            self.assertEqual(decode_barcode(tail)["samples"], [(123, 0, 1, 0, 5)])
 
 
 class BarcodeWireTests(unittest.TestCase):
@@ -87,8 +161,8 @@ class BarcodeWireTests(unittest.TestCase):
             fields={k:v for k,v in frame.items() if k not in ("capture_id","kind","text")}
             self.assertEqual(encode_barcode(frame["capture_id"],frame["kind"],**fields),packet)
         tail=decode_barcode(self.tail)
-        self.assertEqual(tail["index"],2376)
-        self.assertEqual(tail["samples"],[(i,0,0,i,0) for i in range(2376,2400)])
+        self.assertEqual(tail["index"],3976)
+        self.assertEqual(tail["samples"],[(i,0,0,i,0) for i in range(3976,4000)])
         with tempfile.TemporaryDirectory() as tmp:
             store=TraceStore(Path(tmp))
             for packet in self.batch_packets:
@@ -145,13 +219,13 @@ class BarcodeWireTests(unittest.TestCase):
     def test_versioned_sample_count_length_and_padding_limits(self):
         for version,limit,width in ((1,6,3),(2,24,5)):
             for count in (1,limit):
-                packet=encode_barcode(0,"samples",version=version,episode=12,index=2400-count,
+                packet=encode_barcode(0,"samples",version=version,episode=12,index=MAX_CAPTURE_SAMPLES-count,
                                       samples=[(0,0,0,0,0)]*count)
                 self.assertEqual(decode_barcode(packet)["samples"],[(0,0,0,0,0)]*count)
                 with self.assertRaises(ValueError):decode_barcode(packet[:-1])
                 with self.assertRaises(ValueError):decode_barcode(packet+b"\0")
                 with self.assertRaises(ValueError):decode_barcode(packet[:-1]+bytes([packet[-1]|128]))
-            for count,index in ((0,0),(limit+1,0),(limit,2401-limit),(1,-1)):
+            for count,index in ((0,0),(limit+1,0),(limit,MAX_CAPTURE_SAMPLES+1-limit),(1,-1)):
                 with self.assertRaises(ValueError):
                     encode_barcode(1,"samples",version=version,episode=1,index=index,samples=[(0,0,0,0,0)]*count)
             # Count-minus-one lives at bit 58. Reserved count codes are rejected

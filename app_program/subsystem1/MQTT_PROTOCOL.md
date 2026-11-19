@@ -213,7 +213,7 @@ outbox has four slots shared by everything. A map or snapshot reply that finds
 it full is retried every 10 ms by the command task for up to 2 s (the dashboard
 waits 8 s); the command itself is applied once. Barcode, robot-state, obstacle
 summary, scan profile and fault changes are retried by the controller every
-10 ms cycle until queued. Periodic live samples (motion, pose, terrain,
+control cycle (5 ms since 19 Nov 2026) until queued. Periodic live samples (motion, pose, terrain,
 avoidance) stay best effort: the next one follows 200 ms later.
 
 ### Fault ownership

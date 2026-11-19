@@ -19,6 +19,8 @@ test:
 	$(BUILD)/test_ir_reflectance
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_record.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_record
 	$(BUILD)/test_barcode_record
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_fast.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_fast
+	$(BUILD)/test_barcode_fast
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_faint.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_faint
 	$(BUILD)/test_barcode_faint
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_varying.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_varying

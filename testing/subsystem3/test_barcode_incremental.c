@@ -114,22 +114,52 @@ static void all_letters(void)
 
 static void cancel_pending_jobs(void)
 {
-    for (unsigned int mode=0U;mode<4U;mode++) {
-        const unsigned int count=wave(25U,0U);
-        s3_barcode_result_t result;
-        bool pending=false;
-        s3_barcode_record_reset(&record);clock_us=0U;
-        for (unsigned int i=0U;i<count;i++) {
-            assert(feed(samples[i],true,10000U,&result)!=S3_BARCODE_DECODED);
-            if (record.state==S3_REC_PROCESSING) { pending=true;break; }
+    for (unsigned int final=0U;final<2U;final++) {
+        for (unsigned int mode=0U;mode<4U;mode++) {
+            const unsigned int count=wave(25U,0U);
+            s3_barcode_result_t result;
+            bool pending=false;
+            if (final) {
+                /* Retain 15 bars and both stars, but shorten the middle wide
+                 * payload bar to 20 ms. The early fit must refuse it; its
+                 * unchanged 1 s final attempt still has real work to cancel. */
+                unsigned int bars=0U;
+                for (unsigned int i=0U;i<count;) {
+                    if (!samples[i]) { i++;continue; }
+                    const unsigned int begin=i;
+                    while (i<count && samples[i]) { i++; }
+                    if (bars++==7U) {
+                        assert(i-begin>2U);
+                        for (unsigned int j=begin+2U;j<i;j++) { samples[j]=0U; }
+                        break;
+                    }
+                }
+                assert(bars==8U);
+            }
+            s3_barcode_record_reset(&record);clock_us=0U;
+            for (unsigned int i=0U;i<count;i++) {
+                assert(feed(samples[i],true,10000U,&result)!=S3_BARCODE_DECODED);
+                if (record.state==S3_REC_PROCESSING && record.work.early==(final==0U)) {
+                    assert(!record.work.provisional);pending=true;break;
+                }
+            }
+            assert(pending);
+            const unsigned int retained=record.count;
+            if (mode==0U) { assert(feed(0U,false,10000U,&result)==S3_BARCODE_NONE); }
+            if (mode==1U) { assert(feed(0U,true,40000U,&result)==S3_BARCODE_TIMING_ERROR); }
+            if (mode==2U) {
+                const s3_barcode_status_t expected=final ? S3_BARCODE_REJECTED : S3_BARCODE_NONE;
+                assert(feed(400U,true,10000U,&result)==expected);
+            }
+            if (mode==3U) { s3_barcode_record_reset(&record); }
+            if (mode==2U && !final) {
+                assert(record.state==S3_REC_RECORDING && record.work.phase==0U);
+                assert(record.count==retained+1U); /* new ink and old history survive */
+            } else { assert(record.state==S3_REC_WAITING && record.work.phase==0U); }
+            for (unsigned int i=0U;i<300U;i++) {
+                assert(feed(0U,true,10000U,&result)!=S3_BARCODE_DECODED);
+            }
         }
-        assert(pending);
-        if (mode==0U) { assert(feed(0U,false,10000U,&result)==S3_BARCODE_NONE); }
-        if (mode==1U) { assert(feed(0U,true,40000U,&result)==S3_BARCODE_TIMING_ERROR); }
-        if (mode==2U) { assert(feed(400U,true,10000U,&result)==S3_BARCODE_REJECTED); }
-        if (mode==3U) { s3_barcode_record_reset(&record); }
-        assert(record.state==S3_REC_WAITING && record.work.phase==0U);
-        for (unsigned int i=0U;i<300U;i++) { assert(feed(0U,true,10000U,&result)!=S3_BARCODE_DECODED); }
     }
 }
 

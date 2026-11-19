@@ -3,6 +3,8 @@
 #include "barcode_capture.h"
 #include "run_timing.h"
 #include <assert.h>
+#include <float.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -34,6 +36,58 @@ static unsigned dump(char *all, size_t size)
     return lines;
 }
 
+static void check_positions(const double *positions, const uint16_t *expected, unsigned count)
+{
+    assert(count > 0U && count <= BCAP_PRE);
+    bcap_begin_run(&cap, t);
+    for (unsigned i = 0U; i < count; ++i) {
+        const bcap_input_t in = {.t_us=t, .raw=200, .surface=i+1U==count?2U:1U,
+                                  .centre_m=positions[i]};
+        bcap_record(&cap, &in);
+        t += S3_SAMPLE_PERIOD_US;
+    }
+    assert(cap.active && cap.episode[0].count == count);
+    for (unsigned i = 0U; i < count; ++i)
+        assert(cap.pool[cap.episode[0].first+i].mm == expected[i]);
+    bcap_end_run(&cap);
+}
+
+static void fixed_point_odometry_tests(void)
+{
+    /* Preserve unsigned forward distance through negative positions, reverse
+     * motion and crossing zero. Rounding remains to the nearest wire mm. */
+    const double negative[] = {-10.0, -9.999, -9.990, -9.980};
+    const uint16_t negative_mm[] = {0, 1, 10, 20};
+    check_positions(negative, negative_mm, 4);
+    const double reverse[] = {10.0, 9.99, 9.98, 9.97};
+    const uint16_t zero_mm[] = {0, 0, 0, 0};
+    check_positions(reverse, zero_mm, 4);
+    const double rounded[] = {10.0, 9.99, 10.00049, 10.00051, 10.010};
+    const uint16_t rounded_mm[] = {0, 0, 0, 1, 10};
+    check_positions(rounded, rounded_mm, 5);
+    const double crossing[] = {-0.00051, -0.00002, 0.0, 0.00049, 0.001};
+    const uint16_t crossing_mm[] = {0, 0, 1, 1, 2};
+    check_positions(crossing, crossing_mm, 5);
+    /* Absolute odometry can outlive many runs; it must not wrap at 32-bit
+     * millimetre or micrometre limits or lose small increments in that range. */
+    const double long_run[] = {10000000.0, 10000000.001, 10000000.100, 10000001.234};
+    const uint16_t long_run_mm[] = {0, 1, 100, 1234};
+    check_positions(long_run, long_run_mm, 4);
+    const double saturated[] = {0.0, 65.5344, 65.5346, 65.535, 70.0};
+    const uint16_t saturated_mm[] = {0, 65534, 65535, 65535, 65535};
+    check_positions(saturated, saturated_mm, 5);
+    /* A missing origin makes the episode's distances unavailable. Missing
+     * individual readings must not fabricate a forward jump from NaN/Inf. */
+    const double invalid_origin[] = {NAN, 1.0, 2.0, 3.0};
+    check_positions(invalid_origin, zero_mm, 4);
+    const double invalid_sample[] = {1.0, NAN, INFINITY, -INFINITY, 1.001};
+    const uint16_t invalid_sample_mm[] = {0, 0, 0, 0, 1};
+    check_positions(invalid_sample, invalid_sample_mm, 5);
+    const double finite_extremes[] = {-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX};
+    const uint16_t finite_extremes_mm[] = {0, 0, 65535, 65535};
+    check_positions(finite_extremes, finite_extremes_mm, 4);
+}
+
 int main(void)
 {
     static char text[200000];
@@ -59,6 +113,8 @@ int main(void)
     assert(cap.pool[cap.episode[0].first + BCAP_PRE].dt_ms == S3_SAMPLE_PERIOD_MS);
     assert(cap.pool[cap.episode[0].first].mm == 0U);
     assert(cap.pool[cap.episode[0].first + BCAP_PRE].mm == BCAP_PRE);
+    for (i = 0U; i <= BCAP_PRE; ++i)
+        assert(cap.pool[cap.episode[0].first+i].mm == i); /* wrapped history in order */
     assert((cap.pool[cap.episode[0].first + BCAP_PRE].flags & 3U) == 2U);
     /* Status counters outside episodes too. */
     feed(10, 2, 0); feed(10, 3, 0); feed(10, 4, 0);
@@ -110,6 +166,7 @@ int main(void)
     bcap_begin_run(&cap, t);
     for (i = 0; i < 20; i++) feed(10, 1, (char)('A' + i));
     assert(cap.decoded == 20 && strlen(cap.letters) == sizeof cap.letters - 1U);
-    puts("PASS: barcode capture episodes, pre-trigger, quiet end, run end, counters, bounded pool/letters, faint reader-collecting capture and USB dump format");
+    fixed_point_odometry_tests();
+    puts("PASS: barcode capture episodes, pre-trigger, quiet end, run end, counters, bounded pool/letters, fixed-point odometry, faint reader-collecting capture and USB dump format");
     return 0;
 }

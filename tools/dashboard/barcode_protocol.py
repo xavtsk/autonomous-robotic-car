@@ -9,6 +9,8 @@ VERSION = 2
 # Version: (sample-count field width, maximum samples, maximum packet bytes).
 WIRE_LIMITS = {1: (3, 6, 47), 2: (5, 24, 164)}
 MAX_PACKET = WIRE_LIMITS[VERSION][2]
+# Matches firmware BCAP_POOL; the existing count/index fields are 12 bits.
+MAX_CAPTURE_SAMPLES = 4000
 KINDS = ("summary", "episode", "samples", "end")
 
 
@@ -46,13 +48,13 @@ def encode_barcode(capture_id, kind, *, version=VERSION, **data):
             raise ValueError("Invalid barcode capture episode")
         put(episode-1, 4, 11)
         if kind == "episode":
-            put(data["start_ms"], 23, 4294967); put(data["count"], 12, 2400)
+            put(data["start_ms"], 23, 4294967); put(data["count"], 12, MAX_CAPTURE_SAMPLES)
         else:
             samples = data["samples"]
             index = data["index"]
-            if not 1<=len(samples)<=max_samples or type(index) is not int or index+len(samples)>2400:
+            if not 1<=len(samples)<=max_samples or type(index) is not int or index+len(samples)>MAX_CAPTURE_SAMPLES:
                 raise ValueError("Invalid barcode sample slice")
-            put(index, 12, 2399); put(len(samples)-1, count_bits, max_samples-1)
+            put(index, 12, MAX_CAPTURE_SAMPLES-1); put(len(samples)-1, count_bits, max_samples-1)
             for raw, dark4, flags, mm, dt in samples:
                 if flags & 3 > 2 or (flags >> 2) & 7 > 4:
                     raise ValueError("Reserved barcode sample flags")
