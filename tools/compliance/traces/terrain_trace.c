@@ -3,6 +3,7 @@
  * packet bytes.
  */
 /* Existing terrain scenarios/assertions, with exact result values and packet bytes. */
+#include "terrain_trace.h"
 #include "terr_data.h"
 #include <inttypes.h>
 #include <stdio.h>

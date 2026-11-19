@@ -1,6 +1,10 @@
 # Remaining standalone test headers
 
-This is an unapplied proposal at `302100ecf10f088f26a5b6278a8efa4149cdc06b`.
+The thirteen proposed pairs have now been applied in
+[header batch 2](HEADER_PAIRS_BATCH2.md); filename changes remain pending.
+The rest of this document retains the pre-application selection audit.
+
+This proposal was recorded at `302100ecf10f088f26a5b6278a8efa4149cdc06b`.
 No C/header source was changed for this audit. The
 [source-bound manifest](evidence/STANDALONE_HEADER_PROPOSAL.json) records all
 47 remaining owned test/trace sources without a colocated same-root header,

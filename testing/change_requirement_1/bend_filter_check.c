@@ -9,6 +9,7 @@
  * (|turn| >= 20 %). Build and run:
  *   cc -O2 testing/change_requirement_1/bend_filter_check.c -o /tmp/bend && /tmp/bend
  */
+#include "bend_filter_check.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>

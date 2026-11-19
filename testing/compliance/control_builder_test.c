@@ -2,6 +2,7 @@
  * @brief Verify compact builder acceptance/bytes against the wide API.
  * All invalid inputs retain their wide values until each interface validates.
  */
+#include "control_builder_test.h"
 #include "app_program/controller/control_debug.h"
 #include <inttypes.h>
 #include <stddef.h>

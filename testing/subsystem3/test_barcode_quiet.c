@@ -1,6 +1,7 @@
 /** @file test_barcode_quiet.c
  * @brief Exercise strict and tolerant trailing barcode quiet intervals.
  */
+#include "test_barcode_quiet.h"
 #include <assert.h>
 #include <stdio.h>
 #include "bc_quiet.h"

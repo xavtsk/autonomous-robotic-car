@@ -3,6 +3,7 @@
  */
 /* Compile with short enums to match the current Arm ABI. Full linker/static
  * RAM figures are separate from these individual structure sizes. */
+#include "size_report.h"
 #include "navigation_codec.h"
 #include <stdio.h>
 

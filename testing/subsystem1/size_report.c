@@ -5,6 +5,7 @@
 /* Baseline definitions copied from Buddy 1 immediately before this change.
  * Keep them here so the comparison is reproducible after the old JSON code
  * is replaced. These are measurements, not production storage. */
+#include "size_report.h"
 #include "buddy1.h"
 #include "mqtt_utk.h"
 #include <stdio.h>

@@ -2,6 +2,7 @@
  * @brief Independent semantic round-trip / malformed-packet checks.
  */
 /* Independent semantic round-trip / malformed-packet checks. No hardware. */
+#include "test_codec.h"
 #include "navigation_codec.h"
 #include <assert.h>
 #include <stdio.h>

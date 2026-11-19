@@ -1,6 +1,7 @@
 /** @file size_report.c
  * @brief Report baseline and packed motion representation sizes.
  */
+#include "size_report.h"
 #include "codec_motion.h"
 #include <stdio.h>
 

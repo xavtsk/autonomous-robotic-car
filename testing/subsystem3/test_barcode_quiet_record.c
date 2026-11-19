@@ -6,6 +6,7 @@
  * Synthetic Code 39 waveforms, not observed hardware successes. A valid
  * strong frame may bridge bounded paper excursions; faint bars and genuine
  * quiet-zone interruptions must remain visible. */
+#include "test_barcode_quiet_record.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>

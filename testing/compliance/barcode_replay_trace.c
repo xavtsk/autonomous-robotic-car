@@ -7,6 +7,7 @@
  * Stdout preserves the original replay protocol. Stderr retains per-update
  * state, quiet requirements, work budgets and exact decision timestamps.
  */
+#include "barcode_replay_trace.h"
 #include "app_program/subsystem3/bc_decoder.h"
 #include <inttypes.h>
 #include <stdio.h>

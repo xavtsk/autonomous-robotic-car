@@ -4,6 +4,7 @@
 /* Diagnostic stdin: elapsed_us darkness, one sample per line. No padding by
  * default. Optional arguments add SYNTHETIC leading/trailing white milliseconds
  * to investigate clipped captures, never to claim an observed successful run. */
+#include "replay_barcode_record.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "bc_decoder.h"

@@ -6,6 +6,7 @@
  * fixed baseline and candidate. It prints values and destination effects,
  * including failed operations, rather than a generic success message.
  */
+#include "control_debug_trace.h"
 #include "app_program/controller/control_debug.h"
 #include <inttypes.h>
 #include <stddef.h>
