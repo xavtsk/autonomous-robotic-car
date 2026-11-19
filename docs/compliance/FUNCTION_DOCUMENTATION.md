@@ -55,6 +55,13 @@ encoding that may leave partial output on rejection from decoders that commit
 only validated outputs. The current version-3 snapshot's pose fields and exact
 rounding/encoding ranges are documented without changing packet bytes.
 
+The [tilt, IMU calibration and obstacle profile contracts](CALCULATION_FUNCTION_CONTRACTS.md)
+add nine definitions and nine prototypes at `4ce9b14`. Their 34 recorded compiler
+contexts include both IMU debug layouts. Contracts retain signed-zero and angle
+wrapping behavior, calibration readiness latching, and the exact order in which
+sample/profile outputs can change before rejection. These are comments-only
+proofs, with generated-reference evidence recorded separately.
+
 ## Earlier observed workload snapshot
 
 `tools/compliance/barr_functions.py` reuses the compiler contexts and six profile

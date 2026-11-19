@@ -333,7 +333,8 @@
         "docs/compliance/MOTION_FUNCTION_CONTRACTS.json; 31 definitions and 17 prototypes; reviewed units and invalid-output semantics at 0c5c53b",
         "docs/compliance/IR_FUNCTION_CONTRACTS.json; 10 definitions and 9 prototypes; reviewed scan, calibration and hysteresis contracts at 2a10215",
         "docs/compliance/CODEC_FUNCTION_CONTRACTS.json; 28 definitions and 14 prototypes at 0ba528b, exact rejection/output-mutation contracts and clean compiler documentation observations",
-        "docs/compliance/GENERATED_REFERENCE.md; pinned generation and source-bound compiler/XML comparison, first Linux generation pending"
+        "docs/compliance/GENERATED_REFERENCE.md; pinned generation and source-bound compiler/XML comparison, first Linux generation pending",
+        "docs/compliance/CALCULATION_FUNCTION_CONTRACTS.json; 9 definitions and 9 prototypes at 4ce9b14 across 34 recorded compiler contexts; signed-zero, latching and rejection mutation preserved"
       ]
     },
     {
