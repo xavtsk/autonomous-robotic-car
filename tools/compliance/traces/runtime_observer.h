@@ -10,7 +10,7 @@ static void trace_runtime (const char * point)
         point, clock_value, locked, (unsigned)g_drive.state,
         (unsigned)g_drive.reason, stops, velocity_requests, freeze_calls,
         cancel_calls, reset_calls, g_shared.pending, g_shared.stop,
-        g_shared.status_ready, g_shared.reset_pending, g_reset_waiting,
+        g_shared.status_ready, g_shared.reset_pending, TEST_S3_RESET_WAITING,
         g_remote.epoch, g_remote.last_id, g_remote.stop_sequence, g_remote.head,
         g_remote.count, g_remote.pending.valid, g_remote.pending.action,
         g_remote.pending.id, g_remote.pending.epoch);
@@ -24,7 +24,7 @@ static void trace_runtime (const char * point)
         putchar(',');
     }
 #if APP_IR_DEBUG
-    printf(" control=%u,%u,", g_control_seen, g_control_ready);
+    printf(" control=%u,%u,", TEST_S3_CONTROL_SEEN, TEST_S3_CONTROL_READY);
     for (unsigned byte = 0; byte < CONTROL_DEBUG_PACKET_SIZE; ++byte)
     {
         printf("%02x", g_control_debug.bytes[byte]);

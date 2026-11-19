@@ -1,0 +1,1659 @@
+{
+  "schema_version": 1,
+  "batch": "Private integration sampling/publication state",
+  "baseline_revision": "31719bc44e413b97c3f5c3e947695502d6fac77d",
+  "candidate_sources": {
+    "app_program/controller/s3_integration.c": "b89c55d27d0a13bba90777fb6b7c24bec453fbd298921e7f141a273f50c6cfbb",
+    "testing/integration/runtime_test.c": "a6ca0553ca21ad8742b284b48a203ac7029f347e28cbe435585a9f843968e4e9",
+    "testing/integration/integration_storage_compat.h": "3bb74e22fc58a1debe2c18a01aed0c9c2650450618ca253ab9567eb6a242233a",
+    "tools/compliance/traces/runtime_observer.h": "1c5c0982c0828543d08045e848dc6f69b189d23d9ff2884d3df9350bb53efce9",
+    "tools/compliance/instrument_harnesses.py": "bb392319b0db7de96221ceb0d60ae613eaec0300a7c1e240fe089b984149eeba",
+    "testing/integration/controller_test.mk": "10f475e53e5b83e1f51b5a7ca9a45b369cd888640db526819e0e6564a4eb5bd4",
+    "tools/compliance/differential.py": "558fa3284ecc0a4c67c7736c0f5d264ebeb0ed300f2352c22638691d63436df7",
+    "testing/compliance/test_instrument_harnesses.py": "99e65b08e4da1e5604030fd819a24f85d82bf1e580b9aa9d04c850572b9e3eb6",
+    "testing/compliance/inventory_policies.json": "893afaa70d712e673af1bda195010b42b83b83300fe5dc346c2504d66a6b2344"
+  },
+  "source_hash_normalization": "UTF-8 text with LF newlines",
+  "production": {
+    "source": "app_program/controller/s3_integration.c",
+    "same_owner_sampling": {
+      "sensor": {
+        "domain": [
+          0,
+          2
+        ],
+        "stored_bits": 2
+      },
+      "label": {
+        "domain": [
+          0,
+          2
+        ],
+        "stored_bits": 2
+      },
+      "flags": {
+        "names": [
+          "reset_waiting",
+          "reset_remote",
+          "collecting",
+          "control_seen when APP_IR_DEBUG"
+        ],
+        "domain": [
+          0,
+          1
+        ],
+        "stored_bits_each": 1
+      }
+    },
+    "mutex_publication": {
+      "flags": [
+        "pending",
+        "stop",
+        "status_ready",
+        "reset_pending",
+        "ir_ready when APP_IR_DEBUG",
+        "control_ready when APP_IR_DEBUG"
+      ],
+      "domain": [
+        0,
+        1
+      ],
+      "stored_bits_each": 1,
+      "lock": "Every access under existing g_mutex, sharing g_shared with its existing four bits",
+      "boolean_type_review": "All assignments are true/false, comparisons or the bool packed variable. bool:1 preserves 0/1 values, integer promotions and the existing mutex domain; no member address exists. Arm allocation 4B to 1B, with 16B extra submit text versus the intermediate unsigned-field option."
+    },
+    "preserved": [
+      "Wide command validation before checked selector assignment",
+      "Addressable g_ir_seen passed as bool pointer",
+      "Volatile unsynchronized g_bcap_net_pending remains separate",
+      "Unlocked g_bcap_valid remains separate",
+      "All public types, timestamps, raw packets, debug saturating counters and floating precision",
+      "Existing ordering, early failures, lock boundaries and output mutation behavior"
+    ]
+  },
+  "body_inverse": {
+    "anchor": "static uint32_t now_us",
+    "inverse_code_tokens_equal": true,
+    "before_code_tokens": 7689,
+    "mapping": {
+      "g_reset_waiting": "g_sampling.reset_waiting",
+      "g_reset_remote": "g_sampling.reset_remote",
+      "g_collecting": "g_sampling.collecting",
+      "g_sensor": "g_sampling.sensor",
+      "g_label": "g_sampling.label",
+      "g_control_seen": "g_sampling.control_seen",
+      "g_ir_ready": "g_shared.ir_ready",
+      "g_control_ready": "g_shared.control_ready"
+    },
+    "before_fingerprint": "7dc4845f9a2c9f3574fc1edad436b0a0257c3b2481a792a7358f976541b30418",
+    "after_inverse_fingerprint": "7dc4845f9a2c9f3574fc1edad436b0a0257c3b2481a792a7358f976541b30418"
+  },
+  "fixture_inverse": {
+    "before_revision": "f2a47a4b85795ea2f84d01793c05a16c9de07754",
+    "files": [
+      {
+        "path": "testing/integration/runtime_test.c",
+        "inverse_byte_equal_lf": true,
+        "original_sha256_lf": "09f10dfba115e087c4dd497956b151a326256cfa1f82b68f894f6b5c6793b2fe",
+        "current_sha256_lf": "a6ca0553ca21ad8742b284b48a203ac7029f347e28cbe435585a9f843968e4e9"
+      },
+      {
+        "path": "tools/compliance/traces/runtime_observer.h",
+        "inverse_byte_equal_lf": true,
+        "original_sha256_lf": "ca1072dc78803509272fccace61503345e2edd504136a7cc18e68a5ed031d0f8",
+        "current_sha256_lf": "1c5c0982c0828543d08045e848dc6f69b189d23d9ff2884d3df9350bb53efce9"
+      }
+    ],
+    "identifier_mapping": {
+      "g_reset_waiting": "TEST_S3_RESET_WAITING",
+      "g_reset_remote": "TEST_S3_RESET_REMOTE",
+      "g_collecting": "TEST_S3_COLLECTING",
+      "g_sensor": "TEST_S3_SENSOR",
+      "g_label": "TEST_S3_LABEL",
+      "g_control_seen": "TEST_S3_CONTROL_SEEN",
+      "g_ir_ready": "TEST_S3_IR_READY",
+      "g_control_ready": "TEST_S3_CONTROL_READY"
+    }
+  },
+  "format_proof": [
+    {
+      "path": "app_program/controller/s3_integration.c",
+      "before_sha256_lf": "b89c55d27d0a13bba90777fb6b7c24bec453fbd298921e7f141a273f50c6cfbb",
+      "after_sha256_lf": "b89c55d27d0a13bba90777fb6b7c24bec453fbd298921e7f141a273f50c6cfbb",
+      "tokens_and_comments_identical": true,
+      "command": [
+        "C:\\Code\\autonomous-robotic-car\\build\\tooling\\clang-format-18\\clang_format\\data\\bin\\clang-format.exe",
+        "-i",
+        "--style={BasedOnStyle: InheritParentConfig, InsertBraces: false, BreakStringLiterals: false, ReflowComments: false}",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c"
+      ]
+    },
+    {
+      "path": "testing/integration/integration_storage_compat.h",
+      "checked_source_sha256_lf": "3bb74e22fc58a1debe2c18a01aed0c9c2650450618ca253ab9567eb6a242233a",
+      "canonical_whitespace_except_required_final_blank": true,
+      "tokens_and_comments_identical": true,
+      "command": [
+        "C:\\Code\\autonomous-robotic-car\\build\\tooling\\clang-format-18\\clang_format\\data\\bin\\clang-format.exe",
+        "--style={BasedOnStyle: InheritParentConfig, InsertBraces: false, BreakStringLiterals: false, ReflowComments: false}",
+        "C:\\Code\\autonomous-robotic-car\\testing\\integration\\integration_storage_compat.h"
+      ]
+    }
+  ],
+  "host_compile_only": [
+    {
+      "name": "raw-runtime-0",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-Ifakes",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-O2",
+        "-g",
+        "-pthread",
+        "runtime_test.c",
+        "../../app_program/controller/bc_capture.c",
+        "../../app_program/controller/integration_codec.c",
+        "../../app_program/controller/s3_drive.c",
+        "../../app_program/subsystem3/navigation_codec.c",
+        "../../app_program/subsystem3/ir_acquisition.c",
+        "../../app_program/subsystem3/ir_calibration.c",
+        "../../app_program/subsystem3/ir_reflectance.c",
+        "../../app_program/subsystem3/line_detection.c",
+        "../../app_program/subsystem3/line_controller.c",
+        "../../app_program/subsystem3/bc_decoder.c",
+        "../../app_program/subsystem3/line_navigation.c",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\raw-runtime-0.exe",
+        "-pedantic-errors",
+        "-DTEST_S3_COMPACT_STORAGE=1"
+      ],
+      "directory": "C:/Code/autonomous-robotic-car/testing/integration",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "raw-runtime-1",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-Ifakes",
+        "-DTM_MQTT=1",
+        "-I../../lib/liblwip/sysdepend/pico_rp2040",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-O2",
+        "-g",
+        "-pthread",
+        "runtime_test.c",
+        "../../app_program/controller/bc_capture.c",
+        "../../app_program/controller/integration_codec.c",
+        "../../app_program/controller/s3_drive.c",
+        "../../app_program/subsystem3/navigation_codec.c",
+        "../../app_program/subsystem3/ir_acquisition.c",
+        "../../app_program/subsystem3/ir_calibration.c",
+        "../../app_program/subsystem3/ir_reflectance.c",
+        "../../app_program/subsystem3/line_detection.c",
+        "../../app_program/subsystem3/line_controller.c",
+        "../../app_program/subsystem3/bc_decoder.c",
+        "../../app_program/subsystem3/line_navigation.c",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\raw-runtime-1.exe",
+        "-pedantic-errors",
+        "-DTEST_S3_COMPACT_STORAGE=1"
+      ],
+      "directory": "C:/Code/autonomous-robotic-car/testing/integration",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "raw-runtime-2",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-Ifakes",
+        "-DAPP_IR_DEBUG=1",
+        "-DTM_MQTT=1",
+        "-I../../lib/liblwip/sysdepend/pico_rp2040",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-O2",
+        "-g",
+        "-pthread",
+        "runtime_test.c",
+        "../../app_program/controller/ir_debug.c",
+        "../../app_program/controller/control_debug.c",
+        "../../app_program/controller/bc_capture.c",
+        "../../app_program/controller/integration_codec.c",
+        "../../app_program/controller/s3_drive.c",
+        "../../app_program/subsystem3/navigation_codec.c",
+        "../../app_program/subsystem3/ir_acquisition.c",
+        "../../app_program/subsystem3/ir_calibration.c",
+        "../../app_program/subsystem3/ir_reflectance.c",
+        "../../app_program/subsystem3/line_detection.c",
+        "../../app_program/subsystem3/line_controller.c",
+        "../../app_program/subsystem3/bc_decoder.c",
+        "../../app_program/subsystem3/line_navigation.c",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\raw-runtime-2.exe",
+        "-pedantic-errors",
+        "-DTEST_S3_COMPACT_STORAGE=1"
+      ],
+      "directory": "C:/Code/autonomous-robotic-car/testing/integration",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "baseline-runtime-observed",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic-errors",
+        "-O2",
+        "-g",
+        "-pthread",
+        "-DAPP_IR_DEBUG=1",
+        "-DTM_MQTT=1",
+        "-IC:\\Code\\autonomous-robotic-car\\testing\\integration",
+        "-IC:\\Code\\autonomous-robotic-car\\testing\\integration\\fakes",
+        "-IC:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\lib\\liblwip\\sysdepend\\pico_rp2040",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\baseline-runtime-observed.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\bc_capture.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\integration_codec.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\s3_drive.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\ir_debug.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\control_debug.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\navigation_codec.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\ir_acquisition.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\ir_calibration.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\ir_reflectance.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\line_detection.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\line_controller.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\bc_decoder.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\line_navigation.c",
+        "-lm",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\baseline-runtime-observed.exe"
+      ],
+      "directory": "C:\\Code\\autonomous-robotic-car",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\integration_codec.c:3:1: error: ISO C99 does not support '_Static_assert' [-Wpedantic]\n    3 | _Static_assert(sizeof(double) == 8 && DBL_MANT_DIG == 53 && sizeof(float) == 4,\n      | ^~~~~~~~~~~~~~\nC:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\integration_codec.c:5:1: error: ISO C99 does not support '_Static_assert' [-Wpedantic]\n    5 | _Static_assert(sizeof(s3_status_packet_t) == 146 &&\n      | ^~~~~~~~~~~~~~\nC:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\navigation_codec.c:4:1: error: ISO C99 does not support '_Static_assert' [-Wpedantic]\n    4 | _Static_assert(sizeof(float) == 4 && FLT_RADIX == 2 && FLT_MANT_DIG == 24,\n      | ^~~~~~~~~~~~~~\nC:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\navigation_codec.c:6:1: error: ISO C99 does not support '_Static_assert' [-Wpedantic]\n    6 | _Static_assert(sizeof(s3_navigation_packet_t) == 60,\n      | ^~~~~~~~~~~~~~\nC:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\navigation_codec.c:8:1: error: ISO C99 does not support '_Static_assert' [-Wpedantic]\n    8 | _Static_assert(sizeof(double) == 8 && DBL_MANT_DIG == 53, \"odometry binary64\");\n      | ^~~~~~~~~~~~~~\nC:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\navigation_codec.c:9:1: error: ISO C99 does not support '_Static_assert' [-Wpedantic]\n    9 | _Static_assert(sizeof(s3_barcode_packet_t) == 5, \"barcode packet layout\");\n      | ^~~~~~~~~~~~~~\nC:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\navigation_codec.c:10:1: error: ISO C99 does not support '_Static_assert' [-Wpedantic]\n   10 | _Static_assert(sizeof(s3_raw_frame_packet_t) == 34 && S3_SENSOR_COUNT == 3,\n      | ^~~~~~~~~~~~~~\nC:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\navigation_codec.c:12:1: error: ISO C99 does not support '_Static_assert' [-Wpedantic]\n   12 | _Static_assert(S3_EVENT_SENSOR_FAULT == 16 && S3_ALL_SENSORS == 7,\n      | ^~~~~~~~~~~~~~\n"
+    },
+    {
+      "name": "candidate-runtime-observed",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic-errors",
+        "-O2",
+        "-g",
+        "-pthread",
+        "-DAPP_IR_DEBUG=1",
+        "-DTM_MQTT=1",
+        "-DTEST_S3_COMPACT_STORAGE=1",
+        "-IC:\\Code\\autonomous-robotic-car\\testing\\integration",
+        "-IC:\\Code\\autonomous-robotic-car\\testing\\integration\\fakes",
+        "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\candidate-runtime-observed.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\bc_capture.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\integration_codec.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_drive.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\ir_debug.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\navigation_codec.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\ir_acquisition.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\ir_calibration.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\ir_reflectance.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\line_detection.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\line_controller.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\bc_decoder.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\line_navigation.c",
+        "-lm",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\candidate-runtime-observed.exe"
+      ],
+      "directory": "C:\\Code\\autonomous-robotic-car",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "candidate-operator-observed",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-O2",
+        "-g",
+        "-pedantic-errors",
+        "-IC:\\Code\\autonomous-robotic-car\\testing\\integration",
+        "-IC:\\Code\\autonomous-robotic-car\\testing\\integration\\fakes",
+        "-IC:\\Code\\autonomous-robotic-car\\app_program\\controller",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\operator-observed.c",
+        "C:\\Code\\autonomous-robotic-car\\tools\\compliance\\traces\\op_trace.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\bc_capture.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\op_logic.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\integration_codec.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_drive.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\navigation_codec.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\ir_acquisition.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\ir_calibration.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\ir_reflectance.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\line_detection.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\line_controller.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\bc_decoder.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\subsystem3\\line_navigation.c",
+        "-lm",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\operator-observed.exe"
+      ],
+      "directory": "C:\\Code\\autonomous-robotic-car",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "baseline-runtime-observed-c11-historical-contract",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic-errors",
+        "-O2",
+        "-g",
+        "-pthread",
+        "-DAPP_IR_DEBUG=1",
+        "-DTM_MQTT=1",
+        "-IC:\\Code\\autonomous-robotic-car\\testing\\integration",
+        "-IC:\\Code\\autonomous-robotic-car\\testing\\integration\\fakes",
+        "-IC:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\lib\\liblwip\\sysdepend\\pico_rp2040",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\baseline-runtime-observed.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\bc_capture.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\integration_codec.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\s3_drive.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\ir_debug.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\controller\\control_debug.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\navigation_codec.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\ir_acquisition.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\ir_calibration.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\ir_reflectance.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\line_detection.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\line_controller.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\bc_decoder.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\compliance-inventory\\historical-fixtures\\baseline\\app_program\\subsystem3\\line_navigation.c",
+        "-lm",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\baseline-runtime-observed.exe"
+      ],
+      "directory": "C:\\Code\\autonomous-robotic-car",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "manual_make": {
+    "command": [
+      "C:/msys64/usr/bin/make.exe",
+      "-C",
+      "testing/integration",
+      "-f",
+      "controller_test.mk",
+      "-n",
+      "test",
+      "PYTHON=C:/Users/ginli/AppData/Local/Programs/Python/Python313/python.exe",
+      "CC=C:/msys64/ucrt64/bin/gcc.exe"
+    ],
+    "exit_code": 0,
+    "observed": "All three raw runtime compile recipes include -DTEST_S3_COMPACT_STORAGE=1. Detection failure is an explicit Make error. Dry-run only.",
+    "command_line_CFLAGS_override": {
+      "CFLAGS": "-std=c99",
+      "exit_code": 0,
+      "compatibility_flag_present": true
+    },
+    "missing_python": {
+      "PYTHON": "definitely_missing_python_interpreter",
+      "exit_code": 2,
+      "message": "Private storage detection failed; verify PYTHON names a Python 3 interpreter"
+    }
+  },
+  "arm_object_measurements": [
+    {
+      "profile": "production",
+      "totals": {
+        "static_data": {
+          "before": 44967,
+          "after": 44957,
+          "delta": -10
+        },
+        "text": {
+          "before": 8952,
+          "after": 8984,
+          "delta": 32
+        },
+        "read_only": {
+          "before": 39,
+          "after": 39,
+          "delta": 0
+        }
+      },
+      "all_symbol_deltas": [
+        {
+          "symbol": "execute",
+          "before": {
+            "bytes": 380,
+            "kind": "t"
+          },
+          "after": {
+            "bytes": 396,
+            "kind": "t"
+          },
+          "delta_bytes": 16
+        },
+        {
+          "symbol": "g_collecting",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_control_ready",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_control_seen",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_ir_ready",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_label",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_reset_remote",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_reset_waiting",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_sampling",
+          "before": null,
+          "after": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "delta_bytes": 1
+        },
+        {
+          "symbol": "g_sensor",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_shared",
+          "before": {
+            "bytes": 4,
+            "kind": "b"
+          },
+          "after": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "delta_bytes": -3
+        },
+        {
+          "symbol": "mqtt_utk_control_debug_take",
+          "before": {
+            "bytes": 132,
+            "kind": "T"
+          },
+          "after": {
+            "bytes": 136,
+            "kind": "T"
+          },
+          "delta_bytes": 4
+        },
+        {
+          "symbol": "mqtt_utk_ir_debug_take",
+          "before": {
+            "bytes": 132,
+            "kind": "T"
+          },
+          "after": {
+            "bytes": 136,
+            "kind": "T"
+          },
+          "delta_bytes": 4
+        },
+        {
+          "symbol": "s3_integration_submit",
+          "before": {
+            "bytes": 220,
+            "kind": "T"
+          },
+          "after": {
+            "bytes": 236,
+            "kind": "T"
+          },
+          "delta_bytes": 16
+        },
+        {
+          "symbol": "sensor_sample_task",
+          "before": {
+            "bytes": 4368,
+            "kind": "t"
+          },
+          "after": {
+            "bytes": 4360,
+            "kind": "t"
+          },
+          "delta_bytes": -8
+        }
+      ],
+      "all_stack_deltas": [
+        {
+          "function": "sensor_sample_task",
+          "before": {
+            "bytes": 488,
+            "kind": "static"
+          },
+          "after": {
+            "bytes": 456,
+            "kind": "static"
+          }
+        }
+      ],
+      "static_load_store_instruction_changes": [
+        {
+          "function": "execute",
+          "before": {
+            "ldrb": 9,
+            "ldr": 18,
+            "strb": 7,
+            "str": 1
+          },
+          "after": {
+            "ldrb": 10,
+            "ldr": 15,
+            "str": 1,
+            "strb": 4
+          }
+        },
+        {
+          "function": "mqtt_utk_control_debug_take",
+          "before": {
+            "ldr": 8,
+            "ldrb": 7,
+            "strb": 3
+          },
+          "after": {
+            "ldr": 8,
+            "ldrb": 8,
+            "strb": 3
+          }
+        },
+        {
+          "function": "mqtt_utk_ir_debug_take",
+          "before": {
+            "ldr": 8,
+            "ldrb": 7,
+            "strb": 3
+          },
+          "after": {
+            "ldr": 8,
+            "ldrb": 8,
+            "strb": 3
+          }
+        },
+        {
+          "function": "sensor_sample_task",
+          "before": {
+            "ldr": 299,
+            "str": 86,
+            "ldrb": 95,
+            "strb": 55,
+            "ldmia": 8,
+            "stmia": 8,
+            "ldrh": 27,
+            "strh": 6,
+            "ldrsh": 1
+          },
+          "after": {
+            "ldr": 286,
+            "str": 84,
+            "ldrb": 99,
+            "strb": 51,
+            "ldmia": 8,
+            "stmia": 8,
+            "ldrh": 27,
+            "strh": 6,
+            "ldrsh": 1
+          }
+        }
+      ],
+      "before_receipt": {
+        "profile": "production",
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\arm-none-eabi\\include",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\lib\\gcc\\arm-none-eabi\\14.3.1\\include",
+          "-mcpu=cortex-m0plus",
+          "-mthumb",
+          "-ffreestanding",
+          "-O2",
+          "-g3",
+          "-mfloat-abi=soft",
+          "-DCNF_SMP=1",
+          "-DAPP_S4=1",
+          "-DAPP_S4_BENCH=0",
+          "-DAPP_S5=1",
+          "-DS5_HARDWARE_CONFIRMED=1",
+          "-DAPP_TEST=0",
+          "-DAPP_IR_BENCH=0",
+          "-DAPP_S3_MOTION=1",
+          "-DAPP_IR_CHANNELS=1",
+          "-DS3_STRAIGHT_TEST=0",
+          "-DAPP_DIAGNOSTICS=0",
+          "-DAPP_MOTION_SMOKE=0",
+          "-DAPP_IR_DEBUG=1",
+          "-DAPP_IMU_DEBUG=0",
+          "-DTM_CONSOLE_UART=0",
+          "-DBOARD_UART0_FREE=1",
+          "-DTM_CONSOLE_USB_CDC=1",
+          "-DNDEBUG",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\tinyusb\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-DTM_WIFI_CYW43=1",
+          "-DCYW43_LWIP=1",
+          "-DCYW43_ENABLE_BLUETOOTH=0",
+          "-DCYW43_USE_OTP_MAC=1",
+          "-DPICO_CYW43_LOGGING_ENABLED=0",
+          "-DPICO_RP2040=1",
+          "-DPICO_32BIT=1",
+          "-DPICO_ON_DEVICE=1",
+          "-DPICO_BUILD=1",
+          "-DPICO_NO_HARDWARE=0",
+          "-DRASPBERRYPI_PICO_W=1",
+          "-DCYW43_DEFAULT_PIN_WL_REG_ON=23u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_OUT=24u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_IN=24u",
+          "-DCYW43_DEFAULT_PIN_WL_HOST_WAKE=24u",
+          "-DCYW43_DEFAULT_PIN_WL_CLOCK=29u",
+          "-DCYW43_DEFAULT_PIN_WL_CS=25u",
+          "-DNDEBUG",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libwifi\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\firmware",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_cyw43_driver\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\boards\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\hardware_claim\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_util\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_pio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_gpio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_dma\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_clocks\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-DTM_NET_LWIP=1",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\lwip\\src\\include",
+          "-DTM_MQTT=1",
+          "-D_PICO_RP2040_",
+          "-IC:\\Code\\autonomous-robotic-car\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\config",
+          "-IC:\\Code\\autonomous-robotic-car\\kernel\\knlinc",
+          "-std=c99",
+          "-fstack-usage",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-c",
+          "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c",
+          "-o",
+          "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\before-production.o"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "",
+        "source_sha256_lf": "35834e8a97621636527164b677c6cd294de63111e99f8f6180e71330a3e3d449",
+        "revision": "31719bc44e413b97c3f5c3e947695502d6fac77d",
+        "symbols": "00000000 00000001 b dumping.12\n00000000 00000001 b g_bcap_net_pending\n00000000 00000001 b g_bcap_valid\n00000000 00000001 b g_collecting\n00000000 00000001 b g_control_ready\n00000000 00000001 b g_control_seen\n00000000 00000001 b g_control_sequence\n00000000 00000001 b g_ir_ready\n00000000 00000001 b g_ir_seen\n00000000 00000001 b g_ir_sequence\n00000000 00000001 b g_label\n00000000 00000001 b g_last_barcode_status\n00000000 00000001 b g_reset_remote\n00000000 00000001 b g_reset_waiting\n00000000 00000001 b g_sensor\n00000000 00000001 b was_open.10\n00000000 00000001 b was_running.11\n00000000 00000003 r order.3\n00000000 00000004 b cursor.9\n00000000 00000004 b g_bcap_net_cursor\n00000000 00000004 b g_collect_since\n00000000 00000004 b g_control_last\n00000000 00000004 b g_cycle\n00000000 00000004 b g_ir_last\n00000000 00000004 b g_mutex\n00000000 00000004 b g_report\n00000000 00000004 b g_shared\n00000000 00000004 b g_task\n00000000 00000006 b g_debug_events\n00000000 0000000b b g_command\n00000000 0000000c r event_bits.2\n00000000 00000010 b g_ir_debug\n00000000 00000014 t tick\n00000000 00000018 r table.14\n00000000 0000001c b command.7\n00000000 00000020 b feedback.5\n00000000 0000002c b value_m.0\n00000000 00000030 T s3_remote_stop_sequence\n00000000 00000034 b frame.4\n00000000 00000036 b g_collector\n00000000 0000003c T s3_remote_physical_stop\n00000000 00000046 b g_control_debug\n00000000 00000047 b builder.1\n00000000 00000048 t velocity_with_floor\n00000000 00000054 t remote_finish\n00000000 0000005c T s3_integration_status\n00000000 00000064 t cleanup\n00000000 00000064 t remote_permitted.part.0\n00000000 00000070 T mqtt_utk_debug_take\n00000000 00000074 b g_remote\n00000000 0000007c T s3_integration_start\n00000000 00000084 T mqtt_utk_control_debug_take\n00000000 00000084 T mqtt_utk_ir_debug_take\n00000000 00000090 T s3_remote_reply_take\n00000000 00000092 b g_status\n00000000 000000a8 T s3_remote_link\n00000000 000000ac T s3_remote_status_take\n00000000 000000c8 b line.8\n00000000 000000d8 t remote_reply.part.0\n00000000 000000dc T s3_integration_submit\n00000000 000000f8 b value_s.13\n00000000 000000f8 b working.6\n00000000 0000017c t execute\n00000000 000001e4 T s3_integration_init\n00000000 0000024c T s3_remote_receive\n00000000 00000470 t sensor_report_task\n00000000 00001110 t sensor_sample_task\n00000000 00002a58 b g_drive\n00000000 00007fd8 b g_bcap\n",
+        "stack": "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:467:13:tick\t8\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1339:24:velocity_with_floor\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1298:13:cleanup\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:385:13:execute\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:102:13:remote_reply.part.0\t32\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:319:13:remote_permitted.part.0\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:136:13:remote_finish\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:673:13:sensor_sample_task\t488\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:149:6:s3_remote_link\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:172:6:s3_remote_receive\t96\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:249:10:s3_remote_reply_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:271:10:s3_remote_status_take\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:299:10:s3_remote_stop_sequence\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:310:6:s3_remote_physical_stop\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:333:6:s3_integration_submit\t40\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:367:6:s3_integration_status\t168\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1161:13:sensor_report_task\t232\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1032:14:mqtt_utk_control_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1063:14:mqtt_utk_ir_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1097:14:mqtt_utk_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1377:9:s3_integration_init\t320\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1421:9:s3_integration_start\t16\tstatic\n",
+        "disassembly": "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\before-production.dis"
+      },
+      "after_receipt": {
+        "profile": "production",
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\arm-none-eabi\\include",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\lib\\gcc\\arm-none-eabi\\14.3.1\\include",
+          "-mcpu=cortex-m0plus",
+          "-mthumb",
+          "-ffreestanding",
+          "-O2",
+          "-g3",
+          "-mfloat-abi=soft",
+          "-DCNF_SMP=1",
+          "-DAPP_S4=1",
+          "-DAPP_S4_BENCH=0",
+          "-DAPP_S5=1",
+          "-DS5_HARDWARE_CONFIRMED=1",
+          "-DAPP_TEST=0",
+          "-DAPP_IR_BENCH=0",
+          "-DAPP_S3_MOTION=1",
+          "-DAPP_IR_CHANNELS=1",
+          "-DS3_STRAIGHT_TEST=0",
+          "-DAPP_DIAGNOSTICS=0",
+          "-DAPP_MOTION_SMOKE=0",
+          "-DAPP_IR_DEBUG=1",
+          "-DAPP_IMU_DEBUG=0",
+          "-DTM_CONSOLE_UART=0",
+          "-DBOARD_UART0_FREE=1",
+          "-DTM_CONSOLE_USB_CDC=1",
+          "-DNDEBUG",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\tinyusb\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-DTM_WIFI_CYW43=1",
+          "-DCYW43_LWIP=1",
+          "-DCYW43_ENABLE_BLUETOOTH=0",
+          "-DCYW43_USE_OTP_MAC=1",
+          "-DPICO_CYW43_LOGGING_ENABLED=0",
+          "-DPICO_RP2040=1",
+          "-DPICO_32BIT=1",
+          "-DPICO_ON_DEVICE=1",
+          "-DPICO_BUILD=1",
+          "-DPICO_NO_HARDWARE=0",
+          "-DRASPBERRYPI_PICO_W=1",
+          "-DCYW43_DEFAULT_PIN_WL_REG_ON=23u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_OUT=24u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_IN=24u",
+          "-DCYW43_DEFAULT_PIN_WL_HOST_WAKE=24u",
+          "-DCYW43_DEFAULT_PIN_WL_CLOCK=29u",
+          "-DCYW43_DEFAULT_PIN_WL_CS=25u",
+          "-DNDEBUG",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libwifi\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\firmware",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_cyw43_driver\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\boards\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\hardware_claim\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_util\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_pio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_gpio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_dma\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_clocks\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-DTM_NET_LWIP=1",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\lwip\\src\\include",
+          "-DTM_MQTT=1",
+          "-D_PICO_RP2040_",
+          "-IC:\\Code\\autonomous-robotic-car\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\config",
+          "-IC:\\Code\\autonomous-robotic-car\\kernel\\knlinc",
+          "-std=c99",
+          "-fstack-usage",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-c",
+          "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c",
+          "-o",
+          "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\after-production.o"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "",
+        "source_sha256_lf": "b89c55d27d0a13bba90777fb6b7c24bec453fbd298921e7f141a273f50c6cfbb",
+        "symbols": "00000000 00000001 b dumping.12\n00000000 00000001 b g_bcap_net_pending\n00000000 00000001 b g_bcap_valid\n00000000 00000001 b g_control_sequence\n00000000 00000001 b g_ir_seen\n00000000 00000001 b g_ir_sequence\n00000000 00000001 b g_last_barcode_status\n00000000 00000001 b g_sampling\n00000000 00000001 b g_shared\n00000000 00000001 b was_open.10\n00000000 00000001 b was_running.11\n00000000 00000003 r order.3\n00000000 00000004 b cursor.9\n00000000 00000004 b g_bcap_net_cursor\n00000000 00000004 b g_collect_since\n00000000 00000004 b g_control_last\n00000000 00000004 b g_cycle\n00000000 00000004 b g_ir_last\n00000000 00000004 b g_mutex\n00000000 00000004 b g_report\n00000000 00000004 b g_task\n00000000 00000006 b g_debug_events\n00000000 0000000b b g_command\n00000000 0000000c r event_bits.2\n00000000 00000010 b g_ir_debug\n00000000 00000014 t tick\n00000000 00000018 r table.14\n00000000 0000001c b command.7\n00000000 00000020 b feedback.5\n00000000 0000002c b value_m.0\n00000000 00000030 T s3_remote_stop_sequence\n00000000 00000034 b frame.4\n00000000 00000036 b g_collector\n00000000 0000003c T s3_remote_physical_stop\n00000000 00000046 b g_control_debug\n00000000 00000047 b builder.1\n00000000 00000048 t velocity_with_floor\n00000000 00000054 t remote_finish\n00000000 0000005c T s3_integration_status\n00000000 00000064 t cleanup\n00000000 00000064 t remote_permitted.part.0\n00000000 00000070 T mqtt_utk_debug_take\n00000000 00000074 b g_remote\n00000000 0000007c T s3_integration_start\n00000000 00000088 T mqtt_utk_control_debug_take\n00000000 00000088 T mqtt_utk_ir_debug_take\n00000000 00000090 T s3_remote_reply_take\n00000000 00000092 b g_status\n00000000 000000a8 T s3_remote_link\n00000000 000000ac T s3_remote_status_take\n00000000 000000c8 b line.8\n00000000 000000d8 t remote_reply.part.0\n00000000 000000ec T s3_integration_submit\n00000000 000000f8 b value_s.13\n00000000 000000f8 b working.6\n00000000 0000018c t execute\n00000000 000001e4 T s3_integration_init\n00000000 0000024c T s3_remote_receive\n00000000 00000470 t sensor_report_task\n00000000 00001108 t sensor_sample_task\n00000000 00002a58 b g_drive\n00000000 00007fd8 b g_bcap\n",
+        "stack": "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:489:13:tick\t8\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1363:24:velocity_with_floor\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1322:13:cleanup\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:407:13:execute\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:124:13:remote_reply.part.0\t32\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:341:13:remote_permitted.part.0\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:158:13:remote_finish\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:695:13:sensor_sample_task\t456\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:171:6:s3_remote_link\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:194:6:s3_remote_receive\t96\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:271:10:s3_remote_reply_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:293:10:s3_remote_status_take\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:321:10:s3_remote_stop_sequence\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:332:6:s3_remote_physical_stop\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:355:6:s3_integration_submit\t40\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:389:6:s3_integration_status\t168\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1185:13:sensor_report_task\t232\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1056:14:mqtt_utk_control_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1087:14:mqtt_utk_ir_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1121:14:mqtt_utk_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1401:9:s3_integration_init\t320\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1445:9:s3_integration_start\t16\tstatic\n",
+        "disassembly_sha256": "66ff5ae1176499ddf3f67cc3b3c970faa321fa023d137414fed664e164f37a13"
+      }
+    },
+    {
+      "profile": "plain",
+      "totals": {
+        "static_data": {
+          "before": 44745,
+          "after": 44738,
+          "delta": -7
+        },
+        "text": {
+          "before": 6796,
+          "after": 6832,
+          "delta": 36
+        },
+        "read_only": {
+          "before": 24,
+          "after": 24,
+          "delta": 0
+        }
+      },
+      "all_symbol_deltas": [
+        {
+          "symbol": "execute",
+          "before": {
+            "bytes": 380,
+            "kind": "t"
+          },
+          "after": {
+            "bytes": 396,
+            "kind": "t"
+          },
+          "delta_bytes": 16
+        },
+        {
+          "symbol": "g_collecting",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_label",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_reset_remote",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_reset_waiting",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_sampling",
+          "before": null,
+          "after": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "delta_bytes": 1
+        },
+        {
+          "symbol": "g_sensor",
+          "before": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "after": null,
+          "delta_bytes": -1
+        },
+        {
+          "symbol": "g_shared",
+          "before": {
+            "bytes": 4,
+            "kind": "b"
+          },
+          "after": {
+            "bytes": 1,
+            "kind": "b"
+          },
+          "delta_bytes": -3
+        },
+        {
+          "symbol": "s3_integration_submit",
+          "before": {
+            "bytes": 220,
+            "kind": "T"
+          },
+          "after": {
+            "bytes": 236,
+            "kind": "T"
+          },
+          "delta_bytes": 16
+        },
+        {
+          "symbol": "sensor_sample_task",
+          "before": {
+            "bytes": 2476,
+            "kind": "t"
+          },
+          "after": {
+            "bytes": 2480,
+            "kind": "t"
+          },
+          "delta_bytes": 4
+        }
+      ],
+      "all_stack_deltas": [
+        {
+          "function": "sensor_sample_task",
+          "before": {
+            "bytes": 312,
+            "kind": "static"
+          },
+          "after": {
+            "bytes": 296,
+            "kind": "static"
+          }
+        }
+      ],
+      "static_load_store_instruction_changes": [
+        {
+          "function": "execute",
+          "before": {
+            "ldrb": 9,
+            "ldr": 18,
+            "strb": 7,
+            "str": 1
+          },
+          "after": {
+            "ldrb": 10,
+            "ldr": 15,
+            "str": 1,
+            "strb": 4
+          }
+        },
+        {
+          "function": "sensor_sample_task",
+          "before": {
+            "ldr": 201,
+            "str": 69,
+            "ldrb": 67,
+            "strb": 46,
+            "ldmia": 7,
+            "stmia": 7,
+            "ldrh": 5,
+            "strh": 3
+          },
+          "after": {
+            "ldr": 192,
+            "str": 64,
+            "ldrb": 68,
+            "strb": 42,
+            "ldmia": 7,
+            "stmia": 7,
+            "ldrh": 5,
+            "strh": 3
+          }
+        }
+      ],
+      "before_receipt": {
+        "profile": "plain",
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\arm-none-eabi\\include",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\lib\\gcc\\arm-none-eabi\\14.3.1\\include",
+          "-mcpu=cortex-m0plus",
+          "-mthumb",
+          "-ffreestanding",
+          "-O2",
+          "-g3",
+          "-mfloat-abi=soft",
+          "-DCNF_SMP=1",
+          "-DAPP_S4=1",
+          "-DAPP_S4_BENCH=0",
+          "-DAPP_S5=1",
+          "-DS5_HARDWARE_CONFIRMED=1",
+          "-DAPP_TEST=0",
+          "-DAPP_IR_BENCH=0",
+          "-DAPP_S3_MOTION=1",
+          "-DAPP_IR_CHANNELS=1",
+          "-DS3_STRAIGHT_TEST=0",
+          "-DAPP_DIAGNOSTICS=0",
+          "-DAPP_MOTION_SMOKE=0",
+          "-DAPP_IR_DEBUG=0",
+          "-DAPP_IMU_DEBUG=0",
+          "-DTM_CONSOLE_UART=0",
+          "-DBOARD_UART0_FREE=1",
+          "-DTM_CONSOLE_USB_CDC=1",
+          "-DNDEBUG",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\tinyusb\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-DTM_WIFI_CYW43=1",
+          "-DCYW43_LWIP=1",
+          "-DCYW43_ENABLE_BLUETOOTH=0",
+          "-DCYW43_USE_OTP_MAC=1",
+          "-DPICO_CYW43_LOGGING_ENABLED=0",
+          "-DPICO_RP2040=1",
+          "-DPICO_32BIT=1",
+          "-DPICO_ON_DEVICE=1",
+          "-DPICO_BUILD=1",
+          "-DPICO_NO_HARDWARE=0",
+          "-DRASPBERRYPI_PICO_W=1",
+          "-DCYW43_DEFAULT_PIN_WL_REG_ON=23u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_OUT=24u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_IN=24u",
+          "-DCYW43_DEFAULT_PIN_WL_HOST_WAKE=24u",
+          "-DCYW43_DEFAULT_PIN_WL_CLOCK=29u",
+          "-DCYW43_DEFAULT_PIN_WL_CS=25u",
+          "-DNDEBUG",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libwifi\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\firmware",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_cyw43_driver\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\boards\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\hardware_claim\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_util\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_pio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_gpio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_dma\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_clocks\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-DTM_NET_LWIP=1",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\lwip\\src\\include",
+          "-DTM_MQTT=1",
+          "-D_PICO_RP2040_",
+          "-IC:\\Code\\autonomous-robotic-car\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\config",
+          "-IC:\\Code\\autonomous-robotic-car\\kernel\\knlinc",
+          "-std=c99",
+          "-fstack-usage",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-c",
+          "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c",
+          "-o",
+          "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\before-plain.o"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "",
+        "source_sha256_lf": "35834e8a97621636527164b677c6cd294de63111e99f8f6180e71330a3e3d449",
+        "revision": "31719bc44e413b97c3f5c3e947695502d6fac77d",
+        "symbols": "00000000 00000001 b dumping.8\n00000000 00000001 b g_bcap_net_pending\n00000000 00000001 b g_bcap_valid\n00000000 00000001 b g_collecting\n00000000 00000001 b g_label\n00000000 00000001 b g_reset_remote\n00000000 00000001 b g_reset_waiting\n00000000 00000001 b g_sensor\n00000000 00000001 b was_open.6\n00000000 00000001 b was_running.7\n00000000 00000004 b cursor.5\n00000000 00000004 b g_bcap_net_cursor\n00000000 00000004 b g_collect_since\n00000000 00000004 b g_cycle\n00000000 00000004 b g_mutex\n00000000 00000004 b g_report\n00000000 00000004 b g_shared\n00000000 00000004 b g_task\n00000000 0000000b b g_command\n00000000 00000014 t tick\n00000000 00000018 r table.10\n00000000 0000001c b command.3\n00000000 00000020 b feedback.1\n00000000 00000030 T s3_remote_stop_sequence\n00000000 00000034 b frame.0\n00000000 00000036 b g_collector\n00000000 0000003c T s3_remote_physical_stop\n00000000 00000048 t velocity_with_floor\n00000000 00000054 t remote_finish\n00000000 0000005c T s3_integration_status\n00000000 00000064 t cleanup\n00000000 00000064 t remote_permitted.part.0\n00000000 00000070 T mqtt_utk_debug_take\n00000000 00000074 b g_remote\n00000000 0000007c T s3_integration_start\n00000000 00000090 T s3_remote_reply_take\n00000000 00000092 b g_status\n00000000 000000a8 T s3_remote_link\n00000000 000000ac T s3_remote_status_take\n00000000 000000c8 b line.4\n00000000 000000d8 t remote_reply.part.0\n00000000 000000dc T s3_integration_submit\n00000000 000000f8 b value_s.9\n00000000 000000f8 b working.2\n00000000 0000017c t execute\n00000000 000001e4 T s3_integration_init\n00000000 0000024c T s3_remote_receive\n00000000 00000470 t sensor_report_task\n00000000 000009ac t sensor_sample_task\n00000000 00002a58 b g_drive\n00000000 00007fd8 b g_bcap\n",
+        "stack": "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:467:13:tick\t8\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1339:24:velocity_with_floor\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1298:13:cleanup\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:385:13:execute\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:102:13:remote_reply.part.0\t32\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:319:13:remote_permitted.part.0\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:136:13:remote_finish\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:673:13:sensor_sample_task\t312\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:149:6:s3_remote_link\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:172:6:s3_remote_receive\t96\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:249:10:s3_remote_reply_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:271:10:s3_remote_status_take\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:299:10:s3_remote_stop_sequence\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:310:6:s3_remote_physical_stop\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:333:6:s3_integration_submit\t40\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:367:6:s3_integration_status\t168\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1161:13:sensor_report_task\t232\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1097:14:mqtt_utk_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1377:9:s3_integration_init\t320\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1421:9:s3_integration_start\t16\tstatic\n",
+        "disassembly": "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\before-plain.dis"
+      },
+      "after_receipt": {
+        "profile": "plain",
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\arm-none-eabi\\include",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\lib\\gcc\\arm-none-eabi\\14.3.1\\include",
+          "-mcpu=cortex-m0plus",
+          "-mthumb",
+          "-ffreestanding",
+          "-O2",
+          "-g3",
+          "-mfloat-abi=soft",
+          "-DCNF_SMP=1",
+          "-DAPP_S4=1",
+          "-DAPP_S4_BENCH=0",
+          "-DAPP_S5=1",
+          "-DS5_HARDWARE_CONFIRMED=1",
+          "-DAPP_TEST=0",
+          "-DAPP_IR_BENCH=0",
+          "-DAPP_S3_MOTION=1",
+          "-DAPP_IR_CHANNELS=1",
+          "-DS3_STRAIGHT_TEST=0",
+          "-DAPP_DIAGNOSTICS=0",
+          "-DAPP_MOTION_SMOKE=0",
+          "-DAPP_IR_DEBUG=0",
+          "-DAPP_IMU_DEBUG=0",
+          "-DTM_CONSOLE_UART=0",
+          "-DBOARD_UART0_FREE=1",
+          "-DTM_CONSOLE_USB_CDC=1",
+          "-DNDEBUG",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\tinyusb\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-DTM_WIFI_CYW43=1",
+          "-DCYW43_LWIP=1",
+          "-DCYW43_ENABLE_BLUETOOTH=0",
+          "-DCYW43_USE_OTP_MAC=1",
+          "-DPICO_CYW43_LOGGING_ENABLED=0",
+          "-DPICO_RP2040=1",
+          "-DPICO_32BIT=1",
+          "-DPICO_ON_DEVICE=1",
+          "-DPICO_BUILD=1",
+          "-DPICO_NO_HARDWARE=0",
+          "-DRASPBERRYPI_PICO_W=1",
+          "-DCYW43_DEFAULT_PIN_WL_REG_ON=23u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_OUT=24u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_IN=24u",
+          "-DCYW43_DEFAULT_PIN_WL_HOST_WAKE=24u",
+          "-DCYW43_DEFAULT_PIN_WL_CLOCK=29u",
+          "-DCYW43_DEFAULT_PIN_WL_CS=25u",
+          "-DNDEBUG",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libwifi\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\firmware",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_cyw43_driver\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\boards\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\hardware_claim\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_util\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_pio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_gpio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_dma\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_clocks\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-DTM_NET_LWIP=1",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\lwip\\src\\include",
+          "-DTM_MQTT=1",
+          "-D_PICO_RP2040_",
+          "-IC:\\Code\\autonomous-robotic-car\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\config",
+          "-IC:\\Code\\autonomous-robotic-car\\kernel\\knlinc",
+          "-std=c99",
+          "-fstack-usage",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-c",
+          "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c",
+          "-o",
+          "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\after-plain.o"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "",
+        "source_sha256_lf": "b89c55d27d0a13bba90777fb6b7c24bec453fbd298921e7f141a273f50c6cfbb",
+        "symbols": "00000000 00000001 b dumping.8\n00000000 00000001 b g_bcap_net_pending\n00000000 00000001 b g_bcap_valid\n00000000 00000001 b g_sampling\n00000000 00000001 b g_shared\n00000000 00000001 b was_open.6\n00000000 00000001 b was_running.7\n00000000 00000004 b cursor.5\n00000000 00000004 b g_bcap_net_cursor\n00000000 00000004 b g_collect_since\n00000000 00000004 b g_cycle\n00000000 00000004 b g_mutex\n00000000 00000004 b g_report\n00000000 00000004 b g_task\n00000000 0000000b b g_command\n00000000 00000014 t tick\n00000000 00000018 r table.10\n00000000 0000001c b command.3\n00000000 00000020 b feedback.1\n00000000 00000030 T s3_remote_stop_sequence\n00000000 00000034 b frame.0\n00000000 00000036 b g_collector\n00000000 0000003c T s3_remote_physical_stop\n00000000 00000048 t velocity_with_floor\n00000000 00000054 t remote_finish\n00000000 0000005c T s3_integration_status\n00000000 00000064 t cleanup\n00000000 00000064 t remote_permitted.part.0\n00000000 00000070 T mqtt_utk_debug_take\n00000000 00000074 b g_remote\n00000000 0000007c T s3_integration_start\n00000000 00000090 T s3_remote_reply_take\n00000000 00000092 b g_status\n00000000 000000a8 T s3_remote_link\n00000000 000000ac T s3_remote_status_take\n00000000 000000c8 b line.4\n00000000 000000d8 t remote_reply.part.0\n00000000 000000ec T s3_integration_submit\n00000000 000000f8 b value_s.9\n00000000 000000f8 b working.2\n00000000 0000018c t execute\n00000000 000001e4 T s3_integration_init\n00000000 0000024c T s3_remote_receive\n00000000 00000470 t sensor_report_task\n00000000 000009b0 t sensor_sample_task\n00000000 00002a58 b g_drive\n00000000 00007fd8 b g_bcap\n",
+        "stack": "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:489:13:tick\t8\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1363:24:velocity_with_floor\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1322:13:cleanup\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:407:13:execute\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:124:13:remote_reply.part.0\t32\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:341:13:remote_permitted.part.0\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:158:13:remote_finish\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:695:13:sensor_sample_task\t296\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:171:6:s3_remote_link\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:194:6:s3_remote_receive\t96\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:271:10:s3_remote_reply_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:293:10:s3_remote_status_take\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:321:10:s3_remote_stop_sequence\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:332:6:s3_remote_physical_stop\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:355:6:s3_integration_submit\t40\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:389:6:s3_integration_status\t168\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1185:13:sensor_report_task\t232\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1121:14:mqtt_utk_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1401:9:s3_integration_init\t320\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\s3_integration.c:1445:9:s3_integration_start\t16\tstatic\n",
+        "disassembly_sha256": "dd92059372758f051987aa67e6638470e60305ca844ae72cf014432708c9086d"
+      }
+    }
+  ],
+  "python_tests": {
+    "command": [
+      "C:/Users/ginli/AppData/Local/Programs/Python/Python313/python.exe",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "testing/compliance",
+      "-p",
+      "test_instrument_harnesses.py"
+    ],
+    "tests": 10,
+    "failures": 0,
+    "skips": 0
+  },
+  "linux_gate": {
+    "status": "pending",
+    "required": [
+      "Unchanged baseline/candidate runtime rows exact",
+      "Operator8066 rows exact",
+      "All original assertions in GCC/Clang/sanitizer modes",
+      "Linked target RAM/stack/text measurements"
+    ]
+  },
+  "limits": [
+    "No native project/test executable was run on Windows. All local C results are compile/link-only.",
+    "Paired Arm numbers are full symbols of one object, not linked-firmware savings. The predecessor is the exact pre-batch current source, not fixed4ad baseline.",
+    "Static load/store opcode counts include literal-pool loads and compiler spill choices. They are not executed instruction counts or timing measurements.",
+    "Host bitfield layout can differ from Arm. One-byte allocation assertion is Arm-only.",
+    "Unchanged baseline strict C99 compile failed on its historical _Static_assert extensions; the exact same unchanged baseline compiles in its historical C11 context. Both receipts are retained.",
+    "Linux semantic, scheduling and hardware behavior are not established by local object/compile checks."
+  ],
+  "reviewed_intermediate_option": {
+    "description": "Before adopting Boolean shared fields, both Arm profiles compiled with unchanged stacks; bool shared group saves another 3B with 16B extra submit text. This alternate source copy predates the final allocation assertion and is not the final candidate receipt.",
+    "receipts": [
+      {
+        "profile": "production",
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+          "-iquote",
+          "C:\\Code\\autonomous-robotic-car\\app_program\\controller",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\arm-none-eabi\\include",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\lib\\gcc\\arm-none-eabi\\14.3.1\\include",
+          "-mcpu=cortex-m0plus",
+          "-mthumb",
+          "-ffreestanding",
+          "-O2",
+          "-g3",
+          "-mfloat-abi=soft",
+          "-DCNF_SMP=1",
+          "-DAPP_S4=1",
+          "-DAPP_S4_BENCH=0",
+          "-DAPP_S5=1",
+          "-DS5_HARDWARE_CONFIRMED=1",
+          "-DAPP_TEST=0",
+          "-DAPP_IR_BENCH=0",
+          "-DAPP_S3_MOTION=1",
+          "-DAPP_IR_CHANNELS=1",
+          "-DS3_STRAIGHT_TEST=0",
+          "-DAPP_DIAGNOSTICS=0",
+          "-DAPP_MOTION_SMOKE=0",
+          "-DAPP_IR_DEBUG=1",
+          "-DAPP_IMU_DEBUG=0",
+          "-DTM_CONSOLE_UART=0",
+          "-DBOARD_UART0_FREE=1",
+          "-DTM_CONSOLE_USB_CDC=1",
+          "-DNDEBUG",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\tinyusb\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-DTM_WIFI_CYW43=1",
+          "-DCYW43_LWIP=1",
+          "-DCYW43_ENABLE_BLUETOOTH=0",
+          "-DCYW43_USE_OTP_MAC=1",
+          "-DPICO_CYW43_LOGGING_ENABLED=0",
+          "-DPICO_RP2040=1",
+          "-DPICO_32BIT=1",
+          "-DPICO_ON_DEVICE=1",
+          "-DPICO_BUILD=1",
+          "-DPICO_NO_HARDWARE=0",
+          "-DRASPBERRYPI_PICO_W=1",
+          "-DCYW43_DEFAULT_PIN_WL_REG_ON=23u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_OUT=24u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_IN=24u",
+          "-DCYW43_DEFAULT_PIN_WL_HOST_WAKE=24u",
+          "-DCYW43_DEFAULT_PIN_WL_CLOCK=29u",
+          "-DCYW43_DEFAULT_PIN_WL_CS=25u",
+          "-DNDEBUG",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libwifi\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\firmware",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_cyw43_driver\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\boards\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\hardware_claim\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_util\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_pio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_gpio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_dma\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_clocks\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-DTM_NET_LWIP=1",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\lwip\\src\\include",
+          "-DTM_MQTT=1",
+          "-D_PICO_RP2040_",
+          "-IC:\\Code\\autonomous-robotic-car\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\config",
+          "-IC:\\Code\\autonomous-robotic-car\\kernel\\knlinc",
+          "-std=c99",
+          "-fstack-usage",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-c",
+          "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c",
+          "-o",
+          "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-production.o"
+        ],
+        "exit_code": 0,
+        "stderr": "",
+        "symbols": "00000000 00000001 b dumping.12\n00000000 00000001 b g_bcap_net_pending\n00000000 00000001 b g_bcap_valid\n00000000 00000001 b g_control_sequence\n00000000 00000001 b g_ir_seen\n00000000 00000001 b g_ir_sequence\n00000000 00000001 b g_last_barcode_status\n00000000 00000001 b g_sampling\n00000000 00000001 b g_shared\n00000000 00000001 b was_open.10\n00000000 00000001 b was_running.11\n00000000 00000003 r order.3\n00000000 00000004 b cursor.9\n00000000 00000004 b g_bcap_net_cursor\n00000000 00000004 b g_collect_since\n00000000 00000004 b g_control_last\n00000000 00000004 b g_cycle\n00000000 00000004 b g_ir_last\n00000000 00000004 b g_mutex\n00000000 00000004 b g_report\n00000000 00000004 b g_task\n00000000 00000006 b g_debug_events\n00000000 0000000b b g_command\n00000000 0000000c r event_bits.2\n00000000 00000010 b g_ir_debug\n00000000 00000014 t tick\n00000000 00000018 r table.14\n00000000 0000001c b command.7\n00000000 00000020 b feedback.5\n00000000 0000002c b value_m.0\n00000000 00000030 T s3_remote_stop_sequence\n00000000 00000034 b frame.4\n00000000 00000036 b g_collector\n00000000 0000003c T s3_remote_physical_stop\n00000000 00000046 b g_control_debug\n00000000 00000047 b builder.1\n00000000 00000048 t velocity_with_floor\n00000000 00000054 t remote_finish\n00000000 0000005c T s3_integration_status\n00000000 00000064 t cleanup\n00000000 00000064 t remote_permitted.part.0\n00000000 00000070 T mqtt_utk_debug_take\n00000000 00000074 b g_remote\n00000000 0000007c T s3_integration_start\n00000000 00000088 T mqtt_utk_control_debug_take\n00000000 00000088 T mqtt_utk_ir_debug_take\n00000000 00000090 T s3_remote_reply_take\n00000000 00000092 b g_status\n00000000 000000a8 T s3_remote_link\n00000000 000000ac T s3_remote_status_take\n00000000 000000c8 b line.8\n00000000 000000d8 t remote_reply.part.0\n00000000 000000ec T s3_integration_submit\n00000000 000000f8 b value_s.13\n00000000 000000f8 b working.6\n00000000 0000018c t execute\n00000000 000001e4 T s3_integration_init\n00000000 0000024c T s3_remote_receive\n00000000 00000470 t sensor_report_task\n00000000 00001108 t sensor_sample_task\n00000000 00002a58 b g_drive\n00000000 00007fd8 b g_bcap\n",
+        "stack": "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:488:13:tick\t8\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1362:24:velocity_with_floor\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1321:13:cleanup\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:406:13:execute\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:123:13:remote_reply.part.0\t32\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:340:13:remote_permitted.part.0\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:157:13:remote_finish\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:694:13:sensor_sample_task\t456\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:170:6:s3_remote_link\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:193:6:s3_remote_receive\t96\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:270:10:s3_remote_reply_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:292:10:s3_remote_status_take\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:320:10:s3_remote_stop_sequence\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:331:6:s3_remote_physical_stop\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:354:6:s3_integration_submit\t40\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:388:6:s3_integration_status\t168\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1184:13:sensor_report_task\t232\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1055:14:mqtt_utk_control_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1086:14:mqtt_utk_ir_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1120:14:mqtt_utk_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1400:9:s3_integration_init\t320\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1444:9:s3_integration_start\t16\tstatic\n",
+        "source_sha256_lf": "12bd80c5c3ec444cbd7a910d336511a353e41c5fddc86c64f4eece350200fb75"
+      },
+      {
+        "profile": "plain",
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+          "-iquote",
+          "C:\\Code\\autonomous-robotic-car\\app_program\\controller",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\arm-none-eabi\\include",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\lib\\gcc\\arm-none-eabi\\14.3.1\\include",
+          "-mcpu=cortex-m0plus",
+          "-mthumb",
+          "-ffreestanding",
+          "-O2",
+          "-g3",
+          "-mfloat-abi=soft",
+          "-DCNF_SMP=1",
+          "-DAPP_S4=1",
+          "-DAPP_S4_BENCH=0",
+          "-DAPP_S5=1",
+          "-DS5_HARDWARE_CONFIRMED=1",
+          "-DAPP_TEST=0",
+          "-DAPP_IR_BENCH=0",
+          "-DAPP_S3_MOTION=1",
+          "-DAPP_IR_CHANNELS=1",
+          "-DS3_STRAIGHT_TEST=0",
+          "-DAPP_DIAGNOSTICS=0",
+          "-DAPP_MOTION_SMOKE=0",
+          "-DAPP_IR_DEBUG=0",
+          "-DAPP_IMU_DEBUG=0",
+          "-DTM_CONSOLE_UART=0",
+          "-DBOARD_UART0_FREE=1",
+          "-DTM_CONSOLE_USB_CDC=1",
+          "-DNDEBUG",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\tinyusb\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-DTM_WIFI_CYW43=1",
+          "-DCYW43_LWIP=1",
+          "-DCYW43_ENABLE_BLUETOOTH=0",
+          "-DCYW43_USE_OTP_MAC=1",
+          "-DPICO_CYW43_LOGGING_ENABLED=0",
+          "-DPICO_RP2040=1",
+          "-DPICO_32BIT=1",
+          "-DPICO_ON_DEVICE=1",
+          "-DPICO_BUILD=1",
+          "-DPICO_NO_HARDWARE=0",
+          "-DRASPBERRYPI_PICO_W=1",
+          "-DCYW43_DEFAULT_PIN_WL_REG_ON=23u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_OUT=24u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_IN=24u",
+          "-DCYW43_DEFAULT_PIN_WL_HOST_WAKE=24u",
+          "-DCYW43_DEFAULT_PIN_WL_CLOCK=29u",
+          "-DCYW43_DEFAULT_PIN_WL_CS=25u",
+          "-DNDEBUG",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libwifi\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\firmware",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_cyw43_driver\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\boards\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\hardware_claim\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_util\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_pio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_gpio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_dma\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_clocks\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-DTM_NET_LWIP=1",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\lwip\\src\\include",
+          "-DTM_MQTT=1",
+          "-D_PICO_RP2040_",
+          "-IC:\\Code\\autonomous-robotic-car\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\config",
+          "-IC:\\Code\\autonomous-robotic-car\\kernel\\knlinc",
+          "-std=c99",
+          "-fstack-usage",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-c",
+          "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c",
+          "-o",
+          "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-plain.o"
+        ],
+        "exit_code": 0,
+        "stderr": "",
+        "symbols": "00000000 00000001 b dumping.8\n00000000 00000001 b g_bcap_net_pending\n00000000 00000001 b g_bcap_valid\n00000000 00000001 b g_sampling\n00000000 00000001 b g_shared\n00000000 00000001 b was_open.6\n00000000 00000001 b was_running.7\n00000000 00000004 b cursor.5\n00000000 00000004 b g_bcap_net_cursor\n00000000 00000004 b g_collect_since\n00000000 00000004 b g_cycle\n00000000 00000004 b g_mutex\n00000000 00000004 b g_report\n00000000 00000004 b g_task\n00000000 0000000b b g_command\n00000000 00000014 t tick\n00000000 00000018 r table.10\n00000000 0000001c b command.3\n00000000 00000020 b feedback.1\n00000000 00000030 T s3_remote_stop_sequence\n00000000 00000034 b frame.0\n00000000 00000036 b g_collector\n00000000 0000003c T s3_remote_physical_stop\n00000000 00000048 t velocity_with_floor\n00000000 00000054 t remote_finish\n00000000 0000005c T s3_integration_status\n00000000 00000064 t cleanup\n00000000 00000064 t remote_permitted.part.0\n00000000 00000070 T mqtt_utk_debug_take\n00000000 00000074 b g_remote\n00000000 0000007c T s3_integration_start\n00000000 00000090 T s3_remote_reply_take\n00000000 00000092 b g_status\n00000000 000000a8 T s3_remote_link\n00000000 000000ac T s3_remote_status_take\n00000000 000000c8 b line.4\n00000000 000000d8 t remote_reply.part.0\n00000000 000000ec T s3_integration_submit\n00000000 000000f8 b value_s.9\n00000000 000000f8 b working.2\n00000000 0000018c t execute\n00000000 000001e4 T s3_integration_init\n00000000 0000024c T s3_remote_receive\n00000000 00000470 t sensor_report_task\n00000000 000009b0 t sensor_sample_task\n00000000 00002a58 b g_drive\n00000000 00007fd8 b g_bcap\n",
+        "stack": "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:488:13:tick\t8\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1362:24:velocity_with_floor\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1321:13:cleanup\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:406:13:execute\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:123:13:remote_reply.part.0\t32\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:340:13:remote_permitted.part.0\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:157:13:remote_finish\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:694:13:sensor_sample_task\t296\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:170:6:s3_remote_link\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:193:6:s3_remote_receive\t96\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:270:10:s3_remote_reply_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:292:10:s3_remote_status_take\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:320:10:s3_remote_stop_sequence\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:331:6:s3_remote_physical_stop\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:354:6:s3_integration_submit\t40\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:388:6:s3_integration_status\t168\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1184:13:sensor_report_task\t232\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1120:14:mqtt_utk_debug_take\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1400:9:s3_integration_init\t320\tstatic\nC:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\bool-shared-source.c:1444:9:s3_integration_start\t16\tstatic\n",
+        "source_sha256_lf": "12bd80c5c3ec444cbd7a910d336511a353e41c5fddc86c64f4eece350200fb75"
+      }
+    ]
+  },
+  "python_full_audit": {
+    "command": [
+      "C:/Users/ginli/AppData/Local/Programs/Python/Python313/python.exe",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "testing/compliance"
+    ],
+    "environment": {
+      "CR1_REQUIRE_LIBCLANG": "1"
+    },
+    "tests": 203,
+    "failures": 0,
+    "skips": 0
+  }
+}

@@ -6,6 +6,7 @@
  */
 #include "s3_integration.h"
 #include "../app_types.h"
+#include "../build_assert.h"
 #include "vehicle_controller.h"
 #include "integration_codec.h"
 #include "../diagnostics/robot_diagnostics.h"
@@ -56,27 +57,48 @@ static s3_control_packet_t g_command;
 
 static struct
 {
-    unsigned pending : 1, stop : 1, status_ready : 1, reset_pending : 1;
+    bool pending : 1, stop : 1, status_ready : 1, reset_pending : 1;
+#if APP_IR_DEBUG
+    bool ir_ready : 1, control_ready : 1;
+#endif
 } g_shared;
 
-static bool g_reset_waiting; /* sampling-owner-only completion state */
-static bool g_reset_remote;
+/* Only the sampling owner reads or writes this storage byte. Sensor values
+ * are checked before assignment; labels retain zero, white and black. Keep
+ * publication flags in g_shared, whose every access holds g_mutex. */
+static struct
+{
+    uint8_t sensor : 2;
+    uint8_t label : 2;
+    bool reset_waiting : 1; /* sampling-owner-only completion state */
+    bool reset_remote : 1;
+    bool collecting : 1;
+#if APP_IR_DEBUG
+    bool control_seen : 1;
+#endif
+} g_sampling;
+
+BUILD_ASSERT(S3_SENSOR_COUNT <= 4, sampling_sensor_bits_t);
+BUILD_ASSERT(IR_SURFACE_WHITE >= 0 && IR_SURFACE_WHITE <= 3 &&
+                 IR_SURFACE_BLACK >= 0 && IR_SURFACE_BLACK <= 3,
+             sampling_surface_bits_t);
+#if defined(__arm__) || defined(__thumb__)
+BUILD_ASSERT(sizeof(g_sampling) == 1U, sampling_storage_byte_t);
+BUILD_ASSERT(sizeof(g_shared) == 1U, shared_storage_byte_t);
+#endif
+
 static s3_calibration_collector_t g_collector[S3_SENSOR_COUNT];
-static bool g_collecting;
 #if APP_IR_DEBUG
 /* One latest-only packet under g_mutex; no queue, task or peripheral owner. */
 static ir_debug_packet_t g_ir_debug;
-static bool g_ir_ready, g_ir_seen;
+static bool g_ir_seen;
 static uint32_t g_ir_last;
 static uint8_t g_ir_sequence;
 static control_debug_packet_t g_control_debug;
-static bool g_control_ready, g_control_seen;
 static uint32_t g_control_last;
 static uint8_t g_control_sequence, g_last_barcode_status;
 static uint16_t g_debug_events[3]; /* saturating counts since boot */
 #endif
-static s3_sensor_id_t g_sensor;
-static ir_surface_t g_label;
 static uint32_t g_collect_since;
 
 static uint32_t now_us (void)
@@ -387,7 +409,7 @@ static bool execute (const s3_control_request_t * p_c, uint32_t now)
     if (p_c->kind == S3_CONTROL_STOP)
     {
         s3_drive_stop(&g_drive);
-        g_collecting = false;
+        g_sampling.collecting = false;
         return true;
     }
     if (p_c->kind == S3_CONTROL_RESET)
@@ -399,7 +421,7 @@ static bool execute (const s3_control_request_t * p_c, uint32_t now)
     {
         /* Ineligible STARTs (already driving, FAULT, active lifecycle,
          * collecting, not ready) are refused BEFORE touching the map. */
-        if (!terrain_control_ready(now) || g_collecting ||
+        if (!terrain_control_ready(now) || g_sampling.collecting ||
             ((g_drive.state != S3_DRIVE_OFF) &&
              (g_drive.state != S3_DRIVE_HALTED)) ||
             (g_drive.navigation.lifecycle != S3_RUN_INACTIVE) ||
@@ -424,8 +446,8 @@ static bool execute (const s3_control_request_t * p_c, uint32_t now)
         vehicle_controller_commit_start();
         return true;
     }
-    if ((g_drive.navigation.lifecycle != S3_RUN_INACTIVE) || g_collecting ||
-        (g_drive.state == S3_DRIVE_FAULT))
+    if ((g_drive.navigation.lifecycle != S3_RUN_INACTIVE) ||
+        g_sampling.collecting || (g_drive.state == S3_DRIVE_FAULT))
     {
         return false;
     }
@@ -443,22 +465,22 @@ static bool execute (const s3_control_request_t * p_c, uint32_t now)
         return s3_navigation_apply_calibration(&g_drive.navigation, p_c->sensor,
                                                &g_collector[p_c->sensor]);
     }
-    g_sensor = p_c->sensor;
-    g_collecting = true;
+    g_sampling.sensor = p_c->sensor;
+    g_sampling.collecting = true;
     g_collect_since = now;
-    g_label =
+    g_sampling.label =
         p_c->kind == S3_CONTROL_WHITE ? IR_SURFACE_WHITE : IR_SURFACE_BLACK;
     /* Same empty-range convention as s3_calibration_begin(): the minimum
      * starts at the 12-bit maximum. Starting it at 0 kept both minima at 0,
      * so every white/black pair looked overlapping and was rejected. */
-    if (g_label == IR_SURFACE_WHITE)
+    if (g_sampling.label == IR_SURFACE_WHITE)
     {
-        g_collector[g_sensor].white =
+        g_collector[g_sampling.sensor].white =
             (s3_calibration_range_t){.minimum = S3_EMPTY_RANGE_MINIMUM};
     }
     else
     {
-        g_collector[g_sensor].black =
+        g_collector[g_sampling.sensor].black =
             (s3_calibration_range_t){.minimum = S3_EMPTY_RANGE_MINIMUM};
     }
     return true;
@@ -539,11 +561,11 @@ static bool capture_control_debug (const s3_integration_status_t * p_st,
     {
         g_last_barcode_status = (uint8_t)p_st->navigation.barcode_status;
     }
-    if (g_control_seen && (uint32_t)(now - g_control_last) < 200000U)
+    if (g_sampling.control_seen && (uint32_t)(now - g_control_last) < 200000U)
     {
         return false;
     }
-    g_control_seen = true;
+    g_sampling.control_seen = true;
     g_control_last = now;
     control_debug_builder_init(&builder);
     control_debug_builder_u(&builder, CD_TIMESTAMP_US, now);
@@ -711,8 +733,8 @@ static void sensor_sample_task (INT code, void * p_unused)
         }
         if (pending && (command.kind == S3_CONTROL_STOP))
         {
-            g_reset_waiting = false;
-            g_reset_remote = false;
+            g_sampling.reset_waiting = false;
+            g_sampling.reset_remote = false;
             const bool value_ok = execute(&command, now_us());
             if (remote_command.valid)
             {
@@ -744,7 +766,7 @@ static void sensor_sample_task (INT code, void * p_unused)
          * waits for a newer safe feedback publication, or its 500 ms timeout.
          * Publish exactly one command result after that check, not the old
          * pre-reset FAULT snapshot. STOP above can always cancel the wait. */
-        if (g_reset_waiting &&
+        if (g_sampling.reset_waiting &&
             (s3_drive_reset_result(&g_drive) != S3_RESET_PENDING))
         {
             const bool value_ok =
@@ -760,7 +782,7 @@ static void sensor_sample_task (INT code, void * p_unused)
                 g_remote.reset.valid = false;
                 (void)tk_unl_mtx(g_mutex);
             }
-            if (g_reset_remote)
+            if (g_sampling.reset_remote)
             {
                 if (reset.valid)
                 {
@@ -772,8 +794,8 @@ static void sensor_sample_task (INT code, void * p_unused)
                 working.command_ok = value_ok;
                 working.command_sequence++;
             }
-            g_reset_remote = false;
-            g_reset_waiting = false;
+            g_sampling.reset_remote = false;
+            g_sampling.reset_waiting = false;
             reset_completed();
         }
 #if S3_BARCODE_CAPTURE
@@ -813,18 +835,18 @@ static void sensor_sample_task (INT code, void * p_unused)
                                  frame.timestamp_us,
                                  g_drive.navigation.config.max_sample_age_us);
         }
-        if (g_collecting)
+        if (g_sampling.collecting)
         {
-            const s3_raw_sample_t * p_raw = &frame.sensor[g_sensor];
+            const s3_raw_sample_t * p_raw = &frame.sensor[g_sampling.sensor];
             if (p_raw->valid && (p_raw->error == 0))
             {
-                (void)s3_calibration_add(&g_collector[g_sensor], g_label,
-                                         p_raw->raw);
+                (void)s3_calibration_add(&g_collector[g_sampling.sensor],
+                                         g_sampling.label, p_raw->raw);
             }
             if ((uint32_t)(frame.timestamp_us - g_collect_since) >=
                 S3_COLLECTION_US)
             {
-                g_collecting = false;
+                g_sampling.collecting = false;
             }
         }
         if (pending)
@@ -847,8 +869,8 @@ static void sensor_sample_task (INT code, void * p_unused)
             if ((command.kind == S3_CONTROL_RESET) && value_ok &&
                 (s3_drive_reset_result(&g_drive) == S3_RESET_PENDING))
             {
-                g_reset_waiting = true;
-                g_reset_remote = remote_command.valid;
+                g_sampling.reset_waiting = true;
+                g_sampling.reset_remote = remote_command.valid;
                 if (remote_command.valid &&
                     tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
                 {
@@ -917,10 +939,12 @@ static void sensor_sample_task (INT code, void * p_unused)
         {
             s3_timing_increment(&working.above_target);
         }
-        working.collecting = g_collecting;
-        working.calibration_sensor = g_sensor;
-        working.white = s3_calibration_summary(&g_collector[g_sensor].white);
-        working.black = s3_calibration_summary(&g_collector[g_sensor].black);
+        working.collecting = g_sampling.collecting;
+        working.calibration_sensor = g_sampling.sensor;
+        working.white =
+            s3_calibration_summary(&g_collector[g_sampling.sensor].white);
+        working.black =
+            s3_calibration_summary(&g_collector[g_sampling.sensor].black);
         s3_status_packet_t packet;
         bool packed = s3_status_pack(&working, &packet);
         if (!packed)
@@ -973,7 +997,7 @@ static void sensor_sample_task (INT code, void * p_unused)
             feedback.state == MOTION_IDLE &&
             feedback.fault == MOTION_FAULT_NONE &&
             (uint32_t)(remote_now - feedback.timestamp_us) <= 200000U;
-        if (!g_collecting &&
+        if (!g_sampling.collecting &&
             (g_drive.state == S3_DRIVE_OFF ||
              g_drive.state == S3_DRIVE_HALTED) &&
             g_drive.navigation.lifecycle == S3_RUN_INACTIVE &&
@@ -1006,12 +1030,12 @@ static void sensor_sample_task (INT code, void * p_unused)
             if (ir_packed)
             {
                 g_ir_debug = ir_packet;
-                g_ir_ready = true;
+                g_shared.ir_ready = true;
             }
             if (control_packed)
             {
                 g_control_debug = control_packet;
-                g_control_ready = true;
+                g_shared.control_ready = true;
             }
 #endif
             (void)tk_unl_mtx(g_mutex);
@@ -1038,7 +1062,7 @@ unsigned int mqtt_utk_control_debug_take (unsigned char * p_bytes,
     {
         return 0;
     }
-    if (g_control_ready)
+    if (g_shared.control_ready)
     {
         const uint32_t timestamp = (uint32_t)g_control_debug.bytes[1] |
                                    (uint32_t)g_control_debug.bytes[2] << 8 |
@@ -1053,7 +1077,7 @@ unsigned int mqtt_utk_control_debug_take (unsigned char * p_bytes,
             }
             count = CONTROL_DEBUG_PACKET_SIZE;
         }
-        g_control_ready = false;
+        g_shared.control_ready = false;
     }
     (void)tk_unl_mtx(g_mutex);
     return count;
@@ -1068,7 +1092,7 @@ unsigned int mqtt_utk_ir_debug_take (unsigned char * p_bytes, unsigned int size)
     {
         return 0U;
     }
-    if (g_ir_ready)
+    if (g_shared.ir_ready)
     {
         const uint32_t timestamp = (uint32_t)g_ir_debug.bytes[1] |
                                    (uint32_t)g_ir_debug.bytes[2] << 8 |
@@ -1083,7 +1107,7 @@ unsigned int mqtt_utk_ir_debug_take (unsigned char * p_bytes, unsigned int size)
             }
             count = IR_DEBUG_PACKET_SIZE;
         }
-        g_ir_ready = false;
+        g_shared.ir_ready = false;
     }
     (void)tk_unl_mtx(g_mutex);
     return count;

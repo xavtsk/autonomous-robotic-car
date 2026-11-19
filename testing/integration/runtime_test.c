@@ -301,6 +301,7 @@ void vehicle_controller_observe (const s3_integration_status_t * s)
 }
 
 #include "../../app_program/controller/s3_integration.c"
+#include "integration_storage_compat.h"
 
 static void cycle (void)
 {
@@ -495,7 +496,7 @@ int main (void)
     assert(s3_integration_status(&status) &&
            status.command_sequence == sequence + 1 && status.command_ok &&
            status.state == S3_DRIVE_OFF);
-    assert(!g_shared.reset_pending && !g_reset_waiting);
+    assert(!g_shared.reset_pending && !TEST_S3_RESET_WAITING);
 
     /* A genuine motion fault is cleared by the ONE accepted request, but
      * completion still waits until the next feedback publication. */
@@ -529,7 +530,7 @@ int main (void)
     cmd.kind = S3_CONTROL_RESET;
     assert(s3_integration_submit(&cmd));
     cycle();
-    assert(g_reset_waiting && s3_integration_status(&status));
+    assert(TEST_S3_RESET_WAITING && s3_integration_status(&status));
     sequence = status.command_sequence;
     cmd.kind = S3_CONTROL_STOP;
     assert(s3_integration_submit(&cmd));
@@ -540,7 +541,7 @@ int main (void)
     for (unsigned k = 0; k < 600000U / S3_SAMPLE_PERIOD_US; k++)
         cycle();
     assert(s3_integration_status(&status) &&
-           status.command_sequence == sequence && !g_reset_waiting &&
+           status.command_sequence == sequence && !TEST_S3_RESET_WAITING &&
            !g_shared.reset_pending);
 
     /* Persistent fault: bounded refusal with no automatic start. */
@@ -551,7 +552,7 @@ int main (void)
         cycle();
     assert(s3_integration_status(&status) && !status.command_ok &&
            status.state == S3_DRIVE_FAULT);
-    assert(status.command_sequence == sequence + 1 && !g_reset_waiting &&
+    assert(status.command_sequence == sequence + 1 && !TEST_S3_RESET_WAITING &&
            !g_shared.reset_pending);
 #if defined(TM_MQTT) && TM_MQTT
     { /* After the run ended, the barcode trace goes out over Wi-Fi once,
@@ -602,7 +603,7 @@ int main (void)
             cycle();
         clock_value += 100001U;
         assert(mqtt_utk_ir_debug_take(bytes, sizeof bytes) == 0U &&
-               !g_ir_ready);
+               !TEST_S3_IR_READY);
         puts(
             "PASS: production IR preview latest-only mailbox, physical channel mapping, bounded age and nonblocking network access");
         {
@@ -632,7 +633,7 @@ int main (void)
             }
             clock_value += 400001;
             assert(mqtt_utk_control_debug_take(control, sizeof control) == 0 &&
-                   !g_control_ready);
+                   !TEST_S3_CONTROL_READY);
             /* A newer motion tick after the ADC stamp is fresh, not wrapped
              * negative age. Old or out-of-range feedback remains invalid. */
             debug_motion_advance = 100;
@@ -680,7 +681,7 @@ int main (void)
     remote_send(REMOTE_RESET, 2, 0x12345678U, clock_value);
     remote_expect(2, REMOTE_QUEUED, REMOTE_NONE);
     cycle();
-    assert(g_reset_waiting);
+    assert(TEST_S3_RESET_WAITING);
     cycle();
     remote_expect(2, REMOTE_EXECUTED, REMOTE_NONE);
     assert(g_drive.state == S3_DRIVE_OFF && s3_integration_status(&status));
@@ -796,7 +797,7 @@ int main (void)
     remote_send(REMOTE_RESET, 2, 0xabcddcbaU, clock_value);
     remote_expect(2, REMOTE_QUEUED, REMOTE_NONE);
     cycle();
-    assert(g_reset_waiting && g_reset_remote);
+    assert(TEST_S3_RESET_WAITING && TEST_S3_RESET_REMOTE);
     assert(s3_integration_status(&status));
     sequence = status.command_sequence;
     s3_remote_link(0, false);
@@ -811,8 +812,8 @@ int main (void)
     cycle();
     assert(s3_integration_status(&status) &&
            status.command_sequence == sequence);
-    assert(g_drive.state == S3_DRIVE_OFF && !g_reset_waiting &&
-           !g_reset_remote);
+    assert(g_drive.state == S3_DRIVE_OFF && !TEST_S3_RESET_WAITING &&
+           !TEST_S3_RESET_REMOTE);
     {
         uint8_t p[REMOTE_REPLY_SIZE];
         assert(s3_remote_reply_take(p, sizeof p) == 0);

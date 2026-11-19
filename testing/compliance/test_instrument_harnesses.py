@@ -13,6 +13,54 @@ def code_tokens(text):
 
 
 class AnchorTests(unittest.TestCase):
+    def test_private_storage_flags_require_exact_reviewed_declarations(self):
+        root = Path(__file__).resolve().parents[2]
+        original = (root/'app_program/controller/s3_integration.c').read_text()
+        self.assertEqual(harness.integration_storage_flags(root), ['-DTEST_S3_COMPACT_STORAGE=1'])
+        with tempfile.TemporaryDirectory() as directory:
+            subject = Path(directory)
+            source = subject/'app_program/controller/s3_integration.c'
+            source.parent.mkdir(parents=True)
+            source.write_text(original.replace('uint8_t sensor : 2;', 'uint8_t sensor : 3;'))
+            with self.assertRaisesRegex(ValueError, 'Harness changed'):
+                harness.integration_storage_flags(subject)
+            legacy = '''static struct {
+                unsigned pending : 1, stop : 1, status_ready : 1, reset_pending : 1;
+            } g_shared;
+            static bool g_reset_waiting; static bool g_reset_remote;
+            static bool g_collecting; static bool g_ir_ready, g_ir_seen;
+            static bool g_control_ready, g_control_seen;
+            static s3_sensor_id_t g_sensor; static ir_surface_t g_label;'''
+            source.write_text(legacy)
+            self.assertEqual(harness.integration_storage_flags(subject), [])
+            source.write_text(legacy.replace('s3_sensor_id_t', 'uint16_t'))
+            with self.assertRaisesRegex(ValueError, 'Harness changed'):
+                harness.integration_storage_flags(subject)
+            source.write_text('/* '+legacy+' */')
+            with self.assertRaisesRegex(ValueError, 'Unrecognized original'):
+                harness.integration_storage_flags(subject)
+
+    def test_private_aliases_follow_subject_and_preserve_original_assertions(self):
+        root = Path(__file__).resolve().parents[2]
+        fixture = (root/'testing/integration/runtime_test.c').read_text()
+        self.assertLess(fixture.index('#include "../../app_program/controller/s3_integration.c"'),
+                        fixture.index('#include "integration_storage_compat.h"'))
+        header = (root/'testing/integration/integration_storage_compat.h').read_text()
+        self.assertIn('#if defined(TEST_S3_COMPACT_STORAGE) && TEST_S3_COMPACT_STORAGE', header)
+        for name, member in harness.INTEGRATION_STORAGE_NAMES.items():
+            self.assertIn(f'#define TEST_S3_{name[2:].upper()} ({member})', header)
+            self.assertIn(f'#define TEST_S3_{name[2:].upper()} ({name})', header)
+        self.assertNotIn('assert(', header)
+        self.assertNotIn('TEST_S3_COMPACT_STORAGE',
+                         (root/'app_program/controller/s3_integration.c').read_text())
+
+    def test_manual_make_checks_detection_and_keeps_command_line_flags(self):
+        root = Path(__file__).resolve().parents[2]
+        makefile = (root/'testing/integration/controller_test.mk').read_text()
+        self.assertIn('PYTHON ?= python3', makefile)
+        self.assertIn('ifneq ($(.SHELLSTATUS),0)\n$(error Private storage detection failed;', makefile)
+        self.assertIn('override CFLAGS += $(PRIVATE_STORAGE_FLAGS)', makefile)
+
     def test_whitespace_and_interleaved_comments_match_once(self):
         source = 'before();\n call ( value , /* retained condition */ sizeof value ) ;\nafter();'
         result = harness.replace_once(source, 'call(value,sizeof value);', 'call(value,sizeof value); observe();')

@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 from replay_audit import audit
-from instrument_harnesses import runtime_source, mqtt_source, operator_source
+from instrument_harnesses import runtime_source, mqtt_source, operator_source, integration_storage_flags
 from run_host import motion_estimation_module, motion_storage_flags
 from fixture_binding import select_fixture_root
 
@@ -93,7 +93,7 @@ def main():
                                  'line_detection', 'line_controller', 'bc_decoder', 'line_navigation')]
             binary = build(label, 'runtime', [runtime, *runtime_sources],
                 [fixtures/'integration', fixtures/'integration/fakes', root/'lib/liblwip/sysdepend/pico_rp2040'],
-                ['-pthread', '-DAPP_IR_DEBUG=1', '-DTM_MQTT=1'])
+                ['-pthread', '-DAPP_IR_DEBUG=1', '-DTM_MQTT=1', *integration_storage_flags(root)])
             with (output/(label+'-runtime.trace')).open('wb') as stream:
                 subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
             operator = operator_source(fixtures_root, root, output/(label+'-operator.c'))
@@ -150,8 +150,9 @@ def main():
                 after_trace = b'\n'.join(line for line in after_trace.splitlines() if line.startswith(prefix))
             rows = sum(line.startswith(prefix) for line in before_trace.splitlines())
             minimum_rows = (802 if name == 'motion_storage' else
-                            784 if name == 'barcode_work' else
-                            619 if name == 'bcap_storage' else
+                            854 if name == 'barcode_work' else
+                            776 if name == 'bcap_storage' else
+                            8066 if name == 'operator' else
                             2093 if name == 'mqtt_receive' else
                             # Complete fixed-baseline profile counts observed
                             # in run 44584191817; plain MQTT has 99 real rows.

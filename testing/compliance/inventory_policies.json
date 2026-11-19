@@ -25,6 +25,80 @@
       "type_category": ".*"
     },
     {
+      "id": "integration-sampling-flags",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "g_sampling",
+      "name": "reset_waiting|reset_remote|collecting|control_seen",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "boolean",
+        "step": 1
+      },
+      "ownership": "Sampling task exclusively reads and writes these flags.",
+      "synchronization": "Single owner; no address-taking or read/modify/write shared with report/network tasks.",
+      "constraints": [
+        "Boolean values are 0 or 1 including BSS initialization. Store one bit per flag in the reviewed owner/lock domain; keep all original control flow, assignment ordering and publication behavior."
+      ],
+      "reason": "Boolean values are 0 or 1 including BSS initialization. Store one bit per flag in the reviewed owner/lock domain; keep all original control flow, assignment ordering and publication behavior.",
+      "evidence": [
+        "app_program/controller/s3_integration.c:66-86",
+        "app_program/controller/s3_integration.c:563-567",
+        "app_program/controller/s3_integration.c:735-872",
+        "docs/compliance/evidence/integration-private-storage.json"
+      ]
+    },
+    {
+      "id": "integration-publication-flags",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "g_shared",
+      "name": "pending|stop|status_ready|reset_pending|ir_ready|control_ready",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "boolean",
+        "step": 1
+      },
+      "ownership": "Sampling producer and submit/network consumers share g_shared.",
+      "synchronization": "Every access holds the existing g_mutex; debug flags join that same lock domain. Early null/capacity/lock failures remain before any state mutation.",
+      "constraints": [
+        "Boolean values are 0 or 1 including BSS initialization. Store one bit per flag in the reviewed owner/lock domain; keep all original control flow, assignment ordering and publication behavior."
+      ],
+      "reason": "Boolean values are 0 or 1 including BSS initialization. Store one bit per flag in the reviewed owner/lock domain; keep all original control flow, assignment ordering and publication behavior.",
+      "evidence": [
+        "app_program/controller/s3_integration.c:58-64",
+        "app_program/controller/s3_integration.c:1023-1041",
+        "app_program/controller/s3_integration.c:1052-1117",
+        "docs/compliance/evidence/integration-private-storage.json"
+      ]
+    },
+    {
+      "id": "integration-private-storage-containers",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "",
+      "name": "g_sampling|g_shared",
+      "kind": "VAR_DECL",
+      "status": "preserve",
+      "domain": {
+        "description": "Reviewed private aggregate; individual members have their own source-backed domain rows."
+      },
+      "required_bits": null,
+      "ownership": "g_sampling is sampling-task-only; g_shared spans sampling/submit/network owners under g_mutex.",
+      "synchronization": "Do not combine these two allocations: their ownership domains differ. Existing volatile g_bcap_net_pending, unlocked g_bcap_valid and addressable g_ir_seen remain independent.",
+      "constraints": [
+        "Arm GCC14.3.1 allocates g_sampling and g_shared one byte each in both debug and plain profiles. All g_shared writes are Boolean; bool one-bit fields preserve values and mutex ownership. Host bitfield ABI may pad differently; production allocation assertions are Arm-only."
+      ],
+      "reason": "Allocation and ownership evidence is separate from member minimum-bit classification; measure target object and linked firmware independently.",
+      "evidence": [
+        "app_program/controller/s3_integration.c:58-86",
+        "docs/compliance/evidence/integration-private-storage.json"
+      ]
+    },
+    {
       "id": "mutable-work-barcode-work-sample-index",
       "path": "app_program/subsystem3/bc_decoder.h",
       "owner": "s3_barcode_work_t",
@@ -1402,23 +1476,27 @@
     {
       "id": "integration-calibration-selector",
       "path": "app_program/controller/s3_integration.c",
-      "owner": "",
-      "name": "g_sensor|g_label",
+      "owner": "g_sampling",
+      "name": "sensor|label",
       "status": "compare",
       "domain": {
         "min": 0,
         "max": 2,
         "units": "integer code"
       },
-      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
-      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "ownership": "Only the sampling task owns g_sampling; command API input is validated before assignment.",
+      "synchronization": "Single sampling owner. This byte is never published to report/network tasks and no member address escapes.",
       "constraints": [
-        "Sensor assignment follows an explicit sensor<COUNT check; surface label is WHITE or BLACK, with initial zero. Both retained selectors fit two bits."
+        "BSS zero is retained. Sensor admission rejects values >= S3_SENSOR_COUNT before assigning 0..2; labels are WHITE=1 or BLACK=2. Public input stays wide until validation. Two-bit members retain every initialized/internal stored value; compile-time guards bind the admitted enumerations."
       ],
-      "reason": "Sensor assignment follows an explicit sensor<COUNT check; surface label is WHITE or BLACK, with initial zero. Both retained selectors fit two bits.",
+      "reason": "BSS zero is retained. Sensor admission rejects values >= S3_SENSOR_COUNT before assigning 0..2; labels are WHITE=1 or BLACK=2. Public input stays wide until validation. Two-bit members retain every initialized/internal stored value; compile-time guards bind the admitted enumerations.",
       "evidence": [
-        "app_program/controller/s3_integration.c"
-      ]
+        "app_program/controller/s3_integration.c:66-86",
+        "app_program/controller/s3_integration.c:458-483",
+        "app_program/controller/s3_integration.c:837-848",
+        "docs/compliance/evidence/integration-private-storage.json"
+      ],
+      "kind": "FIELD_DECL"
     },
     {
       "id": "integration-retained-barcode-status",
