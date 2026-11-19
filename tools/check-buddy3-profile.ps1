@@ -8,7 +8,7 @@ function Undefined([string]$Path) {
     return @($result | ForEach-Object { ($_ -split '\s+')[-1] })
 }
 $main = Undefined 'app_main'
-$s3 = Undefined 'subsystem3/subsystem3'
+$s3 = Undefined 'subsystem3/buddy3'
 $runtime = Undefined 'controller/s3_integration'
 if ($Profile -eq 'bench') {
     if ($main -notcontains 'subsystem3_start' -or
@@ -32,7 +32,7 @@ if ($Profile -eq 'bench') {
     if ($s3.Count -or $runtime.Count) { throw 'Default profile unexpectedly starts Buddy 3.' }
 }
 foreach ($name in @('ir_acquisition', 'ir_calibration', 'ir_reflectance',
-                    'line_detection', 'line_controller', 'barcode_decoder', 'line_navigation')) {
+                    'line_detection', 'line_controller', 'bc_decoder', 'line_navigation')) {
     if ((Undefined "subsystem3/$name") -match '^(motion_|motor_|stop$|tk_)') {
         throw "Portable sensor core depends on motion or RTOS: $name"
     }

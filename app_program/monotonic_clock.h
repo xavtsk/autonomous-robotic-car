@@ -11,7 +11,7 @@
 
 /* The kernel does not start the TIMER that time_now_us() reads (the Pico
  * SDK runtime normally does): take it out of reset and start its tick */
-static inline void app_clock_start(void)
+static inline void app_clock_start (void)
 {
     uint32_t tick = in_w(WATCHDOG_TICK);
 

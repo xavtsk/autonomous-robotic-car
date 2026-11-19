@@ -12,27 +12,27 @@
  */
 
 /*
- *	config_func.h
- *	User Configuration Definition for function
+ *  config_func.h
+ *  User Configuration Definition for function
  */
 
 #ifndef _CONFIG_FUNC_H_
 #define _CONFIG_FUNC_H_
 
-#define USE_SEMAPHORE		(1)
-#define	USE_MUTEX		(1)
-#define	USE_EVENTFLAG		(1)
-#define	USE_MAILBOX		(1)
-#define	USE_MESSAGEBUFFER	(1)
-#define USE_RENDEZVOUS		(1)
-#define USE_MEMORYPOOL		(1)
-#define	USE_FIX_MEMORYPOOL	(1)
-#define	USE_TIMEMANAGEMENT	(1)
-#define	USE_CYCLICHANDLER	(1)
-#define USE_ALARMHANDLER	(1)
-#define USE_DEVICE		(1)
-#define USE_FAST_LOCK		(1)
-#define USE_MULTI_LOCK		(1)
+#define USE_SEMAPHORE (1)
+#define USE_MUTEX (1)
+#define USE_EVENTFLAG (1)
+#define USE_MAILBOX (1)
+#define USE_MESSAGEBUFFER (1)
+#define USE_RENDEZVOUS (1)
+#define USE_MEMORYPOOL (1)
+#define USE_FIX_MEMORYPOOL (1)
+#define USE_TIMEMANAGEMENT (1)
+#define USE_CYCLICHANDLER (1)
+#define USE_ALARMHANDLER (1)
+#define USE_DEVICE (1)
+#define USE_FAST_LOCK (1)
+#define USE_MULTI_LOCK (1)
 
 /* Task management */
 #define USE_FUNC_TK_DEL_TSK

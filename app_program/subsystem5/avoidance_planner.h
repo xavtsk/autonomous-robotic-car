@@ -1,15 +1,27 @@
 #ifndef BUDDY5_AVOIDANCE_PLANNER_H
 #define BUDDY5_AVOIDANCE_PLANNER_H
-#include "obstacle_profile.h"
-typedef enum { S5_ROUTE_NONE, S5_ROUTE_LEFT, S5_ROUTE_RIGHT } s5_route_t;
-typedef struct {
-    unsigned route:2, offset_mm:12, forward_mm:12;
-    unsigned alt_offset_mm:12, alt_ok:1; /* the other side, tried if blocked */
-    unsigned closest_mm:12;              /* scan: nearest face, sensor-relative */
+#include "profile_obstacle.h"
+
+typedef enum
+{
+    S5_ROUTE_NONE,
+    S5_ROUTE_LEFT,
+    S5_ROUTE_RIGHT
+} s5_route_t;
+
+typedef struct
+{
+    unsigned route : 2, offset_mm : 12, forward_mm : 12;
+    unsigned alt_offset_mm : 12,
+        alt_ok : 1;           /* the other side, tried if blocked */
+    unsigned closest_mm : 12; /* scan: nearest face, sensor-relative */
 } s5_plan_t;
+
 /* Route with 45-degree legs (13 Nov 2026; was 90): out diagonally by
- * offset_mm sideways, parallel past the obstacle, back diagonally. forward_mm reaches the visible front face; the hidden
- * rear edge is found by side peeks while passing, searching at most
- * max_depth_mm before giving up (S5_NO_PATH). */
-bool s5_plan(const s5_profile_t *profile,const s5_config_t *cfg,s5_plan_t *out);
+ * offset_mm sideways, parallel past the obstacle, back diagonally. forward_mm
+ * reaches the visible front face; the hidden rear edge is found by side peeks
+ * while passing, searching at most max_depth_mm before giving up (S5_NO_PATH).
+ */
+bool s5_plan (const s5_profile_t * p_profile, const s5_config_t * p_cfg,
+              s5_plan_t * p_out);
 #endif

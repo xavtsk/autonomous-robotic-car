@@ -6,11 +6,11 @@ CPPFLAGS = -DAPP_H -DAPP_TEST=1 -include host_kernel.h -I. -Ifakes -I$(SOURCE_DI
 # Both IRQ pins must be acknowledged: the original intentional boolean |
 # must not be changed to short-circuit || merely to silence Clang.
 CFLAGS = -std=c11 -Wall -Wextra -Werror -Wno-bitwise-instead-of-logical -O2 -g
-MODULES = motion motion_controller motion_estimation motor_control speed_pid wheel_encoder subsystem2_test
+MODULES = motion ctrl_motion estimate_motion motor_control speed_pid wheel_encoder buddy2_test
 SOURCES = host_regression.c $(addprefix $(SOURCE_DIR)/,$(addsuffix .c,$(MODULES)))
 ifeq ($(SOURCE_DIR),$(APP))
 CPPFLAGS += -DTEST_PACKED
-SOURCES += $(APP)/motion_codec.c $(APP)/../subsystem1/telemetry_codec.c
+SOURCES += $(APP)/codec_motion.c $(APP)/../subsystem1/telemetry_codec.c
 endif
 OUTPUT ?= $(BUILD)/host_regression
 
@@ -22,7 +22,7 @@ test: pack
 
 pack:
 	mkdir -p $(BUILD)
-	$(CC) -I$(APP) $(CFLAGS) pack_test.c $(APP)/motion_pack.c $(APP)/motion_codec.c $(APP)/motion_snapshot_adapter.c -o $(BUILD)/pack_test
+	$(CC) -I$(APP) $(CFLAGS) pack_test.c $(APP)/motion_pack.c $(APP)/codec_motion.c $(APP)/snapshot_motion.c -o $(BUILD)/pack_test
 	$(BUILD)/pack_test
 
 legacy-test:

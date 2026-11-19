@@ -4,7 +4,7 @@
 #define main baseline_runtime_main
 #include "../integration/runtime_test.c"
 #undef main
-#include "../../app_program/subsystem1/subsystem1.h"
+#include "../../app_program/subsystem1/buddy1.h"
 #define LIVE_CYCLES (200U / S3_SAMPLE_PERIOD_MS)
 
 static terrain_result_t imu;
@@ -43,9 +43,9 @@ ER buddy1_report_hump(UH humps,UH mm)
     return hump_report_result;
 }
 static unsigned tilts;
-static BUDDY1_TERRAIN last_terrain;
+static buddy1_terrain_t last_terrain;
 static int tilt_pitch, tilt_roll, tilt_state;
-ER buddy1_report_terrain(const BUDDY1_TERRAIN *t)
+ER buddy1_report_terrain(const buddy1_terrain_t *t)
 {
     assert(t && t->state<8U && (t->tilt_valid || (t->pitch_x10==0 && t->roll_x10==0)));
     assert((t->on_hump || t->climb_mm==0) && (t->peak_valid || t->peak_mm==0));

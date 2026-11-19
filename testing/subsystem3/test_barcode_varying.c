@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "barcode_decoder.h"
+#include "bc_decoder.h"
 
 static const uint16_t letters[26]={
     0x109,0x049,0x148,0x019,0x118,0x058,0x00D,0x10C,0x04C,0x01C,
@@ -64,7 +64,7 @@ static void test_letters_and_payload_independence(void)
                     if(sign) { first=-first;last=-last; }
                     distort(runs,first,last);
                     if(dir) { int32_t b=first;reverse(runs);first=last;last=b; }
-                    assert(s3_barcode_record_correct_varying_runs(runs,10000U,&cfg,bias));
+                    assert(s3_barcode_record_fix_varying(runs,10000U,&cfg,bias));
                     assert(bias[0]>first-1500 && bias[0]<first+1500);
                     assert(bias[1]>last-1500 && bias[1]<last+1500);
                     if(c==0U) { reference[0]=bias[0];reference[1]=bias[1]; }
@@ -86,7 +86,7 @@ static void refuses_unchanged(const uint32_t original[29],uint32_t gap,
 {
     uint32_t runs[29];int32_t bias[2]={123,456};
     memcpy(runs,original,sizeof(runs));
-    assert(!s3_barcode_record_correct_varying_runs(runs,gap,cfg,bias));
+    assert(!s3_barcode_record_fix_varying(runs,gap,cfg,bias));
     assert(memcmp(runs,original,sizeof(runs))==0);
 }
 
@@ -148,7 +148,7 @@ static void test_measured_stars_and_quiet(void)
     unsigned int i;
     memcpy(runs,measured_a,sizeof(runs));
     assert(!s3_barcode_record_correct_runs(runs,12500U,&cfg,&shared));
-    assert(s3_barcode_record_correct_varying_runs(runs,12500U,&cfg,bias));
+    assert(s3_barcode_record_fix_varying(runs,12500U,&cfg,bias));
     assert(bias[0]>120000 && bias[0]<140000 && bias[1]>60000 && bias[1]<75000);
     assert(s3_barcode_decode_runs(runs,29U,2200000U,2000000U,12500U,&cfg,&result));
     assert(result.letter=='A');

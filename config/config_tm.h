@@ -12,8 +12,8 @@
  */
 
 /*
- *	config_tm.h
- *	T-Monitor Configuration Definition
+ *  config_tm.h
+ *  T-Monitor Configuration Definition
  */
 
 #ifndef __TM_CONFIG_H__
@@ -24,15 +24,15 @@
  *      Select the communication port used by T-Monitor.
  *         1: Valid  0: Invalid  (Only one of them is valid)
  */
-#define	TM_COM_SERIAL_DEV	(1)	/* Use serial communication device */
-#define	TM_COM_NO_DEV		(0)	/* Do not use communication port */
+#define TM_COM_SERIAL_DEV (1) /* Use serial communication device */
+#define TM_COM_NO_DEV (0)     /* Do not use communication port */
 
 /*---------------------------------------------------------------------- */
 /* tm_printf() call setting
  *         1: Valid  0: Invalid
  */
-#define	USE_TM_PRINTF		(1)	/* Use tm_printf() & tm_sprintf() calls */
-#define	TM_OUTBUF_SZ		(0)	/* Output Buffer size in stack */
+#define USE_TM_PRINTF (1) /* Use tm_printf() & tm_sprintf() calls */
+#define TM_OUTBUF_SZ (0)  /* Output Buffer size in stack */
 
 /*
  * Console sink selection (RaspberryPi Pico).
@@ -47,10 +47,10 @@
  * console existed. UART0 costs two pins and covers that window.
  */
 #ifndef TM_CONSOLE_USB_CDC
-#define	TM_CONSOLE_USB_CDC	(0)	/* USB CDC-ACM console */
+#define TM_CONSOLE_USB_CDC (0) /* USB CDC-ACM console */
 #endif
 #ifndef TM_CONSOLE_UART
-#define	TM_CONSOLE_UART		(1)	/* UART0 early/panic mirror */
+#define TM_CONSOLE_UART (1) /* UART0 early/panic mirror */
 #endif
 
 #endif /* __TM_CONFIG_H__ */

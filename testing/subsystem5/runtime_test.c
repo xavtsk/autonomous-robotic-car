@@ -6,7 +6,7 @@
 #include "../integration/controller_test_kernel.h"
 #define TMO_POL 0
 ER tk_dly_tsk(unsigned ms);
-#include "../../app_program/subsystem5/subsystem5.h"
+#include "../../app_program/subsystem5/buddy5.h"
 #include "../../app_program/subsystem2/motion.h"
 #include <assert.h>
 #include <setjmp.h>
@@ -40,7 +40,7 @@ bool ultrasonic_sensor_poll(uint32_t now,uint16_t *mm,bool *valid)
 }
 void ultrasonic_sensor_cancel(void) { assert(!locks);pinging=false; }
 #define S5_SCAN_LOG 0
-#include "../../app_program/subsystem5/subsystem5.c"
+#include "../../app_program/subsystem5/buddy5.c"
 ER tk_dly_tsk(unsigned ms)
 {
     s5_observation_t o={0}; /* GCC 13 -Wmaybe-uninitialized */
@@ -82,7 +82,7 @@ int main(void)
     return 0;
 #endif
     for(scenario=0;scenario<5;scenario++) {
-        mutex_id=task_id=0;requested=0;requested_angle=0;shared.cancel=shared.busy=false;
+        g_mutex_id=g_task_id=0;g_requested=0;g_requested_angle=0;g_shared.cancel=g_shared.busy=false;
         clock_us=loops=locks=stage=scan_angles=last_trigger=0;
         angle=90;hw_started=pinging=fail_echo=false;stationary_wheels=true;bad_pings=0;
         assert(subsystem5_init()==E_OK && subsystem5_start()==E_OK);
@@ -95,9 +95,9 @@ int main(void)
             snapshot_lock_error=E_OBJ;
             assert(subsystem5_read_snapshot(&copy)==S5_SNAPSHOT_UNAVAILABLE);
             snapshot_lock_error=0;
-            published[S5_PACKET_BYTES-1]|=0x80U;
+            g_published[S5_PACKET_BYTES-1]|=0x80U;
             assert(subsystem5_read_snapshot(&copy)==S5_SNAPSHOT_INVALID && !locks);
-            published[S5_PACKET_BYTES-1]&=0x7fU;
+            g_published[S5_PACKET_BYTES-1]&=0x7fU;
             assert(subsystem5_read_snapshot(&copy)==S5_SNAPSHOT_OK);
         }
         if(!setjmp(finish)) { owner(0,0); }

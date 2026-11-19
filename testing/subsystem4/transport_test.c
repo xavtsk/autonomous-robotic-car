@@ -50,7 +50,7 @@ ER tk_loc_mtx(ID id,TMO timeout)
 ER tk_unl_mtx(ID id) { assert(id>0 && id<=2 && locked[id]);locked[id]=false;return E_OK; }
 int tm_printf(const UB *format,...) { (void)format;return 0; }
 uint32_t runtime_read_clock(uint32_t address) { (void)address;return clock_us; }
-#include "../../app_program/subsystem4/subsystem4.h"
+#include "../../app_program/subsystem4/buddy4.h"
 #include "../../app_program/subsystem2/motion.h"
 bool motion_get_feedback(motion_feedback_t *out)
 {
@@ -82,7 +82,7 @@ static bool fake_sensor_read(const imu_bus_t *bus,uint32_t now,imu_sample_t *s)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnewline-eof"
 #endif
-#include "../../app_program/subsystem4/subsystem4.c"
+#include "../../app_program/subsystem4/buddy4.c"
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif

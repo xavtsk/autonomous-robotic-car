@@ -47,7 +47,7 @@ separate `on_hump` flag and live height report a right-wheel crossing.
 
 The portable monitor defaults to `TERRAIN_HUMP_LONGITUDINAL`, which retains the
 existing distance-times-sine-of-pitch method for a hump crossed by both wheels.
-`terrain_monitor_set_hump_geometry()` selects the geometry explicitly; a new run
+`terrain_monitor_set_geometry()` selects the geometry explicitly; a new run
 retains that selection. Do not use the right-wheel formula for a general slope,
 both-wheel hump, left-wheel-only obstacle, or a lifted chassis.
 
@@ -58,7 +58,7 @@ discard an incomplete crossing. A successful sensor/telemetry check does not by
 itself validate measured height.
 
 Runtime `S4=1` reads Buddy 2's timestamped feedback and starts in the integrated
-`S3_MOTION=1` profile. `controller/terrain_integration.c` runs inside the existing
+`S3_MOTION=1` profile. `controller/terr_link.c` runs inside the existing
 sampling/controller task. It is the sole S4 event consumer; S4 never calls motors.
 
 START requires a fresh calibrated IMU sample. After the normal navigation/motion
@@ -132,9 +132,9 @@ of a degree, turn rate, count, peak and impact. Since 19 Nov 2026 the live
 `car/telemetry/terrain` packet also carries the compass turn rate (with its
 validity) and lifted/overturned, so they are on Wi-Fi too. The existing heading
 packet remains unavailable: compass-derived turn rate is not an absolute heading
-measurement. Turn rate is valid only after `subsystem4_set_magnetic_calibration()`.
+measurement. Turn rate is valid only after `subsystem4_set_mag_calibration()`.
 
-`subsystem4_set_magnetic_calibration()` accepts measured vehicle-axis hard-iron
+`subsystem4_set_mag_calibration()` accepts measured vehicle-axis hard-iron
 bias and diagonal soft-iron scale. Identity coefficients must not be used as a
 claim that calibration was done. Compass turn rate is an estimate, not gyro data;
 motor magnetic interference must be measured. Stationary offset calibration does

@@ -2,52 +2,60 @@
  * navigation, motion-request and report-consumer owner. No second task here. */
 #include "vehicle_controller.h"
 #include "s3_integration.h"
-#include "terrain_integration.h"
+#include "terr_link.h"
 #include "run_timing.h"
-#include "../subsystem1/subsystem1.h"
+#include "../subsystem1/buddy1.h"
 #include "../subsystem2/motion_pack.h"
 #if APP_S5
 #include "../subsystem5/s5_api.h"
-#include "../subsystem5/obstacle_avoidance.h"
+#include "../subsystem5/avoid_obstacle.h"
 #endif
 
 #define MOTION_PERIOD_US 200000U
 #define STOPPED_MOTION_PERIOD_US 1000000U
 #define LIVE_PERIOD_CYCLES (200U / S3_SAMPLE_PERIOD_MS)
-#if (200U % S3_SAMPLE_PERIOD_MS) != 0U || LIVE_PERIOD_CYCLES == 0U || LIVE_PERIOD_CYCLES > 63U
+#if (200U % S3_SAMPLE_PERIOD_MS) != 0U || LIVE_PERIOD_CYCLES == 0U ||          \
+    LIVE_PERIOD_CYCLES > 63U
 #error "200 ms telemetry cadence must fit the six-bit cycle dividers"
 #endif
-static struct {
+static struct
+{
     uint32_t last_us;
     s3_drive_state_t state;
-    unsigned seen:1, usable:1, stopped:1;
-} telemetry;
+    unsigned seen : 1, usable : 1, stopped : 1;
+} g_telemetry;
+
 /* Route pose (car/telemetry/pose): Buddy 2's encoder distance/heading relative
  * to the start of the current run. Only the sampling owner touches it. */
 #define POSE_PERIOD_CYCLES LIVE_PERIOD_CYCLES
-static struct {
+
+static struct
+{
     unsigned running : 1;
     unsigned divider : 6;
     float start_distance_m, start_heading_deg;
-} pose;
-static BUDDY1_ROBOT_STATE last_state;
-static BUDDY1_BARCODE_ACTION last_action;
+} g_pose;
+
+static buddy1_robot_state_t g_last_state;
+static buddy1_barcode_action_t g_last_action;
 /* Events (barcode, state, obstacle summary, scan profile, fault changes) are
  * retried every cycle while Buddy 1's 4-slot outbox is full (E_TMOUT), so a
  * busy link delays them instead of dropping them. Periodic live samples
  * (motion, pose, terrain, avoidance) stay best effort: the next one follows. */
-static UB pending_barcode;   /* letter still to be queued, 0 = none */
-static unsigned last_faults;
-static bool faults_seen;
+static UB g_pending_barcode; /* letter still to be queued, 0 = none */
+static unsigned g_last_faults;
+static bool g_b_faults_seen;
 #if APP_S5
-static struct {
+static struct
+{
     uint16_t scan;
-    unsigned route:2, invalidated:1;
-    signed echo:2; /* -1 unknown, 0 healthy, 1 no echo */
-    uint16_t profile_scan;       /* last scan id sent on car/telemetry/scan */
-    unsigned profile_sent:1;
-    unsigned divider:6;          /* car/telemetry/avoidance every 200 ms */
-} obstacle_report;
+    unsigned route : 2, invalidated : 1;
+    unsigned echo : 2;     /* 2 unknown, 0 healthy, 1 no echo. */
+    uint16_t profile_scan; /* last scan id sent on car/telemetry/scan */
+    unsigned profile_sent : 1;
+    unsigned divider : 6; /* car/telemetry/avoidance every 200 ms */
+} g_obstacle_report;
+
 /* Raw readings of the scan whose profile was just sent, at most one message
  * every SAMPLE_PERIOD cycles (car/telemetry/scan_sample), and only while the
  * 4-slot outbox is empty: spare capacity only, so barcode/state/fault events
@@ -56,229 +64,403 @@ static struct {
 #if SAMPLE_PERIOD == 0U || SAMPLE_PERIOD > 15U
 #error "scan-sample pacing must fit its four-bit divider"
 #endif
-static struct {
+static struct
+{
     s5_sample_t sample[S5_SAMPLES_MAX];
     uint16_t id;
-    unsigned count:5, next:5, peek:1, pending:1, loaded:1, divider:4;
-} scan_samples;
+    unsigned count : 5, next : 5, peek : 1, pending : 1, loaded : 1,
+        divider : 4;
+} g_scan_samples;
+
 /* Everything Buddy 5 knows, for the laptop: live range, servo angle and
  * bypass progress at 5 Hz (phase-shifted from the other 200 ms reports so the
  * four-message outbox is not filled in one cycle), and the full FR6 profile
  * once per finished scan or side peek. Unusable values are sent as zero with
  * their validity cleared, never as a plausible number. */
 #define S5_LIVE_PERIOD LIVE_PERIOD_CYCLES
-static void obstacle_live_report(const s5_observation_t *o, bool have, unsigned control)
+
+static void obstacle_live_report (const s5_observation_t * p_o, bool have,
+                                  unsigned control)
 {
-    BUDDY1_AVOIDANCE a = {0};
-    if (++obstacle_report.divider < S5_LIVE_PERIOD) return;
-    obstacle_report.divider = 0U;
-    if (have) {
-        a.no_echo = o->no_echo ? 1U : 0U;
-        if (o->range_valid && !o->no_echo && o->range_mm >= BUDDY1_OBSTACLE_MIN_MM &&
-            o->range_mm <= BUDDY1_OBSTACLE_MAX_MM) { a.range_valid = 1U; a.range_mm = o->range_mm; }
+    buddy1_avoidance_t value_a = {0};
+    if (++g_obstacle_report.divider < S5_LIVE_PERIOD)
+    {
+        return;
     }
-    a.servo_deg = subsystem5_servo_angle();
-    if (a.servo_deg > BUDDY1_SERVO_MAX_DEG) a.servo_deg = 0U;
-    a.state = (uint8_t)(control & 7U); a.fault = (uint8_t)((control >> 3) & 7U);
-    a.route = (uint8_t)((control >> 6) & 3U); a.leg = (uint8_t)((control >> 8) & 15U);
-    a.pass = (uint8_t)((control >> 12) & 7U); a.swapped = (uint8_t)((control >> 15) & 1U);
-    if (a.state > BUDDY1_S5_STATE_MAX) a.state = 0U;
-    if (a.route > BUDDY1_ROUTE_RIGHT) a.route = 0U;
-    if (a.pass > BUDDY1_S5_PASS_MAX) a.pass = 0U;
-    (void)buddy1_report_avoidance(&a);   /* QoS 0: the next report follows */
-}
-static void obstacle_profile_report(const s5_observation_t *o)
-{
-    const s5_profile_t *p = &o->profile;
-    BUDDY1_SCAN q = {0};
-    ER er;
-    if (!o->scan_done || (obstacle_report.profile_sent && obstacle_report.profile_scan == o->scan_id)) return;
-    q.scan_id = (uint8_t)(o->scan_id & 0xFFU);
-    if (p->valid) {
-        q.valid = 1U; q.closest_mm = p->closest_mm; q.width_mm = p->width_mm;
-        q.left_clear_mm = p->left_clear_mm; q.right_clear_mm = p->right_clear_mm;
-        q.forward_mm = p->forward_mm; q.left_edge_mm = p->left_edge_mm; q.right_edge_mm = p->right_edge_mm;
-    }
-    er = buddy1_report_scan(&q);
-    if (er == E_PAR && q.valid) { q = (BUDDY1_SCAN){0}; q.scan_id = (uint8_t)(o->scan_id & 0xFFU); er = buddy1_report_scan(&q); }
-    if (er == E_OK || er == E_PAR) {        /* E_TMOUT: outbox full, retry next cycle */
-        obstacle_report.profile_scan = o->scan_id; obstacle_report.profile_sent = 1U;
-        scan_samples.id = o->scan_id; scan_samples.pending = 1U; scan_samples.loaded = 0U;
-        scan_samples.divider = 0U;
-    }
-}
-static void obstacle_samples_report(void)
-{
-    BUDDY1_SCAN_SAMPLE q = {0};
-    unsigned angle, mm, count;
-    bool valid, peek;
-    uint16_t id;
-    ER er;
-    if (!scan_samples.pending || ++scan_samples.divider < SAMPLE_PERIOD) return;
-    scan_samples.divider = 0U;
-    if (!scan_samples.loaded) {
-        if (!subsystem5_scan_samples(&id, &peek, scan_samples.sample, &count)) return; /* busy: retry */
-        if (id != scan_samples.id || count == 0U || count > BUDDY1_SCAN_SAMPLES_MAX) {
-            scan_samples.pending = 0U; return;   /* no readings kept for this scan */
+    g_obstacle_report.divider = 0U;
+    if (have)
+    {
+        value_a.no_echo = p_o->no_echo ? 1U : 0U;
+        if (p_o->range_valid && !p_o->no_echo &&
+            p_o->range_mm >= BUDDY1_OBSTACLE_MIN_MM &&
+            p_o->range_mm <= BUDDY1_OBSTACLE_MAX_MM)
+        {
+            value_a.range_valid = 1U;
+            value_a.range_mm = p_o->range_mm;
         }
-        scan_samples.count = count; scan_samples.next = 0U;
-        scan_samples.peek = peek ? 1U : 0U; scan_samples.loaded = 1U;
     }
-    if (!buddy1_outbox_idle()) return;          /* busy link: same reading later */
-    if (!s5_sample_unpack(&scan_samples.sample[scan_samples.next], &angle, &mm, &valid)) {
-        er = E_PAR;
-    } else {
-        q.scan_id = (uint8_t)(scan_samples.id & 0xFFU); q.peek = (uint8_t)scan_samples.peek;
-        q.index = (uint8_t)scan_samples.next; q.count = (uint8_t)scan_samples.count;
-        q.angle_deg = (uint8_t)angle; q.valid = valid ? 1U : 0U; q.distance_mm = valid ? (uint16_t)mm : 0U;
-        er = buddy1_report_scan_sample(&q);
+    value_a.servo_deg = subsystem5_servo_angle();
+    if (value_a.servo_deg > BUDDY1_SERVO_MAX_DEG)
+    {
+        value_a.servo_deg = 0U;
     }
-    if (er == E_TMOUT) return;               /* outbox full: same reading next time */
-    if (++scan_samples.next >= scan_samples.count) scan_samples.pending = 0U;
+    value_a.state = (uint8_t)(control & 7U);
+    value_a.fault = (uint8_t)((control >> 3) & 7U);
+    value_a.route = (uint8_t)((control >> 6) & 3U);
+    value_a.leg = (uint8_t)((control >> 8) & 15U);
+    value_a.pass = (uint8_t)((control >> 12) & 7U);
+    value_a.swapped = (uint8_t)((control >> 15) & 1U);
+    if (value_a.state > BUDDY1_S5_STATE_MAX)
+    {
+        value_a.state = 0U;
+    }
+    if (value_a.route > BUDDY1_ROUTE_RIGHT)
+    {
+        value_a.route = 0U;
+    }
+    if (value_a.pass > BUDDY1_S5_PASS_MAX)
+    {
+        value_a.pass = 0U;
+    }
+    (void)buddy1_report_avoidance(
+        &value_a); /* QoS 0: the next report follows */
+}
+
+static void obstacle_profile_report (const s5_observation_t * p_o)
+{
+    const s5_profile_t * p_p = &p_o->profile;
+    buddy1_scan_t value_q = {0};
+    ER value_er;
+    if (!p_o->scan_done || (g_obstacle_report.profile_sent &&
+                            g_obstacle_report.profile_scan == p_o->scan_id))
+    {
+        return;
+    }
+    value_q.scan_id = (uint8_t)(p_o->scan_id & 0xFFU);
+    if (p_p->valid)
+    {
+        value_q.valid = 1U;
+        value_q.closest_mm = p_p->closest_mm;
+        value_q.width_mm = p_p->width_mm;
+        value_q.left_clear_mm = p_p->left_clear_mm;
+        value_q.right_clear_mm = p_p->right_clear_mm;
+        value_q.forward_mm = p_p->forward_mm;
+        value_q.left_edge_mm = p_p->left_edge_mm;
+        value_q.right_edge_mm = p_p->right_edge_mm;
+    }
+    value_er = buddy1_report_scan(&value_q);
+    if (value_er == E_PAR && value_q.valid)
+    {
+        value_q = (buddy1_scan_t){0};
+        value_q.scan_id = (uint8_t)(p_o->scan_id & 0xFFU);
+        value_er = buddy1_report_scan(&value_q);
+    }
+    if (value_er == E_OK || value_er == E_PAR)
+    { /* E_TMOUT: outbox full, retry next cycle */
+        g_obstacle_report.profile_scan = p_o->scan_id;
+        g_obstacle_report.profile_sent = 1U;
+        g_scan_samples.id = p_o->scan_id;
+        g_scan_samples.pending = 1U;
+        g_scan_samples.loaded = 0U;
+        g_scan_samples.divider = 0U;
+    }
+}
+
+static void obstacle_samples_report (void)
+{
+    buddy1_scan_sample_t value_q = {0};
+    unsigned angle, value_mm, count;
+    bool valid, peek;
+    uint16_t value_id;
+    ER value_er;
+    if (!g_scan_samples.pending || ++g_scan_samples.divider < SAMPLE_PERIOD)
+    {
+        return;
+    }
+    g_scan_samples.divider = 0U;
+    if (!g_scan_samples.loaded)
+    {
+        if (!subsystem5_scan_samples(&value_id, &peek, g_scan_samples.sample,
+                                     &count))
+        {
+            return; /* busy: retry */
+        }
+        if (value_id != g_scan_samples.id || count == 0U ||
+            count > BUDDY1_SCAN_SAMPLES_MAX)
+        {
+            g_scan_samples.pending = 0U;
+            return; /* no readings kept for this scan */
+        }
+        g_scan_samples.count = count;
+        g_scan_samples.next = 0U;
+        g_scan_samples.peek = peek ? 1U : 0U;
+        g_scan_samples.loaded = 1U;
+    }
+    if (!buddy1_outbox_idle())
+    {
+        return; /* busy link: same reading later */
+    }
+    if (!s5_sample_unpack(&g_scan_samples.sample[g_scan_samples.next], &angle,
+                          &value_mm, &valid))
+    {
+        value_er = E_PAR;
+    }
+    else
+    {
+        value_q.scan_id = (uint8_t)(g_scan_samples.id & 0xFFU);
+        value_q.peek = (uint8_t)g_scan_samples.peek;
+        value_q.index = (uint8_t)g_scan_samples.next;
+        value_q.count = (uint8_t)g_scan_samples.count;
+        value_q.angle_deg = (uint8_t)angle;
+        value_q.valid = valid ? 1U : 0U;
+        value_q.distance_mm = valid ? (uint16_t)value_mm : 0U;
+        value_er = buddy1_report_scan_sample(&value_q);
+    }
+    if (value_er == E_TMOUT)
+    {
+        return; /* outbox full: same reading next time */
+    }
+    if (++g_scan_samples.next >= g_scan_samples.count)
+    {
+        g_scan_samples.pending = 0U;
+    }
 }
 #endif
 /* True only between a prepare_start() that newly froze the Buddy 1 map and
  * the end of that same START attempt. Only the sampling owner touches it. */
-static bool start_claimed_map;
+static bool g_start_claimed_map;
 
-static BUDDY1_BARCODE_ACTION action_for(s3_nav_action_t action)
+static buddy1_barcode_action_t action_for (s3_nav_action_t action)
 {
-    switch (action) {
-    case S3_NAV_STRAIGHT: return BUDDY1_ACTION_FORWARD;
-    case S3_NAV_LEFT: return BUDDY1_ACTION_LEFT;
-    case S3_NAV_RIGHT: return BUDDY1_ACTION_RIGHT;
-    case S3_NAV_UTURN: return BUDDY1_ACTION_UTURN;
-    default: return BUDDY1_ACTION_UNKNOWN;
+    switch (action)
+    {
+    case S3_NAV_STRAIGHT:
+        return BUDDY1_ACTION_FORWARD;
+    case S3_NAV_LEFT:
+        return BUDDY1_ACTION_LEFT;
+    case S3_NAV_RIGHT:
+        return BUDDY1_ACTION_RIGHT;
+    case S3_NAV_UTURN:
+        return BUDDY1_ACTION_UTURN;
+    default:
+        return BUDDY1_ACTION_UNKNOWN;
     }
 }
-static VEHICLE_CONTROLLER_STATE public_state(s3_drive_state_t state)
+
+static vehicle_controller_state_t public_state (s3_drive_state_t state)
 {
-    switch (state) {
-    case S3_DRIVE_FOLLOW: return VC_LINE_FOLLOW;
+    switch (state)
+    {
+    case S3_DRIVE_FOLLOW:
+        return VC_LINE_FOLLOW;
     case S3_DRIVE_BRAKING:
     case S3_DRIVE_MANOEUVRE:
-    case S3_DRIVE_REACQUIRE: return VC_TURNING;
-    case S3_DRIVE_HALTED: return VC_STOPPED;
-    case S3_DRIVE_FAULT: return VC_FAULT;
-    default: return VC_WAITING;
+    case S3_DRIVE_REACQUIRE:
+        return VC_TURNING;
+    case S3_DRIVE_HALTED:
+        return VC_STOPPED;
+    case S3_DRIVE_FAULT:
+        return VC_FAULT;
+    default:
+        return VC_WAITING;
     }
 }
-static BUDDY1_ROBOT_STATE wire_state(s3_drive_state_t state)
+
+static buddy1_robot_state_t wire_state (s3_drive_state_t state)
 {
-    if (state == S3_DRIVE_FAULT) return BUDDY1_STATE_ERROR;
-    if (state == S3_DRIVE_OFF || state == S3_DRIVE_HALTED) return BUDDY1_STATE_STOPPED;
-    if (state == S3_DRIVE_MANOEUVRE) {
-        if (last_action == BUDDY1_ACTION_LEFT) return BUDDY1_STATE_TURNING_LEFT;
-        if (last_action == BUDDY1_ACTION_RIGHT) return BUDDY1_STATE_TURNING_RIGHT;
-        if (last_action == BUDDY1_ACTION_UTURN) return BUDDY1_STATE_UTURN;
+    if (state == S3_DRIVE_FAULT)
+    {
+        return BUDDY1_STATE_ERROR;
+    }
+    if (state == S3_DRIVE_OFF || state == S3_DRIVE_HALTED)
+    {
+        return BUDDY1_STATE_STOPPED;
+    }
+    if (state == S3_DRIVE_MANOEUVRE)
+    {
+        if (g_last_action == BUDDY1_ACTION_LEFT)
+        {
+            return BUDDY1_STATE_TURNING_LEFT;
+        }
+        if (g_last_action == BUDDY1_ACTION_RIGHT)
+        {
+            return BUDDY1_STATE_TURNING_RIGHT;
+        }
+        if (g_last_action == BUDDY1_ACTION_UTURN)
+        {
+            return BUDDY1_STATE_UTURN;
+        }
     }
     return BUDDY1_STATE_LINE_FOLLOWING;
 }
-static bool run_active(s3_drive_state_t state)
+
+static bool run_active (s3_drive_state_t state)
 {
     return state == S3_DRIVE_FOLLOW || state == S3_DRIVE_BRAKING ||
            state == S3_DRIVE_MANOEUVRE || state == S3_DRIVE_REACQUIRE;
 }
+
 /* Repeating zero-speed packets need only a 1 Hz heartbeat while stopped (the
  * dashboard's motion freshness window is 3 s). Keep 5 Hz when moving or the
  * estimate is unavailable, and report transitions on the next observation. */
-static void motion_report(const s3_integration_status_t *status,
-                          const motion_status_t *m, bool available)
+static void motion_report (const s3_integration_status_t * p_status,
+                           const motion_status_t * p_m, bool available)
 {
-    const uint32_t now = status->navigation.timestamp_us;
+    const uint32_t now = p_status->navigation.timestamp_us;
     float left = 0.0f, right = 0.0f;
-    bool usable = available && m->b_valid && !m->b_busy;
-    if (usable) {
-        left = m->speed_left_mps * 1000.0f;
-        right = m->speed_right_mps * 1000.0f;
+    bool usable = available && p_m->b_valid && !p_m->b_busy;
+    if (usable)
+    {
+        left = p_m->speed_left_mps * 1000.0f;
+        right = p_m->speed_right_mps * 1000.0f;
         /* Keep the agreed wheel range unchanged. Calibrated top speed exceeds
          * +/-510 mm/s: mark unavailable, NEVER clip or widen the wire. */
-        usable = left == left && right == right &&
-                 left >= -BUDDY1_SPEED_MAX_MMS && left <= BUDDY1_SPEED_MAX_MMS &&
-                 right >= -BUDDY1_SPEED_MAX_MMS && right <= BUDDY1_SPEED_MAX_MMS;
+        usable =
+            left == left && right == right && left >= -BUDDY1_SPEED_MAX_MMS &&
+            left <= BUDDY1_SPEED_MAX_MMS && right >= -BUDDY1_SPEED_MAX_MMS &&
+            right <= BUDDY1_SPEED_MAX_MMS;
     }
     /* The estimator's smoothing can leave tiny nonzero floats after braking.
      * Only slow down when the brake/still acknowledgement agrees and both
      * integer-mm/s values already report zero. Representable wheel movement
      * restores 5 Hz even when the drive state says HALTED or FAULT. */
-    const bool stopped = usable && !run_active(status->state) && m->b_stopped &&
-                         (H)left == 0 && (H)right == 0;
-    const uint32_t period = stopped ? STOPPED_MOTION_PERIOD_US : MOTION_PERIOD_US;
-    if (telemetry.seen && telemetry.state == status->state &&
-        telemetry.usable == usable && telemetry.stopped == stopped &&
-        (uint32_t)(now - telemetry.last_us) < period) return;
+    const bool stopped = usable && !run_active(p_status->state) &&
+                         p_m->b_stopped && (H)left == 0 && (H)right == 0;
+    const uint32_t period =
+        stopped ? STOPPED_MOTION_PERIOD_US : MOTION_PERIOD_US;
+    if (g_telemetry.seen && g_telemetry.state == p_status->state &&
+        g_telemetry.usable == usable && g_telemetry.stopped == stopped &&
+        (uint32_t)(now - g_telemetry.last_us) < period)
+    {
+        return;
+    }
 
-    telemetry.seen = true; telemetry.state = status->state;
-    telemetry.usable = usable; telemetry.stopped = stopped; telemetry.last_us = now;
-    if (usable) (void)buddy1_report_motion((H)left, (H)right);
-    else (void)buddy1_invalidate(BUDDY1_TOPIC_MOTION);
-}
-static int32_t round_to_int(float x) { return (int32_t)(x >= 0.0f ? x + 0.5f : x - 0.5f); }
-static void send_pose(const motion_status_t *m)
-{
-    int32_t cm = round_to_int((m->distance_m - pose.start_distance_m) * 100.0f);
-    int32_t deg = round_to_int(m->heading_deg - pose.start_heading_deg);
-    cm %= (int32_t)BUDDY1_POSE_DISTANCE_MOD;
-    if (cm < 0) cm += (int32_t)BUDDY1_POSE_DISTANCE_MOD;
-    deg %= 360;
-    if (deg < 0) deg += 360;
-    /* QoS 0 live data: a full outbox drops this sample; the next one,
-     * 200 ms later, carries the current pose (the laptop unwraps distance). */
-    (void)buddy1_report_pose((UH)cm, (H)deg);
-}
-/* One pose at START (0, 0), then every 200 ms while the run is active, and a
- * final one when it ends. Skipped while Buddy 2's estimate is unusable. */
-static void pose_report(const s3_integration_status_t *status,
-                        const motion_status_t *m, bool available)
-{
-    const bool active = run_active(status->state);
-    const bool usable = available && m->b_valid && !m->b_busy &&
-                        m->distance_m == m->distance_m && m->heading_deg == m->heading_deg;
-    if (active && !pose.running) {
-        if (!usable) return; /* start reference needs a valid estimate */
-        pose.running = true; pose.divider = 0U;
-        pose.start_distance_m = m->distance_m; pose.start_heading_deg = m->heading_deg;
-        send_pose(m);
-    } else if (active) {
-        if (++pose.divider >= POSE_PERIOD_CYCLES) {
-            pose.divider = 0U;
-            if (usable) send_pose(m);
-        }
-    } else if (pose.running) {
-        pose.running = false;
-        if (usable) send_pose(m);
+    g_telemetry.seen = true;
+    g_telemetry.state = p_status->state;
+    g_telemetry.usable = usable;
+    g_telemetry.stopped = stopped;
+    g_telemetry.last_us = now;
+    if (usable)
+    {
+        (void)buddy1_report_motion((H)left, (H)right);
+    }
+    else
+    {
+        (void)buddy1_invalidate(BUDDY1_TOPIC_MOTION);
     }
 }
-ER vehicle_controller_init(void)
+
+static int32_t round_to_int (float value_x)
+{
+    return (int32_t)(value_x >= 0.0f ? value_x + 0.5f : value_x - 0.5f);
+}
+
+static void send_pose (const motion_status_t * p_m)
+{
+    int32_t value_cm =
+        round_to_int((p_m->distance_m - g_pose.start_distance_m) * 100.0f);
+    int32_t deg = round_to_int(p_m->heading_deg - g_pose.start_heading_deg);
+    value_cm %= (int32_t)BUDDY1_POSE_DISTANCE_MOD;
+    if (value_cm < 0)
+    {
+        value_cm += (int32_t)BUDDY1_POSE_DISTANCE_MOD;
+    }
+    deg %= 360;
+    if (deg < 0)
+    {
+        deg += 360;
+    }
+    /* QoS 0 live data: a full outbox drops this sample; the next one,
+     * 200 ms later, carries the current pose (the laptop unwraps distance). */
+    (void)buddy1_report_pose((UH)value_cm, (H)deg);
+}
+
+/* One pose at START (0, 0), then every 200 ms while the run is active, and a
+ * final one when it ends. Skipped while Buddy 2's estimate is unusable. */
+static void pose_report (const s3_integration_status_t * p_status,
+                         const motion_status_t * p_m, bool available)
+{
+    const bool active = run_active(p_status->state);
+    const bool usable = available && p_m->b_valid && !p_m->b_busy &&
+                        p_m->distance_m == p_m->distance_m &&
+                        p_m->heading_deg == p_m->heading_deg;
+    if (active && !g_pose.running)
+    {
+        if (!usable)
+        {
+            return; /* start reference needs a valid estimate */
+        }
+        g_pose.running = true;
+        g_pose.divider = 0U;
+        g_pose.start_distance_m = p_m->distance_m;
+        g_pose.start_heading_deg = p_m->heading_deg;
+        send_pose(p_m);
+    }
+    else if (active)
+    {
+        if (++g_pose.divider >= POSE_PERIOD_CYCLES)
+        {
+            g_pose.divider = 0U;
+            if (usable)
+            {
+                send_pose(p_m);
+            }
+        }
+    }
+    else if (g_pose.running)
+    {
+        g_pose.running = false;
+        if (usable)
+        {
+            send_pose(p_m);
+        }
+    }
+}
+
+ER vehicle_controller_init (void)
 {
     terrain_control_init();
-    pose.running = false; pose.divider = 0U;
-    telemetry.seen = false; last_state = BUDDY1_STATE_UNKNOWN;
-    last_action = BUDDY1_ACTION_UNKNOWN; last_faults = 0U; faults_seen = false;
-    pending_barcode = 0U;
-    start_claimed_map = false;
+    g_pose.running = false;
+    g_pose.divider = 0U;
+    g_telemetry.seen = false;
+    g_last_state = BUDDY1_STATE_UNKNOWN;
+    g_last_action = BUDDY1_ACTION_UNKNOWN;
+    g_last_faults = 0U;
+    g_b_faults_seen = false;
+    g_pending_barcode = 0U;
+    g_start_claimed_map = false;
 #if APP_S5
-    obstacle_report.scan=0; obstacle_report.route=0;
-    obstacle_report.echo=-1; obstacle_report.invalidated=false;
-    obstacle_report.profile_scan=0U; obstacle_report.profile_sent=0U;
-    obstacle_report.divider=S5_LIVE_PERIOD/4U;
-    scan_samples.pending=0U; scan_samples.loaded=0U;
+    g_obstacle_report.scan = 0;
+    g_obstacle_report.route = 0;
+    g_obstacle_report.echo = 2U;
+    g_obstacle_report.invalidated = false;
+    g_obstacle_report.profile_scan = 0U;
+    g_obstacle_report.profile_sent = 0U;
+    g_obstacle_report.divider = S5_LIVE_PERIOD / 4U;
+    g_scan_samples.pending = 0U;
+    g_scan_samples.loaded = 0U;
 #endif
     return E_OK;
 }
-ER vehicle_controller_start(void) { return E_OK; }
 
-ER vehicle_controller_begin(void)
+ER vehicle_controller_start (void)
+{
+    return E_OK;
+}
+
+ER vehicle_controller_begin (void)
 {
     const s3_control_request_t request = {.kind = S3_CONTROL_START};
     return s3_integration_submit(&request) ? E_OK : E_OBJ;
 }
-ER vehicle_controller_request_stop(void)
+
+ER vehicle_controller_request_stop (void)
 {
     const s3_control_request_t request = {.kind = S3_CONTROL_STOP};
     return s3_integration_submit(&request) ? E_OK : E_OBJ;
 }
-VEHICLE_CONTROLLER_STATE vehicle_controller_state(void)
+
+vehicle_controller_state_t vehicle_controller_state (void)
 {
     /* Only the normal controller/UI task may use this convenience view.
      * Keep the temporary copy task-local, not a second shared snapshot. */
@@ -288,128 +470,214 @@ VEHICLE_CONTROLLER_STATE vehicle_controller_state(void)
 
 /* Compatibility boundary: new sensor observations are processed in the SAME
  * owner as the upstream drive FSM. Never accept a second external producer. */
-ER vehicle_controller_submit_navigation(const s3_navigation_output_t *output)
-{ (void)output; return E_NOSPT; }
+ER vehicle_controller_submit_nav (const s3_navigation_output_t * p_output)
+{
+    (void)p_output;
+    return E_NOSPT;
+}
 
 /* Called by the sampling/controller owner immediately before an explicit START.
- * Freeze and copy the Buddy 1 map atomically, then update its private nav context. */
-bool vehicle_controller_prepare_start(s3_navigation_t *navigation)
+ * Freeze and copy the Buddy 1 map atomically, then update its private nav
+ * context. */
+bool vehicle_controller_prep_start (s3_navigation_t * p_navigation)
 {
-    BUDDY1_BARCODE_MAP map;
+    buddy1_barcode_map_t map;
     BOOL newly = FALSE;
     s3_nav_action_t expanded[26] = {0};
-    start_claimed_map = false;
-    if (!navigation || buddy1_configuration_claim(&map, &newly) != E_OK)
-        return false;
-    expanded[map.forward-'A'] = S3_NAV_STRAIGHT;
-    expanded[map.left-'A'] = S3_NAV_LEFT;
-    expanded[map.right-'A'] = S3_NAV_RIGHT;
-    expanded[map.uturn-'A'] = S3_NAV_UTURN;
-    if (!s3_navigation_set_mapping(navigation, expanded)) {
-        /* Nothing installed: undo only a freeze this attempt took. */
-        if (newly) (void)buddy1_configuration_reopen();
+    g_start_claimed_map = false;
+    if (!p_navigation || buddy1_configuration_claim(&map, &newly) != E_OK)
+    {
         return false;
     }
-    start_claimed_map = newly != FALSE;
+    expanded[map.forward - 'A'] = S3_NAV_STRAIGHT;
+    expanded[map.left - 'A'] = S3_NAV_LEFT;
+    expanded[map.right - 'A'] = S3_NAV_RIGHT;
+    expanded[map.uturn - 'A'] = S3_NAV_UTURN;
+    if (!s3_navigation_set_mapping(p_navigation, expanded))
+    {
+        /* Nothing installed: undo only a freeze this attempt took. */
+        if (newly)
+        {
+            (void)buddy1_configuration_reopen();
+        }
+        return false;
+    }
+    g_start_claimed_map = newly != FALSE;
     return true;
 }
-void vehicle_controller_cancel_start(void)
+
+void vehicle_controller_cancel_start (void)
 {
-    if (start_claimed_map) (void)buddy1_configuration_reopen();
-    start_claimed_map = false;
+    if (g_start_claimed_map)
+    {
+        (void)buddy1_configuration_reopen();
+    }
+    g_start_claimed_map = false;
 }
-void vehicle_controller_commit_start(void)
+
+void vehicle_controller_commit_start (void)
 {
-    start_claimed_map = false;
+    g_start_claimed_map = false;
 }
-bool vehicle_controller_apply_mapping(const s3_nav_action_t map[26])
+
+bool vehicle_controller_set_mapping (const s3_nav_action_t p_map[26])
 {
-    BUDDY1_BARCODE_MAP reduced = {0};
-    if (!map) return false;
-    for (unsigned i=0U;i<26U;i++) {
-        uint8_t *slot;
-        switch (map[i]) {
-        case S3_NAV_NONE: continue;
-        case S3_NAV_STRAIGHT: slot=&reduced.forward; break;
-        case S3_NAV_LEFT: slot=&reduced.left; break;
-        case S3_NAV_RIGHT: slot=&reduced.right; break;
-        case S3_NAV_UTURN: slot=&reduced.uturn; break;
-        default: return false;
+    buddy1_barcode_map_t reduced = {0};
+    if (!p_map)
+    {
+        return false;
+    }
+    for (unsigned value_i = 0U; value_i < 26U; value_i++)
+    {
+        uint8_t * p_slot;
+        switch (p_map[value_i])
+        {
+        case S3_NAV_NONE:
+            continue;
+        case S3_NAV_STRAIGHT:
+            p_slot = &reduced.forward;
+            break;
+        case S3_NAV_LEFT:
+            p_slot = &reduced.left;
+            break;
+        case S3_NAV_RIGHT:
+            p_slot = &reduced.right;
+            break;
+        case S3_NAV_UTURN:
+            p_slot = &reduced.uturn;
+            break;
+        default:
+            return false;
         }
-        if (*slot) return false; /* Team protocol permits exactly four letters. */
-        *slot=(uint8_t)('A'+i);
+        if (*p_slot)
+        {
+            return false; /* Team protocol permits exactly four letters. */
+        }
+        *p_slot = (uint8_t)('A' + value_i);
     }
     return buddy1_apply_barcode_map(&reduced) == E_OK;
 }
 
 /* Called only by the upstream sampling/controller owner, never under its
  * snapshot mutex. This mirror cannot command motors or consume reports. */
-void vehicle_controller_observe(const s3_integration_status_t *status)
+void vehicle_controller_observe (const s3_integration_status_t * p_status)
 {
     motion_status_t motion;
     bool motion_available;
-    unsigned active=last_faults & (BUDDY1_FAULT_STALL|BUDDY1_FAULT_ENCODER);
-    unsigned changed=BUDDY1_FAULT_IR;
-    BUDDY1_ROBOT_STATE state;
-    if (!status || mtx_buddy1_state <= 0) return;
+    unsigned active =
+        g_last_faults & (BUDDY1_FAULT_STALL | BUDDY1_FAULT_ENCODER);
+    unsigned changed = BUDDY1_FAULT_IR;
+    buddy1_robot_state_t state;
+    if (!p_status || g_mtx_buddy1_state <= 0)
+    {
+        return;
+    }
     terrain_control_report();
-    if (status->navigation.events & S3_EVENT_BARCODE) {
-        last_action=action_for(status->navigation.action);
-        pending_barcode=(UB)status->navigation.barcode.letter;
+    if (p_status->navigation.events & S3_EVENT_BARCODE)
+    {
+        g_last_action = action_for(p_status->navigation.action);
+        g_pending_barcode = (UB)p_status->navigation.barcode.letter;
     }
-    if (pending_barcode && buddy1_report_barcode(pending_barcode)!=E_TMOUT) pending_barcode=0U;
+    if (g_pending_barcode &&
+        buddy1_report_barcode(g_pending_barcode) != E_TMOUT)
+    {
+        g_pending_barcode = 0U;
+    }
     /* One coherent read for faults, route and speed. Do not reacquire Buddy 2's
-     * mutex or repeat encoder/heading arithmetic for each telemetry consumer. */
-    motion_available=motion_get_status(&motion);
-    if (motion_available) {
-        active=0U;
-        changed|=BUDDY1_FAULT_STALL|BUDDY1_FAULT_ENCODER;
-        if (motion.fault_bits & MOTION_FAULT_BIT(MOTION_FAULT_STALL)) active|=BUDDY1_FAULT_STALL;
-        if (motion.fault_bits & MOTION_FAULT_BIT(MOTION_FAULT_ENCODER)) active|=BUDDY1_FAULT_ENCODER;
+     * mutex or repeat encoder/heading arithmetic for each telemetry consumer.
+     */
+    motion_available = motion_get_status(&motion);
+    if (motion_available)
+    {
+        active = 0U;
+        changed |= BUDDY1_FAULT_STALL | BUDDY1_FAULT_ENCODER;
+        if (motion.fault_bits & motion_fault_bit(MOTION_FAULT_STALL))
+        {
+            active |= BUDDY1_FAULT_STALL;
+        }
+        if (motion.fault_bits & motion_fault_bit(MOTION_FAULT_ENCODER))
+        {
+            active |= BUDDY1_FAULT_ENCODER;
+        }
     }
-    if (status->navigation.fault_mask ||
-        (status->navigation.latched_faults & S3_FAULT_SENSOR)) active|=BUDDY1_FAULT_IR;
-    if (!faults_seen || active!=last_faults) {
-        ER error=buddy1_update_faults((UB)changed,(UB)(active & changed));
-        if (error==E_OK) { last_faults=active; faults_seen=true; }
+    if (p_status->navigation.fault_mask ||
+        (p_status->navigation.latched_faults & S3_FAULT_SENSOR))
+    {
+        active |= BUDDY1_FAULT_IR;
     }
-    state=wire_state(status->state);
-    pose_report(status, &motion, motion_available);
+    if (!g_b_faults_seen || active != g_last_faults)
+    {
+        ER error = buddy1_update_faults((UB)changed, (UB)(active & changed));
+        if (error == E_OK)
+        {
+            g_last_faults = active;
+            g_b_faults_seen = true;
+        }
+    }
+    state = wire_state(p_status->state);
+    pose_report(p_status, &motion, motion_available);
 #if APP_S5
     {
         s5_observation_t obstacle;
-        unsigned control=subsystem5_controller_status();
-        unsigned obstacle_state=control&7U,route=(control>>6)&3U;
+        unsigned control = subsystem5_controller_status();
+        unsigned obstacle_state = control & 7U, route = (control >> 6) & 3U;
         bool have_obstacle;
-        if (status->state==S3_DRIVE_MANOEUVRE && obstacle_state>=S5_WAIT_STOP && obstacle_state<=S5_FINISH)
-            state=BUDDY1_STATE_AVOIDING_OBSTACLE;
-        have_obstacle=subsystem5_snapshot(&obstacle);
+        if (p_status->state == S3_DRIVE_MANOEUVRE &&
+            obstacle_state >= S5_WAIT_STOP && obstacle_state <= S5_FINISH)
+        {
+            state = BUDDY1_STATE_AVOIDING_OBSTACLE;
+        }
+        have_obstacle = subsystem5_snapshot(&obstacle);
         obstacle_live_report(&obstacle, have_obstacle, control);
-        if (have_obstacle) {
+        if (have_obstacle)
+        {
             obstacle_profile_report(&obstacle);
             obstacle_samples_report();
-            if (obstacle_report.echo!=(int)obstacle.no_echo) {
-                ER er=buddy1_update_faults(BUDDY1_FAULT_NO_ECHO,obstacle.no_echo?BUDDY1_FAULT_NO_ECHO:0U);
-                if(er==E_OK) { obstacle_report.echo=(int)obstacle.no_echo; }
+            if (g_obstacle_report.echo != (unsigned)obstacle.no_echo)
+            {
+                ER value_er = buddy1_update_faults(
+                    BUDDY1_FAULT_NO_ECHO,
+                    obstacle.no_echo ? BUDDY1_FAULT_NO_ECHO : 0U);
+                if (value_er == E_OK)
+                {
+                    g_obstacle_report.echo = (unsigned)obstacle.no_echo;
+                }
             }
             if (obstacle.scan_done && obstacle.profile.valid &&
-                (obstacle_report.scan!=obstacle.scan_id || obstacle_report.route!=route)) {
-                ER er=buddy1_report_obstacle(obstacle.profile.closest_mm,obstacle.profile.width_mm,
-                    (BUDDY1_OBSTACLE_ROUTE)route);
-                if(er==E_OK || er==E_PAR) {
-                    obstacle_report.scan=obstacle.scan_id;obstacle_report.route=route;
-                    obstacle_report.invalidated=false;
+                (g_obstacle_report.scan != obstacle.scan_id ||
+                 g_obstacle_report.route != route))
+            {
+                ER value_er = buddy1_report_obstacle(
+                    obstacle.profile.closest_mm, obstacle.profile.width_mm,
+                    (buddy1_obstacle_route_t)route);
+                if (value_er == E_OK || value_er == E_PAR)
+                {
+                    g_obstacle_report.scan = obstacle.scan_id;
+                    g_obstacle_report.route = route;
+                    g_obstacle_report.invalidated = false;
                 }
-            } else if (!obstacle.profile.valid && !obstacle_report.invalidated) {
-                if (buddy1_invalidate(BUDDY1_TOPIC_OBSTACLE)==E_OK) obstacle_report.invalidated=true;
+            }
+            else if (!obstacle.profile.valid && !g_obstacle_report.invalidated)
+            {
+                if (buddy1_invalidate(BUDDY1_TOPIC_OBSTACLE) == E_OK)
+                {
+                    g_obstacle_report.invalidated = true;
+                }
             }
         }
     }
 #endif
-    if (state!=last_state) {
-        ER error=buddy1_report_robot_state(state);
-        if (error==E_OK) last_state=state;
+    if (state != g_last_state)
+    {
+        ER error = buddy1_report_robot_state(state);
+        if (error == E_OK)
+        {
+            g_last_state = state;
+        }
     }
-    motion_report(status, &motion, motion_available);
-    if (status->state==S3_DRIVE_OFF) last_action=BUDDY1_ACTION_UNKNOWN;
+    motion_report(p_status, &motion, motion_available);
+    if (p_status->state == S3_DRIVE_OFF)
+    {
+        g_last_action = BUDDY1_ACTION_UNKNOWN;
+    }
 }

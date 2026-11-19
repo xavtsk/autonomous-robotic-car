@@ -1,49 +1,101 @@
 #include "control_debug.h"
 #include <string.h>
-static void put(uint8_t *p, unsigned *bit, unsigned width, uint32_t value)
+
+static void put (uint8_t * p_p, unsigned * p_bit, unsigned width,
+                 uint32_t value)
 {
-    for (unsigned i=0; i<width; ++i,++*bit)
-        p[1U+*bit/8U] |= (uint8_t)(((value>>i)&1U)<<(*bit%8U));
+    for (unsigned value_i = 0; value_i < width; ++value_i, ++*p_bit)
+    {
+        p_p[1U + *p_bit / 8U] |=
+            (uint8_t)(((value >> value_i) & 1U) << (*p_bit % 8U));
+    }
 }
-static uint32_t get(const uint8_t *p, unsigned *bit, unsigned width)
+
+static uint32_t get (const uint8_t * p_p, unsigned * p_bit, unsigned width)
 {
-    uint32_t v=0;
-    for (unsigned i=0; i<width; ++i,++*bit)
-        v |= (uint32_t)((p[1U+*bit/8U]>>(*bit%8U))&1U)<<i;
-    return v;
+    uint32_t value_v = 0;
+    for (unsigned value_i = 0; value_i < width; ++value_i, ++*p_bit)
+    {
+        value_v |= (uint32_t)((p_p[1U + *p_bit / 8U] >> (*p_bit % 8U)) & 1U)
+                   << value_i;
+    }
+    return value_v;
 }
-bool control_debug_pack(const control_debug_sample_t *s, control_debug_packet_t *p)
+
+static bool unsigned_fits (uint32_t value, unsigned width)
 {
-    unsigned bit=0;
-    if (!s || !p || s->motion_state>5 || s->motion_fault>5 || s->drive_state>6 ||
-        s->reason>10 || s->pending>4 || s->barcode_status>4 || s->cal_sensor>2 ||
-        s->line_error < -100 || s->line_error > 100 ||
-        s->duty_left < -100 || s->duty_left > 100 ||
-        s->duty_right < -100 || s->duty_right > 100 ||
-        s->left_white_limit>1000 || s->left_black_limit>1000 ||
-        s->right_white_limit>1000 || s->right_black_limit>1000 ||
-        s->barcode_white_limit>1000 || s->barcode_black_limit>1000 ||
-        (s->motion_valid && !s->motion_available)) return false;
-#define CD_U(name,width) if ((uint64_t)s->name >= (UINT64_C(1)<<width)) return false;
-#define CD_S(name,width) if ((int64_t)s->name < -(INT64_C(1)<<(width-1)) || (int64_t)s->name >= (INT64_C(1)<<(width-1))) return false;
-    CONTROL_DEBUG_FIELDS(CD_U,CD_S)
+    /* The 64-bit limit can represent 2^32 for every schema width. */
+    return (uint64_t)value < (UINT64_C(1) << width);
+}
+
+static bool signed_fits (int32_t value, unsigned width)
+{
+    const int64_t limit = INT64_C(1) << (width - 1U);
+    return ((int64_t)value >= -limit) && ((int64_t)value < limit);
+}
+
+bool control_debug_pack (const control_debug_sample_t * p_sample,
+                         control_debug_packet_t * p_packet)
+{
+    unsigned bit = 0;
+    bool fields_valid = true;
+    if (!p_sample || !p_packet || p_sample->motion_state > 5 ||
+        p_sample->motion_fault > 5 || p_sample->drive_state > 6 ||
+        p_sample->reason > 10 || p_sample->pending > 4 ||
+        p_sample->barcode_status > 4 || p_sample->cal_sensor > 2 ||
+        p_sample->line_error < -100 || p_sample->line_error > 100 ||
+        p_sample->duty_left < -100 || p_sample->duty_left > 100 ||
+        p_sample->duty_right < -100 || p_sample->duty_right > 100 ||
+        p_sample->left_white_limit > 1000 ||
+        p_sample->left_black_limit > 1000 ||
+        p_sample->right_white_limit > 1000 ||
+        p_sample->right_black_limit > 1000 ||
+        p_sample->barcode_white_limit > 1000 ||
+        p_sample->barcode_black_limit > 1000 ||
+        (p_sample->motion_valid && !p_sample->motion_available))
+    {
+        return false;
+    }
+#define CD_U(name, width)                                                      \
+    (fields_valid = fields_valid && unsigned_fits(p_sample->name, (width)));
+#define CD_S(name, width)                                                      \
+    (fields_valid = fields_valid && signed_fits(p_sample->name, (width)));
+    CONTROL_DEBUG_FIELDS(CD_U, CD_S)
 #undef CD_U
 #undef CD_S
-    memset(p,0,sizeof *p); p->bytes[0]=1;
-#define CD_U(name,width) put(p->bytes,&bit,width,(uint32_t)s->name);
-    CONTROL_DEBUG_FIELDS(CD_U,CD_U)
+    if (!fields_valid)
+    {
+        return false;
+    }
+    memset(p_packet, 0, sizeof *p_packet);
+    p_packet->bytes[0] = 1;
+#define CD_U(name, width)                                                      \
+    put(p_packet->bytes, &bit, width, (uint32_t)p_sample->name);
+    CONTROL_DEBUG_FIELDS(CD_U, CD_U)
 #undef CD_U
     return true;
 }
-bool control_debug_unpack(const control_debug_packet_t *p, control_debug_sample_t *s)
+
+bool control_debug_unpack (const control_debug_packet_t * p_packet,
+                           control_debug_sample_t * p_sample)
 {
-    unsigned bit=0;
+    unsigned bit = 0;
     control_debug_packet_t canonical;
-    if (!p || !s || p->bytes[0]!=1) return false;
-#define CD_U(name,width) s->name=get(p->bytes,&bit,width);
-#define CD_S(name,width) { uint32_t v=get(p->bytes,&bit,width); s->name=(int32_t)(v & ((UINT32_C(1)<<(width-1))-1U)) - (int32_t)(v & (UINT32_C(1)<<(width-1))); }
-    CONTROL_DEBUG_FIELDS(CD_U,CD_S)
+    if (!p_packet || !p_sample || p_packet->bytes[0] != 1)
+    {
+        return false;
+    }
+#define CD_U(name, width) p_sample->name = get(p_packet->bytes, &bit, width);
+#define CD_S(name, width)                                                      \
+    {                                                                          \
+        uint32_t value_bits = get(p_packet->bytes, &bit, width);               \
+        p_sample->name =                                                       \
+            (int32_t)(value_bits & ((UINT32_C(1) << (width - 1)) - 1U)) -      \
+            (int32_t)(value_bits & (UINT32_C(1) << (width - 1)));              \
+    }
+    CONTROL_DEBUG_FIELDS(CD_U, CD_S)
 #undef CD_U
 #undef CD_S
-    return control_debug_pack(s,&canonical) && memcmp(p,&canonical,sizeof *p)==0;
+    return control_debug_pack(p_sample, &canonical) &&
+           memcmp(p_packet, &canonical, sizeof *p_packet) == 0;
 }

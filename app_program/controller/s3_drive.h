@@ -4,7 +4,7 @@
 #include "../subsystem3/line_navigation.h"
 #include "../subsystem5/s5_config.h"
 #if APP_S5
-#include "../subsystem5/obstacle_avoidance.h"
+#include "../subsystem5/avoid_obstacle.h"
 #endif
 typedef enum
 {
@@ -16,6 +16,7 @@ typedef enum
     S3_DRIVE_HALTED,
     S3_DRIVE_FAULT
 } s3_drive_state_t;
+
 typedef enum
 {
     S3_DRIVE_OK,
@@ -30,6 +31,7 @@ typedef enum
     S3_DRIVE_BAD_INPUT,
     S3_DRIVE_TERRAIN_FAULT
 } s3_drive_reason_t;
+
 typedef enum
 {
     S3_RESET_IDLE,
@@ -37,8 +39,11 @@ typedef enum
     S3_RESET_OK,
     S3_RESET_FAILED
 } s3_reset_result_t;
-/* Less than the operator's 1 s reply deadline; no blocking wait in the owner. */
+
+/* Less than the operator's 1 s reply deadline; no blocking wait in the owner.
+ */
 #define S3_RESET_WAIT_US (500000U)
+
 /* Temporary controller: sole owner of motion requests AND report consumption.
  * The future Vehicle Controller replaces this owner; the sensor core is
  * unchanged. */
@@ -47,11 +52,12 @@ typedef struct
     motion_result_t (*velocity)(float left, float right);
     motion_result_t (*manoeuvre)(manoeuvre_t action);
     void (*stop)(void);
-    bool (*report)(motion_report_t *out);
+    bool (*report)(motion_report_t * p_out);
     uint8_t (*command_id)(void);
     bool (*reset)(void);
     void (*heartbeat)(bool enabled);
 } s3_drive_port_t;
+
 /* Course behaviour. s3_drive_init() installs the defaults below, which keep
  * the original Buddy 3 behaviour exactly; the integration profile overrides
  * them with s3_drive_set_options(). */
@@ -84,10 +90,13 @@ typedef struct
     float search_mps; /* each wheel's speed while sweeping */
     float track_m;    /* wheel centre-to-centre: converts angle to time */
 } s3_drive_options_t;
-s3_drive_options_t s3_drive_default_options(void);
+
+s3_drive_options_t s3_drive_default_options (void);
+
 typedef struct
 {
-    bool external_hold; /* Controller run-reset handshake: sample but do not move. */
+    bool external_hold; /* Controller run-reset handshake: sample but do not
+                           move. */
     s3_navigation_t navigation;
     s3_navigation_output_t output;
     s3_drive_port_t port;
@@ -101,14 +110,14 @@ typedef struct
     bool configured, waiting_stop;
     unsigned reset_result : 2;
     s3_drive_options_t options;
-    double junction_m;        /* odometry when the junction was detected */
-    uint32_t touch_us;        /* last time a front sensor touched the tape */
-    s3_nav_action_t turn;     /* manoeuvre in progress */
-    bool advancing, touched;  /* advance leg running; touch_us is valid */
-    bool searching;           /* sweeping for the new line after a turn */
-    int8_t search_sign;       /* +1 anticlockwise, -1 clockwise */
-    uint8_t search_leg;       /* 0 = first sweep, 1 = back across */
-    uint32_t search_us;       /* start of the current sweep leg */
+    double junction_m;       /* odometry when the junction was detected */
+    uint32_t touch_us;       /* last time a front sensor touched the tape */
+    s3_nav_action_t turn;    /* manoeuvre in progress */
+    bool advancing, touched; /* advance leg running; touch_us is valid */
+    bool searching;          /* sweeping for the new line after a turn */
+    int8_t search_sign;      /* +1 anticlockwise, -1 clockwise */
+    uint8_t search_leg;      /* 0 = first sweep, 1 = back across */
+    uint32_t search_us;      /* start of the current sweep leg */
 #if APP_S5
     s5_avoidance_t obstacle;
     /* Owner-local packed cache; never refresh source times on a BUSY read. */
@@ -128,20 +137,23 @@ typedef struct
     uint32_t turn_us;
 #endif
 } s3_drive_t;
+
 /* External sensor fault, called only by the same controller owner. */
-void s3_drive_terrain_fault(s3_drive_t *drive);
-bool s3_drive_init(s3_drive_t *drive, const s3_navigation_config_t *config,
-                   const s3_drive_port_t *port);
+void s3_drive_terrain_fault (s3_drive_t * p_drive);
+bool s3_drive_init (s3_drive_t * p_drive,
+                    const s3_navigation_config_t * p_config,
+                    const s3_drive_port_t * p_port);
 /* Only while OFF/HALTED/FAULT. Rejects a nonzero advance without a drive
  * port and invalid numbers; the previous options stay in force. */
-bool s3_drive_set_options(s3_drive_t *drive, const s3_drive_options_t *options);
-bool s3_drive_start(s3_drive_t *drive, uint32_t now);
-void s3_drive_stop(s3_drive_t *drive);
+bool s3_drive_set_options (s3_drive_t * p_drive,
+                           const s3_drive_options_t * p_options);
+bool s3_drive_start (s3_drive_t * p_drive, uint32_t now);
+void s3_drive_stop (s3_drive_t * p_drive);
 /* True means accepted, not completed. Completion requires a NEW braked,
  * healthy motion snapshot and healthy navigation in a later process cycle.
  * It never starts motion; STOP cancels a pending reset. */
-bool s3_drive_reset(s3_drive_t *drive, uint32_t now);
-s3_reset_result_t s3_drive_reset_result(const s3_drive_t *drive);
-bool s3_drive_process(s3_drive_t *drive, const s3_sensor_frame_t *frame,
-                      const motion_feedback_t *feedback);
+bool s3_drive_reset (s3_drive_t * p_drive, uint32_t now);
+s3_reset_result_t s3_drive_reset_result (const s3_drive_t * p_drive);
+bool s3_drive_process (s3_drive_t * p_drive, const s3_sensor_frame_t * p_frame,
+                       const motion_feedback_t * p_feedback);
 #endif

@@ -1,5 +1,9 @@
 #include "motion.h"
+#ifdef S2_LEGACY_MODULE_NAMES
 #include "motion_controller.h"
+#else
+#include "ctrl_motion.h"
+#endif
 #include "motion_kernel_stub.h"
 #include "motor_control.h"
 #include <assert.h>

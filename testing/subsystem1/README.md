@@ -13,7 +13,7 @@ command, bridge and MQTT service sources. Host substitutes model copied bounded
 message buffers and mutexes; no hardware or broker is used. Python requires only
 the standard library; override `PYTHON=/path/to/python3` if needed.
 
-- `subsystem1_test.c`: S1-B01 through B37 (40 checks including four FIFO entries).
+- `buddy1_test.c`: S1-B01 through B37 (40 checks including four FIFO entries).
 - `host_test.c`: all 1,021 signed speed inputs, every heading/state code,
   all 256 barcode body codes, all 64 fault masks through live/snapshot/heartbeat,
   eight simultaneous producers, exact topic/length bridge,

@@ -1,0 +1,186 @@
+{
+  "recorded_at": "2026-11-19T14:21:54.012797+00:00",
+  "baseline_commit": "f684e0ca6ceff67f40226fa6a563d9ee93897601",
+  "branch": "codex/compliance-preserve-behaviour",
+  "revision": "uncommitted working tree",
+  "application_source_manifest_sha256": "1fdffeb450c40d89bffa7b531fa661bb9a4a1057ae259bc997d638885949a5bd",
+  "build_profile": {
+    "SMP": 1,
+    "CONSOLE": "usb_cdc",
+    "CRASH_REPORT": 0,
+    "WIFI": "cyw43",
+    "NET": "lwip",
+    "MQTT": 1,
+    "S3_MOTION": 1,
+    "S3_STRAIGHT_TEST": 0,
+    "S4": 1,
+    "S4_BENCH": 0,
+    "S5": 1,
+    "S5_HARDWARE_CONFIRMED": 1,
+    "IR_DEBUG": 1,
+    "IMU_DEBUG": 0,
+    "TEST": 0,
+    "IR_BENCH": 0,
+    "DIAGNOSTICS": 0,
+    "MOTION_SMOKE": 0
+  },
+  "firmware": {
+    "local_path": "build/compliance-review-20261119/compliance-wifi.uf2",
+    "uf2_sha256": "690d145ba1a5c3b9771e0af191f01632697306d41274cc9a113a8d00fb1cbffa",
+    "elf_sha256": "5971967ca397726ac0d252f962733700b12eb018791c8a8bc3cacb0dd6810a99",
+    "uf2_blocks": 1825,
+    "uf2_families_hex": [
+      "0xe48bff56"
+    ],
+    "elf_flash_bytes_verified_in_uf2": 466948,
+    "flashed": false
+  },
+  "sizes_bytes": {
+    "baseline": {
+      "text": 465756,
+      "data": 688,
+      "bss": 129032,
+      "static_ram": 129720
+    },
+    "representation_intermediate": {
+      "text": 466260,
+      "data": 688,
+      "bss": 129000,
+      "static_ram": 129688
+    },
+    "final": {
+      "text": 466260,
+      "data": 688,
+      "bss": 129008,
+      "static_ram": 129696
+    },
+    "final_static_ram_saved": 24,
+    "barcode_capture_object": 32736
+  },
+  "checks": {
+    "python": {
+      "passed": 43,
+      "failed": 0,
+      "scope": [
+        "timing checker",
+        "width checker",
+        "style checker",
+        "remote control protocol",
+        "barcode capacity"
+      ]
+    },
+    "host_c": {
+      "compiled_linked": 45,
+      "executed": 0,
+      "reason": "Windows Application Control blocks the generated native test programs",
+      "targets": [
+        "diagnostics/firmware_test",
+        "diagnostics/motion_smoke_test",
+        "diagnostics/startup_test",
+        "integration/bcap_test",
+        "integration/bcap_wire_test",
+        "integration/builtin_test",
+        "integration/codec_test",
+        "integration/control_debug_test",
+        "integration/controller_test",
+        "integration/course_sim",
+        "integration/course_test",
+        "integration/ir_debug_test",
+        "integration/map_freeze_test",
+        "integration/operator_test",
+        "integration/remote_bridge_test",
+        "integration/runtime_ir_debug_test",
+        "integration/runtime_mqtt_test",
+        "integration/runtime_test",
+        "integration/straight_test",
+        "integration/timing_test",
+        "subsystem1/host_ir_debug",
+        "subsystem1/host_test",
+        "subsystem2/pack_test",
+        "subsystem2/test_drive",
+        "subsystem2/test_motion_feedback",
+        "subsystem3/test_barcode_faint",
+        "subsystem3/test_barcode_fast",
+        "subsystem3/test_barcode_record",
+        "subsystem3/test_barcode_varying",
+        "subsystem3/test_barcode_wide",
+        "subsystem3/test_core",
+        "subsystem3/test_ir_reflectance",
+        "subsystem3/test_mapping",
+        "subsystem4/host_test",
+        "subsystem4/integration_test",
+        "subsystem4/transport_test",
+        "subsystem5/activation_gate_test",
+        "subsystem5/bypass_course_test",
+        "subsystem5/controller_test",
+        "subsystem5/course_clear_test",
+        "subsystem5/hardware_test",
+        "subsystem5/host_test",
+        "subsystem5/runtime_test",
+        "subsystem5/telemetry_test",
+        "subsystem5/terrain_controller_test"
+      ]
+    },
+    "application_style": {
+      "passed": true,
+      "files": 129,
+      "checks": [
+        "clang-format",
+        "tabs",
+        "80 columns",
+        "first-eight-character module uniqueness",
+        "matching headers and includes"
+      ]
+    },
+    "width_inventory": {
+      "passed": true,
+      "fields": 143,
+      "totals": 18,
+      "coverage": "explicit inventory and selected C-source bindings; not exhaustive"
+    },
+    "existing_object_macros": {
+      "compared_existing_object_macros": 298,
+      "changed": [
+        {
+          "file": "app_program/controller/remote_control.h",
+          "macro": "REMOTE_REPLY_SIZE",
+          "before": "12U",
+          "after": "10U"
+        }
+      ]
+    },
+    "mechanical_flash_equivalence": {
+      "identifier_pass": {
+        "before": "prestyle.elf",
+        "after": "naming.elf",
+        "flash_identical": true,
+        "flash_bytes": 466948
+      },
+      "formatting_pass": {
+        "before": "naming.elf",
+        "after": "formatted.elf",
+        "flash_identical": true,
+        "flash_bytes": 466948
+      },
+      "file_and_function_pass": {
+        "comparison": "Final file/function renaming with original link order",
+        "reference": "formatted.elf",
+        "candidate": "same-order.elf",
+        "loadable_flash_identical": true,
+        "blocks": 2,
+        "bytes": 466948
+      }
+    },
+    "git_diff_check": {
+      "passed": true
+    }
+  },
+  "limitations": [
+    "Mechanical equivalence compares saved intermediate builds, not the representation cleanup against the baseline.",
+    "File renames change sorted object order in the normal build; the final name-pass equivalence check holds the original object order fixed.",
+    "No native C regression was executed.",
+    "No device flash, motion, calibration or physical timing/reconnection test was performed.",
+    "No exhaustive BARR-C certification or whole-firmware minimum-bit proof is claimed.",
+    "Wi-Fi secrets and generated images remain local and ignored."
+  ]
+}

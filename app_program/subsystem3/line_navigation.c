@@ -1,14 +1,16 @@
 #include "line_navigation.h"
 #include <math.h>
-s3_navigation_config_t s3_navigation_defaults(void)
+
+s3_navigation_config_t s3_navigation_defaults (void)
 {
     s3_navigation_config_t cfg = {0};
-    unsigned int i;
+    unsigned int value_i;
     cfg.acquisition = (s3_acquisition_config_t){
-        {S3_ADC_CHANNEL_BARCODE, S3_ADC_CHANNEL_LEFT, S3_ADC_CHANNEL_RIGHT}, 1U};
-    for (i = 0U; i < S3_SENSOR_COUNT; i++)
+        {S3_ADC_CHANNEL_BARCODE, S3_ADC_CHANNEL_LEFT, S3_ADC_CHANNEL_RIGHT},
+        1U};
+    for (value_i = 0U; value_i < S3_SENSOR_COUNT; value_i++)
     {
-        cfg.calibration[i] = (ir_calibration_t){150U, 280U, 400U, 600U};
+        cfg.calibration[value_i] = (ir_calibration_t){150U, 280U, 400U, 600U};
     }
     cfg.line = s3_line_defaults();
     cfg.steering = s3_steering_defaults();
@@ -23,577 +25,616 @@ s3_navigation_config_t s3_navigation_defaults(void)
     cfg.rearm_distance_m = 0.020;
     return cfg;
 }
-bool s3_navigation_init(s3_navigation_t *context,
-                        const s3_navigation_config_t *config)
+
+bool s3_navigation_init (s3_navigation_t * p_context,
+                         const s3_navigation_config_t * p_config)
 {
-    unsigned int i;
-    if (context == 0)
+    unsigned int value_i;
+    if (p_context == 0)
     {
         return false;
     }
-    *context = (s3_navigation_t){0};
-    if ((config == 0) || !s3_acquisition_config_valid(&config->acquisition) ||
-        !s3_steering_config_valid(&config->steering) ||
-        !s3_line_init(&context->line, &config->line) ||
-        !s3_barcode_init(&context->barcode, &config->barcode) ||
-        (config->max_sample_age_us == 0U) ||
-        (config->max_sample_age_us >= 0x80000000U) ||
-        (config->rearm_stable_us == 0U) ||
-        (config->rearm_stable_us >= 0x80000000U) ||
-        (config->fault_clear_us == 0U) ||
-        (config->fault_clear_us >= 0x80000000U) ||
-        !isfinite(config->rearm_distance_m) ||
-        (config->rearm_distance_m <= 0.0))
+    *p_context = (s3_navigation_t){0};
+    if ((p_config == 0) ||
+        !s3_acquisition_config_valid(&p_config->acquisition) ||
+        !s3_steering_config_valid(&p_config->steering) ||
+        !s3_line_init(&p_context->line, &p_config->line) ||
+        !s3_barcode_init(&p_context->barcode, &p_config->barcode) ||
+        (p_config->max_sample_age_us == 0U) ||
+        (p_config->max_sample_age_us >= 0x80000000U) ||
+        (p_config->rearm_stable_us == 0U) ||
+        (p_config->rearm_stable_us >= 0x80000000U) ||
+        (p_config->fault_clear_us == 0U) ||
+        (p_config->fault_clear_us >= 0x80000000U) ||
+        !isfinite(p_config->rearm_distance_m) ||
+        (p_config->rearm_distance_m <= 0.0))
     {
         return false;
     }
-    for (i = 0U; i < S3_SENSOR_COUNT; i++)
+    for (value_i = 0U; value_i < S3_SENSOR_COUNT; value_i++)
     {
-        if (!ir_reflectance_init(&context->sensor[i], &config->calibration[i]))
+        if (!ir_reflectance_init(&p_context->sensor[value_i],
+                                 &p_config->calibration[value_i]))
         {
             return false;
         }
     }
-    for (i = 0U; i < 26U; i++)
+    for (value_i = 0U; value_i < 26U; value_i++)
     {
-        if ((unsigned int)config->map[i] >= S3_NAV_ACTION_COUNT)
+        if ((unsigned int)p_config->map[value_i] >= S3_NAV_ACTION_COUNT)
         {
             return false;
         }
     }
-    context->config = *config;
-    context->mode = S3_MODE_TRACK;
-    context->configured = true;
+    p_context->config = *p_config;
+    p_context->mode = S3_MODE_TRACK;
+    p_context->configured = true;
     return true;
 }
-/* Both barcode readers restart together so one barcode never gives two letters. */
-static void reset_barcode(s3_navigation_t *context)
+
+/* Both barcode readers restart together so one barcode never gives two letters.
+ */
+static void reset_barcode (s3_navigation_t * p_context)
 {
-    s3_barcode_reset(&context->barcode);
-    s3_barcode_record_reset(&context->barcode_record);
-    context->barcode_held = 0U;
+    s3_barcode_reset(&p_context->barcode);
+    s3_barcode_record_reset(&p_context->barcode_record);
+    p_context->barcode_held = 0U;
 }
-static void begin_rearm(s3_navigation_t *context)
+
+static void begin_rearm (s3_navigation_t * p_context)
 {
-    context->rearming = true;
-    context->rearm_stable = false;
-    context->rearm_anchor_valid = context->odometry_available;
-    context->rearm_anchor_m = context->odometry.centre_m;
-    context->rearm_epoch = context->odometry.epoch;
-    reset_barcode(context);
+    p_context->rearming = true;
+    p_context->rearm_stable = false;
+    p_context->rearm_anchor_valid = p_context->odometry_available;
+    p_context->rearm_anchor_m = p_context->odometry.centre_m;
+    p_context->rearm_epoch = p_context->odometry.epoch;
+    reset_barcode(p_context);
 }
-bool s3_navigation_set_mode(s3_navigation_t *context, s3_processing_mode_t mode)
+
+bool s3_navigation_set_mode (s3_navigation_t * p_context,
+                             s3_processing_mode_t mode)
 {
-    if ((context == 0) || !context->configured ||
+    if ((p_context == 0) || !p_context->configured ||
         ((mode != S3_MODE_TRACK) && (mode != S3_MODE_SUPPRESSED)))
     {
         return false;
     }
-    if (context->mode != mode)
+    if (p_context->mode != mode)
     {
-        s3_line_reset(&context->line);
-        reset_barcode(context);
-        context->capture_distance = (s3_capture_distance_t){0};
-        if (context->lifecycle == S3_RUN_ACTIVE)
+        s3_line_reset(&p_context->line);
+        reset_barcode(p_context);
+        p_context->capture_distance = (s3_capture_distance_t){0};
+        if (p_context->lifecycle == S3_RUN_ACTIVE)
         {
-            begin_rearm(context);
+            begin_rearm(p_context);
         }
-        context->mode = mode;
+        p_context->mode = mode;
     }
     return true;
 }
-bool s3_navigation_apply_calibration(
-    s3_navigation_t *context, s3_sensor_id_t id,
-    const s3_calibration_collector_t *collector)
+
+bool s3_navigation_apply_calibration (
+    s3_navigation_t * p_context, s3_sensor_id_t value_id,
+    const s3_calibration_collector_t * p_collector)
 {
     ir_calibration_t candidate;
-    if ((context == 0) || !context->configured ||
-        (context->lifecycle != S3_RUN_INACTIVE) ||
-        ((unsigned int)id >= S3_SENSOR_COUNT))
+    if ((p_context == 0) || !p_context->configured ||
+        (p_context->lifecycle != S3_RUN_INACTIVE) ||
+        ((unsigned int)value_id >= S3_SENSOR_COUNT))
     {
         return false;
     }
-    candidate = context->config.calibration[id];
-    if (!s3_calibration_finish(collector, &candidate))
+    candidate = p_context->config.calibration[value_id];
+    if (!s3_calibration_finish(p_collector, &candidate))
     {
         return false;
     }
-    context->config.calibration[id] = candidate;
-    context->accepted_calibration |= (uint8_t)S3_SENSOR_BIT(id);
-    context->valid_sensors &= (uint8_t)~S3_SENSOR_BIT(id);
-    (void)ir_reflectance_init(&context->sensor[id], &candidate);
-    s3_line_reset(&context->line);
-    reset_barcode(context);
+    p_context->config.calibration[value_id] = candidate;
+    p_context->accepted_calibration |= (uint8_t)S3_SENSOR_BIT(value_id);
+    p_context->valid_sensors &= (uint8_t)~S3_SENSOR_BIT(value_id);
+    (void)ir_reflectance_init(&p_context->sensor[value_id], &candidate);
+    s3_line_reset(&p_context->line);
+    reset_barcode(p_context);
     return true;
 }
-bool s3_navigation_set_mapping(s3_navigation_t *context,
-                               const s3_nav_action_t map[26])
+
+bool s3_navigation_set_mapping (s3_navigation_t * p_context,
+                                const s3_nav_action_t p_map[26])
 {
-    unsigned int i;
-    if ((context == 0) || !context->configured ||
-        (context->lifecycle != S3_RUN_INACTIVE) || (map == 0))
+    unsigned int value_i;
+    if ((p_context == 0) || !p_context->configured ||
+        (p_context->lifecycle != S3_RUN_INACTIVE) || (p_map == 0))
     {
         return false;
     }
-    for (i = 0U; i < 26U; i++)
+    for (value_i = 0U; value_i < 26U; value_i++)
     {
-        if ((unsigned int)map[i] >= S3_NAV_ACTION_COUNT)
+        if ((unsigned int)p_map[value_i] >= S3_NAV_ACTION_COUNT)
         {
             return false;
         }
     }
-    for (i = 0U; i < 26U; i++)
+    for (value_i = 0U; value_i < 26U; value_i++)
     {
-        context->config.map[i] = map[i];
+        p_context->config.map[value_i] = p_map[value_i];
     }
     return true;
 }
-uint32_t s3_navigation_readiness(const s3_navigation_t *context,
-                                 uint32_t now_us)
+
+uint32_t s3_navigation_readiness (const s3_navigation_t * p_context,
+                                  uint32_t now_us)
 {
     uint32_t blockers = 0U;
-    unsigned int i;
-    if ((context == 0) || !context->configured)
+    unsigned int value_i;
+    if ((p_context == 0) || !p_context->configured)
     {
         return S3_READY_CHANNELS | S3_READY_CALIBRATION | S3_READY_SENSORS |
                S3_READY_ODOMETRY;
     }
-    if (context->config.acquisition.enabled_mask != S3_ALL_SENSORS)
+    if (p_context->config.acquisition.enabled_mask != S3_ALL_SENSORS)
     {
         blockers |= S3_READY_CHANNELS;
     }
-    if (context->accepted_calibration != S3_ALL_SENSORS)
+    if (p_context->accepted_calibration != S3_ALL_SENSORS)
     {
         blockers |= S3_READY_CALIBRATION;
     }
-    if (!context->seen_frame || (context->valid_sensors != S3_ALL_SENSORS) ||
-        ((uint32_t)(now_us - context->last_us) >
-         context->config.max_sample_age_us))
+    if (!p_context->seen_frame ||
+        (p_context->valid_sensors != S3_ALL_SENSORS) ||
+        ((uint32_t)(now_us - p_context->last_us) >
+         p_context->config.max_sample_age_us))
     {
         blockers |= S3_READY_SENSORS;
     }
-    for (i = 0U; i < S3_SENSOR_COUNT; i++)
+    for (value_i = 0U; value_i < S3_SENSOR_COUNT; value_i++)
     {
-        if ((uint32_t)(now_us - context->sensor_last_us[i]) >
-            context->config.max_sample_age_us)
+        if ((uint32_t)(now_us - p_context->sensor_last_us[value_i]) >
+            p_context->config.max_sample_age_us)
         {
             blockers |= S3_READY_SENSORS;
         }
     }
-    if (!context->odometry_available ||
-        ((uint32_t)(now_us - context->odometry.timestamp_us) >
-         context->config.max_sample_age_us))
+    if (!p_context->odometry_available ||
+        ((uint32_t)(now_us - p_context->odometry.timestamp_us) >
+         p_context->config.max_sample_age_us))
     {
         blockers |= S3_READY_ODOMETRY;
     }
-    if (context->lifecycle == S3_RUN_FAULT_LATCHED)
+    if (p_context->lifecycle == S3_RUN_FAULT_LATCHED)
     {
         blockers |= S3_READY_FAULT;
     }
     return blockers;
 }
-bool s3_navigation_start(s3_navigation_t *context, uint32_t now_us)
+
+bool s3_navigation_start (s3_navigation_t * p_context, uint32_t now_us)
 {
-    if ((context == 0) || !context->configured ||
-        (context->lifecycle != S3_RUN_INACTIVE) ||
-        (s3_navigation_readiness(context, now_us) != 0U))
+    if ((p_context == 0) || !p_context->configured ||
+        (p_context->lifecycle != S3_RUN_INACTIVE) ||
+        (s3_navigation_readiness(p_context, now_us) != 0U))
     {
         return false;
     }
-    context->lifecycle = S3_RUN_ACTIVE;
-    s3_line_reset(&context->line);
-    reset_barcode(context);
-    context->capture_distance = (s3_capture_distance_t){0};
-    context->rearming = false;
+    p_context->lifecycle = S3_RUN_ACTIVE;
+    s3_line_reset(&p_context->line);
+    reset_barcode(p_context);
+    p_context->capture_distance = (s3_capture_distance_t){0};
+    p_context->rearming = false;
     return true;
 }
-bool s3_navigation_end_run(s3_navigation_t *context)
+
+bool s3_navigation_end_run (s3_navigation_t * p_context)
 {
-    if ((context == 0) || !context->configured ||
-        (context->lifecycle == S3_RUN_FAULT_LATCHED))
+    if ((p_context == 0) || !p_context->configured ||
+        (p_context->lifecycle == S3_RUN_FAULT_LATCHED))
     {
         return false;
     }
-    context->lifecycle = S3_RUN_INACTIVE;
-    context->rearming = false;
-    s3_line_reset(&context->line);
-    reset_barcode(context);
-    context->capture_distance = (s3_capture_distance_t){0};
+    p_context->lifecycle = S3_RUN_INACTIVE;
+    p_context->rearming = false;
+    s3_line_reset(&p_context->line);
+    reset_barcode(p_context);
+    p_context->capture_distance = (s3_capture_distance_t){0};
     return true;
 }
-bool s3_navigation_reset_fault(s3_navigation_t *context, uint32_t now_us)
+
+bool s3_navigation_reset_fault (s3_navigation_t * p_context, uint32_t now_us)
 {
-    if ((context == 0) || !context->configured ||
-        (context->lifecycle != S3_RUN_FAULT_LATCHED) ||
-        ((s3_navigation_readiness(context, now_us) &
+    if ((p_context == 0) || !p_context->configured ||
+        (p_context->lifecycle != S3_RUN_FAULT_LATCHED) ||
+        ((s3_navigation_readiness(p_context, now_us) &
           ~(uint32_t)S3_READY_FAULT) != 0U) ||
-        (context->current_faults != 0U) || !context->healthy_tracking ||
-        ((uint32_t)(context->last_us - context->healthy_since_us) <
-         context->config.fault_clear_us))
+        (p_context->current_faults != 0U) || !p_context->healthy_tracking ||
+        ((uint32_t)(p_context->last_us - p_context->healthy_since_us) <
+         p_context->config.fault_clear_us))
     {
         return false;
     }
-    context->lifecycle = S3_RUN_INACTIVE;
-    context->latched_faults = 0U;
-    return s3_navigation_end_run(context);
+    p_context->lifecycle = S3_RUN_INACTIVE;
+    p_context->latched_faults = 0U;
+    return s3_navigation_end_run(p_context);
 }
+
 /* Rearming requires continuous clear observations AND net displacement. */
-static bool rearm_ready(s3_navigation_t *context,
-                        const s3_sensor_frame_t *frame,
-                        const s3_navigation_output_t *output)
+static bool rearm_ready (s3_navigation_t * p_context,
+                         const s3_sensor_frame_t * p_frame,
+                         const s3_navigation_output_t * p_output)
 {
-    const s3_processed_sensor_t *barcode = &output->sensor[S3_SENSOR_BARCODE];
+    const s3_processed_sensor_t * p_barcode =
+        &p_output->sensor[S3_SENSOR_BARCODE];
     double distance;
-    bool clear = output->line.valid && output->line.present &&
-                 !output->line.junction_candidate && barcode->valid &&
-                 (barcode->surface == IR_SURFACE_WHITE) &&
-                 context->odometry_available;
+    bool clear = p_output->line.valid && p_output->line.present &&
+                 !p_output->line.junction_candidate && p_barcode->valid &&
+                 (p_barcode->surface == IR_SURFACE_WHITE) &&
+                 p_context->odometry_available;
     if (!clear)
     {
-        context->rearm_stable = false;
+        p_context->rearm_stable = false;
         return false;
     }
-    if (!context->rearm_anchor_valid)
+    if (!p_context->rearm_anchor_valid)
     {
-        context->rearm_anchor_m = context->odometry.centre_m;
-        context->rearm_epoch = context->odometry.epoch;
-        context->rearm_anchor_valid = true;
+        p_context->rearm_anchor_m = p_context->odometry.centre_m;
+        p_context->rearm_epoch = p_context->odometry.epoch;
+        p_context->rearm_anchor_valid = true;
     }
-    if (!context->rearm_stable)
+    if (!p_context->rearm_stable)
     {
-        context->rearm_since_us = frame->timestamp_us;
-        context->rearm_stable = true;
+        p_context->rearm_since_us = p_frame->timestamp_us;
+        p_context->rearm_stable = true;
     }
-    distance = context->odometry.centre_m - context->rearm_anchor_m;
+    distance = p_context->odometry.centre_m - p_context->rearm_anchor_m;
     if (distance < 0.0)
     {
         distance = -distance;
     }
-    if ((context->odometry.epoch != context->rearm_epoch) ||
-        ((uint32_t)(frame->timestamp_us - context->rearm_since_us) <
-         context->config.rearm_stable_us) ||
-        (distance < context->config.rearm_distance_m))
+    if ((p_context->odometry.epoch != p_context->rearm_epoch) ||
+        ((uint32_t)(p_frame->timestamp_us - p_context->rearm_since_us) <
+         p_context->config.rearm_stable_us) ||
+        (distance < p_context->config.rearm_distance_m))
     {
         return false;
     }
-    context->rearming = false;
+    p_context->rearming = false;
     /* Decoder was reset at capture completion: seed a new quiet zone now.
      */
     return true;
 }
-static void process_barcode(s3_navigation_t *context,
-                            const s3_sensor_frame_t *frame,
-                            s3_navigation_output_t *output)
+
+static void process_barcode (s3_navigation_t * p_context,
+                             const s3_sensor_frame_t * p_frame,
+                             s3_navigation_output_t * p_output)
 {
-    const s3_processed_sensor_t *barcode = &output->sensor[S3_SENSOR_BARCODE];
-    bool was_collecting, active = context->lifecycle == S3_RUN_ACTIVE;
-    if ((context->mode != S3_MODE_TRACK) ||
-        ((context->config.acquisition.enabled_mask &
+    const s3_processed_sensor_t * p_barcode =
+        &p_output->sensor[S3_SENSOR_BARCODE];
+    bool was_collecting, active = p_context->lifecycle == S3_RUN_ACTIVE;
+    if ((p_context->mode != S3_MODE_TRACK) ||
+        ((p_context->config.acquisition.enabled_mask &
           S3_SENSOR_BIT(S3_SENSOR_BARCODE)) == 0U))
     {
         return;
     }
-    if (active && context->rearming && !rearm_ready(context, frame, output))
+    if (active && p_context->rearming &&
+        !rearm_ready(p_context, p_frame, p_output))
     {
         return;
     }
-    was_collecting = context->barcode.collecting ||
-                     s3_barcode_record_active(&context->barcode_record);
+    was_collecting = p_context->barcode.collecting ||
+                     s3_barcode_record_active(&p_context->barcode_record);
     {
-        const uint32_t t = frame->sensor[S3_SENSOR_BARCODE].timestamp_us;
+        const uint32_t value_t =
+            p_frame->sensor[S3_SENSOR_BARCODE].timestamp_us;
         s3_barcode_result_t live_result, rec_result;
         s3_barcode_status_t live = s3_barcode_update(
-            &context->barcode, t,
-            barcode->valid && (barcode->surface != IR_SURFACE_UNKNOWN),
-            barcode->surface == IR_SURFACE_BLACK, &live_result);
+            &p_context->barcode, value_t,
+            p_barcode->valid && (p_barcode->surface != IR_SURFACE_UNKNOWN),
+            p_barcode->surface == IR_SURFACE_BLACK, &live_result);
         s3_barcode_status_t rec = s3_barcode_record_update(
-            &context->barcode_record, &context->config.barcode, t,
-            barcode->valid, barcode->darkness, &rec_result);
-        output->barcode_status = S3_BARCODE_NONE;
+            &p_context->barcode_record, &p_context->config.barcode, value_t,
+            p_barcode->valid, p_barcode->darkness, &rec_result);
+        p_output->barcode_status = S3_BARCODE_NONE;
         if (live == S3_BARCODE_DECODED)
-        {   /* First reader to decode wins; the other restarts. */
-            output->barcode_status = live;
-            output->barcode = live_result;
-            s3_barcode_record_reset(&context->barcode_record);
-            context->barcode_held = 0U;
+        { /* First reader to decode wins; the other restarts. */
+            p_output->barcode_status = live;
+            p_output->barcode = live_result;
+            s3_barcode_record_reset(&p_context->barcode_record);
+            p_context->barcode_held = 0U;
         }
         else if (rec == S3_BARCODE_DECODED)
         {
-            output->barcode_status = rec;
-            output->barcode = rec_result;
-            s3_barcode_reset(&context->barcode);
-            context->barcode_held = 0U;
+            p_output->barcode_status = rec;
+            p_output->barcode = rec_result;
+            s3_barcode_reset(&p_context->barcode);
+            p_context->barcode_held = 0U;
         }
         else
         {
             if (live != S3_BARCODE_NONE)
-            {   /* e.g. a faint bar never crossed the fixed limits: let the
-                 * recorder, still reading this barcode, have its say first. */
-                if (s3_barcode_record_active(&context->barcode_record))
+            { /* e.g. a faint bar never crossed the fixed limits: let the
+               * recorder, still reading this barcode, have its say first. */
+                if (s3_barcode_record_active(&p_context->barcode_record))
                 {
-                    context->barcode_held = (uint8_t)live;
+                    p_context->barcode_held = (uint8_t)live;
                 }
                 else
                 {
-                    output->barcode_status = live;
+                    p_output->barcode_status = live;
                 }
             }
-            if ((rec != S3_BARCODE_NONE) && !context->barcode.collecting &&
-                !context->barcode.pending)
-            {   /* Recorder failed and the live decoder is idle: report. */
-                output->barcode_status = (context->barcode_held != 0U) ?
-                    (s3_barcode_status_t)context->barcode_held : rec;
-                context->barcode_held = 0U;
+            if ((rec != S3_BARCODE_NONE) && !p_context->barcode.collecting &&
+                !p_context->barcode.pending)
+            { /* Recorder failed and the live decoder is idle: report. */
+                p_output->barcode_status =
+                    (p_context->barcode_held != 0U)
+                        ? (s3_barcode_status_t)p_context->barcode_held
+                        : rec;
+                p_context->barcode_held = 0U;
             }
-            else if ((context->barcode_held != 0U) &&
-                     !s3_barcode_record_active(&context->barcode_record))
+            else if ((p_context->barcode_held != 0U) &&
+                     !s3_barcode_record_active(&p_context->barcode_record))
             {
-                output->barcode_status = (s3_barcode_status_t)context->barcode_held;
-                context->barcode_held = 0U;
+                p_output->barcode_status =
+                    (s3_barcode_status_t)p_context->barcode_held;
+                p_context->barcode_held = 0U;
             }
         }
     }
-    if (!was_collecting && (context->barcode.collecting ||
-                            s3_barcode_record_active(&context->barcode_record)))
+    if (!was_collecting &&
+        (p_context->barcode.collecting ||
+         s3_barcode_record_active(&p_context->barcode_record)))
     {
-        context->capture_distance = (s3_capture_distance_t){0};
-        if (context->odometry_available)
+        p_context->capture_distance = (s3_capture_distance_t){0};
+        if (p_context->odometry_available)
         {
-            context->capture_distance.start_valid = true;
-            context->capture_distance.start_m = context->odometry.centre_m;
-            context->capture_distance.epoch = context->odometry.epoch;
+            p_context->capture_distance.start_valid = true;
+            p_context->capture_distance.start_m = p_context->odometry.centre_m;
+            p_context->capture_distance.epoch = p_context->odometry.epoch;
         }
     }
-    if (was_collecting && (output->barcode_status != S3_BARCODE_NONE))
+    if (was_collecting && (p_output->barcode_status != S3_BARCODE_NONE))
     {
-        if (context->odometry_available)
+        if (p_context->odometry_available)
         {
-            context->capture_distance.end_valid = true;
-            context->capture_distance.end_m = context->odometry.centre_m;
-            if (context->capture_distance.start_valid &&
-                (context->capture_distance.epoch != context->odometry.epoch))
+            p_context->capture_distance.end_valid = true;
+            p_context->capture_distance.end_m = p_context->odometry.centre_m;
+            if (p_context->capture_distance.start_valid &&
+                (p_context->capture_distance.epoch !=
+                 p_context->odometry.epoch))
             {
-                context->capture_distance.start_valid = false;
+                p_context->capture_distance.start_valid = false;
             }
-            context->capture_distance.epoch = context->odometry.epoch;
+            p_context->capture_distance.epoch = p_context->odometry.epoch;
         }
         if (active)
         {
-            begin_rearm(context);
+            begin_rearm(p_context);
         }
     }
 }
-static bool process_sensors(s3_navigation_t *context,
-                            const s3_sensor_frame_t *frame,
-                            s3_navigation_output_t *output, bool frame_time_bad)
+
+static bool process_sensors (s3_navigation_t * p_context,
+                             const s3_sensor_frame_t * p_frame,
+                             s3_navigation_output_t * p_output,
+                             bool frame_time_bad)
 {
-    unsigned int i;
+    unsigned int value_i;
     bool sample_time_bad = frame_time_bad;
-    context->valid_sensors = 0U;
-    for (i = 0U; i < S3_SENSOR_COUNT; i++)
+    p_context->valid_sensors = 0U;
+    for (value_i = 0U; value_i < S3_SENSOR_COUNT; value_i++)
     {
-        const s3_raw_sample_t *raw = &frame->sensor[i];
-        uint8_t bit = (uint8_t)S3_SENSOR_BIT(i);
-        bool enabled = (context->config.acquisition.enabled_mask & bit) != 0U;
-        bool timing_bad = ((uint32_t)(frame->timestamp_us - raw->timestamp_us) >
-                           context->config.max_sample_age_us);
-        if ((context->seen_sensors & bit) != 0U)
+        const s3_raw_sample_t * p_raw = &p_frame->sensor[value_i];
+        uint8_t bit = (uint8_t)S3_SENSOR_BIT(value_i);
+        bool enabled = (p_context->config.acquisition.enabled_mask & bit) != 0U;
+        bool timing_bad =
+            ((uint32_t)(p_frame->timestamp_us - p_raw->timestamp_us) >
+             p_context->config.max_sample_age_us);
+        if ((p_context->seen_sensors & bit) != 0U)
         {
-            uint32_t gap = raw->timestamp_us - context->sensor_last_us[i];
+            uint32_t gap =
+                p_raw->timestamp_us - p_context->sensor_last_us[value_i];
             timing_bad = timing_bad || (gap == 0U) ||
-                         (gap > context->config.max_sample_age_us);
+                         (gap > p_context->config.max_sample_age_us);
         }
         if (enabled && timing_bad)
         {
             sample_time_bad = true;
         }
-        if (enabled && raw->enabled && raw->valid && (raw->error == 0) &&
+        if (enabled && p_raw->enabled && p_raw->valid && (p_raw->error == 0) &&
             !timing_bad && !frame_time_bad &&
-            ir_reflectance_update(&context->sensor[i], raw->raw,
-                                  &output->sensor[i].darkness))
+            ir_reflectance_update(&p_context->sensor[value_i], p_raw->raw,
+                                  &p_output->sensor[value_i].darkness))
         {
-            output->sensor[i].valid = true;
-            context->valid_sensors |= bit;
-            output->sensor[i].surface = context->sensor[i].surface;
-            context->seen_sensors |= bit;
-            context->sensor_last_us[i] = raw->timestamp_us;
+            p_output->sensor[value_i].valid = true;
+            p_context->valid_sensors |= bit;
+            p_output->sensor[value_i].surface =
+                p_context->sensor[value_i].surface;
+            p_context->seen_sensors |= bit;
+            p_context->sensor_last_us[value_i] = p_raw->timestamp_us;
         }
         else
         {
-            ir_reflectance_reset(&context->sensor[i]);
-            context->seen_sensors &= (uint8_t)~bit;
+            ir_reflectance_reset(&p_context->sensor[value_i]);
+            p_context->seen_sensors &= (uint8_t)~bit;
             if (enabled)
             {
-                output->fault_mask |= bit;
+                p_output->fault_mask |= bit;
             }
         }
     }
     return sample_time_bad;
 }
-static void process_health(s3_navigation_t *context,
-                           const s3_sensor_frame_t *frame,
-                           const s3_odometry_sample_t *odometry,
-                           s3_navigation_output_t *output, bool sample_time_bad)
+
+static void process_health (s3_navigation_t * p_context,
+                            const s3_sensor_frame_t * p_frame,
+                            const s3_odometry_sample_t * p_odometry,
+                            s3_navigation_output_t * p_output,
+                            bool sample_time_bad)
 {
     bool epoch_changed;
-    context->odometry_available =
-        (odometry != 0) && odometry->valid && isfinite(odometry->centre_m) &&
-        ((uint32_t)(frame->timestamp_us - odometry->timestamp_us) <=
-         context->config.max_sample_age_us);
-    epoch_changed = context->odometry_available && context->seen_odometry &&
-                    (odometry->epoch != context->odometry.epoch);
-    if (context->odometry_available)
+    p_context->odometry_available =
+        (p_odometry != 0) && p_odometry->valid &&
+        isfinite(p_odometry->centre_m) &&
+        ((uint32_t)(p_frame->timestamp_us - p_odometry->timestamp_us) <=
+         p_context->config.max_sample_age_us);
+    epoch_changed = p_context->odometry_available && p_context->seen_odometry &&
+                    (p_odometry->epoch != p_context->odometry.epoch);
+    if (p_context->odometry_available)
     {
-        context->odometry = *odometry;
-        context->seen_odometry = true;
+        p_context->odometry = *p_odometry;
+        p_context->seen_odometry = true;
     }
-    context->current_faults = 0U;
-    if (output->fault_mask != 0U)
+    p_context->current_faults = 0U;
+    if (p_output->fault_mask != 0U)
     {
-        context->current_faults |= S3_FAULT_SENSOR;
+        p_context->current_faults |= S3_FAULT_SENSOR;
     }
     if (sample_time_bad)
     {
-        context->current_faults |= S3_FAULT_TIMING;
+        p_context->current_faults |= S3_FAULT_TIMING;
     }
-    if (!context->odometry_available)
+    if (!p_context->odometry_available)
     {
-        context->current_faults |= S3_FAULT_ODOMETRY;
+        p_context->current_faults |= S3_FAULT_ODOMETRY;
     }
     if (epoch_changed)
     {
-        context->current_faults |= S3_FAULT_ODOMETRY_EPOCH;
+        p_context->current_faults |= S3_FAULT_ODOMETRY_EPOCH;
     }
-    if ((context->current_faults == 0U) &&
-        (context->valid_sensors == S3_ALL_SENSORS))
+    if ((p_context->current_faults == 0U) &&
+        (p_context->valid_sensors == S3_ALL_SENSORS))
     {
-        if (!context->healthy_tracking)
+        if (!p_context->healthy_tracking)
         {
-            context->healthy_since_us = frame->timestamp_us;
-            context->healthy_tracking = true;
+            p_context->healthy_since_us = p_frame->timestamp_us;
+            p_context->healthy_tracking = true;
         }
     }
     else
     {
-        context->healthy_tracking = false;
+        p_context->healthy_tracking = false;
     }
-    if ((context->lifecycle == S3_RUN_ACTIVE) &&
-        (context->current_faults != 0U))
+    if ((p_context->lifecycle == S3_RUN_ACTIVE) &&
+        (p_context->current_faults != 0U))
     {
-        context->lifecycle = S3_RUN_FAULT_LATCHED;
-        context->latched_faults = context->current_faults;
-        output->events |= S3_EVENT_SENSOR_FAULT;
-        reset_barcode(context);
-        context->capture_distance = (s3_capture_distance_t){0};
+        p_context->lifecycle = S3_RUN_FAULT_LATCHED;
+        p_context->latched_faults = p_context->current_faults;
+        p_output->events |= S3_EVENT_SENSOR_FAULT;
+        reset_barcode(p_context);
+        p_context->capture_distance = (s3_capture_distance_t){0};
     }
-    else if (context->lifecycle == S3_RUN_FAULT_LATCHED)
+    else if (p_context->lifecycle == S3_RUN_FAULT_LATCHED)
     {
-        context->latched_faults |= context->current_faults;
+        p_context->latched_faults |= p_context->current_faults;
     }
 }
-bool s3_navigation_process(s3_navigation_t *context,
-                           const s3_sensor_frame_t *frame,
-                           const s3_odometry_sample_t *odometry,
-                           s3_navigation_output_t *output)
+
+bool s3_navigation_process (s3_navigation_t * p_context,
+                            const s3_sensor_frame_t * p_frame,
+                            const s3_odometry_sample_t * p_odometry,
+                            s3_navigation_output_t * p_output)
 {
     bool frame_time_bad, line_valid, sample_time_bad;
-    if (output == 0)
+    if (p_output == 0)
     {
         return false;
     }
-    *output = (s3_navigation_output_t){0};
-    if ((context == 0) || !context->configured || (frame == 0))
+    *p_output = (s3_navigation_output_t){0};
+    if ((p_context == 0) || !p_context->configured || (p_frame == 0))
     {
         return false;
     }
-    output->timestamp_us = frame->timestamp_us;
-    output->sample_gap_us =
-        context->seen_frame ? (frame->timestamp_us - context->last_us) : 0U;
+    p_output->timestamp_us = p_frame->timestamp_us;
+    p_output->sample_gap_us = p_context->seen_frame
+                                  ? (p_frame->timestamp_us - p_context->last_us)
+                                  : 0U;
     frame_time_bad =
-        context->seen_frame &&
-        ((output->sample_gap_us == 0U) ||
-         (output->sample_gap_us > context->config.max_sample_age_us));
-    context->last_us = frame->timestamp_us;
-    context->seen_frame = true;
-    sample_time_bad = process_sensors(context, frame, output, frame_time_bad);
-    process_health(context, frame, odometry, output, sample_time_bad);
-    line_valid = output->sensor[S3_SENSOR_LEFT].valid &&
-                 output->sensor[S3_SENSOR_RIGHT].valid;
-    output->line =
-        s3_line_update(&context->line, frame->timestamp_us, line_valid,
-                       output->sensor[S3_SENSOR_LEFT].darkness,
-                       output->sensor[S3_SENSOR_RIGHT].darkness);
-    output->steering_preview =
-        s3_steering_compute(&context->config.steering, &output->line);
-    process_barcode(context, frame, output);
-    if ((context->lifecycle == S3_RUN_ACTIVE) &&
-        (context->mode == S3_MODE_TRACK))
+        p_context->seen_frame &&
+        ((p_output->sample_gap_us == 0U) ||
+         (p_output->sample_gap_us > p_context->config.max_sample_age_us));
+    p_context->last_us = p_frame->timestamp_us;
+    p_context->seen_frame = true;
+    sample_time_bad =
+        process_sensors(p_context, p_frame, p_output, frame_time_bad);
+    process_health(p_context, p_frame, p_odometry, p_output, sample_time_bad);
+    line_valid = p_output->sensor[S3_SENSOR_LEFT].valid &&
+                 p_output->sensor[S3_SENSOR_RIGHT].valid;
+    p_output->line =
+        s3_line_update(&p_context->line, p_frame->timestamp_us, line_valid,
+                       p_output->sensor[S3_SENSOR_LEFT].darkness,
+                       p_output->sensor[S3_SENSOR_RIGHT].darkness);
+    p_output->steering_preview =
+        s3_steering_compute(&p_context->config.steering, &p_output->line);
+    process_barcode(p_context, p_frame, p_output);
+    if ((p_context->lifecycle == S3_RUN_ACTIVE) &&
+        (p_context->mode == S3_MODE_TRACK))
     {
-        output->steering = output->steering_preview;
-        if (output->line.lost_event)
+        p_output->steering = p_output->steering_preview;
+        if (p_output->line.lost_event)
         {
-            output->events |= S3_EVENT_LINE_LOST;
+            p_output->events |= S3_EVENT_LINE_LOST;
         }
-        if (output->line.reacquired_event)
+        if (p_output->line.reacquired_event)
         {
-            output->events |= S3_EVENT_LINE_REACQUIRED;
+            p_output->events |= S3_EVENT_LINE_REACQUIRED;
         }
-        if (output->line.junction_event)
+        if (p_output->line.junction_event)
         {
-            output->events |= S3_EVENT_JUNCTION;
+            p_output->events |= S3_EVENT_JUNCTION;
         }
-        if (output->barcode_status == S3_BARCODE_DECODED)
+        if (p_output->barcode_status == S3_BARCODE_DECODED)
         {
-            output->events |= S3_EVENT_BARCODE;
-            output->action =
-                context->config
-                    .map[(unsigned int)(output->barcode.letter - 'A')];
+            p_output->events |= S3_EVENT_BARCODE;
+            p_output->action =
+                p_context->config
+                    .map[(unsigned int)(p_output->barcode.letter - 'A')];
         }
     }
     else
     {
-        output->line.lost_event = false;
-        output->line.reacquired_event = false;
-        output->line.junction_event = false;
+        p_output->line.lost_event = false;
+        p_output->line.reacquired_event = false;
+        p_output->line.junction_event = false;
     }
-    output->lifecycle = context->lifecycle;
-    output->readiness_blockers =
-        s3_navigation_readiness(context, frame->timestamp_us);
-    output->accepted_calibration = context->accepted_calibration;
-    output->latched_faults = context->latched_faults;
-    output->stop_requested = context->lifecycle == S3_RUN_FAULT_LATCHED;
-    output->odometry_available = context->odometry_available;
-    output->rearming = context->rearming;
-    output->diagnostic = (context->lifecycle != S3_RUN_ACTIVE) ||
-                         (context->mode != S3_MODE_TRACK);
-    output->capture_distance = context->capture_distance;
+    p_output->lifecycle = p_context->lifecycle;
+    p_output->readiness_blockers =
+        s3_navigation_readiness(p_context, p_frame->timestamp_us);
+    p_output->accepted_calibration = p_context->accepted_calibration;
+    p_output->latched_faults = p_context->latched_faults;
+    p_output->stop_requested = p_context->lifecycle == S3_RUN_FAULT_LATCHED;
+    p_output->odometry_available = p_context->odometry_available;
+    p_output->rearming = p_context->rearming;
+    p_output->diagnostic = (p_context->lifecycle != S3_RUN_ACTIVE) ||
+                           (p_context->mode != S3_MODE_TRACK);
+    p_output->capture_distance = p_context->capture_distance;
     return true;
 }
-const char *s3_surface_name(ir_surface_t surface)
+
+const char * s3_surface_name (ir_surface_t surface)
 {
     switch (surface)
     {
-        case IR_SURFACE_WHITE:
-            return "WHITE";
-        case IR_SURFACE_BLACK:
-            return "BLACK";
-        default:
-            return "UNKNOWN";
+    case IR_SURFACE_WHITE:
+        return "WHITE";
+    case IR_SURFACE_BLACK:
+        return "BLACK";
+    default:
+        return "UNKNOWN";
     }
 }
-const char *s3_action_name(s3_nav_action_t action)
+
+const char * s3_action_name (s3_nav_action_t action)
 {
     switch (action)
     {
-        case S3_NAV_LEFT:
-            return "LEFT";
-        case S3_NAV_RIGHT:
-            return "RIGHT";
-        case S3_NAV_STRAIGHT:
-            return "STRAIGHT";
-        case S3_NAV_UTURN:
-            return "U-TURN";
-        default:
-            return "NONE";
+    case S3_NAV_LEFT:
+        return "LEFT";
+    case S3_NAV_RIGHT:
+        return "RIGHT";
+    case S3_NAV_STRAIGHT:
+        return "STRAIGHT";
+    case S3_NAV_UTURN:
+        return "U-TURN";
+    default:
+        return "NONE";
     }
 }

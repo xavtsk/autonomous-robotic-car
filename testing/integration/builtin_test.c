@@ -12,7 +12,7 @@
 #define S3_BUILTIN_CALIBRATION 1
 #include "controller_test_kernel.h"
 #include "../../app_program/controller/s3_integration.h"
-#include "../../app_program/controller/operator_logic.h"
+#include "../../app_program/controller/op_logic.h"
 #include "../../app_program/subsystem3/ir_bench_config.h"
 #include <assert.h>
 #include <setjmp.h>
@@ -63,8 +63,8 @@ bool motion_get_report(motion_report_t *r) { (void)r;return false; }
 uint8_t motion_command_id(void) { return 1; }
 bool motion_reset(void) { return true; }
 void motion_navigation_heartbeat(bool enabled) { (void)enabled; }
-bool vehicle_controller_prepare_start(s3_navigation_t *n) { (void)n;starts_requested++;return true; }
-bool vehicle_controller_apply_mapping(const s3_nav_action_t m[26]) { (void)m;return true; }
+bool vehicle_controller_prep_start(s3_navigation_t *n) { (void)n;starts_requested++;return true; }
+bool vehicle_controller_set_mapping(const s3_nav_action_t m[26]) { (void)m;return true; }
 void vehicle_controller_cancel_start(void) {}
 void vehicle_controller_commit_start(void) {}
 void vehicle_controller_observe(const s3_integration_status_t *s) { (void)s; }
@@ -94,7 +94,7 @@ static void period(void)
 {
     bool stop_edge=false,go_edge=false; op_press_t go;
     sleeps=0;clock_value+=10000;
-    if(setjmp(boundary)==0)sample(0,NULL);
+    if(setjmp(boundary)==0)sensor_sample_task(0,NULL);
     assert(!locked);
     (void)op_button_update(&stop_b,stop_down,now_ms(),&stop_edge);
     go=op_button_update(&go_b,go_down,now_ms(),&go_edge);

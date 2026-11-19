@@ -3,7 +3,7 @@
  * to investigate clipped captures, never to claim an observed successful run. */
 #include <stdio.h>
 #include <stdlib.h>
-#include "barcode_decoder.h"
+#include "bc_decoder.h"
 
 static s3_barcode_record_t record;
 static uint32_t now;

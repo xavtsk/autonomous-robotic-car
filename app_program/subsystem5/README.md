@@ -230,7 +230,7 @@ the old cache and still stops motion; unavailable/corrupt data never falls back.
 STOP/fault clears the cache, and START requires a successful fresh snapshot read.
 No queue, task, shared lock or sensor-validity threshold was added. USB `[S5]` lines show FSM state/fault, route, front range,
 validity, no-echo, scan ID, width and both clearances. Numeric state/fault meanings
-are in `obstacle_avoidance.h`. Existing MQTT best-effort/drop behaviour and the
+are in `avoid_obstacle.h`. Existing MQTT best-effort/drop behaviour and the
 network-priority/timing issue have not been solved by adding Buddy 5.
 
 Wi-Fi (see `subsystem1/MQTT_PROTOCOL.md`): `car/telemetry/avoidance` every 200 ms,

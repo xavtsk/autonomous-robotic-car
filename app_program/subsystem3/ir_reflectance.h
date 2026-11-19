@@ -17,7 +17,8 @@ typedef struct
     uint16_t white_raw;
     uint16_t black_raw;
     uint16_t white_limit; /* Normalised 0..1000: enter WHITE at/below this. */
-    uint16_t black_limit; /* Enter BLACK at/above this; must exceed white_limit. */
+    uint16_t
+        black_limit; /* Enter BLACK at/above this; must exceed white_limit. */
 } ir_calibration_t;
 
 /* Validated retained values only. The public input above stays wide so an
@@ -39,16 +40,16 @@ typedef struct
 
 /* One state object per sensor, owned by the sampling task. Either ADC polarity
  * is supported. Invalid calibration leaves the object unconfigured/UNKNOWN. */
-bool ir_reflectance_init(ir_reflectance_t *p_sensor,
-                        const ir_calibration_t *p_calibration);
-void ir_reflectance_reset(ir_reflectance_t *p_sensor);
+bool ir_reflectance_init (ir_reflectance_t * p_sensor,
+                          const ir_calibration_t * p_calibration);
+void ir_reflectance_reset (ir_reflectance_t * p_sensor);
 
 /* Returns false for invalid arguments/raw counts or unconfigured state.
  * Valid readings are clamped to 0 (white)..1000 (black). Inside the hysteresis
  * band, retain the previous surface; initially this is UNKNOWN. On invalid
  * raw input, reset the surface to UNKNOWN and leave p_darkness unchanged.
  * This cannot detect a disconnected wire or validate real track calibration. */
-bool ir_reflectance_update(ir_reflectance_t *p_sensor, uint16_t raw,
-                          uint16_t *p_darkness);
+bool ir_reflectance_update (ir_reflectance_t * p_sensor, uint16_t raw,
+                            uint16_t * p_darkness);
 
 #endif /* BUDDY3_IR_REFLECTANCE_H */

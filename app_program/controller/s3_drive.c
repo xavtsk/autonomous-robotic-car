@@ -10,13 +10,22 @@
  * 10 = turning to face the obstacle before the second scan. */
 #define S5_TELEMETRY_LEG_REVERSE 9U
 #define S5_TELEMETRY_LEG_AIM 10U
-static void report_obstacle_status(const s3_drive_t *d)
+
+static void report_obstacle_status (const s3_drive_t * p_d)
 {
-    unsigned leg = d->obstacle.leg;
-    if (d->obstacle.state == S5_MOVING && d->obstacle.leg == 0U && d->obstacle.backing) leg = S5_TELEMETRY_LEG_REVERSE;
-    if (d->obstacle.state == S5_SCANNING && d->obstacle.aiming) leg = S5_TELEMETRY_LEG_AIM;
-    subsystem5_set_controller_status(d->obstacle.state, d->obstacle.fault, d->obstacle.plan.route,
-                                     leg, d->obstacle.pass, d->obstacle.swapped);
+    unsigned leg = p_d->obstacle.leg;
+    if (p_d->obstacle.state == S5_MOVING && p_d->obstacle.leg == 0U &&
+        p_d->obstacle.backing)
+    {
+        leg = S5_TELEMETRY_LEG_REVERSE;
+    }
+    if (p_d->obstacle.state == S5_SCANNING && p_d->obstacle.aiming)
+    {
+        leg = S5_TELEMETRY_LEG_AIM;
+    }
+    subsystem5_set_control_status(p_d->obstacle.state, p_d->obstacle.fault,
+                                  p_d->obstacle.plan.route, leg,
+                                  p_d->obstacle.pass, p_d->obstacle.swapped);
 }
 #endif
 #define S3_BRAKE_WAIT_US (500000U)
@@ -24,293 +33,330 @@ static void report_obstacle_status(const s3_drive_t *d)
 #define S3_REACQUIRE_WAIT_US (1000000U)
 #define S3_PENDING_WAIT_US (5000000U)
 #define S3_MIN_ADVANCE_M (0.003f) /* shorter advances are skipped */
-s3_drive_options_t s3_drive_default_options(void)
+
+s3_drive_options_t s3_drive_default_options (void)
 {
-    return (s3_drive_options_t){false, 0.0f, 0.10f, 0, S3_PENDING_WAIT_US, 0U,
-                                0.0f, 0.05f, 0.116f};
+    return (s3_drive_options_t){false, 0.0f, 0.10f, 0,     S3_PENDING_WAIT_US,
+                                0U,    0.0f, 0.05f, 0.116f};
 }
-static bool finite_f(float x) { return (x == x) && ((x - x) == 0.0f); }
-static bool feedback_fresh(const s3_drive_t *d, uint32_t now)
+
+static bool finite_f (float value_x)
 {
-    return d->feedback.valid && ((uint32_t)(now - d->feedback.timestamp_us) <=
-                                 d->navigation.config.max_sample_age_us);
+    return (value_x == value_x) && ((value_x - value_x) == 0.0f);
 }
-static void halt(s3_drive_t *d, s3_drive_state_t state,
-                 s3_drive_reason_t reason)
+
+static bool feedback_fresh (const s3_drive_t * p_d, uint32_t now)
 {
-    if (d->reset_result == S3_RESET_PENDING)
+    return p_d->feedback.valid &&
+           ((uint32_t)(now - p_d->feedback.timestamp_us) <=
+            p_d->navigation.config.max_sample_age_us);
+}
+
+static void halt (s3_drive_t * p_d, s3_drive_state_t state,
+                  s3_drive_reason_t reason)
+{
+    if (p_d->reset_result == S3_RESET_PENDING)
     {
-        d->reset_result = S3_RESET_FAILED;
+        p_d->reset_result = S3_RESET_FAILED;
     }
     /* Brake before obstacle cleanup, which can wait for the scanner mutex. */
-    d->external_hold = false;
-    d->port.stop();
-    d->port.heartbeat(false);
+    p_d->external_hold = false;
+    p_d->port.stop();
+    p_d->port.heartbeat(false);
 #if APP_S5
     subsystem5_cancel_scan();
-    d->obstacle_snapshot_valid = false;
-    if (state == S3_DRIVE_FAULT && d->obstacle_active && d->obstacle.state != S5_FAULT) {
-        d->obstacle.state = S5_FAULT;
-        d->obstacle.fault = S5_INTERRUPTED;
+    p_d->obstacle_snapshot_valid = false;
+    if (state == S3_DRIVE_FAULT && p_d->obstacle_active &&
+        p_d->obstacle.state != S5_FAULT)
+    {
+        p_d->obstacle.state = S5_FAULT;
+        p_d->obstacle.fault = S5_INTERRUPTED;
     }
-    d->obstacle_active = false;
-    if (state != S3_DRIVE_FAULT) { s5_avoidance_abort(&d->obstacle); }
-    report_obstacle_status(d);
+    p_d->obstacle_active = false;
+    if (state != S3_DRIVE_FAULT)
+    {
+        s5_avoidance_abort(&p_d->obstacle);
+    }
+    report_obstacle_status(p_d);
 #endif
     (void)s3_navigation_end_run(
-        &d->navigation); /* A sensor latch is retained. */
-    d->pending = S3_NAV_NONE;
-    d->turn = S3_NAV_NONE;
-    d->advancing = false;
-    d->touched = false;
-    d->searching = false;
-    d->command_id = d->cancel_id = 0U;
-    d->waiting_stop = false;
-    d->output.steering.valid = false;
-    d->output.action = S3_NAV_NONE;
+        &p_d->navigation); /* A sensor latch is retained. */
+    p_d->pending = S3_NAV_NONE;
+    p_d->turn = S3_NAV_NONE;
+    p_d->advancing = false;
+    p_d->touched = false;
+    p_d->searching = false;
+    p_d->command_id = p_d->cancel_id = 0U;
+    p_d->waiting_stop = false;
+    p_d->output.steering.valid = false;
+    p_d->output.action = S3_NAV_NONE;
     /* Keep this cycle's barcode event too: a barcode that causes the halt
      * (e.g. an unmapped letter) must still reach telemetry. */
-    d->output.events &= (S3_EVENT_SENSOR_FAULT | S3_EVENT_BARCODE);
-    d->output.lifecycle = d->navigation.lifecycle;
-    d->output.diagnostic = true;
-    d->state = state;
-    d->reason = reason;
+    p_d->output.events &= (S3_EVENT_SENSOR_FAULT | S3_EVENT_BARCODE);
+    p_d->output.lifecycle = p_d->navigation.lifecycle;
+    p_d->output.diagnostic = true;
+    p_d->state = state;
+    p_d->reason = reason;
 }
-void s3_drive_terrain_fault(s3_drive_t *d)
+
+void s3_drive_terrain_fault (s3_drive_t * p_d)
 {
-    if (d && d->configured) { halt(d, S3_DRIVE_FAULT, S3_DRIVE_TERRAIN_FAULT); }
+    if (p_d && p_d->configured)
+    {
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_TERRAIN_FAULT);
+    }
 }
-bool s3_drive_init(s3_drive_t *d, const s3_navigation_config_t *cfg,
-                   const s3_drive_port_t *port)
+
+bool s3_drive_init (s3_drive_t * p_d, const s3_navigation_config_t * p_cfg,
+                    const s3_drive_port_t * p_port)
 {
-    if (d == 0)
+    if (p_d == 0)
     {
         return false;
     }
-    *d = (s3_drive_t){0};
-    if ((port == 0) || !port->velocity || !port->manoeuvre || !port->stop ||
-        !port->report || !port->command_id || !port->reset ||
-        !port->heartbeat || !s3_navigation_init(&d->navigation, cfg))
+    *p_d = (s3_drive_t){0};
+    if ((p_port == 0) || !p_port->velocity || !p_port->manoeuvre ||
+        !p_port->stop || !p_port->report || !p_port->command_id ||
+        !p_port->reset || !p_port->heartbeat ||
+        !s3_navigation_init(&p_d->navigation, p_cfg))
     {
         return false;
     }
-    d->port = *port;
-    d->options = s3_drive_default_options();
-    d->configured = true;
+    p_d->port = *p_port;
+    p_d->options = s3_drive_default_options();
+    p_d->configured = true;
 #if APP_S5
     const s5_config_t obstacle_config = s5_defaults();
-    s5_avoidance_init(&d->obstacle, &obstacle_config);
+    s5_avoidance_init(&p_d->obstacle, &obstacle_config);
 #endif
     return true;
 }
-bool s3_drive_set_options(s3_drive_t *d, const s3_drive_options_t *o)
+
+bool s3_drive_set_options (s3_drive_t * p_d, const s3_drive_options_t * p_o)
 {
-    if ((d == 0) || !d->configured || (o == 0) ||
-        ((d->state != S3_DRIVE_OFF) && (d->state != S3_DRIVE_HALTED) &&
-         (d->state != S3_DRIVE_FAULT)) ||
-        !finite_f(o->turn_advance_m) || !finite_f(o->advance_mps) ||
-        (o->turn_advance_m < 0.0f) || (o->turn_advance_m > 0.30f) ||
-        ((o->turn_advance_m > 0.0f) &&
-         ((o->drive == 0) || (o->advance_mps <= 0.0f))) ||
-        (o->pending_wait_us == 0U) || (o->pending_wait_us >= 0x80000000U) ||
-        (o->turn_line_window_us >= 0x80000000U) ||
-        !finite_f(o->search_deg) || (o->search_deg < 0.0f) ||
-        (o->search_deg > 60.0f) ||
-        ((o->search_deg > 0.0f) &&
-         ((o->turn_line_window_us == 0U) || !finite_f(o->search_mps) ||
-          (o->search_mps <= 0.0f) || (o->search_mps > 0.30f) ||
-          !finite_f(o->track_m) || (o->track_m < 0.05f) ||
-          (o->track_m > 0.50f))))
+    if ((p_d == 0) || !p_d->configured || (p_o == 0) ||
+        ((p_d->state != S3_DRIVE_OFF) && (p_d->state != S3_DRIVE_HALTED) &&
+         (p_d->state != S3_DRIVE_FAULT)) ||
+        !finite_f(p_o->turn_advance_m) || !finite_f(p_o->advance_mps) ||
+        (p_o->turn_advance_m < 0.0f) || (p_o->turn_advance_m > 0.30f) ||
+        ((p_o->turn_advance_m > 0.0f) &&
+         ((p_o->drive == 0) || (p_o->advance_mps <= 0.0f))) ||
+        (p_o->pending_wait_us == 0U) || (p_o->pending_wait_us >= 0x80000000U) ||
+        (p_o->turn_line_window_us >= 0x80000000U) ||
+        !finite_f(p_o->search_deg) || (p_o->search_deg < 0.0f) ||
+        (p_o->search_deg > 60.0f) ||
+        ((p_o->search_deg > 0.0f) &&
+         ((p_o->turn_line_window_us == 0U) || !finite_f(p_o->search_mps) ||
+          (p_o->search_mps <= 0.0f) || (p_o->search_mps > 0.30f) ||
+          !finite_f(p_o->track_m) || (p_o->track_m < 0.05f) ||
+          (p_o->track_m > 0.50f))))
     {
         return false;
     }
-    d->options = *o;
+    p_d->options = *p_o;
     return true;
 }
-bool s3_drive_start(s3_drive_t *d, uint32_t now)
+
+bool s3_drive_start (s3_drive_t * p_d, uint32_t now)
 {
 #if APP_S5
     s5_observation_t obstacle;
-    if (!subsystem5_snapshot(&obstacle) || !s5_range_ready(&obstacle, now)) { return false; }
-#endif
-    if ((d == 0) || !d->configured ||
-        ((d->state != S3_DRIVE_OFF) && (d->state != S3_DRIVE_HALTED)) ||
-        !feedback_fresh(d, now) || (d->feedback.state != MOTION_IDLE) ||
-        (d->feedback.fault != MOTION_FAULT_NONE) || !d->feedback.braked ||
-        !s3_navigation_start(&d->navigation, now))
+    if (!subsystem5_snapshot(&obstacle) || !s5_range_ready(&obstacle, now))
     {
         return false;
     }
-    (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
-#if APP_S5
-    d->obstacle_snapshot_valid=s5_observation_pack(&obstacle,d->obstacle_snapshot);
-    d->obstacle_snapshot_us=now;
-    s5_avoidance_abort(&d->obstacle);d->obstacle.fault=S5_OK;
-    subsystem5_set_controller_status(S5_IDLE,S5_OK,S5_ROUTE_NONE,0U,0U,0U);
 #endif
-    d->state = S3_DRIVE_FOLLOW;
-    d->reason = S3_DRIVE_OK;
-    d->pending = S3_NAV_NONE;
-    d->port.heartbeat(true);
+    if ((p_d == 0) || !p_d->configured ||
+        ((p_d->state != S3_DRIVE_OFF) && (p_d->state != S3_DRIVE_HALTED)) ||
+        !feedback_fresh(p_d, now) || (p_d->feedback.state != MOTION_IDLE) ||
+        (p_d->feedback.fault != MOTION_FAULT_NONE) || !p_d->feedback.braked ||
+        !s3_navigation_start(&p_d->navigation, now))
+    {
+        return false;
+    }
+    (void)s3_navigation_set_mode(&p_d->navigation, S3_MODE_TRACK);
+#if APP_S5
+    p_d->obstacle_snapshot_valid =
+        s5_observation_pack(&obstacle, p_d->obstacle_snapshot);
+    p_d->obstacle_snapshot_us = now;
+    s5_avoidance_abort(&p_d->obstacle);
+    p_d->obstacle.fault = S5_OK;
+    subsystem5_set_control_status(S5_IDLE, S5_OK, S5_ROUTE_NONE, 0U, 0U, 0U);
+#endif
+    p_d->state = S3_DRIVE_FOLLOW;
+    p_d->reason = S3_DRIVE_OK;
+    p_d->pending = S3_NAV_NONE;
+    p_d->port.heartbeat(true);
     return true;
 }
-void s3_drive_stop(s3_drive_t *d)
+
+void s3_drive_stop (s3_drive_t * p_d)
 {
-    if ((d == 0) || !d->configured)
+    if ((p_d == 0) || !p_d->configured)
     {
         return;
     }
-    if ((d->state == S3_DRIVE_FAULT) ||
-        (d->navigation.lifecycle == S3_RUN_FAULT_LATCHED))
+    if ((p_d->state == S3_DRIVE_FAULT) ||
+        (p_d->navigation.lifecycle == S3_RUN_FAULT_LATCHED))
     {
-        halt(d, S3_DRIVE_FAULT, d->reason);
+        halt(p_d, S3_DRIVE_FAULT, p_d->reason);
     }
     else
     {
-        halt(d, S3_DRIVE_OFF, S3_DRIVE_OK);
+        halt(p_d, S3_DRIVE_OFF, S3_DRIVE_OK);
     }
 }
-bool s3_drive_reset(s3_drive_t *d, uint32_t now)
+
+bool s3_drive_reset (s3_drive_t * p_d, uint32_t now)
 {
-    if ((d == 0) || !d->configured || (d->state != S3_DRIVE_FAULT) ||
-        (d->reset_result == S3_RESET_PENDING))
+    if ((p_d == 0) || !p_d->configured || (p_d->state != S3_DRIVE_FAULT) ||
+        (p_d->reset_result == S3_RESET_PENDING))
     {
         return false;
     }
-    d->port.stop();
-    d->port.heartbeat(false);
-    d->reset_result = S3_RESET_FAILED;
-    if (!d->port.reset())
+    p_d->port.stop();
+    p_d->port.heartbeat(false);
+    p_d->reset_result = S3_RESET_FAILED;
+    if (!p_d->port.reset())
     {
         return false;
     }
     /* Buddy 2 resets its controller synchronously but publishes feedback on
      * its next control tick. The cached snapshot is therefore pre-reset;
      * checking it here incorrectly required a second button press. */
-    d->reset_us = now;
-    d->reset_result = S3_RESET_PENDING;
+    p_d->reset_us = now;
+    p_d->reset_result = S3_RESET_PENDING;
     return true;
 }
-s3_reset_result_t s3_drive_reset_result(const s3_drive_t *d)
+
+s3_reset_result_t s3_drive_reset_result (const s3_drive_t * p_d)
 {
-    return d ? (s3_reset_result_t)d->reset_result : S3_RESET_FAILED;
+    return p_d ? (s3_reset_result_t)p_d->reset_result : S3_RESET_FAILED;
 }
-static void finish_reset(s3_drive_t *d, uint32_t now)
+
+static void finish_reset (s3_drive_t * p_d, uint32_t now)
 {
-    if ((uint32_t)(now - d->reset_us) >= S3_RESET_WAIT_US)
+    if ((uint32_t)(now - p_d->reset_us) >= S3_RESET_WAIT_US)
     {
-        d->reset_result = S3_RESET_FAILED;
+        p_d->reset_result = S3_RESET_FAILED;
         return;
     }
-    if (!feedback_fresh(d, now) ||
-        ((int32_t)(d->feedback.timestamp_us - d->reset_us) <= 0) ||
-        (d->feedback.state != MOTION_IDLE) ||
-        (d->feedback.fault != MOTION_FAULT_NONE) || !d->feedback.braked)
-    {
-        return;
-    }
-    if ((d->navigation.lifecycle == S3_RUN_FAULT_LATCHED) &&
-        !s3_navigation_reset_fault(&d->navigation, now))
+    if (!feedback_fresh(p_d, now) ||
+        ((int32_t)(p_d->feedback.timestamp_us - p_d->reset_us) <= 0) ||
+        (p_d->feedback.state != MOTION_IDLE) ||
+        (p_d->feedback.fault != MOTION_FAULT_NONE) || !p_d->feedback.braked)
     {
         return;
     }
-    if (s3_navigation_readiness(&d->navigation, now) != 0U)
+    if ((p_d->navigation.lifecycle == S3_RUN_FAULT_LATCHED) &&
+        !s3_navigation_reset_fault(&p_d->navigation, now))
     {
         return;
     }
-    d->state = S3_DRIVE_OFF;
-    d->reason = S3_DRIVE_OK;
-    d->output.lifecycle = d->navigation.lifecycle;
-    d->output.stop_requested = false;
-    d->reset_result = S3_RESET_OK;
+    if (s3_navigation_readiness(&p_d->navigation, now) != 0U)
+    {
+        return;
+    }
+    p_d->state = S3_DRIVE_OFF;
+    p_d->reason = S3_DRIVE_OK;
+    p_d->output.lifecycle = p_d->navigation.lifecycle;
+    p_d->output.stop_requested = false;
+    p_d->reset_result = S3_RESET_OK;
 }
-static bool request_turn(s3_drive_t *d)
+
+static bool request_turn (s3_drive_t * p_d)
 {
-    manoeuvre_t m;
-    switch (d->turn)
+    manoeuvre_t value_m;
+    switch (p_d->turn)
     {
     case S3_NAV_LEFT:
-        m = MANOEUVRE_LEFT;
+        value_m = MANOEUVRE_LEFT;
         break;
     case S3_NAV_RIGHT:
-        m = MANOEUVRE_RIGHT;
+        value_m = MANOEUVRE_RIGHT;
         break;
     case S3_NAV_STRAIGHT:
-        m = MANOEUVRE_STRAIGHT;
+        value_m = MANOEUVRE_STRAIGHT;
         break;
     case S3_NAV_UTURN:
-        m = MANOEUVRE_U_TURN;
+        value_m = MANOEUVRE_U_TURN;
         break;
     default:
         return false;
     }
-    if (d->port.manoeuvre(m) != MOTION_OK)
+    if (p_d->port.manoeuvre(value_m) != MOTION_OK)
     {
         return false;
     }
-    d->command_id = d->port.command_id();
-    return d->command_id != 0U;
+    p_d->command_id = p_d->port.command_id();
+    return p_d->command_id != 0U;
 }
+
 /* LEFT/RIGHT pivot on the axle, which is behind the sensors. Optionally drive
  * on first so the axle reaches the crossing; the braking distance already
  * travelled since detection is subtracted (same odometry epoch only). */
-static bool start_manoeuvre(s3_drive_t *d)
+static bool start_manoeuvre (s3_drive_t * p_d)
 {
-    const double travelled = d->feedback.centre_m - d->junction_m;
-    const float advance = d->options.turn_advance_m - (float)travelled;
-    d->touched = false;
-    if (((d->turn == S3_NAV_LEFT) || (d->turn == S3_NAV_RIGHT)) &&
-        (d->options.turn_advance_m > 0.0f) && (advance > S3_MIN_ADVANCE_M))
+    const double travelled = p_d->feedback.centre_m - p_d->junction_m;
+    const float advance = p_d->options.turn_advance_m - (float)travelled;
+    p_d->touched = false;
+    if (((p_d->turn == S3_NAV_LEFT) || (p_d->turn == S3_NAV_RIGHT)) &&
+        (p_d->options.turn_advance_m > 0.0f) && (advance > S3_MIN_ADVANCE_M))
     {
-        if (d->options.drive(advance, d->options.advance_mps) != MOTION_OK)
+        if (p_d->options.drive(advance, p_d->options.advance_mps) != MOTION_OK)
         {
             return false;
         }
-        d->advancing = true;
-        d->command_id = d->port.command_id();
-        return d->command_id != 0U;
+        p_d->advancing = true;
+        p_d->command_id = p_d->port.command_id();
+        return p_d->command_id != 0U;
     }
-    d->advancing = false;
-    return request_turn(d);
+    p_d->advancing = false;
+    return request_turn(p_d);
 }
+
 /* Unannounced crossing (or a STRAIGHT action) in cross_straight mode: steering
  * is undefined while both sensors are dark, so hold both wheels at base speed
  * until the crossing has passed under the sensors. */
-static bool straight_across(const s3_drive_t *d)
+static bool straight_across (const s3_drive_t * p_d)
 {
-    return d->options.cross_straight && d->output.line.valid &&
-           d->output.line.junction_candidate &&
-           ((d->pending == S3_NAV_NONE) || (d->pending == S3_NAV_STRAIGHT));
+    return p_d->options.cross_straight && p_d->output.line.valid &&
+           p_d->output.line.junction_candidate &&
+           ((p_d->pending == S3_NAV_NONE) || (p_d->pending == S3_NAV_STRAIGHT));
 }
+
 /* A stop request is not a stopped acknowledgement. Wait for the motion
  * owner to apply its brake and observe stationary wheels before resuming. */
-static void request_stop(s3_drive_t *d, uint32_t now)
+static void request_stop (s3_drive_t * p_d, uint32_t now)
 {
-    if (!d->waiting_stop)
+    if (!p_d->waiting_stop)
     {
-        d->cancel_id = d->command_id;
-        d->command_id = 0U;
-        d->waiting_stop = true;
-        d->phase_us = now;
-        d->port.stop();
+        p_d->cancel_id = p_d->command_id;
+        p_d->command_id = 0U;
+        p_d->waiting_stop = true;
+        p_d->phase_us = now;
+        p_d->port.stop();
     }
 }
-static bool stopped_after_request(const s3_drive_t *d)
+
+static bool stopped_after_request (const s3_drive_t * p_d)
 {
-    return d->feedback.braked && d->feedback.state == MOTION_IDLE &&
-           d->cancel_id == 0U &&
-           (int32_t)(d->feedback.timestamp_us - d->phase_us) > 0;
+    return p_d->feedback.braked && p_d->feedback.state == MOTION_IDLE &&
+           p_d->cancel_id == 0U &&
+           (int32_t)(p_d->feedback.timestamp_us - p_d->phase_us) > 0;
 }
+
 /* Bounded drain, also while disarmed. Never use motion_poll(): it does not
  * consume reports. Only a matching DONE may finish our current manoeuvre. */
-static bool receive_reports(s3_drive_t *d, bool running, bool *done)
+static bool receive_reports (s3_drive_t * p_d, bool running, bool * p_done)
 {
     motion_report_t report;
     bool healthy = true;
-    *done = false;
-    for (unsigned int i = 0U; i < MOTION_REPORT_QUEUE_LEN; i++)
+    *p_done = false;
+    for (unsigned int value_i = 0U; value_i < MOTION_REPORT_QUEUE_LEN;
+         value_i++)
     {
-        if (!d->port.report(&report))
+        if (!p_d->port.report(&report))
         {
             break;
         }
@@ -327,21 +373,21 @@ static bool receive_reports(s3_drive_t *d, bool running, bool *done)
             healthy = false;
             continue;
         }
-        if (report.command_id == d->cancel_id)
+        if (report.command_id == p_d->cancel_id)
         {
             if (report.outcome != MOTION_OUTCOME_CANCELLED)
             {
                 healthy = false;
             }
-            d->cancel_id = 0U;
+            p_d->cancel_id = 0U;
         }
-        else if (report.command_id == d->command_id)
+        else if (report.command_id == p_d->command_id)
         {
-            if (d->state == S3_DRIVE_MANOEUVRE &&
-                report.outcome == MOTION_OUTCOME_DONE && !*done &&
+            if (p_d->state == S3_DRIVE_MANOEUVRE &&
+                report.outcome == MOTION_OUTCOME_DONE && !*p_done &&
                 report.fault == MOTION_FAULT_NONE)
             {
-                *done = true;
+                *p_done = true;
             }
             else
             {
@@ -354,342 +400,430 @@ static bool receive_reports(s3_drive_t *d, bool running, bool *done)
     }
     return healthy;
 }
+
 /* Duration of one search_deg of spin on the spot at search_mps. */
-static uint32_t search_leg_us(const s3_drive_t *d)
+static uint32_t search_leg_us (const s3_drive_t * p_d)
 {
-    const float rad = d->options.search_deg * 0.0174533f;
-    const float s = rad * 0.5f * d->options.track_m / d->options.search_mps;
-    return (uint32_t)(s * 1000000.0f) + 1U;
+    const float rad = p_d->options.search_deg * 0.0174533f;
+    const float value_s =
+        rad * 0.5f * p_d->options.track_m / p_d->options.search_mps;
+    return (uint32_t)(value_s * 1000000.0f) + 1U;
 }
+
 /* The turn ended with no front sensor on the new line. If the last touch was
  * in the second half of the spin, the line was passed (overshoot): sweep back
  * first; otherwise (undershoot, or only the old line touched early) keep
  * turning the same way first. Both sides are swept either way. */
-static void start_search(s3_drive_t *d, uint32_t now)
+static void start_search (s3_drive_t * p_d, uint32_t now)
 {
-    const int8_t turn_sign = (d->turn == S3_NAV_RIGHT) ? -1 : 1;
-    const uint32_t spin_us = now - d->phase_us;
-    const bool overshoot = d->touched && (spin_us > 0U) &&
-                           ((uint32_t)(now - d->touch_us) < spin_us / 2U);
-    d->search_sign = overshoot ? (int8_t)-turn_sign : turn_sign;
-    d->search_leg = 0U;
-    d->search_us = now;
-    d->phase_us = now;
-    d->searching = true;
+    const int8_t turn_sign = (p_d->turn == S3_NAV_RIGHT) ? -1 : 1;
+    const uint32_t spin_us = now - p_d->phase_us;
+    const bool overshoot = p_d->touched && (spin_us > 0U) &&
+                           ((uint32_t)(now - p_d->touch_us) < spin_us / 2U);
+    p_d->search_sign = overshoot ? (int8_t)-turn_sign : turn_sign;
+    p_d->search_leg = 0U;
+    p_d->search_us = now;
+    p_d->phase_us = now;
+    p_d->searching = true;
 }
-static void search_step(s3_drive_t *d, uint32_t now)
+
+static void search_step (s3_drive_t * p_d, uint32_t now)
 {
-    float v;
-    if (d->output.line.valid && d->output.line.touching)
+    float value_v;
+    if (p_d->output.line.valid && p_d->output.line.touching)
     {
-        d->searching = false;
-        d->port.stop();
-        (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
-        d->state = S3_DRIVE_REACQUIRE;
-        d->phase_us = now;
+        p_d->searching = false;
+        p_d->port.stop();
+        (void)s3_navigation_set_mode(&p_d->navigation, S3_MODE_TRACK);
+        p_d->state = S3_DRIVE_REACQUIRE;
+        p_d->phase_us = now;
         return;
     }
-    if ((uint32_t)(now - d->search_us) >=
-        search_leg_us(d) * (d->search_leg == 0U ? 1U : 2U))
+    if ((uint32_t)(now - p_d->search_us) >=
+        search_leg_us(p_d) * (p_d->search_leg == 0U ? 1U : 2U))
     {
-        if (d->search_leg != 0U)
+        if (p_d->search_leg != 0U)
         {
-            halt(d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
+            halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
             return;
         }
-        d->search_leg = 1U;
-        d->search_sign = (int8_t)-d->search_sign;
-        d->search_us = now;
+        p_d->search_leg = 1U;
+        p_d->search_sign = (int8_t)-p_d->search_sign;
+        p_d->search_us = now;
     }
-    v = d->options.search_mps * (float)d->search_sign; /* + = anticlockwise */
-    if (d->port.velocity(-v, v) != MOTION_OK)
+    value_v = p_d->options.search_mps *
+              (float)p_d->search_sign; /* + = anticlockwise */
+    if (p_d->port.velocity(-value_v, value_v) != MOTION_OK)
     {
-        halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
     }
 }
 #if APP_S5
-/* How hard the line follower is turning (+ = left), time-averaged, tau 0.5 s. */
-static void turn_track(s3_drive_t *d, float left, float right, uint32_t now)
+/* How hard the line follower is turning (+ = left), time-averaged, tau 0.5 s.
+ */
+static void turn_track (s3_drive_t * p_d, float left, float right, uint32_t now)
 {
     const float sum = left + right;
-    const uint32_t dt = d->turn_us ? (uint32_t)(now - d->turn_us) : 0U;
-    d->turn_us = now;
-    if (sum < 0.01f || dt == 0U || dt > 200000U)
+    const uint32_t value_dt =
+        p_d->turn_us ? (uint32_t)(now - p_d->turn_us) : 0U;
+    p_d->turn_us = now;
+    if (sum < 0.01f || value_dt == 0U || value_dt > 200000U)
     {
         return;
     }
     {
         /* Fixed point, 1/10000: s += (x - s) * dt / (tau + dt), tau 0.5 s. */
-        float r = (right - left) / sum;
-        int32_t x, s = d->turn_q;
-        r = r > 1.0f ? 1.0f : (r < -1.0f ? -1.0f : r);
-        x = (int32_t)(r * 10000.0f);
-        s += (int32_t)(((int64_t)(x - s) * (int64_t)dt) / (int64_t)(500000U + dt));
-        d->turn_q = (int16_t)(s > 10000 ? 10000 : (s < -10000 ? -10000 : s));
+        float value_r = (right - left) / sum;
+        int32_t value_x, value_s = p_d->turn_q;
+        value_r = value_r > 1.0f ? 1.0f : (value_r < -1.0f ? -1.0f : value_r);
+        value_x = (int32_t)(value_r * 10000.0f);
+        value_s +=
+            (int32_t)(((int64_t)(value_x - value_s) * (int64_t)value_dt) /
+                      (int64_t)(500000U + value_dt));
+        p_d->turn_q =
+            (int16_t)(value_s > 10000 ? 10000
+                                      : (value_s < -10000 ? -10000 : value_s));
     }
 }
+
 /* Latched shared value: whole percent toward zero, -100..100 (so 19.99 % is
  * still below the 20 % bend threshold, as with the old float compare). */
-static int8_t turn_pct(int16_t q)
+static int8_t turn_pct (int16_t value_q)
 {
-    return (int8_t)(q / 100);
+    return (int8_t)(value_q / 100);
 }
 #endif
 
-static void follow(s3_drive_t *d, uint32_t now)
+static void follow (s3_drive_t * p_d, uint32_t now)
 {
-    const s3_navigation_output_t *out = &d->output;
+    const s3_navigation_output_t * p_out = &p_d->output;
     float left, right;
-    if (out->events & S3_EVENT_LINE_LOST)
+    if (p_out->events & S3_EVENT_LINE_LOST)
     {
-        halt(d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
+        halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
         return;
     }
-    if (out->events & S3_EVENT_BARCODE)
+    if (p_out->events & S3_EVENT_BARCODE)
     {
-        if (out->action == S3_NAV_NONE)
+        if (p_out->action == S3_NAV_NONE)
         {
-            halt(d, S3_DRIVE_HALTED, S3_DRIVE_UNMAPPED);
+            halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_UNMAPPED);
             return;
         }
-        if (d->pending != S3_NAV_NONE)
+        if (p_d->pending != S3_NAV_NONE)
         {
-            halt(d, S3_DRIVE_HALTED, S3_DRIVE_NO_DIRECTION);
+            halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_NO_DIRECTION);
             return;
         }
-        d->pending = out->action;
-        d->pending_us = now;
+        p_d->pending = p_out->action;
+        p_d->pending_us = now;
     }
-    if ((d->pending != S3_NAV_NONE) &&
-        ((uint32_t)(now - d->pending_us) > d->options.pending_wait_us))
+    if ((p_d->pending != S3_NAV_NONE) &&
+        ((uint32_t)(now - p_d->pending_us) > p_d->options.pending_wait_us))
     {
-        halt(d, S3_DRIVE_HALTED, S3_DRIVE_TIMEOUT);
+        halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_TIMEOUT);
         return;
     }
-    if (out->events & S3_EVENT_JUNCTION)
+    if (p_out->events & S3_EVENT_JUNCTION)
     {
-        if (d->options.cross_straight &&
-            ((d->pending == S3_NAV_NONE) || (d->pending == S3_NAV_STRAIGHT)))
+        if (p_d->options.cross_straight && ((p_d->pending == S3_NAV_NONE) ||
+                                            (p_d->pending == S3_NAV_STRAIGHT)))
         {
-            d->pending = S3_NAV_NONE; /* straight across, keep following */
+            p_d->pending = S3_NAV_NONE; /* straight across, keep following */
         }
-        else if (d->pending == S3_NAV_NONE)
+        else if (p_d->pending == S3_NAV_NONE)
         {
-            halt(d, S3_DRIVE_HALTED, S3_DRIVE_NO_DIRECTION);
+            halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_NO_DIRECTION);
             return;
         }
         else
         {
-            d->junction_m = d->feedback.centre_m;
-            request_stop(d, now);
-            d->state = S3_DRIVE_BRAKING;
+            p_d->junction_m = p_d->feedback.centre_m;
+            request_stop(p_d, now);
+            p_d->state = S3_DRIVE_BRAKING;
             return;
         }
     }
-    if (d->waiting_stop)
+    if (p_d->waiting_stop)
     {
-        if ((uint32_t)(now - d->phase_us) > S3_BRAKE_WAIT_US)
+        if ((uint32_t)(now - p_d->phase_us) > S3_BRAKE_WAIT_US)
         {
-            halt(d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
+            halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
             return;
         }
-        if (!stopped_after_request(d))
-        {
-            return;
-        }
-        if (!out->steering.valid && !straight_across(d))
+        if (!stopped_after_request(p_d))
         {
             return;
         }
-        d->waiting_stop = false;
+        if (!p_out->steering.valid && !straight_across(p_d))
+        {
+            return;
+        }
+        p_d->waiting_stop = false;
     }
-    if (out->steering.valid)
+    if (p_out->steering.valid)
     {
-        left = out->steering.left_mps;
-        right = out->steering.right_mps;
+        left = p_out->steering.left_mps;
+        right = p_out->steering.right_mps;
     }
-    else if (straight_across(d))
+    else if (straight_across(p_d))
     {
-        left = right = d->navigation.config.steering.base_mps;
+        left = right = p_d->navigation.config.steering.base_mps;
     }
     else
     {
-        request_stop(d, now);
+        request_stop(p_d, now);
         return;
     }
 #if APP_S5
-    turn_track(d, left, right, now);
+    turn_track(p_d, left, right, now);
 #endif
-    if (d->port.velocity(left, right) != MOTION_OK)
+    if (p_d->port.velocity(left, right) != MOTION_OK)
     {
-        halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
     }
     else
     {
-        d->command_id = d->port.command_id();
-        if (d->command_id == 0U)
+        p_d->command_id = p_d->port.command_id();
+        if (p_d->command_id == 0U)
         {
-            halt(d, S3_DRIVE_FAULT, S3_DRIVE_REPORT_FAULT);
+            halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_REPORT_FAULT);
         }
     }
 }
 
 #if APP_S5
-/* Called only by the existing sample/controller task after its one report drain.
- * S5's pure FSM proposes actions; this owner alone authorises Buddy 2 requests. */
-static bool obstacle_snapshot(s3_drive_t *d,uint32_t now,s5_observation_t *out)
+/* Called only by the existing sample/controller task after its one report
+ * drain. S5's pure FSM proposes actions; this owner alone authorises Buddy 2
+ * requests. */
+static bool obstacle_snapshot (s3_drive_t * p_d, uint32_t now,
+                               s5_observation_t * p_out)
 {
-    s5_snapshot_result_t result=subsystem5_read_snapshot(out);
-    if(result==S5_SNAPSHOT_OK) {
-        d->obstacle_snapshot_valid=s5_observation_pack(out,d->obstacle_snapshot);
-        d->obstacle_snapshot_us=now;
-        return d->obstacle_snapshot_valid;
+    s5_snapshot_result_t result = subsystem5_read_snapshot(p_out);
+    if (result == S5_SNAPSHOT_OK)
+    {
+        p_d->obstacle_snapshot_valid =
+            s5_observation_pack(p_out, p_d->obstacle_snapshot);
+        p_d->obstacle_snapshot_us = now;
+        return p_d->obstacle_snapshot_valid;
     }
-    if(result==S5_SNAPSHOT_BUSY && d->obstacle_snapshot_valid &&
-       (uint32_t)(now-d->obstacle_snapshot_us)<=S5_RANGE_FRESH_US) {
-        return s5_observation_unpack(d->obstacle_snapshot,out);
+    if (result == S5_SNAPSHOT_BUSY && p_d->obstacle_snapshot_valid &&
+        (uint32_t)(now - p_d->obstacle_snapshot_us) <= S5_RANGE_FRESH_US)
+    {
+        return s5_observation_unpack(p_d->obstacle_snapshot, p_out);
     }
-    d->obstacle_snapshot_valid=false;
+    p_d->obstacle_snapshot_valid = false;
     return false;
 }
-static bool obstacle_control(s3_drive_t *d,uint32_t now,bool done)
+
+static bool obstacle_control (s3_drive_t * p_d, uint32_t now, bool done)
 {
-    s5_observation_t observation={0};
-    bool have=obstacle_snapshot(d,now,&observation);
-    if (!d->obstacle_active) {
-        if (!have || !s5_range_ready(&observation,now)) {
-            d->obstacle.fault=S5_BAD_RANGE;d->obstacle.state=S5_FAULT;
-            halt(d,S3_DRIVE_FAULT,S3_DRIVE_BAD_INPUT);return true;
+    s5_observation_t observation = {0};
+    bool have = obstacle_snapshot(p_d, now, &observation);
+    if (!p_d->obstacle_active)
+    {
+        if (!have || !s5_range_ready(&observation, now))
+        {
+            p_d->obstacle.fault = S5_BAD_RANGE;
+            p_d->obstacle.state = S5_FAULT;
+            halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_BAD_INPUT);
+            return true;
         }
-        if (d->state!=S3_DRIVE_FOLLOW) {
-            if (observation.range_mm<=d->obstacle.config.emergency_mm) {
-                d->obstacle.fault=S5_NO_PATH;d->obstacle.state=S5_FAULT;
-                halt(d,S3_DRIVE_FAULT,S3_DRIVE_BAD_INPUT);return true;
+        if (p_d->state != S3_DRIVE_FOLLOW)
+        {
+            if (observation.range_mm <= p_d->obstacle.config.emergency_mm)
+            {
+                p_d->obstacle.fault = S5_NO_PATH;
+                p_d->obstacle.state = S5_FAULT;
+                halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_BAD_INPUT);
+                return true;
             }
             return false;
         }
-        if (observation.range_mm>d->obstacle.config.detect_mm) { return false; }
-        if (d->output.events&S3_EVENT_LINE_LOST) {
-            halt(d,S3_DRIVE_HALTED,S3_DRIVE_LINE_LOST);return true;
+        if (observation.range_mm > p_d->obstacle.config.detect_mm)
+        {
+            return false;
         }
-        /* Do not lose a barcode decoded on the same cycle as obstacle detection.
-         * Its pending lifetime is paused for the detour, never executed off-line. */
-        if (d->output.events&S3_EVENT_BARCODE) {
-            if (d->pending!=S3_NAV_NONE || d->output.action==S3_NAV_NONE) {
-                halt(d,S3_DRIVE_HALTED,S3_DRIVE_UNMAPPED);return true;
+        if (p_d->output.events & S3_EVENT_LINE_LOST)
+        {
+            halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
+            return true;
+        }
+        /* Do not lose a barcode decoded on the same cycle as obstacle
+         * detection. Its pending lifetime is paused for the detour, never
+         * executed off-line. */
+        if (p_d->output.events & S3_EVENT_BARCODE)
+        {
+            if (p_d->pending != S3_NAV_NONE ||
+                p_d->output.action == S3_NAV_NONE)
+            {
+                halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_UNMAPPED);
+                return true;
             }
-            d->pending=d->output.action;d->pending_us=now;
+            p_d->pending = p_d->output.action;
+            p_d->pending_us = now;
         }
-        s5_avoidance_begin(&d->obstacle,now);d->obstacle_active=true;
-        d->obstacle_turn_pct=turn_pct(d->turn_q);   /* bend or straight, at detection */
-        request_stop(d,now);d->state=S3_DRIVE_MANOEUVRE;
-        (void)s3_navigation_set_mode(&d->navigation,S3_MODE_SUPPRESSED);
+        s5_avoidance_begin(&p_d->obstacle, now);
+        p_d->obstacle_active = true;
+        p_d->obstacle_turn_pct =
+            turn_pct(p_d->turn_q); /* bend or straight, at detection */
+        request_stop(p_d, now);
+        p_d->state = S3_DRIVE_MANOEUVRE;
+        (void)s3_navigation_set_mode(&p_d->navigation, S3_MODE_SUPPRESSED);
     }
-    if (done) { d->command_id=0U; }
-    if (observation.scan_id!=d->obstacle_scan_id) { observation.scan_done=false; }
-    const s5_input_t input={
-        .now_us=now,.centre_m=d->feedback.centre_m,
-        .stopped=stopped_after_request(d),.motion_done=done,
-        .healthy=have && d->output.line.valid,
-        .tape=d->navigation.config.line.between?d->output.line.touching:d->output.line.present,
-        .junction=d->output.line.junction_candidate,
-        .line_ready=d->output.steering_preview.valid,
-        .turn_pct=d->obstacle_turn_pct,
-        .observation=observation};
-    s5_action_t request=s5_avoidance_step(&d->obstacle,&input);
-    motion_result_t result=MOTION_OK;
-    if (d->obstacle.state==S5_FAULT) {
-        halt(d,S3_DRIVE_FAULT,S3_DRIVE_BAD_INPUT);return true;
+    if (done)
+    {
+        p_d->command_id = 0U;
     }
-    switch(request.kind) {
+    if (observation.scan_id != p_d->obstacle_scan_id)
+    {
+        observation.scan_done = false;
+    }
+    const s5_input_t input = {.now_us = now,
+                              .centre_m = p_d->feedback.centre_m,
+                              .stopped = stopped_after_request(p_d),
+                              .motion_done = done,
+                              .healthy = have && p_d->output.line.valid,
+                              .tape = p_d->navigation.config.line.between
+                                          ? p_d->output.line.touching
+                                          : p_d->output.line.present,
+                              .junction = p_d->output.line.junction_candidate,
+                              .line_ready = p_d->output.steering_preview.valid,
+                              .turn_pct = p_d->obstacle_turn_pct,
+                              .observation = observation};
+    s5_action_t request = s5_avoidance_step(&p_d->obstacle, &input);
+    motion_result_t result = MOTION_OK;
+    if (p_d->obstacle.state == S5_FAULT)
+    {
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_BAD_INPUT);
+        return true;
+    }
+    switch (request.kind)
+    {
     case S5_ACT_STOP:
-        d->port.stop();d->phase_us=now;d->command_id=0U;break;
+        p_d->port.stop();
+        p_d->phase_us = now;
+        p_d->command_id = 0U;
+        break;
     case S5_ACT_SCAN:
-        d->waiting_stop=false;
-        if (++d->obstacle_scan_id==0U) { d->obstacle_scan_id=1U; }
-        if (!subsystem5_request_scan(d->obstacle_scan_id)) { result=MOTION_ERR_BUSY; }
+        p_d->waiting_stop = false;
+        if (++p_d->obstacle_scan_id == 0U)
+        {
+            p_d->obstacle_scan_id = 1U;
+        }
+        if (!subsystem5_request_scan(p_d->obstacle_scan_id))
+        {
+            result = MOTION_ERR_BUSY;
+        }
         break;
     case S5_ACT_PEEK: /* one side reading while stopped (bypass leg 3) */
-        d->waiting_stop=false;
-        if (++d->obstacle_scan_id==0U) { d->obstacle_scan_id=1U; }
-        if (!subsystem5_request_peek(d->obstacle_scan_id,(unsigned)request.value)) { result=MOTION_ERR_BUSY; }
+        p_d->waiting_stop = false;
+        if (++p_d->obstacle_scan_id == 0U)
+        {
+            p_d->obstacle_scan_id = 1U;
+        }
+        if (!subsystem5_request_peek(p_d->obstacle_scan_id,
+                                     (unsigned)request.value))
+        {
+            result = MOTION_ERR_BUSY;
+        }
         break;
     case S5_ACT_DRIVE:
-        result=motion_request_drive((float)request.value/1000.0f,(float)request.speed_mms/1000.0f);
+        result = motion_request_drive((float)request.value / 1000.0f,
+                                      (float)request.speed_mms / 1000.0f);
         break;
     case S5_ACT_TURN:
-        result=motion_request_turn((float)request.value,(float)request.speed_mms/1000.0f);
+        result = motion_request_turn((float)request.value,
+                                     (float)request.speed_mms / 1000.0f);
         break;
     case S5_ACT_RESUME:
-        d->obstacle_active=false;d->waiting_stop=false;d->command_id=d->cancel_id=0U;
-        if (d->pending!=S3_NAV_NONE) { d->pending_us+=now-d->obstacle.started_us; }
-        (void)s3_navigation_set_mode(&d->navigation,S3_MODE_TRACK);
-        d->state=S3_DRIVE_FOLLOW;break;
-    default: break;
+        p_d->obstacle_active = false;
+        p_d->waiting_stop = false;
+        p_d->command_id = p_d->cancel_id = 0U;
+        if (p_d->pending != S3_NAV_NONE)
+        {
+            p_d->pending_us += now - p_d->obstacle.started_us;
+        }
+        (void)s3_navigation_set_mode(&p_d->navigation, S3_MODE_TRACK);
+        p_d->state = S3_DRIVE_FOLLOW;
+        break;
+    default:
+        break;
     }
-    if (result==MOTION_OK && (request.kind==S5_ACT_DRIVE || request.kind==S5_ACT_TURN)) {
-        d->command_id=d->port.command_id();d->phase_us=now;
-        if (!d->command_id) { result=MOTION_ERR_BUSY; }
+    if (result == MOTION_OK &&
+        (request.kind == S5_ACT_DRIVE || request.kind == S5_ACT_TURN))
+    {
+        p_d->command_id = p_d->port.command_id();
+        p_d->phase_us = now;
+        if (!p_d->command_id)
+        {
+            result = MOTION_ERR_BUSY;
+        }
     }
-    if (result!=MOTION_OK) {
-        d->obstacle.state=S5_FAULT;d->obstacle.fault=S5_MOTION_ERROR;
-        halt(d,S3_DRIVE_FAULT,S3_DRIVE_REJECTED);
+    if (result != MOTION_OK)
+    {
+        p_d->obstacle.state = S5_FAULT;
+        p_d->obstacle.fault = S5_MOTION_ERROR;
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
     }
-    report_obstacle_status(d);
+    report_obstacle_status(p_d);
     return true;
 }
 #endif
 
-bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
-                      const motion_feedback_t *feedback)
+bool s3_drive_process (s3_drive_t * p_d, const s3_sensor_frame_t * p_frame,
+                       const motion_feedback_t * p_feedback)
 {
     s3_odometry_sample_t odometry = {0};
     uint32_t now;
     bool running, done, reports_healthy;
-    if ((d == 0) || !d->configured)
+    if ((p_d == 0) || !p_d->configured)
     {
         return false;
     }
-    if (frame == 0)
+    if (p_frame == 0)
     {
-        halt(d, S3_DRIVE_FAULT, S3_DRIVE_BAD_INPUT);
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_BAD_INPUT);
         return false;
     }
-    now = frame->timestamp_us;
-    d->feedback = feedback ? *feedback : (motion_feedback_t){0};
-    running = (d->state >= S3_DRIVE_FOLLOW) && (d->state <= S3_DRIVE_REACQUIRE);
-    reports_healthy = receive_reports(d, running, &done);
-    if (running && d->feedback.report_loss_count != d->report_loss_count)
+    now = p_frame->timestamp_us;
+    p_d->feedback = p_feedback ? *p_feedback : (motion_feedback_t){0};
+    running =
+        (p_d->state >= S3_DRIVE_FOLLOW) && (p_d->state <= S3_DRIVE_REACQUIRE);
+    reports_healthy = receive_reports(p_d, running, &done);
+    if (running && p_d->feedback.report_loss_count != p_d->report_loss_count)
     {
         reports_healthy = false;
     }
-    d->report_loss_count = d->feedback.report_loss_count;
-    odometry =
-        (s3_odometry_sample_t){d->feedback.centre_m, d->feedback.timestamp_us,
-                               d->feedback.epoch, d->feedback.valid};
-    if (!s3_navigation_process(&d->navigation, frame, &odometry, &d->output))
+    p_d->report_loss_count = p_d->feedback.report_loss_count;
+    odometry = (s3_odometry_sample_t){p_d->feedback.centre_m,
+                                      p_d->feedback.timestamp_us,
+                                      p_d->feedback.epoch, p_d->feedback.valid};
+    if (!s3_navigation_process(&p_d->navigation, p_frame, &odometry,
+                               &p_d->output))
     {
-        halt(d, S3_DRIVE_FAULT, S3_DRIVE_BAD_INPUT);
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_BAD_INPUT);
         return false;
     }
-    if (d->reset_result == S3_RESET_PENDING)
+    if (p_d->reset_result == S3_RESET_PENDING)
     {
-        finish_reset(d, now);
+        finish_reset(p_d, now);
         /* Still disarmed whether the reset completed, is waiting, or timed
          * out. Never let a fault reset fall through to a driving action. */
         return true;
     }
-    running = (d->state >= S3_DRIVE_FOLLOW) && (d->state <= S3_DRIVE_REACQUIRE);
-    if (d->output.stop_requested)
+    running =
+        (p_d->state >= S3_DRIVE_FOLLOW) && (p_d->state <= S3_DRIVE_REACQUIRE);
+    if (p_d->output.stop_requested)
     {
-        halt(d, S3_DRIVE_FAULT, S3_DRIVE_SENSOR_FAULT);
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_SENSOR_FAULT);
         return true;
     }
     if (running &&
-        (!feedback_fresh(d, now) || (d->feedback.state == MOTION_FAULT) ||
-         (d->feedback.fault != MOTION_FAULT_NONE)))
+        (!feedback_fresh(p_d, now) || (p_d->feedback.state == MOTION_FAULT) ||
+         (p_d->feedback.fault != MOTION_FAULT_NONE)))
     {
-        halt(d, S3_DRIVE_FAULT, S3_DRIVE_MOTION_FAULT);
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_MOTION_FAULT);
         return true;
     }
     if (!running)
@@ -697,126 +831,135 @@ bool s3_drive_process(s3_drive_t *d, const s3_sensor_frame_t *frame,
         return true;
     }
     if (!reports_healthy ||
-        (d->command_id != 0U && d->feedback.command_id != d->command_id))
+        (p_d->command_id != 0U && p_d->feedback.command_id != p_d->command_id))
     {
-        halt(d, S3_DRIVE_FAULT, S3_DRIVE_REPORT_FAULT);
+        halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_REPORT_FAULT);
         return true;
     }
-    if (d->external_hold) { request_stop(d, now); d->port.heartbeat(false); return true; }
-    d->port.heartbeat(true);
-#if APP_S5
-    if (obstacle_control(d, now, done)) { return true; }
-#endif
-    if (d->state == S3_DRIVE_FOLLOW)
+    if (p_d->external_hold)
     {
-        follow(d, now);
+        request_stop(p_d, now);
+        p_d->port.heartbeat(false);
+        return true;
     }
-    else if (d->state == S3_DRIVE_BRAKING)
+    p_d->port.heartbeat(true);
+#if APP_S5
+    if (obstacle_control(p_d, now, done))
     {
-        if ((uint32_t)(now - d->phase_us) > S3_BRAKE_WAIT_US)
+        return true;
+    }
+#endif
+    if (p_d->state == S3_DRIVE_FOLLOW)
+    {
+        follow(p_d, now);
+    }
+    else if (p_d->state == S3_DRIVE_BRAKING)
+    {
+        if ((uint32_t)(now - p_d->phase_us) > S3_BRAKE_WAIT_US)
         {
-            halt(d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
+            halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
         }
-        else if (stopped_after_request(d))
+        else if (stopped_after_request(p_d))
         {
-            d->waiting_stop = false;
-            (void)s3_navigation_set_mode(&d->navigation, S3_MODE_SUPPRESSED);
-            d->turn = d->pending;
-            if (!start_manoeuvre(d))
+            p_d->waiting_stop = false;
+            (void)s3_navigation_set_mode(&p_d->navigation, S3_MODE_SUPPRESSED);
+            p_d->turn = p_d->pending;
+            if (!start_manoeuvre(p_d))
             {
-                halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
+                halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
             }
             else
             {
-                d->pending = S3_NAV_NONE;
-                d->state = S3_DRIVE_MANOEUVRE;
-                d->phase_us = now;
+                p_d->pending = S3_NAV_NONE;
+                p_d->state = S3_DRIVE_MANOEUVRE;
+                p_d->phase_us = now;
             }
         }
     }
-    else if ((d->state == S3_DRIVE_MANOEUVRE) && d->searching)
+    else if ((p_d->state == S3_DRIVE_MANOEUVRE) && p_d->searching)
     {
-        if ((uint32_t)(now - d->phase_us) > S3_MANOEUVRE_WAIT_US)
+        if ((uint32_t)(now - p_d->phase_us) > S3_MANOEUVRE_WAIT_US)
         {
-            halt(d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
+            halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
         }
         else
         {
-            search_step(d, now);
+            search_step(p_d, now);
         }
     }
-    else if (d->state == S3_DRIVE_MANOEUVRE)
+    else if (p_d->state == S3_DRIVE_MANOEUVRE)
     {
-        if (!d->advancing && d->output.line.valid && d->output.line.touching)
+        if (!p_d->advancing && p_d->output.line.valid &&
+            p_d->output.line.touching)
         {
-            d->touch_us = now;
-            d->touched = true;
+            p_d->touch_us = now;
+            p_d->touched = true;
         }
-        if ((uint32_t)(now - d->phase_us) > S3_MANOEUVRE_WAIT_US)
+        if ((uint32_t)(now - p_d->phase_us) > S3_MANOEUVRE_WAIT_US)
         {
-            halt(d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
+            halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_TIMEOUT);
         }
-        else if (done && d->advancing)
+        else if (done && p_d->advancing)
         {
             /* Axle now over the crossing: turn on the spot from here. */
-            d->command_id = 0U;
-            d->advancing = false;
-            if (!request_turn(d))
+            p_d->command_id = 0U;
+            p_d->advancing = false;
+            if (!request_turn(p_d))
             {
-                halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
+                halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
             }
             else
             {
-                d->phase_us = now;
+                p_d->phase_us = now;
             }
         }
         else if (done)
         {
-            const bool turned = (d->turn == S3_NAV_LEFT) ||
-                                (d->turn == S3_NAV_RIGHT) ||
-                                (d->turn == S3_NAV_UTURN);
-            d->command_id = 0U;
-            d->port.stop();
-            if (turned && (d->options.turn_line_window_us != 0U) &&
-                !(d->touched && ((uint32_t)(now - d->touch_us) <=
-                                 d->options.turn_line_window_us)))
+            const bool turned = (p_d->turn == S3_NAV_LEFT) ||
+                                (p_d->turn == S3_NAV_RIGHT) ||
+                                (p_d->turn == S3_NAV_UTURN);
+            p_d->command_id = 0U;
+            p_d->port.stop();
+            if (turned && (p_d->options.turn_line_window_us != 0U) &&
+                !(p_d->touched && ((uint32_t)(now - p_d->touch_us) <=
+                                   p_d->options.turn_line_window_us)))
             {
                 /* The sensors never crossed the new line near the end of the
                  * turn: they are beside it, not over it. Do not drive off:
                  * sweep for it if enabled, else stop. */
-                if (d->options.search_deg > 0.0f)
+                if (p_d->options.search_deg > 0.0f)
                 {
-                    start_search(d, now); /* stays in MANOEUVRE */
+                    start_search(p_d, now); /* stays in MANOEUVRE */
                 }
                 else
                 {
-                    halt(d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
+                    halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
                 }
             }
             else
             {
-                (void)s3_navigation_set_mode(&d->navigation, S3_MODE_TRACK);
-                d->state = S3_DRIVE_REACQUIRE;
-                d->phase_us = now;
+                (void)s3_navigation_set_mode(&p_d->navigation, S3_MODE_TRACK);
+                p_d->state = S3_DRIVE_REACQUIRE;
+                p_d->phase_us = now;
             }
         }
-        else if ((d->feedback.state != MOTION_TURN) &&
-                 (d->feedback.state != MOTION_DRIVE) &&
-                 (d->feedback.state != MOTION_COMPLETE))
+        else if ((p_d->feedback.state != MOTION_TURN) &&
+                 (p_d->feedback.state != MOTION_DRIVE) &&
+                 (p_d->feedback.state != MOTION_COMPLETE))
         {
-            halt(d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
+            halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
         }
     }
     else
     {
-        d->port.stop();
-        if ((uint32_t)(now - d->phase_us) > S3_REACQUIRE_WAIT_US)
+        p_d->port.stop();
+        if ((uint32_t)(now - p_d->phase_us) > S3_REACQUIRE_WAIT_US)
         {
-            halt(d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
+            halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
         }
-        else if (d->output.steering.valid && stopped_after_request(d))
+        else if (p_d->output.steering.valid && stopped_after_request(p_d))
         {
-            d->state = S3_DRIVE_FOLLOW;
+            p_d->state = S3_DRIVE_FOLLOW;
         }
     }
     return true;

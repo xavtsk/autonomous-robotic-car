@@ -1,0 +1,17 @@
+Checks: '-*,readability-identifier-naming'
+HeaderFilterRegex: '[/\\]app_program[/\\]'
+CheckOptions:
+  readability-identifier-naming.GlobalVariableCase: lower_case
+  readability-identifier-naming.GlobalVariablePrefix: g_
+  readability-identifier-naming.GlobalPointerCase: lower_case
+  readability-identifier-naming.GlobalPointerPrefix: g_p_
+  readability-identifier-naming.LocalPointerCase: lower_case
+  readability-identifier-naming.LocalPointerPrefix: p_
+  readability-identifier-naming.PointerParameterCase: lower_case
+  readability-identifier-naming.PointerParameterPrefix: p_
+  readability-identifier-naming.LocalVariablePrefix: value_
+  readability-identifier-naming.LocalVariableIgnoredRegexp: '^.{3,}$'
+  readability-identifier-naming.LocalConstantPrefix: value_
+  readability-identifier-naming.LocalConstantIgnoredRegexp: '^.{3,}$'
+  readability-identifier-naming.ParameterPrefix: value_
+  readability-identifier-naming.ParameterIgnoredRegexp: '^.{3,}$'

@@ -29,8 +29,8 @@ motor-output writer. Buddies 4/5 have not been integrated.
 - All three physical sensors need accepted white/black calibration. Fresh
   odometry, acknowledged stillness and healthy sensors are required for START.
   No provisional calibration bypass or automatic start has been added.
-- Operator input (S3_MOTION only): `operator_panel.c` polls GP20/GP21 and
-  `operator_logic.c` walks through calibration (LEFT, RIGHT, BARCODE; white
+- Operator input (S3_MOTION only): `op_panel.c` polls GP20/GP21 and
+  `op_logic.c` walks through calibration (LEFT, RIGHT, BARCODE; white
   then black, 1 s each), then GP20 = START after a 3 s countdown, hold GP20
   2 s = recalibrate, GP20 after a FAULT = RESET, GP21 = STOP at any time.
   It only calls `s3_integration_submit()`/`s3_integration_status()`, so the

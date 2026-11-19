@@ -2,19 +2,19 @@
 #include "../../app_program/controller/run_timing.h"
 #define LIVE_CYCLES (200U / S3_SAMPLE_PERIOD_MS)
 #define STOPPED_CYCLES (1000U / S3_SAMPLE_PERIOD_MS)
-#include "../../app_program/subsystem1/subsystem1.h"
+#include "../../app_program/subsystem1/buddy1.h"
 #include "../../app_program/subsystem2/motion_pack.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-ID mtx_buddy1_state=1;
+ID g_mtx_buddy1_state=1;
 static motion_status_t status;
 static s3_integration_status_t runtime;
 static s3_control_kind_t queued;
 static bool queue_ok=true, status_ok=true, frozen;
 static unsigned mask=BUDDY1_FAULT_WIFI, updates, invalidations, reports, states, barcodes, motion_reads;
 static ER mirror_result=E_OK;
-static BUDDY1_ROBOT_STATE last_state;
+static buddy1_robot_state_t last_state;
 static int left_report,right_report;
 bool s3_integration_submit(const s3_control_request_t *r)
 {queued=r->kind;return queue_ok;}
@@ -30,7 +30,7 @@ ER buddy1_update_faults(UB changed,UB active)
 }
 /* E_TMOUT = Buddy 1 outbox full: the controller must retry the event. */
 static ER event_result=E_OK;
-ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state)
+ER buddy1_report_robot_state(buddy1_robot_state_t state)
 {states++;if(event_result!=E_OK)return event_result;last_state=state;return E_OK;}
 ER buddy1_report_barcode(UB letter)
 {assert(letter=='B');barcodes++;return event_result;}
@@ -41,12 +41,12 @@ ER buddy1_report_pose(UH cm,H deg)
 {assert(cm<BUDDY1_POSE_DISTANCE_MOD&&deg>=0&&deg<360);poses++;pose_cm=cm;pose_deg=deg;return E_OK;}
 ER buddy1_invalidate(UB type)
 {assert(type==BUDDY1_TOPIC_MOTION);invalidations++;return E_OK;}
-ER buddy1_configuration_claim(BUDDY1_BARCODE_MAP *map,BOOL *newly)
-{*map=(BUDDY1_BARCODE_MAP){'A','B','C','D'};if(newly)*newly=!frozen;frozen=true;return E_OK;}
+ER buddy1_configuration_claim(buddy1_barcode_map_t *map,BOOL *newly)
+{*map=(buddy1_barcode_map_t){'A','B','C','D'};if(newly)*newly=!frozen;frozen=true;return E_OK;}
 static unsigned reopens;
 ER buddy1_configuration_reopen(void)
 {frozen=false;reopens++;return E_OK;}
-ER buddy1_apply_barcode_map(const BUDDY1_BARCODE_MAP *map)
+ER buddy1_apply_barcode_map(const buddy1_barcode_map_t *map)
 {
     if(frozen)return E_OBJ;
     return map->forward=='A'&&map->left=='B'&&map->right=='C'&&map->uturn=='D'?E_OK:E_PAR;
@@ -117,7 +117,7 @@ int main(void)
     cycles(LIVE_CYCLES);assert(reports==1&&left_report==120&&right_report==-120);
     assert(motion_reads==LIVE_CYCLES); /* one read/cycle, shared by faults/pose/speed */
     assert(last_state==BUDDY1_STATE_LINE_FOLLOWING&&mask==BUDDY1_FAULT_WIFI);
-    status.fault_bits=MOTION_FAULT_BIT(MOTION_FAULT_STALL)|MOTION_FAULT_BIT(MOTION_FAULT_ENCODER);
+    status.fault_bits=motion_fault_bit(MOTION_FAULT_STALL)|motion_fault_bit(MOTION_FAULT_ENCODER);
     runtime.navigation.fault_mask=2;cycles(1);
     assert(mask==(BUDDY1_FAULT_WIFI|BUDDY1_FAULT_STALL|BUDDY1_FAULT_ENCODER|BUDDY1_FAULT_IR));
     unsigned before=updates;cycles(1);assert(updates==before);
@@ -143,21 +143,21 @@ int main(void)
     mirror_result=E_TMOUT;before=updates;cycles(2);assert(updates==before+2);
     mirror_result=E_OK;cycles(1);before=updates;cycles(1);assert(updates==before);
     s3_nav_action_t map[26]={S3_NAV_STRAIGHT,S3_NAV_LEFT,S3_NAV_RIGHT,S3_NAV_UTURN};
-    assert(vehicle_controller_apply_mapping(map));map[4]=S3_NAV_LEFT;assert(!vehicle_controller_apply_mapping(map));map[4]=S3_NAV_NONE;
-    s3_navigation_t nav={0};assert(vehicle_controller_prepare_start(&nav)&&frozen);
+    assert(vehicle_controller_set_mapping(map));map[4]=S3_NAV_LEFT;assert(!vehicle_controller_set_mapping(map));map[4]=S3_NAV_NONE;
+    s3_navigation_t nav={0};assert(vehicle_controller_prep_start(&nav)&&frozen);
     assert(nav.config.map[0]==S3_NAV_STRAIGHT&&nav.config.map[1]==S3_NAV_LEFT);
-    assert(!vehicle_controller_apply_mapping(map));
+    assert(!vehicle_controller_set_mapping(map));
     vehicle_controller_cancel_start();assert(!frozen&&reopens==1);
-    assert(vehicle_controller_apply_mapping(map));
+    assert(vehicle_controller_set_mapping(map));
     /* Accepted START: the freeze belongs to the run; a stray cancel is a no-op. */
-    assert(vehicle_controller_prepare_start(&nav)&&frozen);
+    assert(vehicle_controller_prep_start(&nav)&&frozen);
     vehicle_controller_commit_start();vehicle_controller_cancel_start();
     assert(frozen&&reopens==1);
     /* Later refused restart: map was already frozen, so it is NOT reopened. */
-    assert(vehicle_controller_prepare_start(&nav)&&frozen);
+    assert(vehicle_controller_prep_start(&nav)&&frozen);
     vehicle_controller_cancel_start();assert(frozen&&reopens==1);
-    assert(!vehicle_controller_apply_mapping(map));
-    assert(vehicle_controller_submit_navigation(&runtime.navigation)==E_NOSPT);
+    assert(!vehicle_controller_set_mapping(map));
+    assert(vehicle_controller_submit_nav(&runtime.navigation)==E_NOSPT);
     /* Route pose: relative to START, 5 Hz while running, final one at the end. */
     runtime=(s3_integration_status_t){0};status=(motion_status_t){0};status.b_valid=true;
     assert(vehicle_controller_init()==E_OK);poses=0;

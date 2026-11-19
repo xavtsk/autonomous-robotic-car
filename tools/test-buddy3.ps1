@@ -9,7 +9,7 @@ try {
     $env:PATH = "$(Join-Path $MsysRoot 'ucrt64\bin');$originalPath"
     & powershell -ExecutionPolicy Bypass -File "$repoRoot\tools\test-ir-reflectance.ps1" -MsysRoot $MsysRoot
     if ($LASTEXITCODE -ne 0) { throw 'Reflectance tests failed.' }
-    $sources = @('ir_acquisition', 'ir_calibration', 'ir_reflectance', 'line_detection', 'line_controller', 'barcode_decoder', 'line_navigation') |
+    $sources = @('ir_acquisition', 'ir_calibration', 'ir_reflectance', 'line_detection', 'line_controller', 'bc_decoder', 'line_navigation') |
         ForEach-Object { "$repoRoot\app_program\subsystem3\$_.c" }
     $testExe = Join-Path $testDir 'test_buddy3.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
@@ -22,7 +22,7 @@ try {
     $recordExe = Join-Path $testDir 'test_barcode_record.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\app_program\subsystem3\bc_decoder.c" `
         "$repoRoot\testing\subsystem3\test_barcode_record.c" -o $recordExe
     if ($LASTEXITCODE -ne 0) { throw 'Barcode record test compilation failed.' }
     & $recordExe
@@ -30,7 +30,7 @@ try {
     $fastExe = Join-Path $testDir 'test_barcode_fast.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\app_program\subsystem3\bc_decoder.c" `
         "$repoRoot\testing\subsystem3\test_barcode_fast.c" -o $fastExe
     if ($LASTEXITCODE -ne 0) { throw 'Fast barcode test compilation failed.' }
     & $fastExe
@@ -38,7 +38,7 @@ try {
     $faintExe = Join-Path $testDir 'test_barcode_faint.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\app_program\subsystem3\bc_decoder.c" `
         "$repoRoot\testing\subsystem3\test_barcode_faint.c" -o $faintExe
     if ($LASTEXITCODE -ne 0) { throw 'Faint barcode test compilation failed.' }
     & $faintExe
@@ -46,7 +46,7 @@ try {
     $varyingExe = Join-Path $testDir 'test_barcode_varying.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\app_program\subsystem3\bc_decoder.c" `
         "$repoRoot\testing\subsystem3\test_barcode_varying.c" -o $varyingExe
     if ($LASTEXITCODE -ne 0) { throw 'Varying barcode correction test compilation failed.' }
     & $varyingExe
@@ -68,7 +68,7 @@ try {
     $quietRecordExe = Join-Path $testDir 'test_barcode_quiet_record.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\app_program\subsystem3\bc_decoder.c" `
         "$repoRoot\testing\subsystem3\test_barcode_quiet_record.c" -o $quietRecordExe
     if ($LASTEXITCODE -ne 0) { throw 'Barcode quiet-record test compilation failed.' }
     & $quietRecordExe
@@ -83,7 +83,7 @@ try {
     $wideExe = Join-Path $testDir 'test_barcode_wide.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\app_program\subsystem3\bc_decoder.c" `
         "$repoRoot\testing\subsystem3\test_barcode_wide.c" -o $wideExe
     if ($LASTEXITCODE -ne 0) { throw 'Wide barcode test compilation failed.' }
     & $wideExe
@@ -91,7 +91,7 @@ try {
     $replayExe = Join-Path $testDir 'replay_barcode_record.exe'
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\app_program\subsystem3\barcode_decoder.c" `
+        "$repoRoot\app_program\subsystem3\bc_decoder.c" `
         "$repoRoot\testing\subsystem3\replay_barcode_record.c" -o $replayExe
     if ($LASTEXITCODE -ne 0) { throw 'Barcode replay compilation failed.' }
     $mappingExe = Join-Path $testDir 'test_ir_mapping.exe'
@@ -105,9 +105,9 @@ try {
     & $compiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
         "-I$repoRoot\app_program\subsystem3" "-I$repoRoot\app_program\subsystem2" "-I$repoRoot\app_program\controller" @sources `
         "$repoRoot\app_program\controller\s3_drive.c" `
-        "$repoRoot\app_program\subsystem2\motion_controller.c" `
+        "$repoRoot\app_program\subsystem2\ctrl_motion.c" `
         "$repoRoot\app_program\subsystem2\motion_pack.c" `
-        "$repoRoot\app_program\subsystem2\motion_estimation.c" `
+        "$repoRoot\app_program\subsystem2\estimate_motion.c" `
         "$repoRoot\app_program\subsystem2\speed_pid.c" `
         "$repoRoot\testing\subsystem3\test_drive.c" -o $driveExe
     if ($LASTEXITCODE -ne 0) { throw 'Integration test compilation failed.' }
@@ -118,9 +118,9 @@ try {
         "-I$repoRoot\app_program\subsystem2" "-I$repoRoot\app_program\controller" `
         -include "$repoRoot\testing\subsystem3\motion_kernel_stub.h" `
         "$repoRoot\app_program\subsystem2\motion.c" `
-        "$repoRoot\app_program\subsystem2\motion_controller.c" `
+        "$repoRoot\app_program\subsystem2\ctrl_motion.c" `
         "$repoRoot\app_program\subsystem2\motion_pack.c" `
-        "$repoRoot\app_program\subsystem2\motion_estimation.c" `
+        "$repoRoot\app_program\subsystem2\estimate_motion.c" `
         "$repoRoot\app_program\subsystem2\speed_pid.c" `
         "$repoRoot\testing\subsystem3\test_motion_feedback.c" -o $feedbackExe
     if ($LASTEXITCODE -ne 0) { throw 'Motion feedback test compilation failed.' }

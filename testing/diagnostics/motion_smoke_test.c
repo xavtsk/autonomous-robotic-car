@@ -20,7 +20,7 @@ typedef int ER, INT;
 typedef unsigned char UB;
 typedef struct { int32_t hi; uint32_t lo; } SYSTIM;
 #include "../../app_program/subsystem2/motion.h"
-#include "../../app_program/subsystem2/motion_codec.h"
+#include "../../app_program/subsystem2/codec_motion.h"
 
 enum { COMPLETE, STOP_COUNTDOWN, STOP_RUN, TIMEOUT, FAULT, REJECT,
        STOP_PRIORITY, HELD_BOOT, NO_PRESS, NOT_READY, CLOCK_FAIL, WAIT_FAIL,
@@ -93,7 +93,7 @@ motion_state_t motion_poll(void)
     if (scenario != TIMEOUT && (uint32_t)(clock_value-request_at) >= 400U) { return MOTION_COMPLETE; }
     return MOTION_DRIVE;
 }
-#include "../../app_program/diagnostics/motion_smoke_test.c"
+#include "../../app_program/diagnostics/smoke_motion.c"
 
 static void run(unsigned kind, const char *reason, bool moves, uint32_t starting_clock)
 {

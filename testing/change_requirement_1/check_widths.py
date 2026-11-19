@@ -1,25 +1,26 @@
 #!/usr/bin/env python3
-"""Change Requirement 1: every packed field uses the minimum bits for its range.
+"""Check the declared Change Requirement 1 field inventory and source bindings.
 
 For each field: valid range (lo..hi) and step -> number of distinct codes ->
 minimum bits = ceil(log2(codes)). The script fails if a field's width is not
 the minimum, unless the row states why (a wrapping counter/clock whose width
 is set by how far it may move between reads, not by a range).
 
-It also checks that the fields of each MQTT topic add up to the widths the
-laptop decoder (tools/buddy1_mqtt_codec.py) uses, so this table cannot drift
-from the code. The C side is checked by testing/subsystem1 (exhaustive
-pack/unpack over the full ranges and rejection of out-of-range values).
+This is an explicit inventory, not a parser proving that every application
+field is included. Topic totals are compared with the laptop codec. Selected
+internal layouts and newly packed state are also checked against C source;
+the remaining C layouts need their codec regression tests and manual review.
 
 Run from the repository root:  python3 testing/change_requirement_1/check_widths.py
 """
-from math import ceil, log2
 from pathlib import Path
+import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 import buddy1_mqtt_codec as codec  # noqa: E402
+from dashboard import run_control_protocol as remote  # noqa: E402
 
 FLAG = (0, 1, 1)
 WRAP = "wrapping counter/clock: width set by how far it moves between reads"
@@ -84,6 +85,11 @@ FIELDS = [
     ("status", "fault field known", FLAG, 1, ""),
     ("status", "fault bitmask", (0, 63, 1), 6, ""),
     ("map_reply", "result ok/invalid/closed/internal", (0, 3, 1), 2, ""),
+    ("control_reply", "action start/stop/reset", (1, 3, 1), remote.REPLY_ACTION_BITS, ""),
+    ("control_reply", "queued/executed/rejected/cancelled", (0, 3, 1), remote.REPLY_RESULT_BITS, ""),
+    ("control_reply", "reason", (0, 7, 1), remote.REPLY_REASON_BITS, ""),
+    ("control_reply", "request id", (0, 2**32 - 1, 1), 32, WRAP),
+    ("control_reply", "link epoch", (0, 2**32 - 1, 1), 32, WRAP),
     ("envelope", "outbox topic selector (15 topics)", (0, 14, 1), 4, ""),
     ("envelope", "incoming command kind", (0, 2, 1), 2, ""),
     # Buddy 4 internal 12-byte packet (shared snapshot and 8-slot event queue).
@@ -98,6 +104,7 @@ FIELDS = [
     ("b4 packet", "impact", FLAG, 1, ""),
     ("b4 packet", "hump in progress", FLAG, 1, ""),
     ("b4 packet", "climb so far, mm", (0, 500, 1), 9, ""),
+    ("b4 packet", "safety none/lifted/overturned", (0, 2, 1), 2, ""),
     # Buddy 5 internal 23-byte task snapshot.
     ("b5 packet", "forward reading time, us", (0, 2**32 - 1, 1), 32, WRAP),
     ("b5 packet", "scan time, us", (0, 2**32 - 1, 1), 32, WRAP),
@@ -137,6 +144,41 @@ FIELDS = [
     ("s5 private", "distance from the line at the last side peek, mm", (0, 4095, 1), 12, ""),
 ]
 
+# These retained state fields were added to the audit after the 19 Nov review.
+# They are checked against the named C bit-field declarations below, in addition
+# to checking their range mathematics. Struct padding is measured separately.
+STATE_FIELDS = {
+    "b4 queue": [("head", (0, 7, 1), 3), ("count", (0, 8, 1), 4)] +
+                [(name, FLAG, 1) for name in
+                 ("published", "lost", "reset", "recalibrate", "mag_pending")],
+    "remote request": [("id", (0, 2**32 - 1, 1), 32),
+                       ("epoch", (0, 2**32 - 1, 1), 32),
+                       ("time_us", (0, 2**32 - 1, 1), 32),
+                       ("action", (0, 3, 1), 2), ("valid", FLAG, 1)],
+    "remote state": [("flags", (0, 15, 1), 4), ("head", (0, 5, 1), 3),
+                     ("count", (0, 6, 1), 3)] +
+                    [(name, FLAG, 1) for name in
+                     ("connected", "published", "physical_stop", "inflight")],
+    "barcode work flags": [(name, FLAG, 1) for name in
+                           ("faint", "rising", "crossed", "strong", "varying",
+                            "good", "allow_noise", "ambiguous", "provisional",
+                            "strict_broken", "early")],
+    "barcode record flags": [(name, FLAG, 1) for name in
+                             ("quiet_tolerant", "retry_blocked", "early_tried",
+                              "early_candidate")],
+}
+for group, fields in STATE_FIELDS.items():
+    for name, limits, bits in fields:
+        FIELDS.append((group, name, limits, bits, WRAP if bits == 32 else ""))
+
+STATE_SOURCES = {
+    "b4 queue": ("app_program/subsystem4/buddy4.c", "subsystem4_queue_state_t"),
+    "remote request": ("app_program/controller/remote_control.h", "remote_request_t"),
+    "remote state": ("app_program/controller/s3_integration.c", "g_remote"),
+    "barcode work flags": ("app_program/subsystem3/bc_decoder.h", "s3_barcode_work_t"),
+    "barcode record flags": ("app_program/subsystem3/bc_decoder.h", "s3_barcode_record_t"),
+}
+
 # Total bits per topic used by the laptop decoder and C codec.
 TOTALS = {
     "motion": codec.WIDTHS[0], "barcode": codec.WIDTHS[1], "hump": codec.WIDTHS[2],
@@ -144,17 +186,87 @@ TOTALS = {
     "faults": codec.WIDTHS[6], "pose": codec.POSE_DISTANCE_BITS + 9,
     "terrain": codec.TERRAIN_BITS, "avoidance": codec.AVOIDANCE_BITS, "scan": codec.SCAN_BITS,
     "scan_sample": codec.SCAN_SAMPLE_BITS,
-    "b4 packet": 93, "b5 packet": 182, "b5 sample": 18, "s5 status": 16,
+    "control_reply": remote.REPLY_BITS + 32 + 32,
+    "b4 packet": 95, "b5 packet": 182, "b5 sample": 18, "s5 status": 16,
 }
 
 
 def min_bits(lo, hi, step):
+    if step <= 0 or hi < lo:
+        raise ValueError("Invalid range or resolution")
     codes = (hi - lo) // step + 1
-    return max(1, ceil(log2(codes))), codes
+    return max(1, (codes - 1).bit_length()), codes
+
+
+def without_comments(text):
+    return re.sub(r"/\*.*?\*/|//[^\n]*", "", text, flags=re.DOTALL)
+
+
+def integer_macros(text):
+    return {name: int(number) for name, number in re.findall(
+        r"^\s*#define\s+(\w+)\s+\(?\s*(\d+)[uUlL]*\s*\)?\s*$",
+        without_comments(text), re.MULTILINE)}
+
+
+def function_body(text, name):
+    text = without_comments(text)
+    match = re.search(rf"\b{re.escape(name)}\s*\([^;{{}}]*\)\s*\{{", text)
+    if not match:
+        raise ValueError(f"Missing function {name}")
+    start = match.end()
+    depth = 1
+    for index in range(start, len(text)):
+        depth += (text[index] == "{") - (text[index] == "}")
+        if depth == 0:
+            return text[start:index]
+    raise ValueError(f"Unclosed function {name}")
+
+
+def source_errors(root=ROOT):
+    """Fail if a bound declaration/call changes; never infer whole-source coverage."""
+    errors = []
+    header = (root / "app_program/controller/remote_control.h").read_text(encoding="utf-8")
+    macros = integer_macros(header)
+    for suffix in ("ACTION_BITS", "RESULT_BITS", "REASON_BITS", "BITS", "SIZE", "VERSION"):
+        if macros.get("REMOTE_REPLY_" + suffix) != getattr(remote, "REPLY_" + suffix):
+            errors.append(f"Remote C/Python reply {suffix} differs or is missing")
+    if remote.REPLY_BITS != sum((remote.REPLY_ACTION_BITS, remote.REPLY_RESULT_BITS,
+                                remote.REPLY_REASON_BITS)):
+        errors.append("Remote reply meaningful widths do not sum to REPLY_BITS")
+    if remote.REPLY_SIZE != 1 + (remote.REPLY_BITS + 7) // 8 + 4 + 4:
+        errors.append("Remote reply byte count does not match packed widths and IDs")
+
+    body = function_body((root / "app_program/subsystem4/terr_data.c").read_text(
+        encoding="utf-8"), "terrain_pack")
+    widths = [int(width) for width in re.findall(
+        r"\bput_bits\s*\([^;]*?,\s*(\d+)[uUlL]*\s*\)\s*;", body)]
+    expected = [field[3] for field in FIELDS if field[0] == "b4 packet"]
+    if widths != expected or len(widths) != len(re.findall(r"\bput_bits\s*\(", body)):
+        errors.append(f"Buddy 4 terrain_pack widths {widths} differ from inventory {expected}")
+
+    for group, (name, struct_name) in STATE_SOURCES.items():
+        text = without_comments((root / name).read_text(encoding="utf-8"))
+        match = re.search(rf"\bstruct\s*\{{([^{{}}]*)\}}\s*{struct_name}\s*;", text, re.DOTALL)
+        if not match:
+            errors.append(f"Missing bound state declaration {struct_name}")
+            continue
+        for field, _, bits in STATE_FIELDS[group]:
+            if bits == 32:
+                present = re.search(rf"\buint32_t\s+{field}\s*;", match[1]) is not None
+            else:
+                declaration = re.search(rf"\b{field}\s*:\s*(\w+)\s*;", match[1])
+                width = declaration[1] if declaration else ""
+                actual = int(width) if width.isdigit() else macros.get(width)
+                present = actual == bits
+            if not present:
+                errors.append(f"{struct_name}.{field} does not declare the expected {bits} bits")
+    return errors
 
 
 def main():
     bad = 0
+    print(f"Scope: {len(FIELDS)} declared fields; selected C-source bindings and codec totals.")
+    print("This is not an exhaustive inventory of every application field.\n")
     print("| Group | Field | Range (step) | Codes | Min bits | Used bits | OK |")
     print("|---|---|---|---:|---:|---:|---|")
     sums = {}
@@ -177,6 +289,14 @@ def main():
     ok = snap == codec.SNAPSHOT_BITS
     bad += not ok
     print(f"| snapshot (7 validity + 7 sections + pose validity + pose) | {snap} | {codec.SNAPSHOT_BITS} | {'yes' if ok else '**NO**'} |")
+    try:
+        errors = source_errors()
+    except (OSError, ValueError) as error:
+        errors = [str(error)]
+    for error in errors:
+        print("SOURCE MISMATCH:", error)
+    bad += len(errors)
+    print("Selected C-source bindings:", "PASS" if not errors else "FAIL")
     print()
     print("RESULT:", "PASS" if not bad else f"FAIL ({bad} problems)")
     return 1 if bad else 0

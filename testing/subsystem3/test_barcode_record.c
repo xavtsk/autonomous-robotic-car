@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "barcode_decoder.h"
+#include "bc_decoder.h"
 
 static const uint16_t letters[26] = {
     0x109, 0x049, 0x148, 0x019, 0x118, 0x058, 0x00D, 0x10C, 0x04C,

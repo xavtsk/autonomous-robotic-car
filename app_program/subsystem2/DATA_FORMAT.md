@@ -6,7 +6,7 @@ if the team agrees other values). Ranges marked *to agree* still need a team
 decision.
 
 **Fault bits are implemented.** Buddy 2's faults are 5 individual bits
-(`MOTION_FAULT_BIT()`, `motion_get_fault_bits()`), carried in the status word.
+(`motion_fault_bit()`, `motion_get_fault_bits()`), carried in the status word.
 Where these 5 bits sit in the team's shared fault mask, and who owns the
 mask, is still a team decision.
 
@@ -77,7 +77,7 @@ Stored inside Buddy 2 as C bit-fields of the width their range needs.
 
 | Field | Where | Range | Before | Bits | Representation |
 | --- | --- | --- | --- | --- | --- |
-| Statechart state | `motion_controller.c` `g_ctl.state` | 6 states | 32 (enum) | 3 | code (table below) |
+| Statechart state | `ctrl_motion.c` `g_ctl.state` | 6 states | 32 (enum) | 3 | code (table below) |
 | Latched fault bits | `g_ctl.fault_bits` | 5 faults | 32 (enum code) | 5 | 1 bit per fault, OR-ed in, cleared by `motion_reset()` |
 | Command ID | `g_ctl.cmd_id` | 0 … 255 | 8 | 8 | unsigned, 255 → 1 |
 | Busy (calibration) | `g_ctl.b_busy` | 0 / 1 | 8 (bool) | 1 | flag |
@@ -155,7 +155,7 @@ direction), and `wheel_encoder_delta()` stays correct when a count wraps.
 Manoeuvre codes: LEFT 0, RIGHT 1, STRAIGHT 2, U_TURN 3 (as `manoeuvre_t`).
 
 The fault **bits** above are Buddy 2's part of the shared fault mask
-(`MOTION_FAULT_BIT(f)` = bit f − 1). Only the motion task sets them and only
+(`motion_fault_bit(f)` = bit f − 1). Only the motion task sets them and only
 `motion_reset()` clears them, both with the Buddy 2 mutex held. A fault on
 each wheel in the same period latches both bits. Where the 5 bits sit in the
 team's mask, and who owns it, is a team decision.

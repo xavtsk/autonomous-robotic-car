@@ -12,18 +12,18 @@
 #define BUDDY2_MOTOR_CONTROL_H
 
 #include <stdbool.h>
-#include "wheel_encoder.h"      /* wheel_id_t */
+#include "wheel_encoder.h" /* wheel_id_t */
 
 /* Set up M1A/M1B (left) and M2A/M2B (right) for 10 kHz PWM, both braked */
-void  motor_control_init(bool b_m1_inverted, bool b_m2_inverted);
+void motor_control_init (bool b_m1_inverted, bool b_m2_inverted);
 
 /* duty: -1.0 (full backward) .. 0.0 (brake) .. +1.0 (full forward) */
-void  motor_control_set(wheel_id_t wheel, float duty);
+void motor_control_set (wheel_id_t wheel, float duty);
 
 /* Safe output state: both driver inputs low (brake) on both motors */
-void  motor_control_brake_all(void);
+void motor_control_brake_all (void);
 
 /* Last duty sent to a motor (after inversion is undone), for diagnostics */
-float motor_control_duty(wheel_id_t wheel);
+float motor_control_duty (wheel_id_t wheel);
 
 #endif /* BUDDY2_MOTOR_CONTROL_H */

@@ -3,12 +3,12 @@
  * against the before/after source trees and compare complete stdout traces. */
 #include "host_kernel.h"
 #include "motion.h"
-#include "motion_controller.h"
-#include "motion_estimation.h"
+#include "ctrl_motion.h"
+#include "estimate_motion.h"
 #include "motor_control.h"
 #include "wheel_encoder.h"
 #ifdef TEST_PACKED
-#include "motion_codec.h"
+#include "codec_motion.h"
 #include "../../app_program/subsystem1/telemetry_codec.h"
 #endif
 #include <assert.h>
@@ -190,7 +190,7 @@ static void packed_checks(void)
     assert(!motion_read_snapshot(NULL));
     assert(sizeof(snapshot) == 4);
     for (int speed = -510; speed <= 510; ++speed) {
-        BUDDY1_SNAPSHOT input = {0}, decoded;
+        buddy1_snapshot_t input = {0}, decoded;
         uint8_t packet[4];
         input.left_mms = (int16_t)speed; input.right_mms = (int16_t)-speed;
         assert(buddy1_encode(BUDDY1_TOPIC_MOTION, &input, packet, sizeof(packet)) == 4);

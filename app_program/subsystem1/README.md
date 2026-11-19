@@ -22,13 +22,13 @@ simultaneous sample of every sensor.
 
 1. `telemetry_codec.h`: message kinds, fault bits and decoded data views.
 2. `telemetry_codec.c`: masks/shifts, field validation, pack/unpack and maps.
-3. `subsystem1.h/.c`: reporting API, packed cache, mutex and RTOS message buffers.
+3. `buddy1.h/.c`: reporting API, packed cache, mutex and RTOS message buffers.
 4. `command.c`: binary setup/snapshot commands and pre-run map freeze.
 5. `mqtt_bridge.c`: topic IDs to readable topics, explicit byte lengths, binary
    heartbeat and Wi-Fi fault observation hooks.
 6. `MQTT_PROTOCOL.md`: the robot/laptop contract and known limitations.
 7. `DATA_REPRESENTATION.md`: fields, ranges, resolution, bit counts and owner decisions.
-8. `subsystem1_test.c`: portable checks also compiled into `TEST=1` firmware.
+8. `buddy1_test.c`: portable checks also compiled into `TEST=1` firmware.
 
 The existing platform files `lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c/.h`
 preserve binary input, bound staging to 17 bytes (14 before the 19 Nov 2026

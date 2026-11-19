@@ -43,7 +43,11 @@ def build(ir_debug):
 
 
 def object_ram(folder):
-    objs = sorted((BUILD / "mtkernel_3" / "app_program" / folder).glob("*.o"))
+    # A renamed source can leave an old object beside the current ones. Count
+    # only objects belonging to source files in this checkout.
+    sources = ROOT / "app_program" / folder
+    objs = sorted(BUILD / "mtkernel_3" / "app_program" / folder / (p.stem + ".o")
+                  for p in sources.glob("*.c"))
     objs = [o for o in objs if not o.name.endswith("_test.o")]
     total = 0
     for line in run(["arm-none-eabi-size", *map(str, objs)]).splitlines()[1:]:
@@ -54,10 +58,10 @@ def object_ram(folder):
 
 def compile_flags():
     """The firmware's own compile command for one app file, from `make -n`."""
-    src = ROOT / "app_program" / "subsystem5" / "obstacle_avoidance.c"
+    src = ROOT / "app_program" / "subsystem5" / "avoid_obstacle.c"
     src.touch()
     out = run(["make", "-n", "-C", str(BUILD), *FLAGS, "IR_DEBUG=1"])
-    line = next(l for l in out.splitlines() if "arm-none-eabi-gcc" in l and "obstacle_avoidance.c" in l)
+    line = next(l for l in out.splitlines() if "arm-none-eabi-gcc" in l and "avoid_obstacle.c" in l)
     args = shlex.split(line)
     keep, skip = [], False
     for a in args[1:]:

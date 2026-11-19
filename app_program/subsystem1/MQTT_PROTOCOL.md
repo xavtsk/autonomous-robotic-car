@@ -89,7 +89,7 @@ run ends. Both values come from Buddy 2's encoder estimate
 Live only, like pose: no snapshot section, never cached. The controller sends
 one every 200 ms (S4=1 builds), with or without a run, so tilting or pushing
 the car on the bench is visible. It carries what the Week 6 design and
-Tribunal 1 assign to `terrain_monitor.c`: terrain/motion events, the peak hump
+Tribunal 1 assign to `terr_data.c`: terrain/motion events, the peak hump
 height in mm, and validity for each value.
 
 - **Tilt available + pitch, roll**: 11-bit two's complement, 0.1° units,

@@ -2,9 +2,9 @@
  * and motor-command boundary substitutes. No on-car timing is claimed. */
 #include "controller_test_kernel.h"
 #include "../../app_program/controller/vehicle_controller.h"
-#include "../../app_program/subsystem1/subsystem1.h"
-#include "../../app_program/subsystem2/motion_codec.h"
-#include "../../app_program/subsystem3/subsystem3.h"
+#include "../../app_program/subsystem1/buddy1.h"
+#include "../../app_program/subsystem2/codec_motion.h"
+#include "../../app_program/subsystem3/buddy3.h"
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -77,11 +77,11 @@ ER buddy1_update_faults(UB changed, UB active)
     return fault_update_error;
 }
 ER buddy1_report_motion(H left, H right) { (void)left; (void)right; return E_OK; }
-ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state) { (void)state; return E_OK; }
+ER buddy1_report_robot_state(buddy1_robot_state_t state) { (void)state; return E_OK; }
 ER buddy1_report_barcode(UB letter) { ++barcodes; last_barcode = letter; return E_OK; }
 ER buddy1_invalidate(UB type) { (void)type; return E_OK; }
 ER buddy1_configuration_close(void) { ++freezes; return E_OK; }
-BUDDY1_BARCODE_ACTION buddy1_barcode_action(UB letter)
+buddy1_barcode_action_t buddy1_barcode_action(UB letter)
 {
     if (letter == 'A') return BUDDY1_ACTION_FORWARD;
     if (letter == 'B') return BUDDY1_ACTION_LEFT;
@@ -114,7 +114,7 @@ static s3_navigation_output_t observation(void)
     return value;
 }
 static void send(s3_navigation_output_t *value)
-{ assert(vehicle_controller_submit_navigation(value) == E_OK); idle(); }
+{ assert(vehicle_controller_submit_nav(value) == E_OK); idle(); }
 static uint32_t bits(float value) { uint32_t raw; memcpy(&raw, &value, sizeof(raw)); return raw; }
 
 int main(void)
@@ -146,9 +146,9 @@ int main(void)
     pause_task(1);
     value = observation(); value.events = S3_EVENT_BARCODE; value.barcode.letter = 'C';
     value.barcode_status = S3_BARCODE_DECODED;
-    assert(vehicle_controller_submit_navigation(&value) == E_OK);
+    assert(vehicle_controller_submit_nav(&value) == E_OK);
     value = observation();
-    assert(vehicle_controller_submit_navigation(&value) == E_OK);
+    assert(vehicle_controller_submit_nav(&value) == E_OK);
     pause_task(0); idle();
     assert(barcodes == 2 && last_barcode == 'C' && manoeuvres == 1);
     value.events = S3_EVENT_JUNCTION; value.steering.valid = false; send(&value);
@@ -159,16 +159,16 @@ int main(void)
     pause_task(1);
     value = observation(); value.events = S3_EVENT_BARCODE; value.barcode.letter = 'D';
     value.barcode_status = S3_BARCODE_DECODED;
-    assert(vehicle_controller_submit_navigation(&value) == E_OK);
+    assert(vehicle_controller_submit_nav(&value) == E_OK);
     value = observation(); value.events = S3_EVENT_JUNCTION; value.steering.valid = false;
-    assert(vehicle_controller_submit_navigation(&value) == E_OK);
+    assert(vehicle_controller_submit_nav(&value) == E_OK);
     pause_task(0); idle();
     assert(barcodes == 3 && manoeuvres == 3 && last_manoeuvre == MANOEUVRE_U_TURN);
     polled_state = MOTION_COMPLETE; value = observation(); send(&value); polled_state = MOTION_IDLE;
 
     /* Rejection occurs before narrowing/publication and does not mutate state. */
     value = observation(); value.sensor[0].darkness = 1001;
-    assert(vehicle_controller_submit_navigation(&value) == E_PAR);
+    assert(vehicle_controller_submit_nav(&value) == E_PAR);
     assert(vehicle_controller_state() == VC_LINE_FOLLOW);
 
     motor_fault = MOTION_FAULT_STALL;
@@ -186,7 +186,7 @@ int main(void)
     pause_task(1);
     assert(vehicle_controller_request_stop() == E_OK);
     value = observation();
-    assert(vehicle_controller_submit_navigation(&value) == E_OK);
+    assert(vehicle_controller_submit_nav(&value) == E_OK);
     pause_task(0); idle();
     assert(vehicle_controller_state() == VC_WAITING);
     assert(velocities == previous_velocities); /* newer sample cannot erase explicit stop */

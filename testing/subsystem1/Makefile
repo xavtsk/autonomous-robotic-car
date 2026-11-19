@@ -6,8 +6,8 @@ MQTT = $(ROOT)/lib/liblwip/sysdepend/pico_rp2040
 BUILD = $(ROOT)/build/buddy1
 CPPFLAGS = -DAPP_H -DAPP_TEST=1 -DTM_MQTT=1 -include host_kernel.h -I. -Ifakes -I$(APP) -I$(MQTT)
 CFLAGS = -std=c11 -Wall -Wextra -Werror -O2 -g -pthread
-SOURCES = host_test.c $(APP)/telemetry_codec.c $(APP)/subsystem1.c \
-          $(APP)/command.c $(APP)/mqtt_bridge.c $(APP)/subsystem1_test.c $(MQTT)/mqtt_utk.c
+SOURCES = host_test.c $(APP)/telemetry_codec.c $(APP)/buddy1.c \
+          $(APP)/command.c $(APP)/mqtt_bridge.c $(APP)/buddy1_test.c $(MQTT)/mqtt_utk.c
 
 .PHONY: test sanitize sizes ir-debug
 test: $(BUILD)/host_test
@@ -20,7 +20,7 @@ ir-debug:
 	$(CC) $(CPPFLAGS) -DAPP_IR_DEBUG=1 -DAPP_IMU_DEBUG=1 $(CFLAGS) $(SOURCES) -o $(BUILD)/host_ir_debug
 	$(BUILD)/host_ir_debug
 
-$(BUILD)/host_test: $(SOURCES) $(APP)/telemetry_codec.h $(APP)/subsystem1.h $(MQTT)/mqtt_utk.h host_kernel.h
+$(BUILD)/host_test: $(SOURCES) $(APP)/telemetry_codec.h $(APP)/buddy1.h $(MQTT)/mqtt_utk.h host_kernel.h
 	mkdir -p $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(SOURCES) -o $@
 

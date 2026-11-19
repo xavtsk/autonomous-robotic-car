@@ -12,6 +12,7 @@ from dashboard.state import DashboardState
 from dashboard.traces import TraceStore
 from dashboard.control_protocol import TOPIC as DEBUG_TOPIC, encode_control
 from dashboard.run_control_protocol import (COMMAND_TOPIC, REPLY_TOPIC, STATUS_TOPIC,
+    ACTIONS, RESULTS, REASONS, REPLY_VERSION, REPLY_SIZE,
     encode_request, encode_reply, encode_status, decode_reply, decode_status)
 from dashboard.transport import NativeMqttTransport
 
@@ -105,6 +106,16 @@ class RunControlTests(unittest.TestCase):
         self.reply("rejected", reason="not_ready")
         self.assertEqual(self.view()["last_request"]["status"], "rejected")
         self.assertIn("not ready", self.view()["last_request"]["detail"])
+
+    def test_legacy_reply_retains_acknowledgement_and_observation_behaviour(self):
+        self.ready()
+        self.state.request_control("start")
+        self.state.ingest(REPLY_TOPIC, encode_reply(51, "start", "queued", epoch=7, version=3))
+        self.assertEqual(self.view()["last_request"]["status"], "queued")
+        self.state.ingest(REPLY_TOPIC, encode_reply(51, "start", "executed", epoch=7, version=3))
+        self.assertEqual(self.view()["last_request"]["status"], "executed")
+        self.preview(drive_state=1, motion_state=1, braked=0)
+        self.assertEqual(self.view()["last_request"]["status"], "observed")
 
     def test_timeout_disconnect_reconnect_never_resend(self):
         self.ready(); self.state.request_control("start")
@@ -249,12 +260,41 @@ class RunWireTests(unittest.TestCase):
                          "03017856341244332211ddccbbaa")
         self.assertEqual(decode_reply(bytes.fromhex("030178563412010044332211")),
                          dict(id=0x12345678, action="start", result="executed", reason="none", epoch=0x11223344))
+        self.assertEqual(encode_reply(0x12345678, "start", "executed", epoch=0x11223344).hex(),
+                         "04057856341244332211")
+        self.assertEqual(decode_reply(bytes.fromhex("04057856341244332211")),
+                         decode_reply(bytes.fromhex("030178563412010044332211")))
         self.assertEqual(decode_status(bytes.fromhex("0344332211ddccbbaa7856341203"))["last_id"], 0x12345678)
         for packet in (b"", bytes(12), bytes.fromhex("030178563412040044332211")):
             with self.assertRaises(ValueError): decode_reply(packet)
         with self.assertRaises(ValueError): decode_status(encode_status()[:-1])
         with self.assertRaises(ValueError): decode_status(bytes.fromhex("0344332211ddccbbaa7856341210"))
         with self.assertRaises(ValueError): encode_request(-1, "start", 1, 1)
+
+    def test_compact_reply_preserves_all_enums_and_identity_boundaries(self):
+        for action, action_code in ACTIONS.items():
+            for result_code, result in enumerate(RESULTS):
+                for reason_code, reason in enumerate(REASONS):
+                    for ident, epoch in ((0, 0xffffffff), (0xffffffff, 0)):
+                        with self.subTest(action=action, result=result, reason=reason, ident=ident):
+                            packet = encode_reply(ident, action, result, reason, epoch)
+                            self.assertEqual(len(packet), REPLY_SIZE)
+                            self.assertEqual(packet[0], REPLY_VERSION)
+                            self.assertEqual(packet[1], action_code | result_code << 2 | reason_code << 4)
+                            self.assertEqual(decode_reply(packet),
+                                             decode_reply(encode_reply(ident, action, result, reason, epoch, version=3)))
+
+    def test_compact_reply_rejects_reserved_bits_wrong_lengths_and_versions(self):
+        packet = encode_reply(1, "start", "executed", epoch=2)
+        bad = [packet[:-1], packet+b"\0", packet+b"\0\0",
+               bytes([3])+packet[1:], bytes([5])+packet[1:],
+               bytes([4, packet[1] | 0x80])+packet[2:],
+               bytes([4, packet[1] & ~3])+packet[2:]]
+        for invalid in bad:
+            with self.subTest(packet=invalid.hex()), self.assertRaises(ValueError):
+                decode_reply(invalid)
+        with self.assertRaises(ValueError):
+            encode_reply(1, "start", "executed", version=5)
 
     def test_native_publisher_is_one_shot_qos_zero_nonretained(self):
         state = Mock()

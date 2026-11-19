@@ -6,31 +6,31 @@
 
 #include "speed_pid.h"
 
-#define DUTY_MAX                (1.0f)
+#define DUTY_MAX (1.0f)
 
-void speed_pid_init(speed_pid_t *p_pid, float kp, float ki, float kd,
-                    float kff, float accel_mps2)
+void speed_pid_init (speed_pid_t * p_pid, float value_kp, float value_ki,
+                     float value_kd, float kff, float accel_mps2)
 {
-    p_pid->kp = kp;
-    p_pid->ki = ki;
-    p_pid->kd = kd;
+    p_pid->kp = value_kp;
+    p_pid->ki = value_ki;
+    p_pid->kd = value_kd;
     p_pid->kff = kff;
     p_pid->accel_mps2 = accel_mps2;
     speed_pid_reset(p_pid);
 }
 
-void speed_pid_reset(speed_pid_t *p_pid)
+void speed_pid_reset (speed_pid_t * p_pid)
 {
     p_pid->setpoint_mps = 0.0f;
     p_pid->integral = 0.0f;
 }
 
-float speed_pid_update(speed_pid_t *p_pid, float target_mps,
-                       float speed_mps, float accel_mps2, float dt_s)
+float speed_pid_update (speed_pid_t * p_pid, float target_mps, float speed_mps,
+                        float accel_mps2, float dt_s)
 {
     float step = p_pid->accel_mps2 * dt_s;
     float error;
-    float ff;
+    float value_ff;
     float deriv;
     float integral;
     float duty;
@@ -56,17 +56,17 @@ float speed_pid_update(speed_pid_t *p_pid, float target_mps,
         return 0.0f;
     }
 
-    error    = p_pid->setpoint_mps - speed_mps;
-    ff       = p_pid->kff * p_pid->setpoint_mps;
-    deriv    = -p_pid->kd * accel_mps2;
+    error = p_pid->setpoint_mps - speed_mps;
+    value_ff = p_pid->kff * p_pid->setpoint_mps;
+    deriv = -p_pid->kd * accel_mps2;
     integral = p_pid->integral + (p_pid->ki * error * dt_s);
-    duty     = ff + (p_pid->kp * error) + integral + deriv;
+    duty = value_ff + (p_pid->kp * error) + integral + deriv;
 
     /* Anti-windup: do not grow the integral while the output is saturated */
-    if (((duty > DUTY_MAX) && (error > 0.0f))
-        || ((duty < -DUTY_MAX) && (error < 0.0f)))
+    if (((duty > DUTY_MAX) && (error > 0.0f)) ||
+        ((duty < -DUTY_MAX) && (error < 0.0f)))
     {
-        duty = ff + (p_pid->kp * error) + p_pid->integral + deriv;
+        duty = value_ff + (p_pid->kp * error) + p_pid->integral + deriv;
     }
     else
     {
@@ -85,7 +85,7 @@ float speed_pid_update(speed_pid_t *p_pid, float target_mps,
     return duty;
 }
 
-float speed_pid_setpoint(const speed_pid_t *p_pid)
+float speed_pid_setpoint (const speed_pid_t * p_pid)
 {
     return p_pid->setpoint_mps;
 }

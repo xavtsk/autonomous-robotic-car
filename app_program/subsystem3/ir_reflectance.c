@@ -1,9 +1,9 @@
 #include "ir_reflectance.h"
 
 #define IR_ADC_MAX_COUNT (4095U)
-#define IR_DARKNESS_MAX  (1000)
+#define IR_DARKNESS_MAX (1000)
 
-void ir_reflectance_reset(ir_reflectance_t *p_sensor)
+void ir_reflectance_reset (ir_reflectance_t * p_sensor)
 {
     if (p_sensor != 0)
     {
@@ -11,8 +11,8 @@ void ir_reflectance_reset(ir_reflectance_t *p_sensor)
     }
 }
 
-bool ir_reflectance_init(ir_reflectance_t *p_sensor,
-                        const ir_calibration_t *p_calibration)
+bool ir_reflectance_init (ir_reflectance_t * p_sensor,
+                          const ir_calibration_t * p_calibration)
 {
     if (p_sensor == 0)
     {
@@ -20,8 +20,7 @@ bool ir_reflectance_init(ir_reflectance_t *p_sensor,
     }
     p_sensor->configured = false;
     ir_reflectance_reset(p_sensor);
-    if ((p_calibration == 0) ||
-        (p_calibration->white_raw > IR_ADC_MAX_COUNT) ||
+    if ((p_calibration == 0) || (p_calibration->white_raw > IR_ADC_MAX_COUNT) ||
         (p_calibration->black_raw > IR_ADC_MAX_COUNT) ||
         (p_calibration->white_raw == p_calibration->black_raw) ||
         (p_calibration->white_limit >= p_calibration->black_limit) ||
@@ -36,8 +35,8 @@ bool ir_reflectance_init(ir_reflectance_t *p_sensor,
     return true;
 }
 
-bool ir_reflectance_update(ir_reflectance_t *p_sensor, uint16_t raw,
-                          uint16_t *p_darkness)
+bool ir_reflectance_update (ir_reflectance_t * p_sensor, uint16_t raw,
+                            uint16_t * p_darkness)
 {
     int32_t span;
     int32_t darkness;
@@ -55,7 +54,8 @@ bool ir_reflectance_update(ir_reflectance_t *p_sensor, uint16_t raw,
     span = (int32_t)p_sensor->calibration.black_raw -
            (int32_t)p_sensor->calibration.white_raw;
     darkness = (((int32_t)raw - (int32_t)p_sensor->calibration.white_raw) *
-                IR_DARKNESS_MAX) / span;
+                IR_DARKNESS_MAX) /
+               span;
     if (darkness < 0)
     {
         darkness = 0;

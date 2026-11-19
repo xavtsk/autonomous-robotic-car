@@ -78,9 +78,9 @@ bool motion_get_report(motion_report_t *r) { (void)r;assert(!locked);return fals
 uint8_t motion_command_id(void) { return 1; }
 bool motion_reset(void) { assert(!locked);reset_calls++;if(reset_clears_fault)fb_fault=false;return true; }
 void motion_navigation_heartbeat(bool enabled) { (void)enabled;assert(!locked); }
-bool vehicle_controller_prepare_start(s3_navigation_t *n)
+bool vehicle_controller_prep_start(s3_navigation_t *n)
 { (void)n;assert(!locked);freeze_calls++;if(during_start)during_start();return true; }
-bool vehicle_controller_apply_mapping(const s3_nav_action_t m[26])
+bool vehicle_controller_set_mapping(const s3_nav_action_t m[26])
 { (void)m;assert(!locked);return true; }
 void vehicle_controller_cancel_start(void)
 { assert(!locked);cancel_calls++; }
@@ -89,7 +89,7 @@ void vehicle_controller_observe(const s3_integration_status_t *s)
 { assert(!locked&&s);observed++; }
 #include "../../app_program/controller/s3_integration.c"
 static void cycle(void)
-{ sleeps=0;clock_value+=S3_SAMPLE_PERIOD_US;if(setjmp(boundary)==0)sample(0,NULL);assert(!locked); }
+{ sleeps=0;clock_value+=S3_SAMPLE_PERIOD_US;if(setjmp(boundary)==0)sensor_sample_task(0,NULL);assert(!locked); }
 static void remote_send(uint8_t action,uint32_t id,uint32_t epoch,uint32_t timestamp)
 {
     uint8_t p[REMOTE_COMMAND_SIZE]={REMOTE_VERSION,action};
@@ -100,7 +100,9 @@ static void remote_expect(uint32_t id,uint8_t result,uint8_t reason)
 {
     uint8_t p[REMOTE_REPLY_SIZE];
     assert(s3_remote_reply_take(p,sizeof p)==sizeof p);
-    assert(p[0]==REMOTE_VERSION&&remote_get32(p+2)==id&&p[6]==result&&p[7]==reason);
+    assert(p[0]==REMOTE_REPLY_VERSION&&remote_get32(p+2)==id);
+    assert(((p[1]>>2)&3U)==result&&((p[1]>>4)&7U)==reason);
+    assert((p[1]&0x80U)==0U);
 }
 static void stop_during_start(void)
 { during_start=0;remote_send(REMOTE_STOP,5,0x87654321U,clock_value); }
@@ -379,7 +381,8 @@ int main(void)
     {
         uint8_t p[REMOTE_REPLY_SIZE];
         assert(s3_remote_reply_take(p,sizeof p)==sizeof p&&remote_get32(p+2)==6);
-        assert(p[6]==REMOTE_REJECTED&&p[7]==REMOTE_STALE&&remote_get32(p+8)==0x87654321U);
+        assert(((p[1]>>2)&3U)==REMOTE_REJECTED&&((p[1]>>4)&7U)==REMOTE_STALE);
+        assert(remote_get32(p+6)==0x87654321U);
     }
     assert(g_drive.state==S3_DRIVE_OFF&&velocity_requests==before_velocity);
     /* An asynchronous RESET cancelled on reconnect stays a remote operation
@@ -394,7 +397,7 @@ int main(void)
     {
         uint8_t p[REMOTE_REPLY_SIZE];
         assert(s3_remote_reply_take(p,sizeof p)==sizeof p&&remote_get32(p+2)==2);
-        assert(p[6]==REMOTE_CANCELLED&&remote_get32(p+8)==0xabcddcbaU);
+        assert(((p[1]>>2)&3U)==REMOTE_CANCELLED&&remote_get32(p+6)==0xabcddcbaU);
     }
     s3_remote_link(0x43211234U,true);cycle();
     assert(s3_integration_status(&status)&&status.command_sequence==sequence);
@@ -405,7 +408,7 @@ int main(void)
         const uint8_t expected[]={0x03,0x01,0x78,0x56,0x34,0x12,0x44,0x33,0x22,0x11,0xdd,0xcc,0xbb,0xaa};
         remote_put32(vector+2,0x12345678U);remote_put32(vector+6,0x11223344U);remote_put32(vector+10,0xaabbccddU);
         assert(!memcmp(vector,expected,sizeof vector));
-        const uint8_t reply_vector[]={0x03,0x01,0x78,0x56,0x34,0x12,0x01,0x00,0x44,0x33,0x22,0x11};
+        const uint8_t reply_vector[]={0x04,0x05,0x78,0x56,0x34,0x12,0x44,0x33,0x22,0x11};
         const remote_request_t r={.action=REMOTE_START,.id=0x12345678U,.epoch=0x11223344U,.valid=true};
         remote_reply(&r,REMOTE_EXECUTED,REMOTE_NONE);
         assert(s3_remote_reply_take(p,sizeof p)==sizeof p&&!memcmp(p,reply_vector,sizeof p));
@@ -417,6 +420,35 @@ int main(void)
         assert(s3_remote_status_take(status_vector,sizeof status_vector)==sizeof status_vector);
         assert(!memcmp(status_vector,status_expected,sizeof status_vector));
     }
+    /* All 96 valid enum combinations retain their values. The request ID
+     * and epoch keep all 32 bits, including the STOP/current-epoch rule. */
+    for (unsigned action=REMOTE_START;action<=REMOTE_RESET;action++) {
+        for (unsigned result=REMOTE_QUEUED;result<=REMOTE_CANCELLED;result++) {
+            for (unsigned reason=REMOTE_NONE;reason<=REMOTE_UNAVAILABLE;reason++) {
+                const remote_request_t request={.action=action,.id=UINT32_MAX,
+                    .epoch=UINT32_MAX,.valid=true};
+                uint8_t reply[REMOTE_REPLY_SIZE];
+                remote_reply(&request,(uint8_t)result,(uint8_t)reason);
+                assert(s3_remote_reply_take(reply,sizeof reply)==10U);
+                assert(reply[0]==4U&&reply[1]==(action|(result<<2)|(reason<<4)));
+                assert(remote_get32(reply+2)==UINT32_MAX);
+                assert(remote_get32(reply+6)==(action==REMOTE_STOP?g_remote.epoch:UINT32_MAX));
+            }
+        }
+    }
+    /* Full-ring replacement keeps the newest six results in FIFO order.
+     * The compact head/count must represent the full and wrapped states. */
+    for (uint32_t ident=1U;ident<=10U;ident++) {
+        const remote_request_t request={.action=REMOTE_RESET,.id=ident,
+            .epoch=1U,.valid=true};
+        remote_reply(&request,REMOTE_REJECTED,REMOTE_NOT_READY);
+        assert(g_remote.count<=REMOTE_REPLY_RING_SIZE);
+    }
+    assert(g_remote.count==REMOTE_REPLY_RING_SIZE);
+    for (uint32_t ident=5U;ident<=10U;ident++) {
+        remote_expect(ident,REMOTE_REJECTED,REMOTE_NOT_READY);
+    }
+    assert(g_remote.count==0U);
     puts("PASS: remote queued/executed/fault gates, RESET acknowledgement, duplicate/late/expired START, remote/GP STOP priority and reconnect cancellation");
     puts("PASS: production runtime STOP precedence, packed status, calibration, signed errors, map freeze, per-run timing/fault interval, one-press asynchronous RESET, cancellation and timeout");
     return 0;

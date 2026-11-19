@@ -14,7 +14,7 @@
 #include "../integration/course_sim.c"
 #undef main
 #include "s5_api.h"
-#include "obstacle_scan.h"
+#include "scan_obstacle.h"
 
 /* ---- Obstacle and ultrasonic --------------------------------------------- */
 #define OB_PTS 1200
@@ -70,7 +70,7 @@ static double clearance(void)
     return best;
 }
 
-/* ---- Buddy 5 service boundary (replaces subsystem5.c's task) ------------- */
+/* ---- Buddy 5 service boundary (replaces buddy5.c's task) ------------- */
 static s5_observation_t obs;
 static uint16_t pending_id;
 static unsigned pending_angle; /* 0 = full scan, else peek angle */
@@ -123,7 +123,7 @@ static unsigned st_leg, st_route, st_swapped;
 /* Telemetry-only legs (s3_drive.c): 9 = reversing in leg 0, 10 = aiming turn
  * while scanning. Counted in status updates; anything else is a bug. */
 static unsigned tel_reverse, tel_aim, tel_bad;
-void subsystem5_set_controller_status(unsigned state, unsigned fault, unsigned route,
+void subsystem5_set_control_status(unsigned state, unsigned fault, unsigned route,
                                       unsigned leg, unsigned pass, unsigned swapped)
 {
     (void)fault; (void)pass; st_leg = leg; st_route = route; st_swapped = swapped;
@@ -168,7 +168,7 @@ static void bypass_run(const char *name, double seconds, bool expect_right, bool
             if (off > worst_off) worst_off = off;
             if (verbose && last_leg == 99)
                 printf("    detected: turn %d %%, bend %u, aim %d deg\n", drive.obstacle_turn_pct,
-                       drive.obstacle.bend, drive.obstacle.aim_deg);
+                       drive.obstacle.bend, s5_aim_get(&drive.obstacle));
             if (verbose && drive.obstacle.leg != last_leg) {
                 printf("    t=%6.2f s leg %u %-8s pose (%.3f, %.3f) %4.0f deg  off-line %3.0f mm  clear %3.0f mm\n",
                        now / 1e6, drive.obstacle.leg, s5_state_name(drive.obstacle.state), px, py,

@@ -23,7 +23,7 @@ ER tk_snd_mbf(ID id, const void *msg, INT size, TMO timeout);
 INT tk_rcv_mbf(ID id, void *msg, TMO timeout);
 #include "../../app_program/controller/s3_integration.h"
 #include "../../app_program/controller/vehicle_controller.h"
-#include "../../app_program/subsystem1/subsystem1.h"
+#include "../../app_program/subsystem1/buddy1.h"
 #include "../../app_program/subsystem2/motion_pack.h"
 #include <assert.h>
 #include <setjmp.h>
@@ -36,7 +36,7 @@ static unsigned sleeps,locked[8];
 static uint32_t clock_value;
 static bool fb_braked=true;
 static uint8_t fb_command_id;
-ID mtx_buddy1_state=5, mbf_buddy1_commands=6, mbf_buddy1_outbox=7;
+ID g_mtx_buddy1_state=5, g_mbf_buddy1_commands=6, g_mbf_buddy1_outbox=7;
 ID tk_cre_mtx(const T_CMTX *m) { (void)m;return 1; }
 ER tk_loc_mtx(ID id,TMO t) { (void)t;assert(id>0&&id<8&&!locked[id]);locked[id]=1;return E_OK; }
 ER tk_unl_mtx(ID id) { assert(id>0&&id<8&&locked[id]);locked[id]=0;return E_OK; }
@@ -75,10 +75,10 @@ uint8_t motion_command_id(void) { return 1; }
 bool motion_reset(void) { return true; }
 void motion_navigation_heartbeat(bool enabled) { (void)enabled; }
 bool motion_get_status(motion_status_t *out) { *out=(motion_status_t){0};return false; }
-/* Telemetry publish boundary (subsystem1.c) */
+/* Telemetry publish boundary (buddy1.c) */
 ER buddy1_report_barcode(UB l) { (void)l;return E_OK; }
 ER buddy1_update_faults(UB c,UB a) { (void)c;(void)a;return E_OK; }
-ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE s) { (void)s;return E_OK; }
+ER buddy1_report_robot_state(buddy1_robot_state_t s) { (void)s;return E_OK; }
 ER buddy1_invalidate(UB t) { (void)t;return E_OK; }
 ER buddy1_report_motion(H l,H r) { (void)l;(void)r;return E_OK; }
 ER buddy1_report_pose(UH d,H h) { (void)d;(void)h;return E_OK; }
@@ -90,7 +90,7 @@ BOOL buddy1_snapshot_packet(UB p[BUDDY1_PAYLOAD_MAX]) { (void)p;return TRUE; }
 #include "../../app_program/controller/s3_integration.c"
 
 static void cycle(void)
-{ sleeps=0;clock_value+=10000;if(setjmp(boundary)==0)sample(0,NULL);
+{ sleeps=0;clock_value+=10000;if(setjmp(boundary)==0)sensor_sample_task(0,NULL);
   for(unsigned i=0;i<8;i++)assert(!locked[i]); }
 static bool submit(s3_control_kind_t kind)
 { s3_integration_status_t s; uint32_t seq;
@@ -100,7 +100,7 @@ static bool submit(s3_control_kind_t kind)
   assert(s3_integration_status(&s)&&s.command_sequence==seq+1U);
   return s.command_ok; }
 static ER try_map(char right)
-{ const BUDDY1_BARCODE_MAP m={'A','B',(uint8_t)right,'D'};
+{ const buddy1_barcode_map_t m={'A','B',(uint8_t)right,'D'};
   return buddy1_apply_barcode_map(&m); }
 
 int main(void)

@@ -15,7 +15,7 @@ make pruning comparisons constant-time. A reset, invalid sample or real quiet
 interruption cannot leave a job that later emits a stale result. The existing
 100 Hz sampling and 30 ms sensor/250 ms motor deadlines are retained.
 
-`barcode_quiet.h` maintains separate strict and provisional background clocks.
+`bc_quiet.h` maintains separate strict and provisional background clocks.
 The provisional clock can bridge an excursion of at most 14 normalized units
 above paper for at most 40 ms, and credits it only after the signal returns to
 the strict band. This is below the primary 15-unit peak floor, so tolerated

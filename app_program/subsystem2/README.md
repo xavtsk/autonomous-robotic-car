@@ -15,7 +15,7 @@ Matching headers are in this folder.
 
 `motion.h` declares the subsystem lifecycle API: `motion_init(void)` sets up
 the hardware and `motion_process(void)` runs one control period. Both are
-called by the motion task in `subsystem2.c`.
+called by the motion task in `buddy2.c`.
 
 Agree on data types, units, errors, timing, and ownership before implementation.
 Route cross-subsystem requests and observations through the future integration
@@ -104,6 +104,6 @@ Keep hardware drivers in this folder and register ownership/interfaces in
 `TEAM.md`. Shared configuration is in `app_program/system_config.h`; the
 top-level `include/` directory now belongs to the kernel and board support.
 
-The test hook (`subsystem2_test.c`, `make TEST=1`) runs unit tests S2-U01 to
+The test hook (`buddy2_test.c`, `make TEST=1`) runs unit tests S2-U01 to
 S2-U22; S2-U11, U12, U21 and U22 drive the robot and need `S2_TEST_MOVE` set
 to 1. Record evidence in `testing/subsystem2/TEST_LOG.md`.

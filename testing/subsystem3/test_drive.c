@@ -1,7 +1,7 @@
 /* Real Buddy 2 controller/PID/estimator + real Buddy 3 core/bridge.
  * Hardware edges and PWM are mocked; this cannot prove physical behaviour. */
-#include "motion_controller.h"
-#include "motion_estimation.h"
+#include "ctrl_motion.h"
+#include "estimate_motion.h"
 #include "motion_lease.h"
 #include "motor_control.h"
 #include "s3_drive.h"
@@ -41,7 +41,7 @@ static motion_result_t velocity(float l, float r)
 {
     velocities++;
     return reject_velocity ? MOTION_ERR_BUSY
-                           : motion_controller_request_velocity(l, r, now);
+                           : motion_controller_set_velocity(l, r, now);
 }
 static motion_result_t manoeuvre(manoeuvre_t m)
 {
@@ -117,11 +117,11 @@ static void tick(uint16_t barcode, uint16_t left, uint16_t right, bool valid)
     motion_estimation_update(0.01f);
     if (motion_lease_expired(lease, now, lease_stamp))
     {
-        motion_controller_navigation_timeout();
+        motion_controller_nav_timeout();
         lease = false;
     }
     motion_controller_step(0.01f, now);
-    feedback = (motion_feedback_t){motion_estimation_robot_distance(),
+    feedback = (motion_feedback_t){motion_estimation_robot_dist(),
                                    now,
                                    epoch,
                                    motion_controller_state(),
@@ -318,7 +318,7 @@ static void test_faults_and_stops(void)
     assert(motion_controller_state() == MOTION_TURN);
     now += 40000U;
     assert(motion_lease_expired(lease, now, lease_stamp));
-    motion_controller_navigation_timeout();
+    motion_controller_nav_timeout();
     motion_controller_step(0.01f, now);
     assert(motion_controller_state() == MOTION_FAULT);
     assert(duty[0] == 0.0f && duty[1] == 0.0f);

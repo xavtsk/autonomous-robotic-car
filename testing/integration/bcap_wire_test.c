@@ -1,5 +1,5 @@
 /* Real capture encoder; vectors are independently decoded by Python. */
-#include "barcode_capture.h"
+#include "bc_capture.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

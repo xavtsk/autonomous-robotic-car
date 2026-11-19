@@ -1,10 +1,59 @@
 # Change Requirement 1: Minimum-Bit Data Representation, Week 13 evidence
 
-Team AAI07. Measured 14 Nov 2026 on branch `buddy5-revert-B` unless a row says
-otherwise; widths, message sizes, firmware RAM and all desk tests re-run on
-19 Nov 2026 after Buddy 4 turn rate / lifted-overturned and Buddy 5 raw scan
-readings were added to the telemetry. Every number below comes from a script or test in this repository;
-[how to regenerate](#how-to-regenerate) is at the end.
+Team AAI07. Historical measurements below identify their original snapshots;
+they are not evidence that every test was executed on the current revision.
+The latest compliance cleanup starts from `f684e0c` and keeps the drive,
+barcode, terrain and avoidance decisions and tuning unchanged.
+[How to regenerate](#how-to-regenerate) is at the end.
+
+## Current compliance cleanup
+
+The same-profile Arm builds measure **129720 B before** and **129696 B after**
+the completed cleanup: **24 B less static RAM**. Text grows from
+465756 B to 466260 B; `.data` stays 688 B. Both use 200 Hz IR sampling,
+0.10 m/s cruise, Wi-Fi/MQTT, S3 motion, S4, S5, and IR debug; IMU debug and
+diagnostics are off. These figures include the same local Wi-Fi settings.
+The expanded barcode capture object is **32736 B**, not the historical
+17336 B. Static RAM is `.data + .bss`, not stack high-water or free heap.
+The representation-only intermediate image used 129688 B (32 B less); the
+subsequent module renaming changes sorted link order and adds 8 B of alignment
+padding. The final figure above includes that padding.
+
+| Data changed | Valid values | Required bits | Current storage |
+|---|---|---:|---|
+| Remote reply action | 1..3 | 2 | Bits 0..1 of reply byte 1 |
+| Remote reply result | 0..3 | 2 | Bits 2..3 of reply byte 1 |
+| Remote reply reason | 0..7 | 3 | Bits 4..6 of reply byte 1 |
+| Buddy 4 event queue head | 0..7 | 3 | Protected bit-field |
+| Buddy 4 event queue count | 0..8 | 4 | Protected bit-field; full state fits |
+| Queue, mailbox and barcode workspace flags | false/true | 1 each | Boolean bit-fields |
+| Remote mailbox head/count | 0..5 / 0..6 | 3 each | Protected bit-fields |
+| Buddy 5 relative heading / aim | -90..90 / -40..40 degrees | 8 / 7 | Unsigned fields with explicit signed decoding |
+
+The remote reply is now **10 B instead of 12 B**. Its reply-only version 4
+preserves IDs, epochs and result meanings. Commands and status remain version
+3, and the updated dashboard accepts both old and new replies. Restart the
+dashboard before using the new firmware; no automatic flashing is performed
+by these checks. See [the protocol](REMOTE_CONTROL_PROTOCOL.md).
+
+The width check covers **143 declared fields and 18 totals**, with selected
+source bindings. It now includes the terrain packet's two safety bits and
+checks the actual 95-bit packing sequence. It does not prove that every field
+in every application structure has been inventoried.
+
+The normal target build passes. Naming and formatting were separately checked
+against saved intermediate Arm images: loadable flash contents were identical
+before and after the naming and formatting passes. Final module/function
+renames also produce identical flash contents when linked in the original
+object order. The normal final build has a different file order and addresses.
+These comparisons do not claim that representation changes themselves produce
+identical machine code. See the
+[verification record](../testing/change_requirement_1/logs/2026-11-19_compliance_checks.json).
+
+Current host regression executables are compiled/linked only on this Windows
+machine; Application Control blocks their execution. Pure Python checks can
+run here. Historical native PASS logs below remain historical. The separate
+physical timing/reconnection capture is still **pending**, not a PASS.
 
 The change requirement asks for four things in the repository:
 
@@ -24,12 +73,10 @@ angle 0..180 degrees in 1 degree steps = 181 values = **8 bits**; pitch
 Validity is always a separate bit: zero never means "invalid".
 
 **Automated check.** [`check_widths.py`](../testing/change_requirement_1/check_widths.py)
-lists 103 packed fields (all MQTT payloads, the Buddy 4 and Buddy 5 internal
-packets, the Buddy 5 scan sample, the controller's Buddy 5 status word and
-Buddy 5's private avoidance fields). For each field it recomputes the minimum
-width from the range and fails if the code uses a different width. It also
-checks each topic's field widths add up to what the laptop decoder uses.
-Result: **all 103 fields use the minimum width; all 17 totals match**
+recomputes the minimum width for an explicit field inventory. It compares
+topic totals with the laptop codec and selected declarations/packing calls
+with C source. Fields outside that inventory still need review.
+Historical result before the latest cleanup: **103 fields; 17 totals matched**
 ([log](../testing/change_requirement_1/logs/2026-11-19_widths.txt); 86 fields on 14 Nov, 7 added
 for the 17 Nov bypass state, 10 on 19 Nov: Buddy 4 turn rate + valid and
 lifted/overturned, 7 for the new `car/telemetry/scan_sample` topic).
@@ -72,9 +119,9 @@ read-modify-write (tribunal risk R2).
 | Controller bend filter state (private arithmetic) | `float` | `int16_t`, 1/10000 steps | -10000..10000; kept finer so the slow average does not stall (internal precision, as agreed at the tribunal) |
 | Buddy 5 aim turn (private) | `int8_t` | 7-bit bit-field | -40..40 degrees = 81 values = 7 bits |
 
-The car makes the same bend decisions as before: replaying 20000 random
-line-follower sequences through the old float filter and the new integer filter
-gave the same decision in 19972 runs; the 28 differences were all within 0.01
+In the historical 14 November comparison, replaying 20000 random line-follower
+sequences through the old float filter and the new integer filter gave the
+same decision in 19972 runs; the 28 differences were all within 0.01
 of the 20 % threshold, and the largest difference was 0.004
 ([log](../testing/change_requirement_1/logs/2026-11-14_bend_filter.txt)).
 
@@ -121,7 +168,7 @@ Sizes are measured by the Arm compiler with the firmware's own flags
 
 ([log](../testing/change_requirement_1/logs/2026-11-14_ram_target.txt))
 
-### 2.3 Current firmware (for the record)
+### 2.3 Historical firmware before the 200 Hz buffer expansion
 
 | Image | Flash (text) | .data | .bss | Static RAM |
 |---|---:|---:|---:|---:|
@@ -136,8 +183,9 @@ them one by one from its own copy), and the snapshot cache and outbox slots
 growing by 3 B each for distance/heading since START.
 
 The RP2040 has 264 KB of RAM. The large items are kernel task stacks, lwIP/Wi-Fi
-buffers and the fixed 17336 B barcode capture buffer (scans uploaded to the
-laptop). Per-buddy object totals are in the log; most application state is
+buffers and, in this historical build, a 17336 B barcode capture buffer.
+The current capture object is 32736 B; see the current comparison above.
+Per-buddy object totals are in the historical log; most application state is
 instantiated by the vehicle controller module, so it appears under that row.
 
 ## 3. Message size before and after
@@ -190,7 +238,10 @@ in binary; the same readings as text would be about 1 kB.
 
 ## 4. Correctness and performance
 
-### 4.1 Nothing lost (desk tests, 14 Nov 2026, re-run 19 Nov 2026, all PASS)
+### 4.1 Historical desk-test evidence
+
+The following logs describe the revisions on which they were recorded. They
+are not a claim that native tests were executed for the later compliance cleanup.
 
 | Suite | What it proves | Log |
 |---|---|---|
@@ -201,21 +252,27 @@ in binary; the same readings as text would be about 1 kB.
 | Dashboard tests | The laptop shows every decoded field | [log](../testing/change_requirement_1/logs/2026-11-19_tests_dashboard.txt) |
 | Width check, bend filter check | Sections 1 above | `..._widths.txt`, `..._bend_filter.txt` |
 
-**On the car** the packed telemetry is what the team uses every run: the
+**Earlier on-car demonstrations:** the packed telemetry is what the team uses: the
 dashboard shows motion, barcode, terrain (pitch, roll, hump height, run peak,
 turn rate, lifted/overturned), obstacle scan, raw scan readings and avoidance
 live over Wi-Fi, and the 10 mission requirements
-except the U-turn have been demonstrated with this firmware.
+except the U-turn were reported demonstrated at that earlier snapshot. This is
+not a physical validation claim for the new compliance firmware.
 
 ### 4.2 Timing on the real car (to be recorded by the team)
 
 Question: do the packing work and the network (including a Wi-Fi drop and
-reconnection) make the 10 ms control loops late? (Tribunal test plan, Buddy 1
+reconnection) make the control loops late? (Tribunal test plan, Buddy 1
 and Buddy 2, "heavy telemetry or forced Wi-Fi reconnection".)
 
 The `DIAGNOSTICS=1` firmware measures, on the Pico itself, the gap between
-starts of the motion PID task and the IR sampling task (both 10 ms). A gap of
-20 ms or more would mean a missed cycle.
+starts of the motion PID task (10 ms) and IR sampling task (5 ms). The checker
+reads these periods from the current headers and fails at two periods:
+20 ms for motion, 10 ms for IR. It retains the worst valid summary in a log,
+so a reset cannot hide an earlier excessive gap. This screens missed cycles;
+execution time, workload and reconnection recovery still require review.
+For an archived image use both `--motion-period-ms` and `--ir-period-ms`
+overrides matching that image; a current header cannot identify an old log's rate.
 
 1. Build and flash the diagnostics image (same as the demo build plus `DIAGNOSTICS=1`):
    ```
@@ -236,10 +293,13 @@ starts of the motion PID task and the IR sampling task (both 10 ms). A gap of
    ```
 5. Paste the table here and add a dashboard screenshot from the same run.
 
-| Source | Samples | Min gap (ms) | Max gap (ms) | Max execution (ms) | Result |
-|---|---:|---:|---:|---:|---|
-| motion | _to fill_ | | | | |
-| ir | _to fill_ | | | | |
+| Source | Period | Required evidence | Status |
+|---|---:|---|---|
+| motion | 10 ms | Three-minute workload and Wi-Fi reconnect capture | Pending physical test |
+| ir | 5 ms | Same capture; evaluate against its independent period | Pending physical test |
+
+Synthetic timing fixtures test the checker itself and must never be substituted
+for this table's physical measurements.
 
 Known risk carried from Tribunal 1: the kernel's Wi-Fi driver task runs at a
 higher priority than motion control. This test is what shows whether that
@@ -256,7 +316,8 @@ sh testing/change_requirement_1/run_all.sh
 
 It writes one log per check to `testing/change_requirement_1/logs/` and prints
 PASS/FAIL per step. Static RAM depends slightly on the private Wi-Fi settings
-compiled in; the logs above were built with the public example settings.
+compiled in. The historical RAM logs used the public example settings; the
+current cleanup comparison uses identical local settings for both images.
 
 ## Not claimed
 

@@ -1,15 +1,15 @@
 /* Real Buddy 2 controller/PID/estimator + real Buddy 3 core/bridge.
  * Hardware edges and PWM are mocked; this cannot prove physical behaviour. */
-#include "motion_controller.h"
-#include "motion_estimation.h"
+#include "ctrl_motion.h"
+#include "estimate_motion.h"
 #include "motion_lease.h"
 #include "motor_control.h"
 #include "s3_drive.h"
 #include "s5_api.h"
 #if APP_S4
-#include "terrain_integration.h"
-#include "../../app_program/subsystem4/subsystem4.h"
-#include "../../app_program/subsystem1/subsystem1.h"
+#include "terr_link.h"
+#include "../../app_program/subsystem4/buddy4.h"
+#include "../../app_program/subsystem1/buddy1.h"
 #endif
 #include <assert.h>
 #include <stdio.h>
@@ -34,9 +34,9 @@ bool subsystem4_event(terrain_result_t *out,bool *lost)
 }
 ER buddy1_update_faults(UB changed,UB active) { (void)changed;(void)active;return E_OK; }
 ER buddy1_report_hump(UH count,UH height) { (void)count;(void)height;return E_OK; }
-ER buddy1_report_terrain(const BUDDY1_TERRAIN *t) { (void)t;return E_OK; }
-ER buddy1_report_avoidance(const BUDDY1_AVOIDANCE *a) { (void)a;return E_OK; }
-ER buddy1_report_scan(const BUDDY1_SCAN *q) { (void)q;return E_OK; }
+ER buddy1_report_terrain(const buddy1_terrain_t *t) { (void)t;return E_OK; }
+ER buddy1_report_avoidance(const buddy1_avoidance_t *a) { (void)a;return E_OK; }
+ER buddy1_report_scan(const buddy1_scan_t *q) { (void)q;return E_OK; }
 ER buddy1_invalidate(UB topic) { (void)topic;return E_OK; }
 #endif
 
@@ -73,7 +73,7 @@ static motion_result_t velocity(float l, float r)
 {
     velocities++;
     return reject_velocity ? MOTION_ERR_BUSY
-                           : motion_controller_request_velocity(l, r, now);
+                           : motion_controller_set_velocity(l, r, now);
 }
 static motion_result_t manoeuvre(manoeuvre_t m)
 {
@@ -163,7 +163,7 @@ bool subsystem5_request_peek(uint16_t id,unsigned angle) {
     obstacle.scan_id=id;return true;
 }
 void subsystem5_cancel_scan(void) { scanning_requested=false;peek_angle=0; }
-void subsystem5_set_controller_status(unsigned s,unsigned f,unsigned r,unsigned l,unsigned p,unsigned w) { (void)s;(void)f;(void)r;(void)l;(void)p;(void)w; }
+void subsystem5_set_control_status(unsigned s,unsigned f,unsigned r,unsigned l,unsigned p,unsigned w) { (void)s;(void)f;(void)r;(void)l;(void)p;(void)w; }
 uint16_t subsystem5_controller_status(void) { return 0; }
 uint8_t subsystem5_servo_angle(void) { return 0; }
 motion_result_t motion_request_drive(float metres,float speed) {
@@ -197,11 +197,11 @@ static void tick(uint16_t barcode, uint16_t left, uint16_t right, bool valid)
     motion_estimation_update(0.01f);
     if (motion_lease_expired(lease, now, lease_stamp))
     {
-        motion_controller_navigation_timeout();
+        motion_controller_nav_timeout();
         lease = false;
     }
     motion_controller_step(0.01f, now);
-    feedback = (motion_feedback_t){motion_estimation_robot_distance(),
+    feedback = (motion_feedback_t){motion_estimation_robot_dist(),
                                    now,
                                    epoch,
                                    motion_controller_state(),
@@ -296,7 +296,7 @@ static void simulate(void)
      * return diagonal and under the IR again during the swerve and hand-back. */
     bool tape=false, off=drive.obstacle_active && drive.obstacle.state==S5_MOVING && drive.obstacle.leg>=1;
     if(drive.obstacle_active && drive.obstacle.leg==5 && drive.obstacle.issued && !drive.obstacle.tail) {
-        double travelled=motion_estimation_robot_distance()-drive.obstacle.leg_start_m;
+        double travelled=motion_estimation_robot_dist()-drive.obstacle.leg_start_m;
         double goal=(double)drive.obstacle.plan.offset_mm/1000.0;
         tape=recovery_tape && travelled>goal-0.07 && travelled<goal+0.07;
     }

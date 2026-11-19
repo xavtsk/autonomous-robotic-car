@@ -9,7 +9,8 @@
  * User also confirmed servo signal GP12. Activation stays opt-in; pulse
  * limits, ECHO level protection and route geometry need physical validation.
  * Enable after checking the actual sensor, level
- * protection, servo supply/travel and robot geometry. No automatic motor start. */
+ * protection, servo supply/travel and robot geometry. No automatic motor start.
+ */
 #ifndef S5_HARDWARE_CONFIRMED
 #define S5_HARDWARE_CONFIRMED 0
 #endif
@@ -36,10 +37,11 @@
 #define S5_SAMPLES_MAX 16U
 /* Passing an obstacle of unknown depth (bypass leg 3): stop, look S5_PEEK_DEG
  * toward the obstacle, step S5_PEEK_STEP_MM while it is still beside the car.
- * The servo cannot look 90 deg sideways (30..150 only), hence the diagonal peek. */
+ * The servo cannot look 90 deg sideways (30..150 only), hence the diagonal
+ * peek. */
 /* Bypass turn angle (13 Nov 2026: 45, was 90). Out and back legs are driven
  * diagonally: sideways offset d costs d*sqrt(2) of travel and also moves the
- * car d forward. obstacle_avoidance.c assumes exactly 45 (1.414 / 0.707). */
+ * car d forward. avoid_obstacle.c assumes exactly 45 (1.414 / 0.707). */
 #define S5_BYPASS_DEG 45
 #define S5_PEEK_DEG 60U
 /* 25 mm (was 50): stop closer to the obstacle's real rear edge. */
@@ -126,10 +128,10 @@
 #define S5_BEND_AIM_PCT 100
 #endif
 #define S5_BEND_AIM_MAX_DEG 40
-#define S5_IR_AXLE_MM 135U        /* S3_SENSOR_TO_AXLE_MM, course_profile.h */
+#define S5_IR_AXLE_MM 135U /* S3_SENSOR_TO_AXLE_MM, course_profile.h */
 /* 0 (17 Nov 2026, was 100): driving on past the end of the diagonal moved
  * the car away from a line bending away; the measured return distance
- * (obstacle_avoidance.c return_lat) and the swerve find it instead. */
+ * (avoid_obstacle.c return_lat) and the swerve find it instead. */
 #ifndef S5_RETURN_EXTRA_MM
 #define S5_RETURN_EXTRA_MM 0U
 #endif
@@ -156,7 +158,8 @@
  * goes LEFT unless the left is shown to be impossible:
  *   - the scan puts the obstacle's left edge beyond max_offset_mm, or
  *   - after the 45-degree turn the left diagonal reads blocked on
- *     S5_BLOCK_CONFIRM consecutive fresh readings (one bad echo is not enough), or
+ *     S5_BLOCK_CONFIRM consecutive fresh readings (one bad echo is not enough),
+ * or
  *   - the obstacle is too close for the left out-leg even after reversing
  *     S5_BACKUP_MAX_MM.
  * Then it takes the RIGHT (telemetry: side swapped). 0 = left only: stop
@@ -171,23 +174,30 @@
 #define S5_MARGIN_MM 30U
 #endif
 /* Application settings, NOT measured tolerances. Units mm unless noted.
- * 12-bit distances preserve 1 mm through 4095; timings retain wrap precision. */
-typedef struct {
-    unsigned detect_mm:12, emergency_mm:12, profile_mm:12;
-    unsigned half_width_mm:12, margin_mm:12, max_depth_mm:12;
-    unsigned recovery_gate_mm:12, max_offset_mm:12, sensor_axle_mm:12;
-    unsigned speed_mms:9;
+ * 12-bit distances preserve 1 mm through 4095; timings retain wrap precision.
+ */
+typedef struct
+{
+    unsigned detect_mm : 12, emergency_mm : 12, profile_mm : 12;
+    unsigned half_width_mm : 12, margin_mm : 12, max_depth_mm : 12;
+    unsigned recovery_gate_mm : 12, max_offset_mm : 12, sensor_axle_mm : 12;
+    unsigned speed_mms : 9;
 } s5_config_t;
-static inline s5_config_t s5_defaults(void)
+
+static inline s5_config_t s5_defaults (void)
 {
     /* detect 250 mm (13 Nov run 3, was 200; 350 before that): more room for the
      * 45-degree out-leg when the car is not square to the obstacle.
      * Emergency must stay well below
-     * detect or every avoidance faults at its first leg (obstacle_avoidance.c:66). */
-    /* profile 350 mm (was 700): only returns near the obstacle detected at <=200 mm
-     * belong to it; cones/walls ~50 cm to the side made it look 501 mm wide (NO_PATH). */
-    /* margin 30 mm (was 70): smaller sideways swing, less risk of leaving the mat. */
+     * detect or every avoidance faults at its first leg
+     * (avoid_obstacle.c:66). */
+    /* profile 350 mm (was 700): only returns near the obstacle detected at
+     * <=200 mm belong to it; cones/walls ~50 cm to the side made it look 501 mm
+     * wide (NO_PATH). */
+    /* margin 30 mm (was 70): smaller sideways swing, less risk of leaving the
+     * mat. */
     /* half width 63 mm (was 90): measured 125 mm car width. */
-    return (s5_config_t){250U,80U,350U,63U,S5_MARGIN_MM,500U,100U,700U,0U,80U};
+    return (s5_config_t){250U, 80U,  350U, 63U, S5_MARGIN_MM,
+                         500U, 100U, 700U, 0U,  80U};
 }
 #endif

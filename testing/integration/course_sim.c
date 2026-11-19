@@ -12,8 +12,8 @@
  * the LOGIC works for a plausible car, not that the real car will.
  *
  * Each scenario prints one line; the program fails if any expectation fails. */
-#include "motion_controller.h"
-#include "motion_estimation.h"
+#include "ctrl_motion.h"
+#include "estimate_motion.h"
 #include "motion_lease.h"
 #include "motor_control.h"
 #include "wheel_encoder.h"
@@ -131,7 +131,7 @@ static bool receive(motion_report_t *r)
 }
 static float floor_wheel(float v) { return (v > 0.0f && v < MIN_WHEEL) ? MIN_WHEEL : v; }
 static motion_result_t velocity(float l, float r)
-{ return motion_controller_request_velocity(floor_wheel(l), floor_wheel(r), now); }
+{ return motion_controller_set_velocity(floor_wheel(l), floor_wheel(r), now); }
 static double turn_scale = 1.0; /* models a turn that ends short/long */
 static motion_result_t turn_deg(float deg, float speed)   /* motion.c mapping */
 {
@@ -207,9 +207,9 @@ static void tick(void)
     physics_10ms();
     now += 10000U;
     motion_estimation_update(0.01f);
-    if (motion_lease_expired(lease, now, lease_stamp)) { motion_controller_navigation_timeout(); lease = false; }
+    if (motion_lease_expired(lease, now, lease_stamp)) { motion_controller_nav_timeout(); lease = false; }
     motion_controller_step(0.01f, now);
-    fb = (motion_feedback_t){motion_estimation_robot_distance(), now, 1U,
+    fb = (motion_feedback_t){motion_estimation_robot_dist(), now, 1U,
                              motion_controller_state(), motion_controller_fault(), true,
                              motion_controller_is_stopped(), motion_controller_command_id(), 0U};
     f.timestamp_us = now;

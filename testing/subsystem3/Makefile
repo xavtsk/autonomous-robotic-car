@@ -5,8 +5,14 @@ BASELINE_DIR ?=
 BUILD = ../../build/buddy3
 CPPFLAGS = -I$(SOURCE_DIR) -I.
 CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g
-MODULES = ir_acquisition ir_calibration ir_reflectance line_detection line_controller barcode_decoder line_navigation
+MODULES = ir_acquisition ir_calibration ir_reflectance line_detection line_controller bc_decoder line_navigation
 SOURCES = $(addprefix $(SOURCE_DIR)/,$(addsuffix .c,$(MODULES)))
+# Archived baselines predate the BARR module-name cleanup.
+BASELINE_MODULES = $(MODULES)
+ifeq ($(wildcard $(BASELINE_DIR)/bc_decoder.c),)
+BASELINE_MODULES = $(subst bc_decoder,barcode_decoder,$(MODULES))
+BASELINE_CPPFLAGS = -DS3_LEGACY_MODULE_NAMES
+endif
 
 .PHONY: test replay regression compare bench bench-compare codec sanitize sizes drive feedback
 test:
@@ -17,21 +23,21 @@ test:
 	$(BUILD)/test_mapping
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_ir_reflectance.c $(SOURCE_DIR)/ir_reflectance.c -o $(BUILD)/test_ir_reflectance
 	$(BUILD)/test_ir_reflectance
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_record.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_record
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_record.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_record
 	$(BUILD)/test_barcode_record
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_fast.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_fast
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_fast.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_fast
 	$(BUILD)/test_barcode_fast
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_faint.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_faint
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_faint.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_faint
 	$(BUILD)/test_barcode_faint
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_varying.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_varying
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_varying.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_varying
 	$(BUILD)/test_barcode_varying
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_wide.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/test_barcode_wide
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_wide.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_wide
 	$(BUILD)/test_barcode_wide
 
 PYTHON ?= python3
 replay:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) replay_barcode_record.c $(SOURCE_DIR)/barcode_decoder.c -o $(BUILD)/replay_barcode_record
+	$(CC) $(CPPFLAGS) $(CFLAGS) replay_barcode_record.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/replay_barcode_record
 	$(PYTHON) test_barcode_replay.py $(BUILD)/replay_barcode_record
 
 regression:
@@ -39,7 +45,7 @@ regression:
 
 compare:
 	mkdir -p $(BUILD)
-	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) -DS3_BASELINE_TRACE host_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(MODULES))) -o $(BUILD)/before_trace
+	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) $(BASELINE_CPPFLAGS) -DS3_BASELINE_TRACE host_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) -o $(BUILD)/before_trace
 	$(BUILD)/before_trace > $(BUILD)/before.trace
 	$(CC) $(CPPFLAGS) $(CFLAGS) -DS3_BASELINE_TRACE host_trace.c $(SOURCES) -o $(BUILD)/after_trace
 	$(BUILD)/after_trace > $(BUILD)/after.trace
@@ -54,7 +60,7 @@ bench:
 
 bench-compare: bench
 	mkdir -p $(BUILD)
-	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) bench_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(MODULES))) -o $(BUILD)/before_bench
+	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) $(BASELINE_CPPFLAGS) bench_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) -o $(BUILD)/before_bench
 	$(BUILD)/before_bench > $(BUILD)/before-bench.trace
 	cmp $(BUILD)/before-bench.trace $(BUILD)/after-bench.trace
 	shasum -a 256 $(BUILD)/before-bench.trace $(BUILD)/after-bench.trace
@@ -68,7 +74,11 @@ sanitize:
 	$(MAKE) test codec drive feedback CFLAGS='$(CFLAGS) -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'
 
 MOTION = $(APP)/../subsystem2
+MOTION_CORE = $(addprefix $(MOTION)/,ctrl_motion.c motion_pack.c estimate_motion.c speed_pid.c)
+ifeq ($(wildcard $(MOTION)/ctrl_motion.c),)
 MOTION_CORE = $(addprefix $(MOTION)/,motion_controller.c motion_pack.c motion_estimation.c speed_pid.c)
+CPPFLAGS += -DS2_LEGACY_MODULE_NAMES
+endif
 drive:
 	mkdir -p $(BUILD)
 	$(CC) $(CPPFLAGS) -I$(MOTION) -I$(APP)/../controller $(CFLAGS) test_drive.c $(SOURCES) $(APP)/../controller/s3_drive.c $(MOTION_CORE) -o $(BUILD)/test_drive

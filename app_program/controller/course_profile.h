@@ -28,10 +28,10 @@
 #error S3_STRAIGHT_TEST must be 0 or 1
 #endif
 #ifndef S3_LINE_BETWEEN
-#define S3_LINE_BETWEEN 1        /* 0 = Buddy 3's original edge design */
+#define S3_LINE_BETWEEN 1 /* 0 = Buddy 3's original edge design */
 #endif
 #ifndef S3_CROSS_STRAIGHT
-#define S3_CROSS_STRAIGHT 1      /* 0 = halt at a crossing with no action */
+#define S3_CROSS_STRAIGHT 1 /* 0 = halt at a crossing with no action */
 #endif
 /* MEASURE on the car: middle of the driven-wheel axle to the front IR sensor
  * heads, in millimetres. 0 = unknown: LEFT/RIGHT turn where the car stops,
@@ -78,7 +78,9 @@
 #define S3_BARCODE_WHITE_LIMIT (400U) /* was 400; 28 Oct: Y thin bars */
 #endif
 #ifndef S3_BARCODE_BLACK_LIMIT
-#define S3_BARCODE_BLACK_LIMIT (600U) /* was 600; Y's faint bars peak 480/512 */
+#define S3_BARCODE_BLACK_LIMIT                                                 \
+    (600U) /* was 600; Y's faint bars peak 480/512                             \
+            */
 #endif
 
 /* After a turn that ends off the line: sweep up to +/- this many degrees
@@ -91,33 +93,35 @@
 #define S3_TURN_SEARCH_MPS (0.05f) /* each wheel, while sweeping */
 #define S3_TRACK_M (0.116f)        /* wheel centre-to-centre (Buddy 2) */
 
-static inline void s3_course_navigation(s3_navigation_config_t *cfg)
+static inline void s3_course_navigation (s3_navigation_config_t * p_cfg)
 {
-    cfg->calibration[S3_SENSOR_BARCODE].white_limit = S3_BARCODE_WHITE_LIMIT;
-    cfg->calibration[S3_SENSOR_BARCODE].black_limit = S3_BARCODE_BLACK_LIMIT;
-    cfg->line.between = S3_STRAIGHT_TEST || (S3_LINE_BETWEEN != 0);
-    cfg->steering.kp_mps = S3_STRAIGHT_TEST ? 0.0f : S3_COURSE_STEERING_KP;
-    cfg->steering.base_mps = S3_COURSE_BASE_MPS;
+    p_cfg->calibration[S3_SENSOR_BARCODE].white_limit = S3_BARCODE_WHITE_LIMIT;
+    p_cfg->calibration[S3_SENSOR_BARCODE].black_limit = S3_BARCODE_BLACK_LIMIT;
+    p_cfg->line.between = S3_STRAIGHT_TEST || (S3_LINE_BETWEEN != 0);
+    p_cfg->steering.kp_mps = S3_STRAIGHT_TEST ? 0.0f : S3_COURSE_STEERING_KP;
+    p_cfg->steering.base_mps = S3_COURSE_BASE_MPS;
 }
-static inline s3_drive_options_t s3_course_options(void)
+
+static inline s3_drive_options_t s3_course_options (void)
 {
-    s3_drive_options_t o = s3_drive_default_options();
-    o.cross_straight = S3_STRAIGHT_TEST || (S3_CROSS_STRAIGHT != 0);
-    o.pending_wait_us = S3_COURSE_PENDING_WAIT_US;
+    s3_drive_options_t value_o = s3_drive_default_options();
+    value_o.cross_straight = S3_STRAIGHT_TEST || (S3_CROSS_STRAIGHT != 0);
+    value_o.pending_wait_us = S3_COURSE_PENDING_WAIT_US;
     /* "touching" is only produced by the between-sensors detector. */
-    o.turn_line_window_us = (S3_STRAIGHT_TEST || S3_LINE_BETWEEN) ? S3_TURN_LINE_WINDOW_US : 0U;
-    if (o.turn_line_window_us != 0U)
+    value_o.turn_line_window_us =
+        (S3_STRAIGHT_TEST || S3_LINE_BETWEEN) ? S3_TURN_LINE_WINDOW_US : 0U;
+    if (value_o.turn_line_window_us != 0U)
     {
-        o.search_deg = S3_TURN_SEARCH_DEG;
-        o.search_mps = S3_TURN_SEARCH_MPS;
-        o.track_m = S3_TRACK_M;
+        value_o.search_deg = S3_TURN_SEARCH_DEG;
+        value_o.search_mps = S3_TURN_SEARCH_MPS;
+        value_o.track_m = S3_TRACK_M;
     }
 #if S3_SENSOR_TO_AXLE_MM > 0
-    o.turn_advance_m =
+    value_o.turn_advance_m =
         (float)(S3_SENSOR_TO_AXLE_MM + S3_CROSSING_CENTRE_MM) / 1000.0f;
-    o.advance_mps = S3_ADVANCE_MPS;
-    o.drive = motion_request_drive;
+    value_o.advance_mps = S3_ADVANCE_MPS;
+    value_o.drive = motion_request_drive;
 #endif
-    return o;
+    return value_o;
 }
 #endif

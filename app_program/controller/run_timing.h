@@ -16,30 +16,39 @@ typedef struct
     uint32_t above_target, above_safety, last_safety_us;
 } s3_run_timing_t;
 
-static inline void s3_timing_increment(uint32_t *value)
+static inline void s3_timing_increment (uint32_t * p_value)
 {
-    if (*value != UINT32_MAX) { ++*value; }
+    if (*p_value != UINT32_MAX)
+    {
+        ++*p_value;
+    }
 }
-static inline void s3_run_timing_begin(s3_run_timing_t *timing, uint32_t now)
+
+static inline void s3_run_timing_begin (s3_run_timing_t * p_timing,
+                                        uint32_t now)
 {
-    *timing = (s3_run_timing_t){.started_us = now};
+    *p_timing = (s3_run_timing_t){.started_us = now};
 }
-static inline void s3_run_timing_record(s3_run_timing_t *timing,
-                                        uint32_t gap_us, uint32_t stamp_us,
-                                        uint32_t safety_limit_us)
+
+static inline void s3_run_timing_record (s3_run_timing_t * p_timing,
+                                         uint32_t gap_us, uint32_t stamp_us,
+                                         uint32_t safety_limit_us)
 {
-    s3_timing_increment(&timing->samples);
-    if (gap_us > timing->max_gap_us) { timing->max_gap_us = gap_us; }
+    s3_timing_increment(&p_timing->samples);
+    if (gap_us > p_timing->max_gap_us)
+    {
+        p_timing->max_gap_us = gap_us;
+    }
     /* Above-target intervals include ordinary jitter: not a missed-deadline
      * count. The separate safety counter uses the existing navigation limit. */
     if (gap_us > S3_SAMPLE_PERIOD_US)
     {
-        s3_timing_increment(&timing->above_target);
+        s3_timing_increment(&p_timing->above_target);
     }
     if (gap_us > safety_limit_us)
     {
-        s3_timing_increment(&timing->above_safety);
-        timing->last_safety_us = stamp_us;
+        s3_timing_increment(&p_timing->above_safety);
+        p_timing->last_safety_us = stamp_us;
     }
 }
 #endif

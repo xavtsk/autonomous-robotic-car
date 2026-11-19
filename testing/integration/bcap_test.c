@@ -1,6 +1,6 @@
 /* Barcode capture: episode detection, pre-trigger samples, quiet end, pool
  * limits, decoder counters and the USB dump format. */
-#include "barcode_capture.h"
+#include "bc_capture.h"
 #include "run_timing.h"
 #include <assert.h>
 #include <float.h>

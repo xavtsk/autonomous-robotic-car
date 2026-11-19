@@ -5,7 +5,11 @@
 #include "ir_acquisition.h"
 #include "ir_calibration.h"
 #include "line_controller.h"
+#ifdef S3_LEGACY_MODULE_NAMES
 #include "barcode_decoder.h"
+#else
+#include "bc_decoder.h"
+#endif
 #include "line_navigation.h"
 #include "barcode_fixtures.h"
 

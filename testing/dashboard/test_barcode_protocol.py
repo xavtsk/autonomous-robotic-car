@@ -108,7 +108,7 @@ class BarcodeWireTests(unittest.TestCase):
         subprocess.run(["cc","-std=c11","-Wall","-Wextra","-Werror",
                         "-I"+str(ROOT/"app_program/controller"),
                         str(ROOT/"testing/integration/bcap_wire_test.c"),
-                        str(ROOT/"app_program/controller/barcode_capture.c"),"-o",str(binary)],check=True)
+                        str(ROOT/"app_program/controller/bc_capture.c"),"-o",str(binary)],check=True)
         output=subprocess.check_output([str(binary)],text=True)
         cls.packets=[bytes.fromhex(line.split()[1]) for line in output.splitlines() if line.startswith("BCAP_VECTOR ")]
         cls.boundary=bytes.fromhex(next(line.split()[1] for line in output.splitlines() if line.startswith("BCAP_BOUNDARY ")))

@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
-#include "barcode_quiet.h"
+#include "bc_quiet.h"
 
 int main(void)
 {

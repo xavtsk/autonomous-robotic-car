@@ -14,27 +14,27 @@
 
 typedef struct
 {
-    float kp;               /* duty per m/s of speed error              */
-    float ki;               /* duty per m of accumulated speed error    */
-    float kd;               /* duty per m/s^2 of measured acceleration  */
-    float kff;              /* duty per m/s of setpoint (1 / top speed) */
-    float accel_mps2;       /* setpoint ramp rate                       */
-    float setpoint_mps;     /* ramped setpoint                          */
-    float integral;         /* integral term, duty                      */
+    float kp;           /* duty per m/s of speed error              */
+    float ki;           /* duty per m of accumulated speed error    */
+    float kd;           /* duty per m/s^2 of measured acceleration  */
+    float kff;          /* duty per m/s of setpoint (1 / top speed) */
+    float accel_mps2;   /* setpoint ramp rate                       */
+    float setpoint_mps; /* ramped setpoint                          */
+    float integral;     /* integral term, duty                      */
 } speed_pid_t;
 
-void  speed_pid_init(speed_pid_t *p_pid, float kp, float ki, float kd,
-                     float kff, float accel_mps2);
+void speed_pid_init (speed_pid_t * p_pid, float value_kp, float value_ki,
+                     float value_kd, float kff, float accel_mps2);
 
 /* Clear the setpoint and integral (used whenever the motor is braked) */
-void  speed_pid_reset(speed_pid_t *p_pid);
+void speed_pid_reset (speed_pid_t * p_pid);
 
 /* One control step. Returns the motor duty; 0.0 (brake) once both the
  * target and the ramped setpoint are zero. */
-float speed_pid_update(speed_pid_t *p_pid, float target_mps,
-                       float speed_mps, float accel_mps2, float dt_s);
+float speed_pid_update (speed_pid_t * p_pid, float target_mps, float speed_mps,
+                        float accel_mps2, float dt_s);
 
 /* Current ramped setpoint, m/s */
-float speed_pid_setpoint(const speed_pid_t *p_pid);
+float speed_pid_setpoint (const speed_pid_t * p_pid);
 
 #endif /* BUDDY2_SPEED_PID_H */

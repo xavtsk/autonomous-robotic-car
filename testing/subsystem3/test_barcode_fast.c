@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "barcode_decoder.h"
+#include "bc_decoder.h"
 
 enum { STEP_US=5000U, PAPER=100U, INK=900U, MARGIN_US=1500000U };
 enum { INTACT, SHORT_LEAD, SHORT_TRAIL, MISSING_NARROW, WEAK_FRAME };

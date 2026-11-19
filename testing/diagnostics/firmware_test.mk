@@ -3,12 +3,12 @@ ROOT = ../..
 BUILD = $(ROOT)/build/diagnostics
 CPPFLAGS = -DAPP_H -DAPP_DIAGNOSTICS=1 -include firmware_test_kernel.h -I. -Ifakes
 CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g
-SOURCES = firmware_test.c $(ROOT)/app_program/subsystem2/motion_codec.c
+SOURCES = firmware_test.c $(ROOT)/app_program/subsystem2/codec_motion.c
 
 .PHONY: test sanitize disabled smoke
 smoke:
 	mkdir -p $(BUILD)
-	$(CC) -Ifakes $(CFLAGS) motion_smoke_test.c $(ROOT)/app_program/subsystem2/motion_codec.c -o $(BUILD)/motion_smoke_test
+	$(CC) -Ifakes $(CFLAGS) motion_smoke_test.c $(ROOT)/app_program/subsystem2/codec_motion.c -o $(BUILD)/motion_smoke_test
 	$(BUILD)/motion_smoke_test
 
 test:

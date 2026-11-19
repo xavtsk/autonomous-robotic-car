@@ -1,7 +1,7 @@
 /* Include the actual optional module to inspect publication versus owner-only
  * summaries; only RTOS/MMIO/status observations are substituted. */
 #include "firmware_test_kernel.h"
-#include "../../app_program/subsystem2/motion_codec.h"
+#include "../../app_program/subsystem2/codec_motion.h"
 #include "../../app_program/subsystem2/wheel_encoder.h"
 #include <assert.h>
 #include <stdarg.h>

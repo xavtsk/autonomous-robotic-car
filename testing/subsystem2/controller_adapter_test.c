@@ -19,11 +19,11 @@ ER buddy1_update_faults(UB changed, UB active)
     return next_error;
 }
 ER buddy1_report_motion(H l, H r) { (void)l; (void)r; return E_OK; }
-ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE s) { (void)s; return E_OK; }
+ER buddy1_report_robot_state(buddy1_robot_state_t s) { (void)s; return E_OK; }
 ER buddy1_report_barcode(UB c) { (void)c; return E_OK; }
 ER buddy1_invalidate(UB type) { (void)type; return E_OK; }
 ER buddy1_configuration_close(void) { return E_OK; }
-BUDDY1_BARCODE_ACTION buddy1_barcode_action(UB c) { (void)c; return BUDDY1_ACTION_UNKNOWN; }
+buddy1_barcode_action_t buddy1_barcode_action(UB c) { (void)c; return BUDDY1_ACTION_UNKNOWN; }
 ER subsystem3_set_mode(s3_processing_mode_t m) { (void)m; return E_OK; }
 motion_fault_t motion_get_fault(void) { return MOTION_FAULT_NONE; }
 motion_state_t motion_poll(void) { return MOTION_IDLE; }

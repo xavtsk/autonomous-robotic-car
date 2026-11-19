@@ -1,40 +1,79 @@
 #include "tilt_estimation.h"
 #include <math.h>
 #define DEG 57.295779513f
-bool tilt_estimation(const float a[3],float *pitch,float *roll)
+
+bool tilt_estimation (const float p_a[3], float * p_pitch, float * p_roll)
 {
-    float n=a[0]*a[0]+a[1]*a[1]+a[2]*a[2];
-    if (!isfinite(n) || n<0.81f || n>1.21f || a[2]<=0.0f) { return false; }
+    float value_n = p_a[0] * p_a[0] + p_a[1] * p_a[1] + p_a[2] * p_a[2];
+    if (!isfinite(value_n) || value_n < 0.81f || value_n > 1.21f ||
+        p_a[2] <= 0.0f)
+    {
+        return false;
+    }
     /* Positive pitch = nose up; positive roll = right side up (team choice,
      * 3 Nov 2026). Accelerometer measures support against gravity; a[1] is
      * the vehicle-left axis, so right side up makes it negative. */
-    *pitch=atan2f(a[0],sqrtf(a[1]*a[1]+a[2]*a[2]))*DEG;
-    *roll=atan2f(-a[1],a[2])*DEG;
+    *p_pitch = atan2f(p_a[0], sqrtf(p_a[1] * p_a[1] + p_a[2] * p_a[2])) * DEG;
+    *p_roll = atan2f(-p_a[1], p_a[2]) * DEG;
     return true;
 }
-bool tilt_heading(const float a[3],const float m[3],float *heading)
+
+bool tilt_heading (const float p_a[3], const float p_m[3], float * p_heading)
 {
     /* Project vehicle forward and magnetic north onto the gravity-normal plane.
      * Heading increases anticlockwise, matching Buddy 2. */
-    float n=sqrtf(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);
-    float norm=m[0]*m[0]+m[1]*m[1]+m[2]*m[2];
-    float u[3], f[3], left[3], fn, x,y;
-    unsigned i;
-    if (!isfinite(n) || n<0.9f || n>1.1f || !isfinite(norm) || norm<0.01f || norm>0.64f) { return false; }
-    for(i=0;i<3;++i) { u[i]=a[i]/n; f[i]=(i==0?1.0f:0.0f)-u[0]*u[i]; }
-    fn=sqrtf(f[0]*f[0]+f[1]*f[1]+f[2]*f[2]);
-    if (fn<0.2f) { return false; }
-    for(i=0;i<3;++i) { f[i]/=fn; }
-    left[0]=u[1]*f[2]-u[2]*f[1]; left[1]=u[2]*f[0]-u[0]*f[2]; left[2]=u[0]*f[1]-u[1]*f[0];
-    x=m[0]*f[0]+m[1]*f[1]+m[2]*f[2]; y=m[0]*left[0]+m[1]*left[1]+m[2]*left[2];
-    if (x*x+y*y<0.0025f) { return false; }
-    *heading=-atan2f(y,x)*DEG;
-    if (*heading<0) { *heading+=360.0f; }
+    float value_n = sqrtf(p_a[0] * p_a[0] + p_a[1] * p_a[1] + p_a[2] * p_a[2]);
+    float norm = p_m[0] * p_m[0] + p_m[1] * p_m[1] + p_m[2] * p_m[2];
+    float value_u[3], value_f[3], left[3], value_fn, value_x, value_y;
+    unsigned value_i;
+    if (!isfinite(value_n) || value_n < 0.9f || value_n > 1.1f ||
+        !isfinite(norm) || norm < 0.01f || norm > 0.64f)
+    {
+        return false;
+    }
+    for (value_i = 0; value_i < 3; ++value_i)
+    {
+        value_u[value_i] = p_a[value_i] / value_n;
+        value_f[value_i] =
+            (value_i == 0 ? 1.0f : 0.0f) - value_u[0] * value_u[value_i];
+    }
+    value_fn = sqrtf(value_f[0] * value_f[0] + value_f[1] * value_f[1] +
+                     value_f[2] * value_f[2]);
+    if (value_fn < 0.2f)
+    {
+        return false;
+    }
+    for (value_i = 0; value_i < 3; ++value_i)
+    {
+        value_f[value_i] /= value_fn;
+    }
+    left[0] = value_u[1] * value_f[2] - value_u[2] * value_f[1];
+    left[1] = value_u[2] * value_f[0] - value_u[0] * value_f[2];
+    left[2] = value_u[0] * value_f[1] - value_u[1] * value_f[0];
+    value_x = p_m[0] * value_f[0] + p_m[1] * value_f[1] + p_m[2] * value_f[2];
+    value_y = p_m[0] * left[0] + p_m[1] * left[1] + p_m[2] * left[2];
+    if (value_x * value_x + value_y * value_y < 0.0025f)
+    {
+        return false;
+    }
+    *p_heading = -atan2f(value_y, value_x) * DEG;
+    if (*p_heading < 0)
+    {
+        *p_heading += 360.0f;
+    }
     return true;
 }
-float tilt_angle_delta(float now,float previous)
+
+float tilt_angle_delta (float now, float previous)
 {
-    float d=now-previous;
-    if(d>180.0f) { d-=360.0f; } else if(d < -180.0f) { d+=360.0f; }
-    return d;
+    float value_d = now - previous;
+    if (value_d > 180.0f)
+    {
+        value_d -= 360.0f;
+    }
+    else if (value_d < -180.0f)
+    {
+        value_d += 360.0f;
+    }
+    return value_d;
 }

@@ -1,5 +1,5 @@
 #include "imu_sensor.h"
-#include "terrain_monitor.h"
+#include "terr_data.h"
 #include "tilt_estimation.h"
 #include <assert.h>
 #include <math.h>
@@ -55,7 +55,7 @@ static void terrain_fixture_init(terrain_fixture_t *f,terrain_hump_geometry_t ge
 {
  *f=(terrain_fixture_t){0};terrain_monitor_init(&f->monitor);
  assert(f->monitor.hump_geometry==TERRAIN_HUMP_LONGITUDINAL);
- assert(terrain_monitor_set_hump_geometry(&f->monitor,geometry,0.116f));
+ assert(terrain_monitor_set_geometry(&f->monitor,geometry,0.116f));
  f->sample.valid=true;f->odometry.valid=true;f->odometry.epoch=1;
  for(unsigned i=0;i<110;i++) { terrain_step(f,0,0,0,20000); }
  assert(f->monitor.calibration.ready && (f->monitor.result.flags&TERRAIN_TILT_VALID));
@@ -143,8 +143,8 @@ static void right_wheel_tests(void)
   terrain_monitor_reset_run(&f.monitor);
   assert(f.monitor.hump_geometry==TERRAIN_HUMP_RIGHT_WHEEL && f.monitor.wheel_track_m==0.116f);
   assert(f.monitor.calibration.ready && !f.monitor.hump.highest_valid);
-  assert(!terrain_monitor_set_hump_geometry(&f.monitor,TERRAIN_HUMP_RIGHT_WHEEL,0));
-  assert(!terrain_monitor_set_hump_geometry(&f.monitor,(terrain_hump_geometry_t)99,0.116f));
+  assert(!terrain_monitor_set_geometry(&f.monitor,TERRAIN_HUMP_RIGHT_WHEEL,0));
+  assert(!terrain_monitor_set_geometry(&f.monitor,(terrain_hump_geometry_t)99,0.116f));
  }
  {
   terrain_fixture_t f;const float roll=roll_for_height(0.01f,0,0.116f);

@@ -1,0 +1,9 @@
+# Keep application sources and review tooling independent of checkout platform.
+app_program/**/*.c text eol=lf
+app_program/**/*.h text eol=lf
+testing/**/*.c text eol=lf
+testing/**/*.h text eol=lf
+testing/change_requirement_1/*.py text eol=lf
+config/*.h text eol=lf
+.clang-format text eol=lf
+.clang-tidy text eol=lf

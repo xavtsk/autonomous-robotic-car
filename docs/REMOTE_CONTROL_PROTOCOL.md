@@ -3,19 +3,39 @@
 This optional protocol is available in the `APP_S3_MOTION` firmware profile.
 It uses the existing single navigation owner and its calibration, fault,
 motion-feedback and terrain readiness gates. GP20/GP21 remain available.
-All integers below are unsigned little-endian. Version is `3`. Commands and
-replies are non-retained MQTT messages. There is no automatic START retry.
+All integers below are unsigned little-endian. Commands and status retain
+version `3`; compact replies use version `4`. Commands and replies are
+non-retained MQTT messages. There is no automatic START retry.
 
 | Topic | Python struct | Fields in order |
 | --- | --- | --- |
 | `car/cmd/control` | `<BBIII` (14 bytes) | version, action, request ID, link epoch, observed robot time in microseconds |
-| `car/reply/control` | `<BBIBBI` (12 bytes) | version, action, request ID, result, reason, request epoch (STOP uses current epoch) |
+| `car/reply/control` | `<BBII` (10 bytes) | reply version, packed action/result/reason, request ID, request epoch (STOP uses current epoch) |
 | `car/telemetry/control` | `<BIIIB` (14 bytes) | version, link epoch, robot time in microseconds, last request ID, flags |
 
 Actions: START=1, STOP=2, RESET=3. Results: QUEUED=0, EXECUTED=1,
 REJECTED=2, CANCELLED=3. Reasons: NONE=0, INVALID=1, STALE=2, REPLAY=3,
 BUSY=4, NOT_READY=5, SUPERSEDED=6, UNAVAILABLE=7. Malformed/unknown packets
 are ignored, because a reliable request identity cannot be assumed.
+
+Version 4 reply byte 1 stores action in bits 0..1, result in bits 2..3 and
+reason in bits 4..6. Bit 7 is reserved and must be zero. These use the minimum
+2, 2 and 3 bits for their valid ranges. Request ID and epoch retain all 32
+bits; no freshness, replay, correlation or STOP-precedence rule changes.
+The six-entry reply ring therefore uses 60 payload bytes instead of 72.
+
+The dashboard accepts both version 4 replies and the original version 3
+`<BBIBBI` 12-byte replies, so existing firmware continues to work after the
+dashboard update. Update/restart the dashboard before deploying version 4
+firmware; an older dashboard cannot decode the compact reply. The request
+and status layouts and versions are unchanged, so no command negotiation or
+automatic resending is introduced.
+
+The retained request stores action in 2 bits and validity in 1 bit. The
+remote mailbox stores flags in 4 bits, head (0..5) and count (0..6) in 3 bits
+each, and each Boolean in 1 bit. The existing controller mutex covers these
+shared fields and their read-modify-write operations. Native C bit-field
+layout is never sent over MQTT; the wire layout is encoded explicitly.
 
 Flags: bit0 AVAILABLE, bit1 CAN_START, bit2 CAN_RESET, bit3 RUNNING;
 bits4–7 are zero. Flags are a current readiness hint, not a promise that a
@@ -59,5 +79,6 @@ works without the dashboard/network.
 
 Example vectors (hex): START ID `12345678`, epoch `11223344`, time `aabbccdd`:
 `03017856341244332211ddccbbaa`; EXECUTED/NONE reply:
-`030178563412010044332211`; status flags3 with the same values:
-`0344332211ddccbbaa7856341203`.
+`04057856341244332211`; status flags3 with the same values:
+`0344332211ddccbbaa7856341203`. The dashboard also accepts the legacy reply
+`030178563412010044332211` with exactly the same decoded values.

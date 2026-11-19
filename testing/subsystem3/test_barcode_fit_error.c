@@ -1,9 +1,9 @@
 /* Exact-equivalence regression for the RP2040 fit-score optimization.
  * Include the implementation to exercise its private arithmetic helper;
- * compile this file alone, without a second barcode_decoder.c object. */
+ * compile this file alone, without a second bc_decoder.c object. */
 #include <assert.h>
 #include <stdio.h>
-#include "../../app_program/subsystem3/barcode_decoder.c"
+#include "../../app_program/subsystem3/bc_decoder.c"
 
 static uint32_t random_state=0x8421937U;
 static uint32_t random_word(void)

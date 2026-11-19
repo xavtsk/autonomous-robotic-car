@@ -2,6 +2,7 @@
 #define BUDDY3_LINE_DETECTION_H
 #include <stdbool.h>
 #include <stdint.h>
+
 typedef struct
 {
     uint16_t signal_floor;  /* Sum of normalised darkness, 0..2000. */
@@ -19,11 +20,13 @@ typedef struct
      * error and junction detection are identical in both modes. */
     bool between;
 } s3_line_config_t;
+
 typedef struct
 {
     uint8_t active : 1;
     uint32_t since_us;
 } s3_persistence_t;
+
 typedef struct
 {
     bool valid;
@@ -36,6 +39,7 @@ typedef struct
     bool junction_event;
     bool touching; /* between mode: a sensor is at/above signal_floor */
 } s3_line_observation_t;
+
 typedef struct
 {
     s3_line_config_t config;
@@ -47,10 +51,12 @@ typedef struct
     uint8_t junction_latched : 1;
     uint8_t loss_reported : 1;
 } s3_line_detector_t;
-s3_line_config_t s3_line_defaults(void);
-bool s3_line_init(s3_line_detector_t *detector, const s3_line_config_t *config);
-void s3_line_reset(s3_line_detector_t *detector);
-s3_line_observation_t s3_line_update(s3_line_detector_t *detector,
-                                     uint32_t timestamp_us, bool inputs_valid,
-                                     uint16_t left_dark, uint16_t right_dark);
+
+s3_line_config_t s3_line_defaults (void);
+bool s3_line_init (s3_line_detector_t * p_detector,
+                   const s3_line_config_t * p_config);
+void s3_line_reset (s3_line_detector_t * p_detector);
+s3_line_observation_t s3_line_update (s3_line_detector_t * p_detector,
+                                      uint32_t timestamp_us, bool inputs_valid,
+                                      uint16_t left_dark, uint16_t right_dark);
 #endif

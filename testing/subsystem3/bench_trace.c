@@ -94,7 +94,11 @@ int32_t ir_sensor_read_frame(s3_sensor_frame_t *frame)
 }
 void ir_sensor_close(void) { assert(!locked); }
 
+#ifdef S3_LEGACY_MODULE_NAMES
 #include "subsystem3.c"
+#else
+#include "buddy3.c"
+#endif
 
 static void once(FP entry)
 {

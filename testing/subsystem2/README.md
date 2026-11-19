@@ -14,7 +14,7 @@ See [integration review](../../docs/INTEGRATION_2026-10-25.md).
 
 ## Unit tests (S2-U01 to S2-U22)
 
-Automated in `app_program/subsystem2/subsystem2_test.c`.
+Automated in `app_program/subsystem2/buddy2_test.c`.
 
 ```sh
 make -C build_make PICO_SDK_PATH=... TEST=1 -j8   # -> mtk3pico_smp1_usb_cdc_wifi_test.uf2
@@ -23,7 +23,7 @@ make -C build_make PICO_SDK_PATH=... TEST=1 -j8   # -> mtk3pico_smp1_usb_cdc_wif
 Flash the image, open the USB console and reset the Pico. Each check prints
 `[TEST] S2-Uxx PASS|FAIL`; the last line is the subsystem 2 summary.
 
-| Setting in `subsystem2_test.c` | Effect |
+| Setting in `buddy2_test.c` | Effect |
 |---|---|
 | `S2_TEST_MOVE` = 0 (default) | Tests that never move the robot; S2-U11, U12, U21, U22 print SKIP |
 | `S2_TEST_MOVE` = 1 | Also drives: forward 20 cm, left 90°, right 90°, back 20 cm. Robot on the floor, 30 cm clear |

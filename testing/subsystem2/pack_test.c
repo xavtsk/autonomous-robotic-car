@@ -1,6 +1,6 @@
 /* Current teammate contract, not the superseded GPIO-IRQ implementation. */
 #include "motion_pack.h"
-#include "motion_codec.h"
+#include "codec_motion.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -16,6 +16,15 @@ int main(void)
     motion_status_t decoded;
     motion_report_t report, restored;
     motion_snapshot_t legacy;
+    /* Function arguments are evaluated once; code zero remains no fault. */
+    {
+        unsigned calls = 0U;
+        assert(motion_fault_bit((motion_fault_t)calls++) == 0U);
+        assert(calls == 1U);
+        for (unsigned fault = 1U; fault <= MOTION_FAULT_TIMEOUT; ++fault) {
+            assert(motion_fault_bit((motion_fault_t)fault) == (1U << (fault - 1U)));
+        }
+    }
     for (int speed=-1022;speed<=1022;speed++) {
         float v=speed/1000.0f;
         assert(motion_unpack_cmd(motion_cmd_velocity(v,-v),&command));

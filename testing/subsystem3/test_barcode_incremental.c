@@ -3,7 +3,7 @@
 #define S3_BARCODE_SYNC_REFERENCE
 #include <assert.h>
 #include <stdio.h>
-#include "../../app_program/subsystem3/barcode_decoder.c"
+#include "../../app_program/subsystem3/bc_decoder.c"
 
 static s3_barcode_record_t record;
 static uint32_t clock_us;

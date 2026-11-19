@@ -1,5 +1,5 @@
-#include "obstacle_avoidance.h"
-#include "obstacle_scan.h"
+#include "avoid_obstacle.h"
+#include "scan_obstacle.h"
 #include "ultrasonic_sensor.h"
 #include <assert.h>
 #include <stdio.h>
@@ -224,7 +224,7 @@ static int fsm_aim_turn(int left_edge,int right_edge,unsigned closest,bool secon
         a=s5_avoidance_step(&f,&in);
     }
     assert(f.state==S5_MOVING && !f.issued && !f.aiming && f.aimed);
-    assert(scans==(turn_deg?2U:1U) && f.aim_deg==turn_deg && f.bend==(turn*100.0>=S5_BEND_PCT-0.5 || turn*100.0<=-S5_BEND_PCT+0.5));
+    assert(scans==(turn_deg?2U:1U) && s5_aim_get(&f)==turn_deg && f.bend==(turn*100.0>=S5_BEND_PCT-0.5 || turn*100.0<=-S5_BEND_PCT+0.5));
     return turn_deg;
 }
 static int fsm_aim(int l,int r,unsigned c,bool off) { return fsm_aim_turn(l,r,c,off,0.0); }
@@ -429,6 +429,25 @@ static void rules_17nov(void)
 }
 int main(void)
 {
+    /* The unsigned representation preserves every former signed bit-field
+     * value, including zero initialization and untouched neighbouring bits. */
+    {
+        s5_avoidance_t stored = {0};
+        assert(s5_rel_get(&stored) == 0 && s5_aim_get(&stored) == 0);
+        stored.side_turn = 13U;
+        stored.side_turns = 3U;
+        stored.blocked_reads = 3U;
+        for (int degrees = -128; degrees <= 127; ++degrees) {
+            s5_rel_set(&stored, degrees);
+            assert(s5_rel_get(&stored) == degrees);
+            assert(stored.side_turn == 13U && stored.side_turns == 3U);
+        }
+        for (int degrees = -64; degrees <= 63; ++degrees) {
+            s5_aim_set(&stored, degrees);
+            assert(s5_aim_get(&stored) == degrees);
+            assert(stored.blocked_reads == 3U);
+        }
+    }
     codecs();scans();rules_17nov();fsm(true,false,false);fsm(true,true,false);fsm(true,false,true);fsm(false,false,false);
     { /* 10 cm box at 196 mm: beam smear at 60/120 must not block either side. */
         unsigned ang[12]={30,60,90,120,150,75,80,85,90,95,100,105},rr[12]={4000,215,196,215,4000,203,199,197,196,197,199,203};

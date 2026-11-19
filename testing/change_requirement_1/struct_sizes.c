@@ -8,9 +8,9 @@
  * (terrain_result_t, s5_observation_t); they are what the shared/queued data
  * would occupy without the packed formats. Buddy 1's real pre-change layouts
  * are in testing/subsystem1/size_report.c. Buddy 2/3: their own EVIDENCE.md. */
-#include "terrain_monitor.h"
+#include "terr_data.h"
 #include "s5_codec.h"
-#include "obstacle_scan.h"
+#include "scan_obstacle.h"
 #include <stdint.h>
 #include <stdbool.h>
 

@@ -12,7 +12,7 @@ revisions; its old whole-structure sizes are not current measurements.
 
 Problem: the small barcode (Y) blurs, so thin bars read about 500 and grey
 gaps 300+; fixed WHITE <= 400 / BLACK >= 600 limits never see those stripes.
-A second reader (`s3_barcode_record_*`, `barcode_decoder.c`) runs beside the
+A second reader (`s3_barcode_record_*`, `bc_decoder.c`) runs beside the
 unchanged live decoder. It stores the darkness of the whole pass, then finds
 bumps/dips (prominence >= 100), trims brief/shallow wiggles if more than 31,
 places each edge time-weighted between neighbouring levels and gives the 29
