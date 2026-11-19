@@ -10,6 +10,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import target_metrics
 
 SDK_SHA = '98a542c1a62fb549ffb5d66a3e5892b06276b670'
 COMMON = dict(SMP=1, CONSOLE='usb_cdc', CRASH_REPORT=0, WIFI='none', NET='none',
@@ -115,6 +116,8 @@ def main():
                 record['artifacts'][source.name] = digest(source)
             subprocess.run(['arm-none-eabi-objcopy', '-O', 'binary', str(elf), str(dest / 'flash.bin')], check=True)
             record['flash_sha256'] = digest(dest / 'flash.bin')
+            symbols = output_of(['arm-none-eabi-nm', '-S', '--size-sort', '--format=posix', '--defined-only', str(elf)])
+            (dest/'symbols.txt').write_text(symbols+'\n', encoding='utf-8')
             stack_files = sorted((root / 'build_make').rglob('*.su'))
             for source in stack_files:
                 target = dest / 'stack-usage' / source.relative_to(root / 'build_make')
@@ -123,6 +126,7 @@ def main():
             record['stack_usage_files'] = len(stack_files)
             if not stack_files:
                 raise RuntimeError('Compiler produced no stack-usage reports')
+            target_metrics.collect(dest)
             # Capture the commands that actually built the image, never make -n:
             # this project's parse-time profile guard can mutate even a dry run.
             commands = []
@@ -152,6 +156,14 @@ def main():
         manifest['comparison'] = dict(static_ram_delta=after['sizes']['static_ram']-before['sizes']['static_ram'],
                                       flash_identical=before['flash_sha256']==after['flash_sha256'],
                                       note='Binary equality is reported, not assumed for representation changes.')
+        metric_files = [output/label/'allocation-and-stack.json' for label in ('baseline', 'candidate')]
+        if all(path.is_file() for path in metric_files):
+            metrics = [json.loads(path.read_text(encoding='utf-8')) for path in metric_files]
+            (output/'allocation-and-stack-delta.json').write_text(
+                json.dumps(target_metrics.compare(*metrics), indent=2)+'\n', encoding='utf-8')
+        else:
+            manifest['comparison']['metrics_error'] = 'Missing allocation/stack report; see individual build error.'
+            failed = True
     (output / 'results.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     return failed
 
