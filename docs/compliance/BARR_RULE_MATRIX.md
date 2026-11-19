@@ -40,7 +40,8 @@ is approved, and preserving behavior does not silently approve one.
 It reports observed violations, review findings and missing evidence separately.
 Exit 1 means violations; exit 2 means incomplete review or unavailable evidence.
 A clean partial scan does not certify full BARR compliance. The existing
-`tools/check_c_style.py` remains an application formatter check only.
+`tools/check_c_style.py` checks wholly owned C/header files; mixed imported
+regions remain under the separate ownership-aware audit.
 
 The lexical pass excludes strings and comments when recognizing C keywords,
 checks filenames/includes/text/comment tokens and identifies missing module

@@ -15,8 +15,10 @@ unchanged outputs on rejection and copied floating representations; steering
 acceptance/clamping; and strict timing thresholds with saturating counters.
 No namespace, signature, visibility, numeric operation or synchronization changed.
 Clang 18.1.1 recognizes all 48 comments with no documentation diagnostics.
-Doxygen output has not yet been generated or reviewed, so this is not closure of
-BARR 2.2.h across the project.
+Doxygen output was not generated as part of this historical batch. The
+[generated reference workflow](GENERATED_REFERENCE.md) now records generation
+and compiler-definition comparison separately. This is not closure of BARR
+2.2.h across the project.
 
 ```sh
 python tools/compliance/verify_comment_batch.py --manifest docs/compliance/FUNCTION_DOCS_BATCH1.json --candidate 4f5dd616198455d9784e7a60f3bd1edc873fa89e
@@ -47,10 +49,10 @@ surface hysteresis. Each batch has exact preprocessing fingerprints, preserved
 old comments and zero Clang documentation diagnostics in its recorded contexts.
 Their immutable commits are checked separately by the audit workflow.
 
-## Observed remaining workload
+## Earlier observed workload snapshot
 
 `tools/compliance/barr_functions.py` reuses the compiler contexts and six profile
-variants from the field inventory. The current collection covers 247 scoped
+variants from the field inventory. This earlier collection covered 247 scoped
 paths after upstream-boundary correction and addition of two fixtures. Its 1,238
 translation-unit observations contain 45 units with diagnostics. It records:
 
@@ -63,7 +65,10 @@ translation-unit observations contain 45 units with diagnostics. It records:
 | Error-free variants still without recognized function comments | 1,407 |
 | Files containing observed definitions | 148 |
 
-These are observed counts, not a certified denominator. Recovery ASTs account
+These historical observed counts are not the current source denominator.
+Later ownership corrections, contracts and new fixtures changed the scope;
+the current-revision CI function inventory supersedes this snapshot when
+available. Recovery ASTs in this snapshot account
 for 270 variants; unobserved conditional combinations remain open. A recognized
 comment is not proof of a correct contract. Module `@file` comments are excluded
 from the function-comment count. Mixed imported bodies are excluded through the

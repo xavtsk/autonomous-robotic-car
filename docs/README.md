@@ -23,6 +23,8 @@ Records named for an earlier date retain their original results and assumptions.
 | [Alias/assertion batch](compliance/ALIAS_ASSERT_BATCH.md) | Exact type-alias/assertion transformation and verification limits. |
 | [Formatting batch](compliance/FORMAT_BATCH.md) | Token preservation, target-image comparison and executed trace evidence. |
 | [Function documentation](compliance/FUNCTION_DOCUMENTATION.md) | Reviewed contracts, observed coverage and remaining work. |
+| [Generated reference](compliance/GENERATED_REFERENCE.md) | Pinned Doxygen generation, retained warnings and compiler-definition comparison. |
+| [Operator observations](compliance/OPERATOR_TRACE.md) | Exact button/state/console traces against the fixed baseline. |
 | [Estimator module rename](compliance/MOTION_MODULE_RENAME.md) | Filename/API alignment with unchanged implementation and link order. |
 | [Template boundary correction](compliance/TEMPLATE_BOUNDARY_CORRECTION.md) | Provenance-based restoration of unchanged imported adapters. |
 | [Conditional compilation](compliance/CONDITIONAL_COVERAGE.md) | Matching profile receipts, full matrix union and remaining arm coverage. |

@@ -70,6 +70,12 @@ def main():
         ('navigation_header_batch', [sys.executable, 'tools/compliance/verify_header_interfaces.py',
                                      '--manifest', 'docs/compliance/NAVIGATION_TEST_INTERFACE.json',
                                      '--candidate', 'ed3433451ed462d9e01b4204ea102062b44c9618']),
+        ('barcode_edge_batch', [sys.executable, 'tools/compliance/verify_barcode_phase_batch.py',
+                                '--manifest', 'docs/compliance/evidence/barcode-edge-extraction.json',
+                                '--candidate', '02890251f55214e93aaf5149d0c5141364e7c962']),
+        ('standalone_header_batch', [sys.executable, 'tools/compliance/verify_header_pairs.py',
+                                     '--manifest', 'docs/compliance/HEADER_PAIRS_BATCH2.json',
+                                     '--candidate', '31719bc44e413b97c3f5c3e947695502d6fac77d']),
         ('audit_tests', [sys.executable, '-m', 'unittest', 'discover', '-v', '-s', 'testing/compliance', '-p', 'test_*.py']),
     ]
     for label, path in (('cr1_runner_syntax', 'testing/change_requirement_1/run_all.sh'),

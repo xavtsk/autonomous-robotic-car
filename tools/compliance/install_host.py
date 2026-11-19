@@ -11,6 +11,7 @@ if sys.platform != 'linux':
     sys.exit('This installer is only for the isolated Linux CI runner.')
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--formatter', action='store_true')
+parser.add_argument('--documentation', action='store_true')
 args = parser.parse_args()
 lock = json.loads(Path(__file__).with_name('toolchain.lock.json').read_text())
 image = os.environ.get('ImageVersion')
@@ -19,6 +20,8 @@ subprocess.run(['sudo', 'apt-get', 'update'], check=True)
 versions = dict(lock['host_packages'])
 if args.formatter:
     versions.update(lock['static_packages'])
+if args.documentation:
+    versions.update(lock['documentation_packages'])
 packages = [name + '=' + version for name, version in versions.items()]
 # Deliberately request these exact reviewed versions even when the hosted
 # image has newer tools. No unversioned tool downgrade is requested.
