@@ -1,0 +1,109 @@
+name: Compliance regression
+
+on:
+  push:
+    branches: ['codex/compliance-preserve-behaviour', 'codex/compliance-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compliance-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BASELINE_SHA: 4ad2cc42595722cedb47102e4343298339040d40
+  PICO_SDK_SHA: 98a542c1a62fb549ffb5d66a3e5892b06276b670
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        revision: [baseline, candidate]
+        mode: [gcc, clang, sanitize]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: tooling
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ matrix.revision == 'baseline' && env.BASELINE_SHA || github.sha }}
+          path: subject
+          persist-credentials: false
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gcc-13 g++-13 clang-18 python3 nodejs mosquitto mosquitto-clients
+      - name: Execute host suites
+        run: python3 tooling/tools/compliance/run_host.py --root subject --output evidence --mode '${{ matrix.mode }}'
+      - name: Save execution evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: host-${{ matrix.revision }}-${{ matrix.mode }}-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+
+  differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.BASELINE_SHA }}
+          path: baseline
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y build-essential python3
+      - name: Compare actual semantic outputs
+        run: python3 candidate/tools/compliance/differential.py --baseline baseline --candidate candidate --output evidence
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: differential-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+
+  target:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [production, diagnostics, imu_debug, offline_motion, stationary_1, stationary_3, self_tests, motion_smoke, s4_bench, single_core, straight_test, s5_unconfirmed]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.BASELINE_SHA }}
+          path: baseline
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: ${{ env.PICO_SDK_SHA }}
+          path: pico-sdk
+          submodules: recursive
+          persist-credentials: false
+      - name: Install pinned Arm compiler
+        run: bash candidate/tools/compliance/install_arm.sh "$RUNNER_TEMP/arm"
+      - name: Build identical baseline and candidate profiles
+        run: python3 candidate/tools/compliance/build_targets.py --baseline baseline --candidate candidate --sdk pico-sdk --profile '${{ matrix.profile }}' --output evidence
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: target-${{ matrix.profile }}-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
