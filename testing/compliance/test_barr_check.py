@@ -47,6 +47,15 @@ class LexicalTests(unittest.TestCase):
         findings = self.inspect('/** @file sample.c\n * See https://example.invalid.\n */\n')
         self.assertTrue(any(row.rule == "2.1.b" for row in findings))
 
+    def test_mixed_region_scan_does_not_require_imported_module_structure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "imported.c"
+            path.write_text("long imported_value;\n#if OWNED\nshort owned_value;\n#endif\n")
+            masked = "                    \n#if OWNED\nshort owned_value;\n#endif\n"
+            findings = barr.lexical_checks(path, root, masked, file_level=False)
+            self.assertEqual([(row.rule, row.line) for row in findings], [("5.2.b", 3)])
+
 
 class AstTests(unittest.TestCase):
     def inspect(self, node):

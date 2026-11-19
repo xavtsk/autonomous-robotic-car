@@ -98,8 +98,8 @@ def owned_files(root: Path, scope: dict) -> list[Path]:
             if path.suffix.lower() in {".c", ".h"}]
 
 
-def lexical_checks(path: Path, root: Path) -> list[Finding]:
-    data = path.read_bytes()
+def lexical_checks(path: Path, root: Path, source_override=None, file_level=True) -> list[Finding]:
+    data = path.read_bytes() if source_override is None else source_override.encode("utf-8")
     text = data.decode("utf-8")
     name = relative(path, root)
     findings = []
@@ -142,12 +142,12 @@ def lexical_checks(path: Path, root: Path) -> list[Finding]:
             add("4.3.d", line_at(text, match.start()), "Absolute include path")
         if target.endswith(".c"):
             add("4.3.f", line_at(text, match.start()), "Source includes another C source")
-    if not re.fullmatch(r"[a-z0-9_]+", path.stem):
+    if file_level and not re.fullmatch(r"[a-z0-9_]+", path.stem):
         add("4.1.a", 1, "Module basename contains disallowed characters")
-    if path.suffix == ".h" and path.stem in STANDARD_HEADERS:
+    if file_level and path.suffix == ".h" and path.stem in STANDARD_HEADERS:
         add("4.1.c", 1, "Module reuses a standard-library header name")
     comments = [match for match in TOKEN.finditer(text) if match.lastgroup == "comment"]
-    if path.suffix == ".c":
+    if file_level and path.suffix == ".c":
         if not path.with_suffix(".h").is_file():
             add("4.2.a", 1, "Same-basename header is missing")
         if not any((path.parent / item[1]).resolve() == path.with_suffix(".h").resolve()
@@ -157,11 +157,11 @@ def lexical_checks(path: Path, root: Path) -> list[Finding]:
         if not (last and re.search(r"\b(?:end of file|eof)\b", last[0], re.IGNORECASE)
                 and re.fullmatch(r"\n\n[\n]*", text[last.end():])):
             add("3.3.c", max(1, len(text.splitlines())), "Missing final end-of-file comment followed by a blank line")
-    if path.suffix == ".h":
+    if file_level and path.suffix == ".h":
         guard = re.search(r"(?m)^\s*#\s*ifndef\s+(\w+)", code)
         if not guard or not re.search(r"(?m)^\s*#\s*define\s+" + re.escape(guard[1]) + r"\b", code):
             add("4.2.b", 1, "No conventional matching ifndef/define inclusion guard found", "review")
-    if not any(re.match(r"/\*\*|/\*!|///|//!", match[0]) and
+    if file_level and not any(re.match(r"/\*\*|/\*!|///|//!", match[0]) and
                re.search(r"(?:@file|\\file)\b", match[0]) for match in comments):
         add("2.2.h", 1, "No automatic-documentation module @file comment found")
     return findings
@@ -179,7 +179,7 @@ def float_type(node: dict) -> bool:
     return bool(re.search(r"\b(?:float|double|_Float\d+)\b", spelling))
 
 
-def ast_checks(tree: dict, source: Path, root: Path, owned: set[Path]):
+def ast_checks(tree: dict, source: Path, root: Path, owned: set[Path], allowed_lines=None):
     """Inspect Clang-declared types/definitions, never regex-infer C types.
 
     Results cover this translation unit/profile only. Missing file provenance
@@ -200,7 +200,8 @@ def ast_checks(tree: dict, source: Path, root: Path, owned: set[Path]):
         kind = node.get("kind")
         loc = node.get("loc", node.get("range", {}).get("begin", {}))
         ambiguous = "includedFrom" in loc and "file" not in loc
-        relevant = path in owned and not ambiguous
+        line_range = (allowed_lines or {}).get(path)
+        relevant = path in owned and not ambiguous and (line_range is None or line_range[0] <= number <= line_range[1])
         if ambiguous and kind in {"FunctionDecl", "VarDecl", "ParmVarDecl", "FieldDecl"}:
             unknown_locations += 1
 
@@ -281,15 +282,37 @@ def audit(root: Path, scope: dict, ledger: dict, ast_manifest: Path | None = Non
     paths = owned_files(root, scope)
     if not paths:
         raise ValueError("Scope selected no C/header files")
-    findings = [finding for path in paths for finding in lexical_checks(path, root)]
+    findings = []
+    allowed_lines = {}
+    mixed = scope.get("mixed_files", {})
+    for path in paths:
+        region = mixed.get(relative(path, root))
+        if region:
+            text = path.read_text(encoding="utf-8")
+            pattern = r"^[ \t]*" + re.escape(region["project_region_start"]) + r"\b.*?^[ \t]*" + re.escape(region["project_region_end"]) + r"[^\n]*"
+            matches = list(re.finditer(pattern, text, re.MULTILINE | re.DOTALL))
+            if len(matches) != 1:
+                raise ValueError(f"Ambiguous mixed-ownership region: {relative(path, root)}")
+            match = matches[0]
+            masked = re.sub(r"[^\n]", "", text[:match.start()]) + match[0] + re.sub(r"[^\n]", "", text[match.end():])
+            allowed_lines[path] = (line_at(text, match.start()), line_at(text, match.end()))
+            findings.extend(lexical_checks(path, root, masked, file_level=False))
+        else:
+            findings.extend(lexical_checks(path, root))
     prefixes = {}
     for path in paths:
+        if relative(path, root) in mixed:
+            continue
         key = path.stem[:8]
         module = path.with_suffix("")
         previous = prefixes.setdefault(key, module)
         if previous != module:
             findings.append(Finding("4.1.b", relative(path, root), 1, f"First-eight-character collision with {relative(previous, root)}"))
     gaps = validate_ledger(ledger)
+    from testing.compliance.inventory import repository_errors
+    gaps.extend(repository_errors(root, scope))
+    if mixed:
+        gaps.append(f"{len(mixed)} mixed-ownership file(s): only recorded owned regions scanned; surrounding imported bodies are not BARR edit targets")
     functions, documented, covered = set(), set(), set()
     if ast_manifest is None:
         gaps.append("No Clang AST manifest supplied; function/type/profile coverage is unknown")
@@ -311,7 +334,7 @@ def audit(root: Path, scope: dict, ledger: dict, ast_manifest: Path | None = Non
             tree = json.loads((ast_manifest.parent / unit["ast"]).read_text(encoding="utf-8"))
             if tree.get("kind") != "TranslationUnitDecl":
                 raise ValueError("AST root is not a Clang TranslationUnitDecl")
-            result, found, docs, unknown = ast_checks(tree, source, root, set(paths))
+            result, found, docs, unknown = ast_checks(tree, source, root, set(paths), allowed_lines)
             findings.extend(result)
             functions.update(found)
             documented.update(docs)

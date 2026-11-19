@@ -22,6 +22,9 @@ The original PDF is the authority. The local extraction used during review is
 Owned C/header scope comes from
 [inventory_scope.json](../../testing/compliance/inventory_scope.json).
 Imported source and externally fixed ABI boundaries must remain explicit.
+For a mixed-ownership file, the lexical/AST audit limits findings to its recorded
+owned region and separately checks that the surrounding imported body is intact.
+The mixed file is never a whole-file formatting target.
 
 ## Reading status and strength
 

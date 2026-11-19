@@ -1,0 +1,2514 @@
+{
+  "schema_version": 1,
+  "prepared_after_commit": "a03615e20de749548653f9e2e342cce0897dc324",
+  "scope_manifest": "testing/compliance/inventory_scope.json",
+  "authorization": "Source application is currently held while root investigates alias target-image differences; --apply has not been run.",
+  "formatter_policy": {
+    "InsertBraces": false,
+    "BreakStringLiterals": false,
+    "ReflowComments": false,
+    "reason": "Retain exact preprocessing tokens and existing comments; brace and function-documentation changes are separate batches."
+  },
+  "files": [
+    {
+      "path": "app_program/app.h",
+      "before_sha256": "5af5dd54f6cb700e07c3703d092847f0c5f562e52bf83dce9db7a897d62da2f9",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Expose shared RTOS definitions and subsystem lifecycle contracts.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/app_main.c",
+      "before_sha256": "ea8901e11ff6baad7e09f2045582ecc19f21806e095cd667e25d99fac1fbc1b6",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Application entry point, adapted from INF2004_ProjectTemplate.",
+      "module_brief_source": "existing leading purpose in app_program/app_main.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/app_main.h",
+      "before_sha256": "1652e99463ce78d0721a415328a74ea5702a2abb7fc5f446c041dca506aeca9c",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "Declare application startup entry points.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/app_types.h",
+      "before_sha256": "51a59fd67831e9ae00a8e48f691ec0af1ad04844dc848ba77b8dbdee969ac610",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "Name the application's existing floating-point representations.",
+      "module_brief_source": "existing leading purpose in app_program/app_types.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/build_assert.h",
+      "before_sha256": "1cce954ee0b520effe47726680020ecf341e677fabdc34382a9bdf0c096a3326",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "Check integer constant expressions without C11 language features.",
+      "module_brief_source": "existing leading purpose in app_program/build_assert.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/bc_capture.c",
+      "before_sha256": "515e0b295c4aac26695c7b10391034b7faa409e4d65ace3d9d8323b5bed17c24",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Barcode-sensor capture for diagnosing barcode reading on the course.",
+      "module_brief_source": "existing paired-module purpose in app_program/controller/bc_capture.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/bc_capture.h",
+      "before_sha256": "f4652099fb4f0e74faaae02d7d3bdc58f6dd05a6c05dbe1c2282ae0dcdd6d49a",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Barcode-sensor capture for diagnosing barcode reading on the course.",
+      "module_brief_source": "existing leading purpose in app_program/controller/bc_capture.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/builtin_calibration.h",
+      "before_sha256": "a3ea2deaa9b80c3ab1a8bdfc02b308b874712d250ab85a5e6f43ff9dcf0c5701",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Built-in IR calibration for the S3_MOTION profile, so the car is ready to START right after power-up.",
+      "module_brief_source": "existing leading purpose in app_program/controller/builtin_calibration.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/control_debug.c",
+      "before_sha256": "67589218db243dc7c26941f5a5186251ce04e1b71b400ae0b30c759dee35d7e4",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Observation-only controller snapshot.",
+      "module_brief_source": "existing paired-module purpose in app_program/controller/control_debug.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/control_debug.h",
+      "before_sha256": "05348ebaa8ce33fba2767fa45b380c99f41b146c8e7ad7e6472af12c4923c597",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Observation-only controller snapshot.",
+      "module_brief_source": "existing leading purpose in app_program/controller/control_debug.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/course_profile.h",
+      "before_sha256": "a4cff4107b3a768e9bad076eabe4841330161dc36781873f0b504431137579ae",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Line-following profile for the Buddies 1-3 course car (integration build).",
+      "module_brief_source": "existing leading purpose in app_program/controller/course_profile.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/integration_codec.c",
+      "before_sha256": "b0adc9b8c3c3d8224c82397802a0f93afc5434d3bac900a6373c818303dfcbbf",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Pack and unpack copied controller command and status data.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/integration_codec.h",
+      "before_sha256": "a778cf1d6ad4f169f32b1ba32c90e621d7f38eebd3a10300d4942a605abcf6c5",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Describe copied controller command and status packets.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/ir_debug.c",
+      "before_sha256": "2fb92080d98934fad48b00701ad7a8fed214e4a78b587a782c7f951f3d7cb1ba",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Optional observation-only IR preview.",
+      "module_brief_source": "existing paired-module purpose in app_program/controller/ir_debug.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/ir_debug.h",
+      "before_sha256": "f751f9ace1c8c3d54d739b4f96fa3062ce223594b0e36b127cd5c8f4bfc36d1d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Optional observation-only IR preview.",
+      "module_brief_source": "existing leading purpose in app_program/controller/ir_debug.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/op_logic.c",
+      "before_sha256": "78ceafb108680a9184b51016390ae90a0633581fcf7ea514ea2a01abdbcfa474",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Operator controls: calibration walkthrough, START/STOP/RESET.",
+      "module_brief_source": "existing leading purpose in app_program/controller/op_logic.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/op_logic.h",
+      "before_sha256": "576f6bb085206826d21831670dde27c417ca16c5068b0291ad37048a27e2cc52",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Operator controls for the S3_MOTION profile: a calibration walkthrough, START with a countdown, STOP and fault RESET, driven by two buttons.",
+      "module_brief_source": "existing leading purpose in app_program/controller/op_logic.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/op_panel.c",
+      "before_sha256": "b389e029e54e3af7d2d3bdeec0245c5d3d04b7717d0e3e628537cd4bfc6a2750",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Thin RTOS/GPIO shell around operator_logic.",
+      "module_brief_source": "existing leading purpose in app_program/controller/op_panel.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/op_panel.h",
+      "before_sha256": "d004cb10a73e8d3968d72c14d1c56f46408577f32ecdd3a2b6e00be29c759b5f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "GP20/GP21 operator buttons for the S3_MOTION profile (see op_logic.h).",
+      "module_brief_source": "existing leading purpose in app_program/controller/op_panel.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/remote_control.h",
+      "before_sha256": "50d6554388076227210d3521d35d693aa28b63fa10616ac68ac41407aec7bf71",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Define dashboard command, status and reply byte layouts and accessors.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/run_timing.h",
+      "before_sha256": "4822d6881d3aefab62f206da89573b4814e4a3050c1fb9adc0c6459b98749d64",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Observation only: one sampling owner updates this; packed status carries a copied view.",
+      "module_brief_source": "existing leading purpose in app_program/controller/run_timing.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/s3_drive.c",
+      "before_sha256": "d1bcf0eb433dbfec08cae96a97007caf435bacd0ad7894e2bb6d2f9e4f0b080a",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Own line following, manoeuvres, fault handling and optional avoidance arbitration.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/s3_drive.h",
+      "before_sha256": "d4f281cc2fef14d20a9d722404112ebf9e9d11b619fb769c165672659c5759a6",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare the drive owner state, motion boundary and course behaviour interface.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/s3_integration.c",
+      "before_sha256": "d043968081faa1a63e55752f7818ae9f38d8a376e4aea3f92a21641074d0e0fb",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Run sensor sampling and serialized controller commands for the integration profile.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/s3_integration.h",
+      "before_sha256": "50a11410ffcd12c3ac27786cebae7aa9a3aac1eee7a17ec9109958af1872e74b",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Expose bounded controller command submission and copied runtime status.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/terr_link.c",
+      "before_sha256": "c3828471838f4c9d2dd6f683f1eae14c99aa80784b8bb6cb81e6096da558261e",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Integrate terrain readiness, reset and observations with the controller owner.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/terr_link.h",
+      "before_sha256": "2357aa4c1b5310d70d80043361c44db2e03ee135522ae94c1cb77057c6f52b17",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Integrate terrain readiness, reset and observations with the controller owner.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/vehicle_controller.c",
+      "before_sha256": "b94ad85a4dbaec2d5507d5fae43edfad1defa75d7a0a10bcef6b903113a2da0a",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Route operator requests and adapt observations for the shared controller owner.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/controller/vehicle_controller.h",
+      "before_sha256": "f42147f04c682b7c1b71e520063008c8358acf6524c49048ce031e050b7a415f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Expose controller request and telemetry adapters around the shared runtime.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/diagnostics/robot_diagnostics.c",
+      "before_sha256": "bf65f466c0c5a46c9dbdb674ccdc75622fa4e7be6f28b98571d5d92bc5a06880",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Collect and report optional motion and IR timing observations over USB.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/diagnostics/robot_diagnostics.h",
+      "before_sha256": "427ead1b63843eb05bf4d070ceb503ecfa42092efed30affe8dcca63c095081e",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare optional motion and IR timing observation and USB reporting interfaces.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/diagnostics/smoke_motion.c",
+      "before_sha256": "aa5be263d02493c46f814dd97e16c29cd44806a72a7edda51cb0cc7d8bbe0307",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Run the separately enabled, manually armed hardware motion smoke test.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/diagnostics/smoke_motion.h",
+      "before_sha256": "d0741b174ef64914c05f4c56c6cd94aa101284e83a87543c4528b4058084a5ba",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare the separately enabled hardware motion smoke-test entry point.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/monotonic_clock.h",
+      "before_sha256": "dc5110ea46bdd95a5314226b36152564087678a6b74a7d263dbf50caa6c65ac1",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Start the RP2040 timer clock used by timed application tasks.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/buddy1.c",
+      "before_sha256": "55eae7c910be8fcaa34804851e8cd071810a1318b322b5baed3169883b05e8cb",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Buddy 1: task-context reporting API.",
+      "module_brief_source": "existing paired-module purpose in app_program/subsystem1/buddy1.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/buddy1.h",
+      "before_sha256": "c3bb39b5287dc645847d033dafa7742fcecf56f2c824ec63aa1113fe002c5e08",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Buddy 1: task-context reporting API.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem1/buddy1.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/buddy1_test.c",
+      "before_sha256": "8e18ed4bd14bc391050ec12d4f5ae7628ee69a639f93f86928b6d3f135fa83b4",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "On-device self-check entry point for Buddy 1.",
+      "module_brief_source": "existing paired-module purpose in app_program/subsystem1/buddy1_test.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/buddy1_test.h",
+      "before_sha256": "79a44d5e663e1283a5ed0fcfb300af3179de5864303404c12a977d42718d40ad",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "On-device self-check entry point for Buddy 1.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem1/buddy1_test.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/command.c",
+      "before_sha256": "0c533ca451073571dea6bf5896cbbd27165aae6ac0801c782ff5faf46834db37",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Barcode configuration and queued command processing.",
+      "module_brief_source": "existing paired-module purpose in app_program/subsystem1/command.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/command.h",
+      "before_sha256": "91c97eeb0bfb4a0e630c470fd90cdcb6077f22238b62fbfd38005653b325ae58",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "Barcode configuration and queued command processing.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem1/command.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/mqtt_bridge.c",
+      "before_sha256": "79977464e9a04aa3029ca162d0056fdbeafdfea2e0cc82fca4635ace5b3922fd",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Adapter between the kernel-owned MQTT port and Buddy 1 queues.",
+      "module_brief_source": "existing paired-module purpose in app_program/subsystem1/mqtt_bridge.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/mqtt_bridge.h",
+      "before_sha256": "304639669c8809b90ca5b8db5ca2aa966b02d3b5eb12ad1050ea6bce73f9a072",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "Adapter between the kernel-owned MQTT port and Buddy 1 queues.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem1/mqtt_bridge.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/telemetry_codec.c",
+      "before_sha256": "1ac9e6c932bed627ba5aba28728009487b7f383f55f687ed5f2de7e39e3034fd",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Encode and decode bounded binary telemetry payloads.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem1/telemetry_codec.h",
+      "before_sha256": "a7fd2f4f9ff37fcb3108f83bc9dbd6e5aca07bc9e79cba88177e8da1ef863139",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Define bounded telemetry values, packets and codec interfaces.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/buddy2.c",
+      "before_sha256": "1bf7e0570b43f61b818756fa03decd5ed21e27a226a1382c03793f07bdf57e25",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "RTOS lifecycle: the motion task and its 10 ms tick.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/buddy2.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/buddy2.h",
+      "before_sha256": "553baddd88b30364895b629513cb1b9d38f14589e11e1c2db937b5fc9fd4e778",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "RTOS lifecycle interface.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/buddy2.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/buddy2_test.c",
+      "before_sha256": "3fbfc47b349e2321ac349237bc773f96cc1eb6170f473c49e81dd3232b30ef8c",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "On-target unit tests (make TEST=1). IDs match testing/subsystem2/TEST_LOG.md.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/buddy2_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/buddy2_test.h",
+      "before_sha256": "a250082d387fa23a24829bd61464d98c0252043c7d4f0f989cd22fbad8d0880d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "On-device self-check entry point for Buddy 2.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/buddy2_test.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/codec_motion.c",
+      "before_sha256": "bc0ded2aed8f9da4970809fa019b28a0ea04adf9298575b0b6b2c43ff1c1c12b",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Pack and unpack the shared motion snapshot.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/codec_motion.h",
+      "before_sha256": "a6ce395e604d5721ddb323a64d016333224b925de521ec349fc9e5bdf43f3469",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Define the shared packed motion snapshot and codec interface.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/ctrl_motion.c",
+      "before_sha256": "8f5c0322b917869609759283a41d3a3c99a16c881f152c744f6f58b467e2010d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Motion Control statechart, straight-line correction and encoder-based turning.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/ctrl_motion.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/ctrl_motion.h",
+      "before_sha256": "53e63abcdab48855f38e1a7e116c781156f9df56389976792513e1b5d5bc7d8d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Motion Control statechart, straight-line correction and encoder-based turning.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/ctrl_motion.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/estimate_motion.c",
+      "before_sha256": "62f48ebc1fca79d7351acf761be4df38680e44d2ab9034bda605996ad7f27cba",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Encoder-based speed and distance estimation.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/estimate_motion.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/estimate_motion.h",
+      "before_sha256": "ff9dfa081198d2afca34be0d4ebf051bdaa6ad099e6ad9d20158d51d8f174cfa",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Encoder-based speed and distance estimation.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/estimate_motion.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/motion.c",
+      "before_sha256": "a3f141a214ba32afd3227bb3e1987a8ee1ebcd12f8bb5a5d7772a4673562d918",
+      "format_allowed": false,
+      "boundary": "Owned by the concurrent motion-storage batch; omitted from this formatting batch.",
+      "module_already_documented": false,
+      "module_brief": "Public motion subsystem interface (thread-safe front end) and the robot setup values.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/motion.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/motion.h",
+      "before_sha256": "90d32883ada9c9a26cc59c7bce7e2fb2ea707832ba95f5df5fab6800050ec252",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Public motion subsystem interface.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/motion.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/motion_lease.h",
+      "before_sha256": "1441f53bcf4b82f63ee5bfe3b4ed96184666178361ed8f26f6c5e6ed3584f434",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Portable lease check shared by the motion owner and host tests.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/motion_lease.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/motion_pack.c",
+      "before_sha256": "7d62101cc4c848e80afe378d06b4ac4f249554d9234f089a2a97658eb709b4d6",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Minimum-bit representation of the data Buddy 2 shares.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/motion_pack.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/motion_pack.h",
+      "before_sha256": "b48ee62bfea491c86752f0bae9f6c3946f41c2aaaba502ce7651bec9cb77da9a",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Minimum-bit representation of the data Buddy 2 shares (status / telemetry, reports, commands).",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/motion_pack.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/motor_control.c",
+      "before_sha256": "3f9b5a55937c9a1cd4bdd60b96a45f771d05d3bf76f1b48a8b60a9de0c7fc39b",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Motor actuation through the Robo Pico motor driver (PWM).",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/motor_control.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/motor_control.h",
+      "before_sha256": "b489d11fd53e1627763acece6055d26b7ec50c386d8aa8f4461cbb326eaa7f03",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Motor actuation through the Robo Pico motor driver (PWM).",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/motor_control.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/snapshot_motion.c",
+      "before_sha256": "8c143bcbe127a343b42720d9dd39051c6e17ed142ced119c7aee72c5055d8b20",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Legacy Buddy 1/USB reporting view over the teammate's coherent status API.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/snapshot_motion.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/snapshot_motion.h",
+      "before_sha256": "8f79d04bf101872fd26583b45bb43cf5af0883c4bb41fda2352274691e7e6482",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "Read-only compatibility view of the motion owner's status.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/snapshot_motion.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/speed_pid.c",
+      "before_sha256": "996773ff202b17ff9e3fc798af53271a0f1a245c0a204123b62a749d49461e26",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Motor speed PID control (one controller per wheel).",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/speed_pid.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/speed_pid.h",
+      "before_sha256": "5150025f50543329b1e30409a36149b9a8aa01aa1bfa6e65560e1012a96b9a8e",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Motor speed PID control (one controller per wheel).",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/speed_pid.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/wheel_encoder.c",
+      "before_sha256": "f16cbdcc6db2e0972052caf7cf8d388f5e867fed729c774ecd122913f7dd950e",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Wheel encoder acquisition (quadrature, decoded in PIO0).",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/wheel_encoder.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem2/wheel_encoder.h",
+      "before_sha256": "d5f9d05fa4dbfe52b11c4f74d2ea92d6c1f77a13a1fe0d8307a29f83891f26ea",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Wheel encoder acquisition (quadrature, decoded in PIO0).",
+      "module_brief_source": "existing leading purpose in app_program/subsystem2/wheel_encoder.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/bc_decoder.c",
+      "before_sha256": "51cf91a112d3cdd6d05262a4e75b41b2d27186fc20e90c4cc40631043f7f0839",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Decode Code 39 letters from bounded streaming and recorded reflectance samples.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "before_sha256": "6aff437c813b127174a06769c9257bc6f1526d9dca58f54d7b9de4776ff9ccd1",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Define Code 39 decoding configuration, state, results and bounded-work interfaces.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/bc_quiet.h",
+      "before_sha256": "d180a4f58c964f14a26060aaa8af716aa90afa9089721636ac3359d53b4bcd6b",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Classify trailing quiet intervals after strongly contrasted barcode frames.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/buddy3.c",
+      "before_sha256": "83fc449fdf3fce1f336f5e810af18452ba5275d067b92026ad92de867e357bd1",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Stationary, opt-in diagnostics.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem3/buddy3.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/buddy3.h",
+      "before_sha256": "d5c6ad0aa3ff2246121f48f8259918c20506639d30da520b87c88acf23e0ad50",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "RTOS lifecycle interface for the opt-in IR bench diagnostic.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem3/buddy3.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/buddy3_test.c",
+      "before_sha256": "b840878342360c5dc55a16968373a7174bd7f4e51668b422adf8c7dd5dc11471",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Target hook; portable algorithm tests run separately on the host.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem3/buddy3_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/buddy3_test.h",
+      "before_sha256": "47fd369530f1dc4ca1693167e35f0002cd68d29b4fc0a6c1d3e1b703f675669f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "On-device self-check entry point for Buddy 3.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem3/buddy3_test.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/ir_acquisition.c",
+      "before_sha256": "2427628f2af6ae365fc83c065a95c313310036f27160a8c4808dc60cba2a113f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Buddy 3: portable acquisition boundary; one peripheral owner.",
+      "module_brief_source": "existing paired-module purpose in app_program/subsystem3/ir_acquisition.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/ir_acquisition.h",
+      "before_sha256": "6289853678fef90a3e48ecb7ecb8c80ecce1ea1048cbc0a59e6e0656fe1de1e7",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Buddy 3: portable acquisition boundary; one peripheral owner.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem3/ir_acquisition.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/ir_bench_config.h",
+      "before_sha256": "f594121cb4cba7f0f74e5654b7160728a545b85c5ea93be41a57dc1e56778d4d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Configure bench IR channel routing, measured reflectance references and timing.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/ir_calibration.c",
+      "before_sha256": "727c07e3808849702a8db0d34c04542316ef2c081571f57dd95da19f22bd80f5",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Collect labelled reflectance samples and derive validated sensor calibration.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/ir_calibration.h",
+      "before_sha256": "c8435b52b8880495a663ae95d8ea2bc4590fa081525b7cab2220981458fa6ab0",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Collect labelled reflectance samples and derive validated sensor calibration.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/ir_reflectance.c",
+      "before_sha256": "6264a3b6dfafd8cc9c2208be20e1a08ed7eaaffcae9d6c8ab3dee81727dc9f5d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Buddy 3: hardware-independent, per-sensor reflectance classification.",
+      "module_brief_source": "existing paired-module purpose in app_program/subsystem3/ir_reflectance.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/ir_reflectance.h",
+      "before_sha256": "3b18e802ba70403df7f1c2980f69081b26724967129c81f05d60394d9a5911c3",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Buddy 3: hardware-independent, per-sensor reflectance classification.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem3/ir_reflectance.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/ir_sensor.c",
+      "before_sha256": "26c4c0b272257fc6633b542fe556aba617b8517f4e064e665c6e7629103d9b89",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Buddy 3: only this adapter touches the kernel ADC and physical pads.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem3/ir_sensor.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/ir_sensor.h",
+      "before_sha256": "1a687880ecac6d621dd3a73c10fe36c41599cee6777017f34c2784f82b171996",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Buddy 3: only this adapter touches the kernel ADC and physical pads.",
+      "module_brief_source": "existing paired-module purpose in app_program/subsystem3/ir_sensor.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/line_controller.c",
+      "before_sha256": "ca4dd0e4fe92e884d75ed38c0609bafb3fac2921a02e60acce973dd7881425cc",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Compute bounded differential wheel-speed proposals from line error.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/line_controller.h",
+      "before_sha256": "f089d9ead8df8efc8c9b214b4c7cc3be29757a000adf023a15ae540ac3e60f50",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Compute bounded differential wheel-speed proposals from line error.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/line_detection.c",
+      "before_sha256": "1bba3cdfd282047d12f6a9bbbd9534dcab399e35b68c1b93d9e42a63a741ec1e",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Track line error, loss, reacquisition and junction persistence.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/line_detection.h",
+      "before_sha256": "301f136016f20ecec1f89f690aba684485653b856845d24fcb8cfd97014a562d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Track line error, loss, reacquisition and junction persistence.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/line_navigation.c",
+      "before_sha256": "4a330b8d9e9ab0e004f3a485869013a5f229e865042db8ba5773116fea984faa",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Combine reflectance, line, barcode and odometry observations into navigation results.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/line_navigation.h",
+      "before_sha256": "99e229c0f3d8c90f2d700046f060eaecc3cb86f4445f1958250d7a8bad123b54",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Define single-owner navigation state and copied sensor, odometry and result interfaces.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/navigation_codec.c",
+      "before_sha256": "3b62d909185cd9b1db96784e890c7ee0ea6fdba7062e36e055211ff18c742f91",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Pack and unpack navigation, barcode and raw-frame snapshots.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem3/navigation_codec.h",
+      "before_sha256": "544d4a323bfeabb0f63dbf27011aac684127aa8170d53880fab9140a49534913",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Define copied navigation, barcode and raw-frame packet layouts.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/buddy4.c",
+      "before_sha256": "e662b2e1777620954faafabde10c882fbc8c94a25eb563f701bd5427d156e8fa",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Own IMU acquisition, terrain processing and protected snapshots and events.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/buddy4.h",
+      "before_sha256": "c34ea7b48341dbbec4eb7c77bbe303be8c39c93e4daa3db968e2aa9d5e977830",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Own IMU acquisition, terrain processing and protected snapshots and events.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/buddy4_test.c",
+      "before_sha256": "39639f120950bc0a1d9d81341af1e890b5cb2099beffbd1ad71988f9ca80dd8e",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "On-device self-check entry point for Buddy 4.",
+      "module_brief_source": "existing paired-module purpose in app_program/subsystem4/buddy4_test.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/buddy4_test.h",
+      "before_sha256": "1004a4e9557dec995b2e9caafe2e6ad16d45f8583d62ee459cd5d19c3090301f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "On-device self-check entry point for Buddy 4.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem4/buddy4_test.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/events_motion.c",
+      "before_sha256": "06f424a981a4403fd8ae9019943b42102988e7e6cd136eeb34d32eee4d8856bc",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Classify terrain motion from pitch, speed and longitudinal acceleration.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/events_motion.h",
+      "before_sha256": "f726822e54d3cc8403a5de5e81b9981fdaff68ff049903ff191018700cf9d473",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Classify terrain motion from pitch, speed and longitudinal acceleration.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/hump_detection.c",
+      "before_sha256": "27c145a8dfa2f28d643a5e917ed69e64dc21dd2eca6fd89cb89d6543fcb1164e",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Track hump progress and height for the configured wheel geometry.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/hump_detection.h",
+      "before_sha256": "a4b79e9f07076c70a354e929da26e8cc9d74c3493de66c62b5c89bd9dae326aa",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Track hump progress and height for the configured wheel geometry.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/imu_calibration.c",
+      "before_sha256": "4018f191aff40cd48618f3d451a0c597f0fefee726269225d18e9f649fd79b91",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Collect stationary IMU samples for initial sensor calibration.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/imu_calibration.h",
+      "before_sha256": "08018c62e2825c528d2a9ac784d1e10171196cc9133f6e9e383b205740bfff97",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Collect stationary IMU samples for initial sensor calibration.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/imu_sensor.c",
+      "before_sha256": "b1e08f4db8cf953dcb78eba657244869fedd7f48a0e2fd1cc55014dbee805a1c",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Configure and read the LSM303DLHC accelerometer and magnetometer through the bus interface.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/imu_sensor.h",
+      "before_sha256": "7e6654bd42ea5aa3810e46d91886bf4ee8363384b1691668c7d6dec32a041530",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare the IMU bus boundary and vehicle-axis acceleration and magnetic samples.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/terr_data.c",
+      "before_sha256": "8b4bb21f3fcd6b08d02ce4b9e5da265e5c9b754f36d2bf8765682c746c05516e",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Maintain terrain monitoring state and pack copied terrain observations.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/terr_data.h",
+      "before_sha256": "1c167ed6cf6a88432fba841c37ae3c15dbc69a9ae11987e708ba576cb444ee57",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Maintain terrain monitoring state and pack copied terrain observations.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/tilt_estimation.c",
+      "before_sha256": "55659ee605d9611e986091f515552dda900551009cfb2a365bab31ba963a6533",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Estimate tilt and heading and calculate wrapped angle differences.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem4/tilt_estimation.h",
+      "before_sha256": "1a24d48d7b8912664095800688caf32ee979ebf241ecc67bb54e6e3bda6f9a06",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Estimate tilt and heading and calculate wrapped angle differences.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/avoid_obstacle.c",
+      "before_sha256": "2f40e34e2f591fa8e5ed7bb62062e9abe86958330bf4fa9c2ed59322dcab40f9",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Advance obstacle avoidance and line hand-back through motion proposals.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/avoid_obstacle.h",
+      "before_sha256": "90f395a58df523476d944002a4fffb23e88ba72da389499fca1adbcdf1b8e2cc",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Advance obstacle avoidance and line hand-back through motion proposals.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/avoidance_planner.c",
+      "before_sha256": "bd0ddfaa56b94144e990a0b039fbd983d450f08a97c2ae55dc18e98082a0b256",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Select a bounded bypass plan from the measured obstacle profile.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/avoidance_planner.h",
+      "before_sha256": "fc1fefb192360ccbc333331def30984b4d18adf522bb5b9361438b05a0a56609",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Select a bounded bypass plan from the measured obstacle profile.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/buddy5.c",
+      "before_sha256": "0bb814b2723d9a287867c6cd0050ebf7bbb096e0168e74eb29448a7ac758f6d4",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Own ultrasonic and servo scanning and publish protected obstacle snapshots.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/buddy5.h",
+      "before_sha256": "4eeea05ba36204d91afae2f4d086da41a77b412a2ffc2a76b8ec720c287f7fe2",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Own ultrasonic and servo scanning and publish protected obstacle snapshots.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/buddy5_test.c",
+      "before_sha256": "ea46939a6dbd6ab990ea94b53f23539b18c8f451abc8022faa58c22d384f49a9",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "On-device self-check entry point for Buddy 5.",
+      "module_brief_source": "existing paired-module purpose in app_program/subsystem5/buddy5_test.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/buddy5_test.h",
+      "before_sha256": "7f67aff843ddbcc37610240c70da8c918151d1b13066f722c05ac46ccdd7d5cd",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "On-device self-check entry point for Buddy 5.",
+      "module_brief_source": "existing leading purpose in app_program/subsystem5/buddy5_test.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/line_recovery.c",
+      "before_sha256": "825c50f9256215a9efe9d99d577d15788ea3e7ee41987ac38eea4a0ba19008e5",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Track line observations while recovering after an obstacle detour.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/line_recovery.h",
+      "before_sha256": "45ab02a0f6770e07c20aa538d3da41ac3db36b6be7db2871afcadd824bc0fca4",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Track line observations while recovering after an obstacle detour.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/profile_obstacle.c",
+      "before_sha256": "3c240e832c2959bbe6048b625aaf8353d6dc9a51efd56c6bb71a1b8373e16183",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Pack scan samples and derive obstacle profiles and side-peek updates.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/profile_obstacle.h",
+      "before_sha256": "6dc369f357e588391b5f1af64770d43032dc3e65a94667f94c0fbc38a839baad",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Pack scan samples and derive obstacle profiles and side-peek updates.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/s5_api.h",
+      "before_sha256": "c14ce05010b0da5b175133475fb17e02d18e2dac07f4a8cf2b9ae2ebb7aa3952",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Expose obstacle snapshots, scan requests and controller status exchange.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/s5_codec.c",
+      "before_sha256": "49dec153c39731daa437e5380932e6b6dc7ea44e41c0c343c6fffbe944984685",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Encode and decode copied obstacle-observation packets.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/s5_codec.h",
+      "before_sha256": "83438c4c0b259ef760dc0874dbb8366c5c0f48648aa91c9eae1104e22fd5209c",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Encode and decode copied obstacle-observation packets.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/s5_config.h",
+      "before_sha256": "b7e7ce23b9475fde1572434e0767eb123d168b4aeeca84d126eb4b759561cb72",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Define obstacle sensing, scan geometry and avoidance configuration.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/scan_obstacle.c",
+      "before_sha256": "5df12777874c90e5a49f595b3cdd65c60cfc8800a87c3a19afa1b8e59043b0d7",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Track scan angles, sample acceptance and scan completion.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/scan_obstacle.h",
+      "before_sha256": "222f69693414d87f9b014410a16c55d5cb981668f5a62798545c90c234b84f80",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Track scan angles, sample acceptance and scan completion.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/scan_servo.c",
+      "before_sha256": "f23911e25c6b73b91fb571cd11259121f4ea99d660bd812168d2b946aa6d82aa",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Configure and position the ultrasonic scan servo through PWM.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/scan_servo.h",
+      "before_sha256": "1d20315f5efc33c3b1c4b07ad07fff1222e4220f0d623137c974f55c0d046b63",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Configure and position the ultrasonic scan servo through PWM.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/ultrasonic_sensor.c",
+      "before_sha256": "d66c013fcf0628b45c670290b58a56067de98bd6f65a850c55cc3a3c49fe3d50",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Trigger and poll PIO ultrasonic echo capture and convert pulses to range.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/subsystem5/ultrasonic_sensor.h",
+      "before_sha256": "c8453f140a9d4f7e32445907924dd311f34cc251e22d7369c679759460a7d474",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Trigger and poll PIO ultrasonic echo capture and convert pulses to range.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/system_config.h",
+      "before_sha256": "579a9bf35ea01a9b7476e9f46be0d4b055e9a5135ce30fe910605685fc084519",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Reserve the shared application configuration interface for team agreement.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "app_program/test_report.h",
+      "before_sha256": "cfcb7079cc8611b42e5d8246388e93ddbe33d8e30a4c088929d6e7e5e7eec3dc",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Report named on-device test results and summaries.",
+      "module_brief_source": "individually written from the current interface",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "config/config.h",
+      "before_sha256": "55a1474a369483b3817a028fe4e755f8f39a2484736fc955cb6ee8ab355ad979",
+      "format_allowed": false,
+      "boundary": "Upstream copyright/licence notice: whole-file provenance review required; preserve body and notice in this batch.",
+      "module_already_documented": false,
+      "module_brief": null,
+      "module_brief_source": null,
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "config/config_device.h",
+      "before_sha256": "cfd817ee458248dea5d1a171216c18222b3be0f08150ca4d0eed65aef8cef842",
+      "format_allowed": false,
+      "boundary": "Upstream copyright/licence notice: whole-file provenance review required; preserve body and notice in this batch.",
+      "module_already_documented": false,
+      "module_brief": "Select enabled device drivers and the terrain-dependent I2C configuration.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "config/config_func.h",
+      "before_sha256": "5e71275f9be6fb04b2610ef5e2617f536aa936155fc9e2247c4f1f7a18ce9f06",
+      "format_allowed": false,
+      "boundary": "Upstream copyright/licence notice: whole-file provenance review required; preserve body and notice in this batch.",
+      "module_already_documented": false,
+      "module_brief": null,
+      "module_brief_source": null,
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "config/config_tm.h",
+      "before_sha256": "05f555826cae20c8cdcb866bdfbb4923fda778d43e974e7cb4a2825522913799",
+      "format_allowed": false,
+      "boundary": "Upstream copyright/licence notice: whole-file provenance review required; preserve body and notice in this batch.",
+      "module_already_documented": false,
+      "module_brief": "Configure monitor output and the selected USB or UART console.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "config/wifi_secrets.example.h",
+      "before_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Provide placeholder Wi-Fi and MQTT settings for a local credentials header.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "device/adc/sysdepend/rp2040/adc_cnf_sysdep.h",
+      "before_sha256": "3affc71fcb52b6aff4b7d7be4dc893f6b4eaba1c2bae64413be4a9ebd916c3ca",
+      "format_allowed": false,
+      "boundary": "Upstream copyright/licence notice: whole-file provenance review required; preserve body and notice in this batch.",
+      "module_already_documented": false,
+      "module_brief": "Configure RP2040 ADC reset, clock, pins and interrupt priority.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "device/adc/sysdepend/rp2040/adc_rp2040.c",
+      "before_sha256": "fa927e7ac1020f27c7068599c31c6aea1deebce48fc7153c75bba6d1ef814f0d",
+      "format_allowed": false,
+      "boundary": "Upstream copyright/licence notice: whole-file provenance review required; preserve body and notice in this batch.",
+      "module_already_documented": false,
+      "module_brief": "Implement RP2040 ADC device-driver acquisition and interrupt handling.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "device/adc/sysdepend/rp2040/adc_sysdep.h",
+      "before_sha256": "f0d0287c2ee364df88800ff53817df90388c7ac5c918759ab873be7d3c1307b2",
+      "format_allowed": false,
+      "boundary": "Upstream copyright/licence notice: whole-file provenance review required; preserve body and notice in this batch.",
+      "module_already_documented": false,
+      "module_brief": "Define RP2040 ADC registers and driver-specific constants.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "device/i2c/sysdepend/rp2040/i2c_cnf_sysdep.h",
+      "before_sha256": "b185f35821ceac2abfa9cc2db2ac8dd30541906dde32fe7105c0f1a967ec5e60",
+      "format_allowed": false,
+      "boundary": "Upstream copyright/licence notice: whole-file provenance review required; preserve body and notice in this batch.",
+      "module_already_documented": false,
+      "module_brief": "Configure RP2040 I2C pins, resets and interrupt priorities.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "kernel/sysdepend/pico_rp2040/devinit.c",
+      "before_sha256": "9d0fd59eafad2ecabfc4655473725420f1cbb3be938680429447989eda928010",
+      "format_allowed": false,
+      "boundary": "Upstream copyright/licence notice: whole-file provenance review required; preserve body and notice in this batch.",
+      "module_already_documented": false,
+      "module_brief": null,
+      "module_brief_source": null,
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/liblwip/sysdepend/pico_rp2040/include/arch/cc.h",
+      "before_sha256": "795c8b932fe6426f6849c57c550bd6ba14ce51e102c623c9b851404b0247235a",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Adapt lwIP packing, diagnostics and random-number hooks to the RP2040 kernel port.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/liblwip/sysdepend/pico_rp2040/include/arch/sys_arch.h",
+      "before_sha256": "8efcbc692de1130a9e8ad445f01651a04fa5dc81a3c5a79a281cb96b38927517",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Provide the lwIP OS-abstraction include boundary for the single-owner NO_SYS port.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/liblwip/sysdepend/pico_rp2040/lwipopts.h",
+      "before_sha256": "708afa92378248452894fec00cf00069c692bfaecf8aca7ff68420d30f51d1c4",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Configure the polling lwIP port and its bounded network protocol resources.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "before_sha256": "217ed62b1c66895cb5c7f0743c49fc9cc9a7e17d450c4a6b60792d0e9db24bad",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Run MQTT connection and callback processing within the network-owning task.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h",
+      "before_sha256": "defd0f3b62e45a781e70931af5c8b276fc55fcb1f0ebe06d9438de6232447d21",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare the kernel MQTT lifecycle, publishing and application callback interface.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/liblwip/sysdepend/pico_rp2040/sys_arch.c",
+      "before_sha256": "cd941b66abd9e68bc7b3e1acda0bc21224fe983150086b2bfcb10623d476c994",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Supply kernel-backed lwIP time, diagnostics and pseudo-random platform hooks.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/tusb_config.h",
+      "before_sha256": "b3ae85907cdc9371496862a802e78d0888842ef56f01fa6e228a0d2fa91c8d11",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Configure TinyUSB device endpoints and the CDC console class.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c",
+      "before_sha256": "2e469744395b9e015e48f8666ade0f305ec247e9bc6c0be164098025d062bbfe",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Buffer T-Monitor console output for the USB CDC-ACM service.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c",
+      "before_sha256": "5d68d51ef40a7169fd2606515139ae7b05590769deff8b4a17372a58d66832cd",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Minimal USB CDC ACM descriptors for the Thread-Metric console.",
+      "module_brief_source": "existing leading purpose in lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c",
+      "before_sha256": "69e5c685803fef30e4fa5b61c9fec416788b8752efe089b9f55754469231fcbe",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Pico SDK hooks needed by TinyUSB, implemented on micro T-Kernel.",
+      "module_brief_source": "existing leading purpose in lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_tinyusb_glue.c",
+      "before_sha256": "a16501522982de400e6f96172a7e71b5e0a08767759524f230d0cfdf2cb58fbb",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Bridge TinyUSB service calls across the Pico SDK and kernel type boundary.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_configport.h",
+      "before_sha256": "82956d38218c110569ed9a6f9e4a36a509f48b861b171b5e404743bb9f94c697",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Minimal cyw43-driver environment for the micro T-Kernel polling port.",
+      "module_brief_source": "existing leading purpose in lib/libwifi/sysdepend/pico_rp2040/cyw43_configport.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+      "before_sha256": "791e66f17c0f96b1aaec3eb2536f0352dcf7b136f29049b7cb2281b087466137",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Core-0-owned CYW43439 polling service for micro T-Kernel.",
+      "module_brief_source": "existing leading purpose in lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h",
+      "before_sha256": "4aa2fd08057d14bdacc0ba9a99925346ea318fe14b0281d9996b73840e8b7d70",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Core-0-owned CYW43439 polling service for micro T-Kernel.",
+      "module_brief_source": "existing paired-module purpose in lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_compat.c",
+      "before_sha256": "48ed37f7b69d5c152ce00ec1be82b23dcecdd0a5faeac2623a0554361cb1b93b",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Pico SDK and cyw43-driver hooks supplied by micro T-Kernel.",
+      "module_brief_source": "existing leading purpose in lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_compat.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_kernel.c",
+      "before_sha256": "563e70835fbdf219f86349794bae85adf1c44b94c8236fa49e1111032f83c8a4",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Kernel-facing half of the CYW43 service.",
+      "module_brief_source": "existing leading purpose in lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_kernel.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h",
+      "before_sha256": "0d713953006017f60cd4a0e5e5c97f552098d4350779516163dae6a84ad01d25",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Single-owner Wi-Fi retry policy.",
+      "module_brief_source": "existing leading purpose in lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/change_requirement_1/bend_filter_check.c",
+      "before_sha256": "d7c27aa1aa8a94cad41eb65aebda105ead6e337c4e9f781b3281b6778e081066",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Change Requirement 1: the controller's bend detector moved from float to minimum-width integers (14 Nov 2026).",
+      "module_brief_source": "existing leading purpose in testing/change_requirement_1/bend_filter_check.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/change_requirement_1/struct_sizes.c",
+      "before_sha256": "dc4e0c9ec9c83b2918b6cbc13996d5eb37f3d12aca64a42b4b5b6bb1bef0f8be",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Change Requirement 1 evidence: storage sizes measured by the TARGET compiler (arm-none-eabi-gcc, the firmware's own flags).",
+      "module_brief_source": "existing leading purpose in testing/change_requirement_1/struct_sizes.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/compliance/barcode_replay_trace.c",
+      "before_sha256": "fdb4941bdfa0bfabab7b9a96fc5063d887aaf1988aae0fa06f5721ab5919ad93",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "Replay observed samples and expose every decoder work/state update.",
+      "module_brief_source": "existing leading purpose in testing/compliance/barcode_replay_trace.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/compliance/control_builder_test.c",
+      "before_sha256": "539afd91d2775be6ce2f75179faa4dcfe4ce821e152516881ae9139a356e7ae3",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "Verify compact builder acceptance/bytes against the wide API. All invalid inputs retain their wide values until each interface validates.",
+      "module_brief_source": "existing leading purpose in testing/compliance/control_builder_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/compliance/control_debug_trace.c",
+      "before_sha256": "8afbe4fa03b6291b089f81bcfa717684b3c575b0da54df80906c9b008f997751",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": true,
+      "module_brief": "Deterministic boundary traces for the public debug wire codec.",
+      "module_brief_source": "existing leading purpose in testing/compliance/control_debug_trace.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/compliance/motion_storage_test.c",
+      "before_sha256": "34201fece1813f2c272c04f325f2840302d5af07e832e90935a1e22a813b9c72",
+      "format_allowed": false,
+      "boundary": "Owned by the concurrent motion-storage batch; omitted from this formatting batch.",
+      "module_already_documented": true,
+      "module_brief": "Characterize retained motion values through the unchanged wide APIs.",
+      "module_brief_source": "existing leading purpose in testing/compliance/motion_storage_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/diagnostics/fakes/sys/sysdef.h",
+      "before_sha256": "18d5fac0570eca6066c785ef88dc247cc178d09c766eaaf66e52efa26145283a",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Provide a controlled timer register for diagnostic host tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/diagnostics/firmware_test.c",
+      "before_sha256": "16f4aacd8e4a14d98056e04d18ac42851529b44785d2f50be686532bd21ef2c5",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Include the actual optional module to inspect publication versus owner-only summaries; only RTOS/MMIO/status observations are substituted.",
+      "module_brief_source": "existing leading purpose in testing/diagnostics/firmware_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/diagnostics/firmware_test_kernel.h",
+      "before_sha256": "ed47d2409f283072b7d603c3637306cc18551fea771ca93e2e5a8f8f01e66306",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Host-only declarations; production keeps the real micro T-Kernel headers.",
+      "module_brief_source": "existing leading purpose in testing/diagnostics/firmware_test_kernel.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/diagnostics/motion_smoke_test.c",
+      "before_sha256": "2847e672efaf8b1b84788ffbfd72628eb2c3967566f7d15a6586f39fc3c5f846",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Actual test runner with fake time/buttons/motion boundaries; no hardware.",
+      "module_brief_source": "existing leading purpose in testing/diagnostics/motion_smoke_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/diagnostics/startup_test.c",
+      "before_sha256": "10be316a58b9c06904ed8df9fab7ba6f50cb88598b5f628d828c68f8b37a51f2",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Actual app_main.c startup, with task execution and hardware replaced by bounded event observations.",
+      "module_brief_source": "existing leading purpose in testing/diagnostics/startup_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/bcap_test.c",
+      "before_sha256": "74b43ca2939b5696530af5d57fe120e346168bfce5bb6c98975c180ffe104c4a",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Barcode capture: episode detection, pre-trigger samples, quiet end, pool limits, decoder counters and the USB dump format.",
+      "module_brief_source": "existing leading purpose in testing/integration/bcap_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/bcap_wire_test.c",
+      "before_sha256": "a260c066b43ef44a31026cf1389d3f240ca394517c70800828bd3fd5072db943",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Real capture encoder; vectors are independently decoded by Python.",
+      "module_brief_source": "existing leading purpose in testing/integration/bcap_wire_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/builtin_test.c",
+      "before_sha256": "ec16b58572451999c44730b0cfdfe24398705e5d8c7b117c2ffcd9ad8d74ba16",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Built-in calibration at boot (S3_BUILTIN_CALIBRATION=1), through the production runtime and operator logic.",
+      "module_brief_source": "existing leading purpose in testing/integration/builtin_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/codec_test.c",
+      "before_sha256": "84d8a301cf06aaa21fb8e391fd6dee24af282e5943092b89d287340bde984823",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise round-trip preservation of copied controller packets.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/control_debug_test.c",
+      "before_sha256": "1f0a98ec5ffdf06d4c9ecf2f1fa69eefeb3b8cc75e8e17af106dd3c2cbd6e798",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise controller debug packet fields and malformed-input rejection.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/controller_test.c",
+      "before_sha256": "2b706a23ba9d605faf0add2e401e2b2adb1a6142b31b72cea7d411d09a12d83f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Actual controller task + actual Buddy 3 packet codec, with RTOS, Buddy 1 and motor-command boundary substitutes.",
+      "module_brief_source": "existing leading purpose in testing/integration/controller_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/controller_test_kernel.h",
+      "before_sha256": "f993f3f25b3bdcb4dc6a314222e2becd25c8899e1b27d3b6290131fd02427bb9",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Host-only RTOS declarations for the real controller integration test.",
+      "module_brief_source": "existing leading purpose in testing/integration/controller_test_kernel.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/course_sim.c",
+      "before_sha256": "56618ae4f12deee926bf677a8dd041617eda9548b0469ae3cce039c89f673390",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Course simulator for the \"tape between the sensors\" line-following profile.",
+      "module_brief_source": "existing leading purpose in testing/integration/course_sim.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/course_test.c",
+      "before_sha256": "b10bd4b236c094a3136a2c8312cb44a47c4d54a7398871bc13a402a213645ebc",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Unit checks for the course profile: the \"tape between the sensors\" line detector mode and the s3_drive course options.",
+      "module_brief_source": "existing leading purpose in testing/integration/course_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/fakes/sys/sysdef.h",
+      "before_sha256": "76f469e61243878edcede1f8ef19f282a04be9cc6fdcaa227a98fbd14b99afde",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Provide the fake timer register used by controller runtime tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/ir_debug_test.c",
+      "before_sha256": "62e5ac85a18a7221c2abae3744f6aedd820fef41af7d5cfc53a3a446742e83b0",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise IR debug packet encoding, decoding and validation.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/map_freeze_test.c",
+      "before_sha256": "22a7bdac75a7d3fae5f0ded07585eff9ab30c8c3c1cd4ae79d4b10258a36bf7f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Map-freeze ownership with the REAL pieces wired together: Buddy 1 map storage (command.c + telemetry_codec.c), the facade (vehicle_controller.c), the production runtime (s3_integration.c) and s3_drive/navigation.",
+      "module_brief_source": "existing leading purpose in testing/integration/map_freeze_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/operator_test.c",
+      "before_sha256": "b998c917a79cb266647eb241d5965799a3bc863e626e57bdf7e3dcf3998d9d21",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "End-to-end host test of the operator controls: simulated GP20/GP21 presses -> operator_logic -> the PRODUCTION s3_integration runtime (fake ADC/motion boundaries, as in runtime_test.c) -> published status -> operator_logic.",
+      "module_brief_source": "existing leading purpose in testing/integration/operator_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/remote_bridge_test.c",
+      "before_sha256": "6dc1e82962c887f232609346004f1915a0b8cadd86bdbf9b3ba6be545e57fce4",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Production MQTT bridge routing; remote owner is stubbed, never motors.",
+      "module_brief_source": "existing leading purpose in testing/integration/remote_bridge_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/runtime_test.c",
+      "before_sha256": "a09d4850a6428bcf13aead76eb6dcffa60dc6448c2078ec82d286e3d51956e6f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Execute the production runtime with fake task/ADC boundaries.",
+      "module_brief_source": "existing leading purpose in testing/integration/runtime_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/team_adapter_test.c",
+      "before_sha256": "09765c1c2a6da8e0b232025037b8e2d946a0152b76b46d656762aac2a58540b1",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise controller-to-telemetry adapters and motion reporting cadence.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/integration/timing_test.c",
+      "before_sha256": "d13027cde53179181c8068dd5d4eb8fbc95f8a01c3b95c1f6dd4d25515260990",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise run timing accumulation and diagnostic counters.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/fakes/cyw43.h",
+      "before_sha256": "de26fd8fe4fb40c499b4f60fb880b69e0b93edac0dc27c094664a2c9bce582ff",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare fake CYW43 link states and radio operations for host tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/fakes/cyw43_country.h",
+      "before_sha256": "49825a82bd45d3554d68e3538a5ff047a57856c2dfcb037b07f682a3cfd8340f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Provide the country-code constant used by Wi-Fi host tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/fakes/lwip/init.h",
+      "before_sha256": "246eec716c58e1cf959cdb04b12c9e57b1afffd2d38266a5b61af58dabce6dfa",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare the fake lwIP initialization hook for Wi-Fi host tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/fakes/lwip/netif.h",
+      "before_sha256": "ece243e6499baec4acb48b9f6ad383c6d1de3e66c920bf5c023153feb4ddddac",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Expose fake network address accessors for Wi-Fi host tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/fakes/lwip/timeouts.h",
+      "before_sha256": "133200c13df61cc56fe4001f6c1c60c5f4c988bd7a13c41f74aee89e85113c95",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare the fake lwIP timeout-polling hook for Wi-Fi tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/fakes/mqtt_utk.h",
+      "before_sha256": "3a470f47b42ea0e3db8728de783bf315c38dc3d43c40b7bd2ee99f59963ae081",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare fake MQTT lifecycle hooks used by Wi-Fi host tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/fakes/tm/tmonitor.h",
+      "before_sha256": "b1b6ec90c4a8bf60b3f66f00016bea20e79516c84e3a3213b643324662ca6338",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare the fake monitor output function used by Wi-Fi tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/fakes/wifi_secrets.h",
+      "before_sha256": "03a97e4fd6fbe92c3de8dbce2b9e6a025f0198bd4ef7c11fc6922cbf6491cc24",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Provide public placeholder credentials for Wi-Fi host tests.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/policy_test.c",
+      "before_sha256": "393e4c857d15904a70c1aef523037fa31c7f1945ac771de9699647482816234a",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise Wi-Fi retry policy across radio link states.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/network_wifi/runtime_test.c",
+      "before_sha256": "3c7f78cf0fa08483600be5db059886e3a8d5cf0d73bfb853445bd88e05f3ec52",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Runs the actual production cyw43_utk_task() with fake hardware/clock APIs.",
+      "module_brief_source": "existing leading purpose in testing/network_wifi/runtime_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem1/fakes/lwip/apps/mqtt.h",
+      "before_sha256": "0494e45480d1a26ba8808e468fffdf7f0a199a906ab25c5a6846a591ebe7706b",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare fake MQTT callbacks, errors and client operations for host tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem1/fakes/lwip/ip_addr.h",
+      "before_sha256": "c4f487f5541aab9ce452a3ca30a7623c615b7197686e75dd4820213dad9099e3",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Provide fake IPv4 address types and conversion hooks for MQTT tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem1/fakes/lwip/sys.h",
+      "before_sha256": "01f038422118e245cdd8ac0d18184bb574011eb3a75f4c9ae07a72cd2ed865c8",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Expose the fake lwIP clock interface used by MQTT host tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem1/fakes/lwip/timeouts.h",
+      "before_sha256": "f5db0f25d9ed5e091186ecf98a0fb6a36ce58d27d67d2cf3a954c5ff37a68e11",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Declare fake lwIP timeout scheduling hooks for MQTT tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem1/fakes/tm/tmonitor.h",
+      "before_sha256": "c086ce62d0e499e6f9458126cf889c6b22ee0f86808d869ae99fb63a3abd2d19",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Expose the host kernel monitor interface for telemetry tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem1/fakes/wifi_secrets.h",
+      "before_sha256": "7d21ce1b77879ed78d86ca7a30933b904def5a659399f85d5ad675c44b159345",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Deliberately public compile/test placeholders; never a real connection.",
+      "module_brief_source": "existing leading purpose in testing/subsystem1/fakes/wifi_secrets.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem1/host_kernel.h",
+      "before_sha256": "24a54d081fb7049632165bb623ad03f343c239a7d8bad9201b72a33e247f0c8e",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Host-only model of the small RTOS surface used by Buddy 1.",
+      "module_brief_source": "existing leading purpose in testing/subsystem1/host_kernel.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem1/host_test.c",
+      "before_sha256": "1d23ecb3eeb00ce9e816803fce799e1f3ed518c59acb849ec4a4eb64ff57abe2",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise MQTT telemetry, command handling and debug publication fairness.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem1/size_report.c",
+      "before_sha256": "b0f3655623116f9b334b2b87a9d28c0f7375a64a3b640e3b2168352a1ebd5ec7",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Compare retained baseline telemetry storage and payload sizes with current representations.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem2/controller_adapter_test.c",
+      "before_sha256": "12ced6b7aafe4d9b0934a3e6c84dfd58897bbd85779ed2d4893359452ce351a3",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise the actual controller's telemetry-only fault adapter.",
+      "module_brief_source": "existing leading purpose in testing/subsystem2/controller_adapter_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem2/fakes/tm/tmonitor.h",
+      "before_sha256": "c086ce62d0e499e6f9458126cf889c6b22ee0f86808d869ae99fb63a3abd2d19",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Expose the host kernel monitor interface for motion tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem2/host_kernel.h",
+      "before_sha256": "55a5f2c8514aa6e4145c40d74d260260875801e71ad8bfb8b158e02e8d550a03",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Host-only MMIO/RTOS boundary.",
+      "module_brief_source": "existing leading purpose in testing/subsystem2/host_kernel.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem2/host_regression.c",
+      "before_sha256": "87e076b689d13e710e82c067e3544e89bd31d78e72c05ec0e71463ee921747df",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Runs the real public motion API, controller, PID, estimation, encoder ISR and motor driver against deterministic fake registers.",
+      "module_brief_source": "existing leading purpose in testing/subsystem2/host_regression.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem2/pack_test.c",
+      "before_sha256": "3eee05404969bb44318d4860d567a335f1374817b84bf1f00fe49598dc6be8df",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise packed motion commands, status, reports and the legacy snapshot adapter.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem2/size_report.c",
+      "before_sha256": "df1cf461bb8cf13d0f05766878d566c1a6fc6033926894a70a963bd5130764f3",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Report baseline and packed motion representation sizes.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/barcode_fixtures.h",
+      "before_sha256": "f5dc74f6e065a7c1d532cc7fa264ce5ff681c3bbce71b3a456973e9c8370d33d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Independent fixtures from Barcode Sample.pdf; SHA256 4994bf35dead5fb06288bb4cd58672ce74dcca83a473c326f5e1aa968a694b74 PyMuPDF grayscale, 2x render, row height/5, threshold <128.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/barcode_fixtures.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/bench_trace.c",
+      "before_sha256": "b314b99d17ef4355f8aefdda51d4c6e5bfde8ec5832c5a8d243a4156dd540c8b",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise the actual APP_IR_BENCH wrapper, not a reimplementation.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/bench_trace.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/host_trace.c",
+      "before_sha256": "17406c9e23f54122262d483d73cd7d8ed8d7ab07b34bf62f1406f5a56852f321",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Observe navigation and barcode semantic fields for differential harness comparisons.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/motion_kernel_stub.h",
+      "before_sha256": "243502c0fb9f66fe674ac06b5f8cd56dd1e3537ae9fb8b2753548362998cf059",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Minimal kernel boundary for testing production motion.c on the host.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/motion_kernel_stub.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/replay_barcode_record.c",
+      "before_sha256": "468328d59106321d84017b7aa67453631177588bd699518494842cd4f53186bc",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Diagnostic stdin: elapsed_us darkness, one sample per line.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/replay_barcode_record.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/size_report.c",
+      "before_sha256": "aff905a03685a644d5d1739abb91b92ec6b432b2079707557ef93cd04d77addb",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Report navigation storage sizes and assert copied packet layouts.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_faint.c",
+      "before_sha256": "062d80f93e345230e4488f3f5d469ae2df86782ee64af900344d39e263308a02",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Synthetic low-contrast printed-barcode regressions.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_barcode_faint.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_fast.c",
+      "before_sha256": "c1e1ab9ca784ad895f48c46a84ca956aa7bba43164a4fc101adc18bb62338e68",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Synthetic fast-scan regressions, not claims about physical test success.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_barcode_fast.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_fit_error.c",
+      "before_sha256": "1ad4bc555161275ae098d539b25ee75521a8c164cc81f93607bd2c58e38d8e43",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exact-equivalence regression for the RP2040 fit-score optimization.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_barcode_fit_error.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_incremental.c",
+      "before_sha256": "a36007f88da94b9e8aae5bad2e3c7da233d4f8a8460617254e9d9c73ca4a3d25",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Bounded-work and cancellation tests.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_barcode_incremental.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_quiet.c",
+      "before_sha256": "f036c3509d2e0a8690acdd3d84ab56564db4e2905679e34de2607150a61ebed8",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise strict and tolerant trailing barcode quiet intervals.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_quiet_record.c",
+      "before_sha256": "df688c395f2345c272dfaca8c3ab55d5e96a6465278b966cb357e20e41985108",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Public-API regressions for noisy trailing paper in the recording reader.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_barcode_quiet_record.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_record.c",
+      "before_sha256": "6410411fe0d565de437d53014ef60fc2741690b9282af12ba44db73c70728208",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Host tests for the record-then-decide barcode reader (s3_barcode_record_*).",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_barcode_record.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_varying.c",
+      "before_sha256": "80a3ea5af574ccf6efc0fbdfe335c3281218bf79dd3f805c0aedfe1786a1abf2",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Host evidence for a width bias that changes between the two known stars.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_barcode_varying.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_wide.c",
+      "before_sha256": "4e11c2999fae6a2a38fecd5a9b7f5a679e4aa5a4d103d6c5b0280ad73652d3cc",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Synthetic physical-size coverage at 40 mm/s.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_barcode_wide.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_codec.c",
+      "before_sha256": "3f79da3ad085dac9f785a64a4c114492e31b3ce861d64219f6183ccb05d25a2d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Independent semantic round-trip / malformed-packet checks.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_codec.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_core.c",
+      "before_sha256": "1c0fab8cef16b10ddd52c40b49c57d7c5821df111207212bdd7b055d2a3b646f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise IR acquisition, calibration, line, barcode and navigation logic.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_drive.c",
+      "before_sha256": "36a301560ef8337e91d74e1fcc060853a07506279df32f432c48aaeeaa7edf23",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Real Buddy 2 controller/PID/estimator + real Buddy 3 core/bridge.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_drive.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_ir_reflectance.c",
+      "before_sha256": "afa06aa036a23e043c88293530b15547b9359e492ddc99124a5ea3359466d52d",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Host tests: synthetic inputs verify software, not physical sensor accuracy.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_ir_reflectance.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_mapping.c",
+      "before_sha256": "d7078d229bf80d4a536aa053cc858aba512a02b8691bef308eec307b3d56b687",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Physical GPIO routing regression; independent of historical algorithm traces.",
+      "module_brief_source": "existing leading purpose in testing/subsystem3/test_mapping.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_motion_feedback.c",
+      "before_sha256": "73c63c3b0065b99889dc913bd5b15029d3be3e98345df5f22aab92dd344b0208",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise motion feedback, report handling and counter wrap with fakes.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem3/test_navigation.c",
+      "before_sha256": "aa7f1058f4b4e3c9244d28fb45e96588b70fda423f6f365ba674f5430ab09672",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise navigation, barcode and odometry integration using synthetic sensor frames.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem4/fakes/tk/device.h",
+      "before_sha256": "209ab84c50e14795265524b0a74a429f6f1e6f2868fac1d59d677f2856883624",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Provide device API declarations used by terrain transport host tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem4/host_test.c",
+      "before_sha256": "b31d05ae0e081cddba450499fca43bddbb37f8d39c86fc3e7c7cb9e83b62646f",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise IMU, terrain, hump, pickup and overturn processing.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem4/integration_test.c",
+      "before_sha256": "a468c2f2621733e9b5c4e7c45322495700af7dea3d216165466a30d042f8e033",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Execute the actual sampling/controller runtime with mocked IMU transport.",
+      "module_brief_source": "existing leading purpose in testing/subsystem4/integration_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem4/transport_test.c",
+      "before_sha256": "4b889ea3c02f32c59a04d053acf284038458f82e7bfd7ecb01f1a9fac9eca8d1",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Production S4 task/transport with fake RTOS and sensor boundaries.",
+      "module_brief_source": "existing leading purpose in testing/subsystem4/transport_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem5/bypass_course_test.c",
+      "before_sha256": "70b72d0151b026d0dd7a424ba693e5dde67d87b6a3f4bc0bc42cdfdeced6b204",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Obstacle bypass on a simulated course: straight track and obstacles near bends.",
+      "module_brief_source": "existing leading purpose in testing/subsystem5/bypass_course_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem5/controller_test.c",
+      "before_sha256": "f5d976c1b051ee2ce55575088d8d9a70268fa43d76b6aed4060dde5ef68c5f7a",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Real Buddy 2 controller/PID/estimator + real Buddy 3 core/bridge.",
+      "module_brief_source": "existing leading purpose in testing/subsystem5/controller_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem5/course_clear_test.c",
+      "before_sha256": "319332326112200e3eafd173a8d411b562d0c967070c7f8fe29b5c39f5bb9be8",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Run the upstream course scenarios with the real S5 arbitration enabled.",
+      "module_brief_source": "existing leading purpose in testing/subsystem5/course_clear_test.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem5/fakes/sys/sysdef.h",
+      "before_sha256": "2a3976b34875b848050a894799395c925317948023f15215c6421ac7a7811bf4",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Provide controlled RP2040 register reads and writes for obstacle tests.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem5/hardware_test.c",
+      "before_sha256": "6d09573cf78a13fa87b3f74d9bd33ad63419a9e127ce9c2d52cfebf89d302996",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise ultrasonic and servo driver logic through fake hardware.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem5/host_test.c",
+      "before_sha256": "990e4d97f5db7770db7f7f10502b99c2fd490de3d93e99745af115887ed9bf4c",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise scan codecs, avoidance planning, manoeuvres and line recovery.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem5/runtime_test.c",
+      "before_sha256": "b89b1a5e9cc239115b8f676b784135f9615c6f2e373b148786ae5b23e61de6d1",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise obstacle task ownership, requests and snapshots with fakes.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "testing/subsystem5/telemetry_test.c",
+      "before_sha256": "e76c1d32c194a78dc300648e3bec9a278cb264f54f820a34aa01ca25a12e8fc0",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Exercise obstacle observations and scan samples through telemetry adapters.",
+      "module_brief_source": "Individually reviewed current declarations, implementation and test calls; no function contracts inferred.",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "tools/compliance/traces/motion_trace.c",
+      "before_sha256": "1b64e3c7e4e2d3ed788a41ccb64cbc5b481d316ec7307b2be73f4db590af7117",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Shared harness: observe actual production feedback without consuming extra reports.",
+      "module_brief_source": "existing leading purpose in tools/compliance/traces/motion_trace.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "tools/compliance/traces/mqtt_observer.h",
+      "before_sha256": "0939ed8b4b28021499e91a30ba3ef2ae31bef044897d57066641b95044e7df66",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Observe deterministic network callbacks after the concurrent producer test joins.",
+      "module_brief_source": "existing leading purpose in tools/compliance/traces/mqtt_observer.h",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "tools/compliance/traces/obstacle_trace.c",
+      "before_sha256": "f248cec967d659ee2cc679bf3307fdd2e25ee1f2cbfa4c3dbac5942c1e6e8118",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Existing avoidance scenarios/assertions, with every requested action and state.",
+      "module_brief_source": "existing leading purpose in tools/compliance/traces/obstacle_trace.c",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "tools/compliance/traces/runtime_observer.h",
+      "before_sha256": "d9c63a66f8027f1281f1f5dcd7c5b486f3601eb488be594eccdc6b26c924ba32",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Print controller state and queued replies from the generated runtime harness.",
+      "module_brief_source": "individually reviewed against current interfaces, implementation and test calls",
+      "function_documentation": "not changed in this batch"
+    },
+    {
+      "path": "tools/compliance/traces/terrain_trace.c",
+      "before_sha256": "691fa40f518e020bed1b6a69b3c23a211486d2ef28b2a0fbe15533fa98b95cf5",
+      "format_allowed": true,
+      "boundary": "",
+      "module_already_documented": false,
+      "module_brief": "Existing terrain scenarios/assertions, with exact result values and packet bytes.",
+      "module_brief_source": "existing leading purpose in tools/compliance/traces/terrain_trace.c",
+      "function_documentation": "not changed in this batch"
+    }
+  ]
+}

@@ -1,11 +1,32 @@
 """Add observations to shared existing tests, without changing assertions."""
 from pathlib import Path
 
+try:
+    from .format_owned import TOKEN
+except ImportError:
+    from format_owned import TOKEN
+
 
 def replace_once(text, old, new):
-    if text.count(old) != 1:
+    """Replace one exact C-token sequence while ignoring formatting/comments.
+
+    Strings remain literal tokens and multi-character operators remain atomic.
+    An absent or repeated code anchor fails closed; an identical phrase inside
+    a comment/string cannot manufacture a match. Only the copied harness changes.
+    """
+    anchor = [match[0] for match in TOKEN.finditer(old)
+              if match.lastgroup != 'comment']
+    source = [match for match in TOKEN.finditer(text)
+              if match.lastgroup != 'comment']
+    if not anchor:
+        raise ValueError('Instrumentation anchor contains no C tokens')
+    matches = [index for index in range(len(source) - len(anchor) + 1)
+               if [item[0] for item in source[index:index + len(anchor)]] == anchor]
+    if len(matches) != 1:
         raise ValueError('Harness changed; review instrumentation anchor: ' + old[:100])
-    return text.replace(old, new, 1)
+    start = source[matches[0]].start()
+    end = source[matches[0] + len(anchor) - 1].end()
+    return text[:start] + new + text[end:]
 
 
 def runtime_source(candidate, subject, destination):
