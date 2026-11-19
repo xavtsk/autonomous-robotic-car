@@ -1658,6 +1658,80 @@ static void work_faint_valley (s3_barcode_record_t * p_r)
     return;
 }
 
+/** @brief Begin one bounded extrema-pruning iteration.
+ * @param p_r Recorder owning the retained samples and workspace.
+ * @return Nothing. The retained workspace records the next phase.
+ * @note The dispatcher has already consumed this step's work unit.
+ *       This helper neither loops over phases nor owns sample storage.
+ */
+static void work_prune_begin (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    if (p_w->n <= S3_BARCODE_RUNS + 2U)
+    {
+        p_w->phase = RW_EDGES_BEGIN;
+        return;
+    }
+    p_w->smallest = UINT64_MAX;
+    p_w->cut = 1U;
+    p_w->scan = 1U;
+    p_w->phase = RW_PRUNE_SCAN;
+    return;
+}
+
+/** @brief Compare one extrema pair while choosing a pruning cut.
+ * @param p_r Recorder owning the retained samples and workspace.
+ * @return Nothing. The retained workspace records the next phase.
+ * @note The dispatcher has already consumed this step's work unit.
+ *       This helper neither loops over phases nor owns sample storage.
+ */
+static void work_prune_scan (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    if (p_w->scan + 2U >= p_w->n)
+    {
+        p_w->copy = p_w->cut;
+        p_w->phase = RW_PRUNE_COPY;
+        return;
+    }
+    {
+        const unsigned int value_a = REC_DARK(p_r, p_w->ext[p_w->scan]),
+                           value_b = REC_DARK(p_r, p_w->ext[p_w->scan + 1U]);
+        const uint64_t size =
+            (uint64_t)(value_a > value_b ? value_a - value_b
+                                         : value_b - value_a) *
+            (p_w->ext_us[p_w->scan + 1U] - p_w->ext_us[p_w->scan]);
+        if (size < p_w->smallest)
+        {
+            p_w->smallest = size;
+            p_w->cut = p_w->scan;
+        }
+        p_w->scan++;
+        return;
+    }
+}
+
+/** @brief Copy one retained extrema entry or complete its pruning cut.
+ * @param p_r Recorder owning the retained samples and workspace.
+ * @return Nothing. The retained workspace records the next phase.
+ * @note The dispatcher has already consumed this step's work unit.
+ *       This helper neither loops over phases nor owns sample storage.
+ */
+static void work_prune_copy (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    if (p_w->copy + 2U >= p_w->n)
+    {
+        p_w->n -= 2U;
+        p_w->phase = RW_PRUNE_BEGIN;
+        return;
+    }
+    p_w->ext[p_w->copy] = p_w->ext[p_w->copy + 2U];
+    p_w->ext_us[p_w->copy] = p_w->ext_us[p_w->copy + 2U];
+    p_w->copy++;
+    return;
+}
+
 /* Each call performs bounded sample/pruning work and at most 32 fit ticks.
  * No complete-frame extraction or grid search runs synchronously here. */
 static void work_advance (s3_barcode_record_t * p_r,
@@ -1686,49 +1760,13 @@ static void work_advance (s3_barcode_record_t * p_r,
             work_faint_valley(p_r);
             break;
         case RW_PRUNE_BEGIN:
-            if (p_w->n <= S3_BARCODE_RUNS + 2U)
-            {
-                p_w->phase = RW_EDGES_BEGIN;
-                break;
-            }
-            p_w->smallest = UINT64_MAX;
-            p_w->cut = 1U;
-            p_w->scan = 1U;
-            p_w->phase = RW_PRUNE_SCAN;
+            work_prune_begin(p_r);
             break;
         case RW_PRUNE_SCAN:
-            if (p_w->scan + 2U >= p_w->n)
-            {
-                p_w->copy = p_w->cut;
-                p_w->phase = RW_PRUNE_COPY;
-                break;
-            }
-            {
-                const unsigned int value_a = REC_DARK(p_r, p_w->ext[p_w->scan]),
-                                   value_b =
-                                       REC_DARK(p_r, p_w->ext[p_w->scan + 1U]);
-                const uint64_t size =
-                    (uint64_t)(value_a > value_b ? value_a - value_b
-                                                 : value_b - value_a) *
-                    (p_w->ext_us[p_w->scan + 1U] - p_w->ext_us[p_w->scan]);
-                if (size < p_w->smallest)
-                {
-                    p_w->smallest = size;
-                    p_w->cut = p_w->scan;
-                }
-                p_w->scan++;
-                break;
-            }
+            work_prune_scan(p_r);
+            break;
         case RW_PRUNE_COPY:
-            if (p_w->copy + 2U >= p_w->n)
-            {
-                p_w->n -= 2U;
-                p_w->phase = RW_PRUNE_BEGIN;
-                break;
-            }
-            p_w->ext[p_w->copy] = p_w->ext[p_w->copy + 2U];
-            p_w->ext_us[p_w->copy] = p_w->ext_us[p_w->copy + 2U];
-            p_w->copy++;
+            work_prune_copy(p_r);
             break;
         case RW_EDGES_BEGIN:
             if (p_w->n != S3_BARCODE_RUNS + 2U)

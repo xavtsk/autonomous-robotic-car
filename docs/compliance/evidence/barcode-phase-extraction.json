@@ -44,7 +44,7 @@
     "Token equivalence after bounded inversion does not prove equal machine code, stack or physical timing."
   ],
   "before_revision": "ba4f3391261e47ede38649b231324269d86c60bb",
-  "status": "source inverse verified and compile checked; extraction execution pending",
+  "status": "extracted candidate executed: six host modes and exact traces pass; all twelve target jobs succeed",
   "characterization_before_extraction": {
     "run_id": 44584191817,
     "artifact_id": 14559782444,
@@ -82,7 +82,68 @@
   },
   "verification_command": "python tools/compliance/verify_barcode_phase_batch.py --candidate WORKTREE --json (pin the extraction commit after publishing)",
   "pending": [
-    "Linux execution of the extracted candidate against fixed baseline: full scratch, replay, runtime and sanitizers.",
-    "Full target-profile links and subsequent hardware timing evidence."
-  ]
+    "Physical task high-water and instruction timing remain unmeasured.",
+    "Two unchanged recorded-replay expectation failures and incomplete compliance audits remain separately nonpassing."
+  ],
+  "candidate_revision": "74b95107aa41d816bd143e8abf7ef4fe556f5b18",
+  "linux_candidate_validation": {
+    "run_id": 44589867778,
+    "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44589867778",
+    "revision": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
+    "host_artifacts": {
+      "baseline-clang": {
+        "artifact_id": 14561844364,
+        "returncode": 0,
+        "sanitizer_errors": false
+      },
+      "baseline-gcc": {
+        "artifact_id": 14561943145,
+        "returncode": 0,
+        "sanitizer_errors": false
+      },
+      "candidate-gcc": {
+        "artifact_id": 14562257399,
+        "returncode": 0,
+        "sanitizer_errors": false
+      },
+      "baseline-sanitize": {
+        "artifact_id": 14562482234,
+        "returncode": 0,
+        "sanitizer_errors": false
+      },
+      "candidate-sanitize": {
+        "artifact_id": 14563901381,
+        "returncode": 0,
+        "sanitizer_errors": false
+      },
+      "candidate-clang": {
+        "artifact_id": 14564151076,
+        "returncode": 0,
+        "sanitizer_errors": false
+      }
+    },
+    "differential_artifact": 14562981591,
+    "semantic_trace": {
+      "name": "barcode_work_semantic_trace",
+      "matched": true,
+      "semantic_rows": 854,
+      "baseline_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+      "candidate_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9"
+    },
+    "audit_artifact": 14562048432,
+    "header_pairs": "PASS:20",
+    "audit_tests": "PASS:139, no skips",
+    "production_artifact": 14562364185,
+    "production_sizes": {
+      "text": 466012,
+      "data": 696,
+      "bss": 128816,
+      "static_ram": 129512
+    },
+    "production_flash_sha256": "b548612c61fdcdc74a8bb0148f8002cc77a8b095bc2b7a736482b5f3b055e03d",
+    "production_text_delta_vs_d26a980": -24,
+    "static_ram_delta": 0,
+    "all_compiler_function_stack_rows_unchanged": true,
+    "all_twelve_target_jobs_successful": true
+  }
 }

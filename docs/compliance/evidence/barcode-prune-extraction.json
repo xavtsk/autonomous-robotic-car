@@ -1,0 +1,78 @@
+{
+  "source": "app_program/subsystem3/bc_decoder.c",
+  "before_lf_sha256": "89995779cbffbdbe7d8252e619f9c239fdea2205467006c9e8b82e35ca4de6fe",
+  "candidate_lf_sha256": "13cf1584e8f2fb53d92bac8af760ae504eb6ac35178871aeb15e1be173c03c3f",
+  "inverse_token_equal": true,
+  "before_token_count": 12688,
+  "helpers": [
+    {
+      "phase": "RW_PRUNE_BEGIN",
+      "helper": "work_prune_begin",
+      "switch_exit_count": 2
+    },
+    {
+      "phase": "RW_PRUNE_SCAN",
+      "helper": "work_prune_scan",
+      "switch_exit_count": 2
+    },
+    {
+      "phase": "RW_PRUNE_COPY",
+      "helper": "work_prune_copy",
+      "switch_exit_count": 2
+    }
+  ],
+  "inverse_rules": [
+    "remove exact local workspace-pointer binding",
+    "map helper returns to original phase-switch breaks",
+    "inline each recovered body at its one matching dispatcher call",
+    "remove the three helper definitions"
+  ],
+  "unmodified": [
+    "dispatcher guards",
+    "work_units increment",
+    "fit_ticks guard",
+    "remaining phase bodies",
+    "workspace layout",
+    "public API"
+  ],
+  "limits": [
+    "Token equivalence after bounded inversion does not prove equal machine code, stack or physical timing."
+  ],
+  "before_revision": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
+  "status": "three pruning phase helpers inverse-verified and compiled; candidate Linux execution pending",
+  "predecessor_gate": {
+    "run_id": 44589867778,
+    "revision": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
+    "six_host_modes_pass": true,
+    "semantic_rows": 854,
+    "trace_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+    "all_twelve_targets_pass": true,
+    "production_artifact": 14562364185
+  },
+  "compile_validation": {
+    "host": "Shared barcode_work fixture compiled/linked with C99 -Wall -Wextra -Werror -pedantic-errors -O2; no native test execution",
+    "target": "Arm GNU 14.3.1, identical recorded production flags with -fstack-usage",
+    "record_update_symbol_bytes": [
+      8324,
+      8324
+    ],
+    "record_update_stack_bytes": [
+      376,
+      376
+    ],
+    "all_emitted_function_stack_rows_unchanged": true,
+    "extracted_helpers": "All three inline; no separate emitted helper symbol/frame",
+    "allocated_object_sections_identical": false,
+    "differing_sections": [
+      ".rodata.s3_barcode_record_update",
+      ".text.s3_barcode_record_update"
+    ],
+    "interpretation": "Instruction and switch-table bytes differ despite equal size. Timing equivalence is not inferred.",
+    "artifacts": "build/barcode-prune-extraction/{before,candidate}/{command.json,bc_decoder.o,bc_decoder.su,symbols.txt,disassembly.txt}, target-compile-comparison.json and object-equivalence.json"
+  },
+  "verification_command": "python tools/compliance/verify_barcode_phase_batch.py --manifest docs/compliance/evidence/barcode-prune-extraction.json --candidate WORKTREE --json (pin the new commit after publication)",
+  "pending": [
+    "Linux execution of this candidate with exact full scratch/replay/runtime traces and sanitizers.",
+    "Matched target-profile links; physical timing and task high-water evidence remain separate."
+  ]
+}
