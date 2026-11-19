@@ -150,21 +150,74 @@ typedef struct
 } control_debug_builder_t;
 
 /** Reset the builder to the version-1 zero sample, owned by the caller. */
+/** @brief Reset caller-owned scratch to a valid version-1 zero sample.
+ * @param p_builder Writable builder or null; null is a no-op.
+ * @post clears all prior packet bits and the previous error latch.
+ * @note No locks or callbacks. The caller exclusively owns the scratch object.
+ */
 void control_debug_builder_init (control_debug_builder_t * p_builder);
 /** Validate an unsigned public value before encoding; errors remain latched. */
+/** @brief Validate and encode an unsigned wide public field value.
+ * @param p_builder Initialized caller-owned builder; null is a no-op.
+ * @param field Unsigned schema selector; negative/out-of-range or signed
+ * selectors latch failure without writing packet bits.
+ * @param value Full uint32_t input in schema units; width/domain failures
+ * latch failure without narrowing or changing the selected packet bits.
+ * @post Later valid writes still update fields after an error,
+ * but they cannot clear the failure latch; init is required to clear it.
+ * @note Caller serializes builder access. No publication or motor effect.
+ */
 void control_debug_builder_u (control_debug_builder_t * p_builder,
                               control_debug_field_t field, uint32_t value);
 /** Validate a signed public value before encoding; errors remain latched. */
+/** @brief Validate and encode a signed wide public field value.
+ * @param p_builder Initialized caller-owned builder; null is a no-op.
+ * @param field Signed schema selector; negative/out-of-range or unsigned
+ * selectors latch failure without writing packet bits.
+ * @param value Full int32_t input in schema units; no prevalidation clipping.
+ * Valid values retain the public packer's low-bit two's-complement encoding.
+ * @post Rejection latches failure; later valid writes cannot
+ * clear that latch, although they still replace their selected field bits.
+ * @note Caller serializes builder access. No locks, callbacks or publication.
+ */
 void control_debug_builder_s (control_debug_builder_t * p_builder,
                               control_debug_field_t field, int32_t value);
 /** Publish only a valid complete sample; failure leaves p_packet unchanged. */
+/** @brief Copy a valid builder packet to caller-owned output storage.
+ * @param p_builder Readable initialized builder, or null for rejection.
+ * @param p_packet Writable output packet, or null for rejection.
+ * @return True after the full packet copy. False leaves output unchanged
+ * for nulls, a latched field error, or motion valid while unavailable.
+ * @note Does not change the builder. The motion-availability relationship
+ * failure is not latched, so changing that field can permit a later end.
+ * The caller owns synchronization; this function itself publishes nothing.
+ */
 bool control_debug_builder_end (const control_debug_builder_t * p_builder,
                                 control_debug_packet_t * p_packet);
 
 /** Encode a debug sample; return false for null pointers or invalid fields. */
+/** @brief Encode a validated wide sample as the canonical 70-byte packet.
+ * @param p_sample Readable sample; null is rejected. Widths follow the schema.
+ * Clocks/gaps are microseconds, speeds mm/s, duty percent and encoders counts.
+ * Raw reflectance is 0..4095 ADC; normalized limits are 0..1000.
+ * @param p_packet Writable packet; null is rejected.
+ * @return True on success. False for nulls, any width/domain error, or valid
+ * motion marked unavailable; failure leaves the destination unchanged.
+ * @note Copies no floating/native structure layout. No locks or callbacks;
+ * the caller owns input/output access and supplies the already scaled units.
+ */
 bool control_debug_pack (const control_debug_sample_t * p_sample,
                          control_debug_packet_t * p_packet);
 /** Decode a canonical packet. Use the output only when this returns true. */
+/** @brief Decode and validate a canonical version-1 controller packet.
+ * @param p_packet Readable complete 70-byte packet; null is rejected.
+ * @param p_sample Writable wide result in the units documented by pack.
+ * @return True only when decoded values re-encode to every original byte,
+ * including zero padding. Nulls/bad version leave p_sample unchanged; with
+ * version 1, fields are written before later semantic/canonical rejection.
+ * @note Use the result only on true. No locks, callbacks or shared mutation;
+ * the caller serializes access to its buffers.
+ */
 bool control_debug_unpack (const control_debug_packet_t * p_packet,
                            control_debug_sample_t * p_sample);
 #endif

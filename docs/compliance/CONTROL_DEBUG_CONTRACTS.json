@@ -1,0 +1,186 @@
+{
+  "before_commit": "d26a9808f00add85ee3b6701b415cdec21444e29",
+  "functions": 13,
+  "source_operations_changed": false,
+  "files": [
+    {
+      "path": "app_program/controller/control_debug.c",
+      "before_lf_sha256": "2ac493ebc19f41d35fd7ff4c99d07c6f53a233f2f5a9a5e3e0d62ef7d5d095a7",
+      "after_lf_sha256": "1296e652c7ed9c1ad0425509468333309d5170acecdc5f01b5ced3b31b5a45fc",
+      "tokens_identical": true,
+      "original_comments_preserved": true
+    },
+    {
+      "path": "app_program/controller/control_debug.h",
+      "before_lf_sha256": "3600b7f3b9cd56fc7e68c163ffe6da603179ddf27b0e64287ef3d75f458c86d6",
+      "after_lf_sha256": "913f254df87b14885e7ac51b20eccd6b9f79bef5c3813fcd7764a04bc4460560",
+      "tokens_identical": true,
+      "original_comments_preserved": true
+    }
+  ],
+  "compiler_documentation_check": {
+    "status": "PASS",
+    "compiler": "libclang18.1.1",
+    "compile_database": "build/compliance-review-20261119/compile_commands.json",
+    "actual_source_context": "C:/Code/autonomous-robotic-car/app_program/controller/control_debug.c",
+    "flags": [
+      "-Wdocumentation",
+      "-Wdocumentation-unknown-command",
+      "-ferror-limit=8",
+      "-x",
+      "c"
+    ],
+    "function_definitions": 13,
+    "header_prototypes": 6,
+    "diagnostic_count": 0,
+    "all_parameters_named": true,
+    "doxygen_generator_executed": false,
+    "translation_units": [
+      {
+        "path": "app_program/controller/control_debug.c",
+        "diagnostics": [],
+        "functions": [
+          {
+            "name": "put",
+            "definition": true,
+            "line": 15,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "get",
+            "definition": true,
+            "line": 32,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "unsigned_fits",
+            "definition": true,
+            "line": 49,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "signed_fits",
+            "definition": true,
+            "line": 61,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_pack",
+            "definition": true,
+            "line": 77,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_unpack",
+            "definition": true,
+            "line": 128,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "debug_unsigned_domain",
+            "definition": true,
+            "line": 222,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "debug_signed_domain",
+            "definition": true,
+            "line": 257,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "debug_builder_write",
+            "definition": true,
+            "line": 279,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_builder_init",
+            "definition": true,
+            "line": 302,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_builder_u",
+            "definition": true,
+            "line": 322,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_builder_s",
+            "definition": true,
+            "line": 353,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_builder_end",
+            "definition": true,
+            "line": 385,
+            "comment_attached": true,
+            "parameters_documented": true
+          }
+        ]
+      },
+      {
+        "path": "app_program/controller/control_debug.h",
+        "diagnostics": [],
+        "functions": [
+          {
+            "name": "control_debug_builder_init",
+            "definition": false,
+            "line": 158,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_builder_u",
+            "definition": false,
+            "line": 170,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_builder_s",
+            "definition": false,
+            "line": 183,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_builder_end",
+            "definition": false,
+            "line": 195,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_pack",
+            "definition": false,
+            "line": 209,
+            "comment_attached": true,
+            "parameters_documented": true
+          },
+          {
+            "name": "control_debug_unpack",
+            "definition": false,
+            "line": 221,
+            "comment_attached": true,
+            "parameters_documented": true
+          }
+        ]
+      }
+    ]
+  }
+}

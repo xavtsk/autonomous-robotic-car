@@ -4,6 +4,14 @@
 #include "control_debug.h"
 #include <string.h>
 
+/** @brief OR validated low-order value bits into the packet body.
+ * @param p_p Writable packet of CONTROL_DEBUG_PACKET_SIZE bytes.
+ * @param p_bit Non-null body-bit cursor; cursor plus width is at most 551.
+ * @param width Number of bits, from 1 through 32.
+ * @param value Already validated or explicitly encoded unsigned value.
+ * @post advances the cursor by width. Existing one bits remain set.
+ * @note Private helper; the caller initializes storage and owns all access.
+ */
 static void put (uint8_t * p_p, unsigned * p_bit, unsigned width,
                  uint32_t value)
 {
@@ -14,6 +22,13 @@ static void put (uint8_t * p_p, unsigned * p_bit, unsigned width,
     }
 }
 
+/** @brief Read a little-bit-order field following the version byte.
+ * @param p_p Readable complete packet; this helper does not validate it.
+ * @param p_bit Non-null body-bit cursor; cursor plus width is at most 551.
+ * @param width Number of bits, from 1 through 32.
+ * @return The unsigned field value; advances p_bit by width.
+ * @note Private helper with caller-owned storage and no synchronization.
+ */
 static uint32_t get (const uint8_t * p_p, unsigned * p_bit, unsigned width)
 {
     uint32_t value_v = 0;
@@ -25,18 +40,40 @@ static uint32_t get (const uint8_t * p_p, unsigned * p_bit, unsigned width)
     return value_v;
 }
 
+/** @brief Test the unsigned schema range without overflowing at 32 bits.
+ * @param value Full-width public input, including invalid sentinels.
+ * @param width Schema width from 1 through 32 bits.
+ * @return True exactly when value is below two to the power width.
+ * @note Pure calculation; no caller output or shared state is changed.
+ */
 static bool unsigned_fits (uint32_t value, unsigned width)
 {
     /* The 64-bit limit can represent 2^32 for every schema width. */
     return (uint64_t)value < (UINT64_C(1) << width);
 }
 
+/** @brief Test the exact signed two's-complement schema interval.
+ * @param value Full-width signed public input, including invalid sentinels.
+ * @param width Schema width from 1 through 32 bits.
+ * @return True for minus two to power(width-1) through that power minus one.
+ * @note Uses unchanged int64_t intermediates; no state is changed.
+ */
 static bool signed_fits (int32_t value, unsigned width)
 {
     const int64_t limit = INT64_C(1) << (width - 1U);
     return ((int64_t)value >= -limit) && ((int64_t)value < limit);
 }
 
+/** @brief Encode a validated wide sample as the canonical 70-byte packet.
+ * @param p_sample Readable sample; null is rejected. Widths follow the schema.
+ * Clocks/gaps are microseconds, speeds mm/s, duty percent and encoders counts.
+ * Raw reflectance is 0..4095 ADC; normalized limits are 0..1000.
+ * @param p_packet Writable packet; null is rejected.
+ * @return True on success. False for nulls, any width/domain error, or valid
+ * motion marked unavailable; failure leaves the destination unchanged.
+ * @note Copies no floating/native structure layout. No locks or callbacks;
+ * the caller owns input/output access and supplies the already scaled units.
+ */
 bool control_debug_pack (const control_debug_sample_t * p_sample,
                          control_debug_packet_t * p_packet)
 {
@@ -79,6 +116,15 @@ bool control_debug_pack (const control_debug_sample_t * p_sample,
     return true;
 }
 
+/** @brief Decode and validate a canonical version-1 controller packet.
+ * @param p_packet Readable complete 70-byte packet; null is rejected.
+ * @param p_sample Writable wide result in the units documented by pack.
+ * @return True only when decoded values re-encode to every original byte,
+ * including zero padding. Nulls/bad version leave p_sample unchanged; with
+ * version 1, fields are written before later semantic/canonical rejection.
+ * @note Use the result only on true. No locks, callbacks or shared mutation;
+ * the caller serializes access to its buffers.
+ */
 bool control_debug_unpack (const control_debug_packet_t * p_packet,
                            control_debug_sample_t * p_sample)
 {
@@ -166,6 +212,13 @@ static const control_debug_field_info_t g_debug_fields[CD_FIELD_COUNT] = {
 };
 
 /** Apply the same additional domains as the wide public pack interface. */
+/** @brief Check unsigned semantic limits beyond the encoded field width.
+ * @param field Schema selector already checked by the public setter.
+ * @param value Full-width unsigned input; no narrowing has occurred.
+ * @return True for the field's existing domain. Other selectors return true
+ * here and rely on the caller's separate selector and width validation.
+ * @note Pure helper; no output, builder state or shared state changes.
+ */
 static bool debug_unsigned_domain (control_debug_field_t field, uint32_t value)
 {
     switch (field)
@@ -195,6 +248,12 @@ static bool debug_unsigned_domain (control_debug_field_t field, uint32_t value)
 }
 
 /** Apply the same signed semantic limits as the wide public pack interface. */
+/** @brief Check signed semantic limits beyond the encoded field width.
+ * @param field Schema selector already checked by the public setter.
+ * @param value Full-width input; line error and duty must be -100..100.
+ * @return True for the semantic domain; other fields rely on width checks.
+ * @note Pure helper; invalid selectors must be rejected by its caller first.
+ */
 static bool debug_signed_domain (control_debug_field_t field, int32_t value)
 {
     switch (field)
@@ -209,6 +268,14 @@ static bool debug_signed_domain (control_debug_field_t field, int32_t value)
 }
 
 /** Replace a field, including clearing a previously populated zero value. */
+/** @brief Replace exactly one validated field in the caller's packet.
+ * @param p_builder Non-null, caller-owned initialized builder.
+ * @param field Valid schema selector in 0..CD_FIELD_COUNT-1.
+ * @param value Valid unsigned bits or explicitly encoded signed low bits.
+ * @post changes only the selected bits and preserves other fields.
+ * @note Unlike put, writing zero clears previous bits. Does not inspect or
+ * restore the validity latch; public setters perform domain validation.
+ */
 static void debug_builder_write (control_debug_builder_t * p_builder,
                                  control_debug_field_t field, uint32_t value)
 {
@@ -227,6 +294,11 @@ static void debug_builder_write (control_debug_builder_t * p_builder,
     }
 }
 
+/** @brief Reset caller-owned scratch to a valid version-1 zero sample.
+ * @param p_builder Writable builder or null; null is a no-op.
+ * @post clears all prior packet bits and the previous error latch.
+ * @note No locks or callbacks. The caller exclusively owns the scratch object.
+ */
 void control_debug_builder_init (control_debug_builder_t * p_builder)
 {
     if (NULL != p_builder)
@@ -237,6 +309,16 @@ void control_debug_builder_init (control_debug_builder_t * p_builder)
     }
 }
 
+/** @brief Validate and encode an unsigned wide public field value.
+ * @param p_builder Initialized caller-owned builder; null is a no-op.
+ * @param field Unsigned schema selector; negative/out-of-range or signed
+ * selectors latch failure without writing packet bits.
+ * @param value Full uint32_t input in schema units; width/domain failures
+ * latch failure without narrowing or changing the selected packet bits.
+ * @post Later valid writes still update fields after an error,
+ * but they cannot clear the failure latch; init is required to clear it.
+ * @note Caller serializes builder access. No publication or motor effect.
+ */
 void control_debug_builder_u (control_debug_builder_t * p_builder,
                               control_debug_field_t field, uint32_t value)
 {
@@ -258,6 +340,16 @@ void control_debug_builder_u (control_debug_builder_t * p_builder,
     }
 }
 
+/** @brief Validate and encode a signed wide public field value.
+ * @param p_builder Initialized caller-owned builder; null is a no-op.
+ * @param field Signed schema selector; negative/out-of-range or unsigned
+ * selectors latch failure without writing packet bits.
+ * @param value Full int32_t input in schema units; no prevalidation clipping.
+ * Valid values retain the public packer's low-bit two's-complement encoding.
+ * @post Rejection latches failure; later valid writes cannot
+ * clear that latch, although they still replace their selected field bits.
+ * @note Caller serializes builder access. No locks, callbacks or publication.
+ */
 void control_debug_builder_s (control_debug_builder_t * p_builder,
                               control_debug_field_t field, int32_t value)
 {
@@ -281,6 +373,15 @@ void control_debug_builder_s (control_debug_builder_t * p_builder,
     }
 }
 
+/** @brief Copy a valid builder packet to caller-owned output storage.
+ * @param p_builder Readable initialized builder, or null for rejection.
+ * @param p_packet Writable output packet, or null for rejection.
+ * @return True after the full packet copy. False leaves output unchanged
+ * for nulls, a latched field error, or motion valid while unavailable.
+ * @note Does not change the builder. The motion-availability relationship
+ * failure is not latched, so changing that field can permit a later end.
+ * The caller owns synchronization; this function itself publishes nothing.
+ */
 bool control_debug_builder_end (const control_debug_builder_t * p_builder,
                                 control_debug_packet_t * p_packet)
 {
