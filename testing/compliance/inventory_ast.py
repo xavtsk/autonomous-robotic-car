@@ -46,7 +46,10 @@ def clean_arguments(arguments, directory):
         if arg in paired:
             index += 2
             continue
-        if arg in {"-c", "-MMD", "-MD", "-MP", "-pthread"} or re.match(r"^-Wl,|^-l|^-L", arg):
+        if any(arg.startswith(flag) and len(arg) > len(flag) for flag in ("-MF", "-MT", "-MQ", "-o")):
+            index += 1
+            continue
+        if arg in {"-c", "-MMD", "-MD", "-MP"} or re.match(r"^-Wl,|^-l|^-L", arg):
             index += 1
             continue
         if arg in path_flags and index + 1 < len(arguments):
@@ -65,10 +68,15 @@ def clean_arguments(arguments, directory):
     return output
 
 
-def compiler_include_arguments(compiler):
+def compiler_include_arguments(compiler, resource_directory=None):
     """Recover Arm GCC implicit C headers without running a target program."""
     executable = Path(shutil.which(compiler) or compiler)
-    result = []
+    # Explicit matching Clang builtins must precede GCC's private headers:
+    # freestanding GCC stdint-gcc.h requires __UINT64_C-style GCC builtins
+    # which libclang does not implement. Keep the target's newlib headers.
+    result = (["-resource-dir", str(resource_directory), "-isystem",
+               str(Path(resource_directory) / "include")]
+              if resource_directory is not None else [])
     if "arm-none-eabi" in executable.name:
         prefix = executable.resolve().parent.parent
         result.append("--target=arm-none-eabi")
@@ -85,7 +93,7 @@ def compiler_include_arguments(compiler):
         for path in candidates:
             if path.is_dir():
                 result += ["-isystem", str(path)]
-    clang = shutil.which("clang")
+    clang = None if resource_directory is not None else shutil.which("clang")
     if clang:
         resource = subprocess.run([clang, "-print-resource-dir"], capture_output=True,
                                   text=True, check=True).stdout.strip()
