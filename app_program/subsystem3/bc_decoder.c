@@ -1732,6 +1732,133 @@ static void work_prune_copy (s3_barcode_record_t * p_r)
     return;
 }
 
+/** @brief Check extrema count and prominence, then initialize edge traversal.
+ * @param p_r Nonnull caller-owned record with the current workspace state.
+ * @pre The caller owns the record exclusively and has charged one work unit.
+ * @post Mutates the same workspace fields as one original phase dispatch;
+ * no allocation, locking or complete-frame rescan is introduced.
+ */
+static void work_edges_begin (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    if (p_w->n != S3_BARCODE_RUNS + 2U)
+    {
+        work_bad_path(p_r);
+        return;
+    }
+    p_w->strong = !p_w->faint;
+    for (unsigned int value_i = 1U; value_i + 1U < p_w->n; value_i += 2U)
+    {
+        const unsigned int value_p = REC_DARK(p_r, p_w->ext[value_i]);
+        const unsigned int value_a = REC_DARK(p_r, p_w->ext[value_i - 1U]),
+                           value_b = REC_DARK(p_r, p_w->ext[value_i + 1U]);
+        if (value_p < value_a + S3_QUIET_STRONG_PROMINENCE ||
+            value_p < value_b + S3_QUIET_STRONG_PROMINENCE)
+        {
+            p_w->strong = false;
+        }
+    }
+    p_w->segment = 0U;
+    p_w->edges = 0U;
+    p_w->edge_previous_us = 0U;
+    p_w->phase = RW_EDGE_BEGIN;
+    return;
+}
+
+/** @brief Initialize one edge segment or advance to direct decoding.
+ * @param p_r Nonnull caller-owned record with the current workspace state.
+ * @pre The caller owns the record exclusively and has charged one work unit.
+ * @post Mutates the same workspace fields as one original phase dispatch;
+ * no allocation, locking or complete-frame rescan is introduced.
+ */
+static void work_edge_begin (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    if (p_w->segment + 1U >= p_w->n)
+    {
+        p_w->last_us = p_w->edge_previous_us;
+        p_w->phase = RW_DIRECT;
+        return;
+    }
+    if (p_w->ext[p_w->segment + 1U] <= p_w->ext[p_w->segment])
+    {
+        work_bad_path(p_r);
+        return;
+    }
+    p_w->edge_cursor = p_w->ext[p_w->segment] + 1U;
+    p_w->segment_us = p_w->ext_us[p_w->segment];
+    p_w->integral_us = 0U;
+    p_w->crossed = false;
+    p_w->phase = RW_EDGE_SCAN;
+    return;
+}
+
+/** @brief Accumulate one sample interval and update a completed edge segment.
+ * @param p_r Nonnull caller-owned record with the current workspace state.
+ * @pre The caller owns the record exclusively and has charged one work unit.
+ * @post Mutates the same workspace fields as one original phase dispatch;
+ * no allocation, locking or complete-frame rescan is introduced.
+ */
+static void work_edge_scan (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    {
+        const unsigned int value_i = p_w->edge_cursor, value_k = p_w->segment;
+        const unsigned int value_lo = REC_DARK(p_r, p_w->ext[value_k]),
+                           value_hi = REC_DARK(p_r, p_w->ext[value_k + 1U]);
+        const unsigned int value_a = REC_DARK(p_r, value_i - 1U),
+                           value_b = REC_DARK(p_r, value_i),
+                           mid = (value_lo + value_hi) / 2U;
+        const uint32_t step = REC_STEP_US(p_r, value_i);
+        const bool value_up = value_hi > value_lo,
+                   core = p_w->faint &&
+                          (value_up ? value_hi : value_lo) - p_r->paper <=
+                              S3_REC_RISE;
+        const bool crossed = value_up ? (core ? value_a <= mid && value_b > mid
+                                              : value_a < mid && value_b >= mid)
+                                      : value_a > mid && value_b <= mid;
+        p_w->integral_us += (step * (rec_frac(value_a, value_lo, value_hi) +
+                                     rec_frac(value_b, value_lo, value_hi))) /
+                            2048U;
+        if (crossed)
+        {
+            const uint32_t edge =
+                p_w->segment_us +
+                step * (uint32_t)(value_up ? mid - value_a : value_a - mid) /
+                    (uint32_t)(value_up ? value_b - value_a
+                                        : value_a - value_b);
+            if (!p_w->crossed || (core ? value_up : !value_up))
+            {
+                p_w->edge_us = edge;
+            }
+            p_w->crossed = true;
+        }
+        p_w->segment_us += step;
+        p_w->edge_cursor++;
+        if (value_i == p_w->ext[value_k + 1U])
+        {
+            if (!p_w->crossed)
+            {
+                p_w->edge_us = p_w->ext_us[value_k] + p_w->integral_us;
+            }
+            if (!p_w->edges)
+            {
+                p_w->first_us = p_w->edge_us;
+            }
+            else
+            {
+                p_w->runs[p_w->edges - 1U] =
+                    p_w->edge_us - p_w->edge_previous_us;
+            }
+            p_w->edge_previous_us = p_w->edge_us;
+            p_w->edges++;
+            p_w->segment++;
+            p_w->phase = RW_EDGE_BEGIN;
+        }
+        return;
+    }
+}
+
 /* Each call performs bounded sample/pruning work and at most 32 fit ticks.
  * No complete-frame extraction or grid search runs synchronously here. */
 static void work_advance (s3_barcode_record_t * p_r,
@@ -1769,109 +1896,14 @@ static void work_advance (s3_barcode_record_t * p_r,
             work_prune_copy(p_r);
             break;
         case RW_EDGES_BEGIN:
-            if (p_w->n != S3_BARCODE_RUNS + 2U)
-            {
-                work_bad_path(p_r);
-                break;
-            }
-            p_w->strong = !p_w->faint;
-            for (unsigned int value_i = 1U; value_i + 1U < p_w->n;
-                 value_i += 2U)
-            {
-                const unsigned int value_p = REC_DARK(p_r, p_w->ext[value_i]);
-                const unsigned int value_a =
-                                       REC_DARK(p_r, p_w->ext[value_i - 1U]),
-                                   value_b =
-                                       REC_DARK(p_r, p_w->ext[value_i + 1U]);
-                if (value_p < value_a + S3_QUIET_STRONG_PROMINENCE ||
-                    value_p < value_b + S3_QUIET_STRONG_PROMINENCE)
-                {
-                    p_w->strong = false;
-                }
-            }
-            p_w->segment = 0U;
-            p_w->edges = 0U;
-            p_w->edge_previous_us = 0U;
-            p_w->phase = RW_EDGE_BEGIN;
+            work_edges_begin(p_r);
             break;
         case RW_EDGE_BEGIN:
-            if (p_w->segment + 1U >= p_w->n)
-            {
-                p_w->last_us = p_w->edge_previous_us;
-                p_w->phase = RW_DIRECT;
-                break;
-            }
-            if (p_w->ext[p_w->segment + 1U] <= p_w->ext[p_w->segment])
-            {
-                work_bad_path(p_r);
-                break;
-            }
-            p_w->edge_cursor = p_w->ext[p_w->segment] + 1U;
-            p_w->segment_us = p_w->ext_us[p_w->segment];
-            p_w->integral_us = 0U;
-            p_w->crossed = false;
-            p_w->phase = RW_EDGE_SCAN;
+            work_edge_begin(p_r);
             break;
         case RW_EDGE_SCAN:
-        {
-            const unsigned int value_i = p_w->edge_cursor,
-                               value_k = p_w->segment;
-            const unsigned int value_lo = REC_DARK(p_r, p_w->ext[value_k]),
-                               value_hi = REC_DARK(p_r, p_w->ext[value_k + 1U]);
-            const unsigned int value_a = REC_DARK(p_r, value_i - 1U),
-                               value_b = REC_DARK(p_r, value_i),
-                               mid = (value_lo + value_hi) / 2U;
-            const uint32_t step = REC_STEP_US(p_r, value_i);
-            const bool value_up = value_hi > value_lo,
-                       core = p_w->faint &&
-                              (value_up ? value_hi : value_lo) - p_r->paper <=
-                                  S3_REC_RISE;
-            const bool crossed = value_up
-                                     ? (core ? value_a <= mid && value_b > mid
-                                             : value_a < mid && value_b >= mid)
-                                     : value_a > mid && value_b <= mid;
-            p_w->integral_us +=
-                (step * (rec_frac(value_a, value_lo, value_hi) +
-                         rec_frac(value_b, value_lo, value_hi))) /
-                2048U;
-            if (crossed)
-            {
-                const uint32_t edge =
-                    p_w->segment_us +
-                    step *
-                        (uint32_t)(value_up ? mid - value_a : value_a - mid) /
-                        (uint32_t)(value_up ? value_b - value_a
-                                            : value_a - value_b);
-                if (!p_w->crossed || (core ? value_up : !value_up))
-                {
-                    p_w->edge_us = edge;
-                }
-                p_w->crossed = true;
-            }
-            p_w->segment_us += step;
-            p_w->edge_cursor++;
-            if (value_i == p_w->ext[value_k + 1U])
-            {
-                if (!p_w->crossed)
-                {
-                    p_w->edge_us = p_w->ext_us[value_k] + p_w->integral_us;
-                }
-                if (!p_w->edges)
-                {
-                    p_w->first_us = p_w->edge_us;
-                }
-                else
-                {
-                    p_w->runs[p_w->edges - 1U] =
-                        p_w->edge_us - p_w->edge_previous_us;
-                }
-                p_w->edge_previous_us = p_w->edge_us;
-                p_w->edges++;
-                p_w->segment++;
-                p_w->phase = RW_EDGE_BEGIN;
-            }
+            work_edge_scan(p_r);
             break;
-        }
         case RW_DIRECT:
         {
             s3_barcode_result_t candidate;
@@ -2340,3 +2372,4 @@ s3_barcode_record_update (s3_barcode_record_t * p_r,
 }
 
 /* End of file. */
+

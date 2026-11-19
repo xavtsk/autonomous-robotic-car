@@ -1,0 +1,48 @@
+{
+  "source": "app_program/subsystem3/bc_decoder.c",
+  "before_revision": "b4ad5d09a9953cfd308bf4e2d19cd9ffcd4d0c60",
+  "before_lf_sha256": "13cf1584e8f2fb53d92bac8af760ae504eb6ac35178871aeb15e1be173c03c3f",
+  "candidate_lf_sha256": "59b1abc96b589646a373f82723aa5350e5b40b28b0bfda6e711c26c8cbad0b95",
+  "helpers": [
+    {
+      "phase": "RW_EDGES_BEGIN",
+      "helper": "work_edges_begin",
+      "switch_exit_count": 2
+    },
+    {
+      "phase": "RW_EDGE_BEGIN",
+      "helper": "work_edge_begin",
+      "switch_exit_count": 3
+    },
+    {
+      "phase": "RW_EDGE_SCAN",
+      "helper": "work_edge_scan",
+      "switch_exit_count": 1
+    }
+  ],
+  "inverse_token_equal": true,
+  "before_token_count": 12766,
+  "status": "Bounded source inversion and unchanged emitted symbol sizes/stack verified. Allocated instructions or relocations differ; Linux semantic/replay and full target-profile gates pending.",
+  "unmodified": [
+    "work-unit and fit-tick budgets",
+    "state and arithmetic types",
+    "thresholds and sample periods",
+    "all remaining phase bodies",
+    "caller-owned workspace and lock boundaries"
+  ],
+  "limits": [
+    "Source inversion does not prove identical machine instructions, stack or physical timing."
+  ],
+  "compile_validation": {
+    "host": "Shared complete-scratch fixture compiles/links with strict C99; not executed on Windows.",
+    "target": "Arm GNU14.3.1; identical production flags and headers; emitted symbol sizes and every function stack row unchanged.",
+    "allocated_sections_identical": false,
+    "allocated_relocations_identical": false,
+    "artifacts": "build/barcode-edge-extraction/{before,candidate}/{command.json,compile.log,bc_decoder.o,bc_decoder.su,defined-symbols.txt,disassembly.txt,host-command.json,host-compile.log}; object-equivalence.json and target-compile-comparison.json",
+    "initial_measurement_error": "Undefined nm rows rejected by parser; corrected --defined-only invocation retained alongside initial error record.",
+    "differing_sections": [
+      ".rodata.s3_barcode_record_update",
+      ".text.s3_barcode_record_update"
+    ]
+  }
+}
