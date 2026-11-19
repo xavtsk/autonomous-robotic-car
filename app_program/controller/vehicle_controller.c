@@ -32,6 +32,11 @@ static struct {
 } pose;
 static BUDDY1_ROBOT_STATE last_state;
 static BUDDY1_BARCODE_ACTION last_action;
+/* Events (barcode, state, obstacle summary, scan profile, fault changes) are
+ * retried every cycle while Buddy 1's 4-slot outbox is full (E_TMOUT), so a
+ * busy link delays them instead of dropping them. Periodic live samples
+ * (motion, pose, terrain, avoidance) stay best effort: the next one follows. */
+static UB pending_barcode;   /* letter still to be queued, 0 = none */
 static unsigned last_faults;
 static bool faults_seen;
 #if APP_S5
@@ -43,6 +48,19 @@ static struct {
     unsigned profile_sent:1;
     unsigned divider:6;          /* car/telemetry/avoidance every 200 ms */
 } obstacle_report;
+/* Raw readings of the scan whose profile was just sent, at most one message
+ * every SAMPLE_PERIOD cycles (car/telemetry/scan_sample), and only while the
+ * 4-slot outbox is empty: spare capacity only, so barcode/state/fault events
+ * and command replies never find it full because of these readings. */
+#define SAMPLE_PERIOD (40U / S3_SAMPLE_PERIOD_MS) /* 40 ms */
+#if SAMPLE_PERIOD == 0U || SAMPLE_PERIOD > 15U
+#error "scan-sample pacing must fit its four-bit divider"
+#endif
+static struct {
+    s5_sample_t sample[S5_SAMPLES_MAX];
+    uint16_t id;
+    unsigned count:5, next:5, peek:1, pending:1, loaded:1, divider:4;
+} scan_samples;
 /* Everything Buddy 5 knows, for the laptop: live range, servo angle and
  * bypass progress at 5 Hz (phase-shifted from the other 200 ms reports so the
  * four-message outbox is not filled in one cycle), and the full FR6 profile
@@ -83,9 +101,40 @@ static void obstacle_profile_report(const s5_observation_t *o)
     }
     er = buddy1_report_scan(&q);
     if (er == E_PAR && q.valid) { q = (BUDDY1_SCAN){0}; q.scan_id = (uint8_t)(o->scan_id & 0xFFU); er = buddy1_report_scan(&q); }
-    if (er == E_OK || er == E_TMOUT || er == E_PAR) {
+    if (er == E_OK || er == E_PAR) {        /* E_TMOUT: outbox full, retry next cycle */
         obstacle_report.profile_scan = o->scan_id; obstacle_report.profile_sent = 1U;
+        scan_samples.id = o->scan_id; scan_samples.pending = 1U; scan_samples.loaded = 0U;
+        scan_samples.divider = 0U;
     }
+}
+static void obstacle_samples_report(void)
+{
+    BUDDY1_SCAN_SAMPLE q = {0};
+    unsigned angle, mm, count;
+    bool valid, peek;
+    uint16_t id;
+    ER er;
+    if (!scan_samples.pending || ++scan_samples.divider < SAMPLE_PERIOD) return;
+    scan_samples.divider = 0U;
+    if (!scan_samples.loaded) {
+        if (!subsystem5_scan_samples(&id, &peek, scan_samples.sample, &count)) return; /* busy: retry */
+        if (id != scan_samples.id || count == 0U || count > BUDDY1_SCAN_SAMPLES_MAX) {
+            scan_samples.pending = 0U; return;   /* no readings kept for this scan */
+        }
+        scan_samples.count = count; scan_samples.next = 0U;
+        scan_samples.peek = peek ? 1U : 0U; scan_samples.loaded = 1U;
+    }
+    if (!buddy1_outbox_idle()) return;          /* busy link: same reading later */
+    if (!s5_sample_unpack(&scan_samples.sample[scan_samples.next], &angle, &mm, &valid)) {
+        er = E_PAR;
+    } else {
+        q.scan_id = (uint8_t)(scan_samples.id & 0xFFU); q.peek = (uint8_t)scan_samples.peek;
+        q.index = (uint8_t)scan_samples.next; q.count = (uint8_t)scan_samples.count;
+        q.angle_deg = (uint8_t)angle; q.valid = valid ? 1U : 0U; q.distance_mm = valid ? (uint16_t)mm : 0U;
+        er = buddy1_report_scan_sample(&q);
+    }
+    if (er == E_TMOUT) return;               /* outbox full: same reading next time */
+    if (++scan_samples.next >= scan_samples.count) scan_samples.pending = 0U;
 }
 #endif
 /* True only between a prepare_start() that newly froze the Buddy 1 map and
@@ -206,12 +255,14 @@ ER vehicle_controller_init(void)
     pose.running = false; pose.divider = 0U;
     telemetry.seen = false; last_state = BUDDY1_STATE_UNKNOWN;
     last_action = BUDDY1_ACTION_UNKNOWN; last_faults = 0U; faults_seen = false;
+    pending_barcode = 0U;
     start_claimed_map = false;
 #if APP_S5
     obstacle_report.scan=0; obstacle_report.route=0;
     obstacle_report.echo=-1; obstacle_report.invalidated=false;
     obstacle_report.profile_scan=0U; obstacle_report.profile_sent=0U;
     obstacle_report.divider=S5_LIVE_PERIOD/4U;
+    scan_samples.pending=0U; scan_samples.loaded=0U;
 #endif
     return E_OK;
 }
@@ -304,8 +355,9 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
     terrain_control_report();
     if (status->navigation.events & S3_EVENT_BARCODE) {
         last_action=action_for(status->navigation.action);
-        (void)buddy1_report_barcode((UB)status->navigation.barcode.letter);
+        pending_barcode=(UB)status->navigation.barcode.letter;
     }
+    if (pending_barcode && buddy1_report_barcode(pending_barcode)!=E_TMOUT) pending_barcode=0U;
     /* One coherent read for faults, route and speed. Do not reacquire Buddy 2's
      * mutex or repeat encoder/heading arithmetic for each telemetry consumer. */
     motion_available=motion_get_status(&motion);
@@ -319,7 +371,7 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
         (status->navigation.latched_faults & S3_FAULT_SENSOR)) active|=BUDDY1_FAULT_IR;
     if (!faults_seen || active!=last_faults) {
         ER error=buddy1_update_faults((UB)changed,(UB)(active & changed));
-        if (error==E_OK || error==E_TMOUT) { last_faults=active; faults_seen=true; }
+        if (error==E_OK) { last_faults=active; faults_seen=true; }
     }
     state=wire_state(status->state);
     pose_report(status, &motion, motion_available);
@@ -335,15 +387,16 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
         obstacle_live_report(&obstacle, have_obstacle, control);
         if (have_obstacle) {
             obstacle_profile_report(&obstacle);
+            obstacle_samples_report();
             if (obstacle_report.echo!=(int)obstacle.no_echo) {
                 ER er=buddy1_update_faults(BUDDY1_FAULT_NO_ECHO,obstacle.no_echo?BUDDY1_FAULT_NO_ECHO:0U);
-                if(er==E_OK || er==E_TMOUT) { obstacle_report.echo=(int)obstacle.no_echo; }
+                if(er==E_OK) { obstacle_report.echo=(int)obstacle.no_echo; }
             }
             if (obstacle.scan_done && obstacle.profile.valid &&
                 (obstacle_report.scan!=obstacle.scan_id || obstacle_report.route!=route)) {
                 ER er=buddy1_report_obstacle(obstacle.profile.closest_mm,obstacle.profile.width_mm,
                     (BUDDY1_OBSTACLE_ROUTE)route);
-                if(er==E_OK || er==E_TMOUT) {
+                if(er==E_OK || er==E_PAR) {
                     obstacle_report.scan=obstacle.scan_id;obstacle_report.route=route;
                     obstacle_report.invalidated=false;
                 }
@@ -355,7 +408,7 @@ void vehicle_controller_observe(const s3_integration_status_t *status)
 #endif
     if (state!=last_state) {
         ER error=buddy1_report_robot_state(state);
-        if (error==E_OK || error==E_TMOUT) last_state=state;
+        if (error==E_OK) last_state=state;
     }
     motion_report(status, &motion, motion_available);
     if (status->state==S3_DRIVE_OFF) last_action=BUDDY1_ACTION_UNKNOWN;

@@ -85,6 +85,42 @@
     if (!section('terrain')?.valid) return null;
     return field('terrain', 'peak_valid') ? String(field('terrain', 'peak_mm')) : 'No hump yet this run';
   }
+  // Buddy 4 compass turn rate and safety trip (terrain packets since 19 Nov 2026).
+  function turnText() {
+    if (!section('terrain')?.valid) return '—';
+    if (field('terrain', 'safety') === null) return 'Not sent by this firmware';
+    return field('terrain', 'turn_valid') ? `${field('terrain', 'turn_dps')} °/s` : 'Unavailable (compass not calibrated)';
+  }
+  function safetyText() {
+    if (!section('terrain')?.valid) return '—';
+    const value = field('terrain', 'safety');
+    return value === null ? 'Not sent by this firmware' : value === 'none' ? 'No' : titleCase(value);
+  }
+  // Buddy 2 wheel-encoder pose (car/telemetry/pose), kept by the route tracker,
+  // not a section: the live run, else the last one.
+  function routeRun() {
+    const runs = state?.route?.runs || [];
+    return runs.find(run => run.active) || runs[runs.length - 1] || null;
+  }
+  function routeDistance() {
+    const run = routeRun();
+    return run?.point_count ? `${run.path_m.toFixed(2)} m driven · ${run.distance_m.toFixed(2)} m net` : null;
+  }
+  function routeHeading() {
+    const run = routeRun();
+    return run?.point_count && run.heading_deg !== null ? `${run.heading_deg}` : null;
+  }
+  function snapshotPoseText() {
+    const pose = state?.snapshot_pose;
+    if (!pose) return '—';
+    return pose.valid ? `${(pose.distance_cm_mod / 100).toFixed(2)} m / ${pose.heading_deg} °` : 'No drive since power-up';
+  }
+  function routeSource() {
+    const run = routeRun();
+    if (!run?.point_count) return 'Not received';
+    if (transportError) return 'Service offline';
+    return run.active ? 'Live run' : 'Last run';
+  }
   // Buddy 5: an unusable value is a state ("No echo", "No profile"), never 0.
   function avoidField(key, unit, missing) {
     if (!section('avoidance')?.valid) return '—';
@@ -97,15 +133,33 @@
   }
   /* Buddy 5 bypass legs (obstacle_avoidance.c, 17 Nov 2026). */
   const BYPASS_LEGS = ['turn out 45', 'out diagonal', 'turn parallel', 'passing', 'turn back in',
-    'return diagonal', 'swerve 1 (finding line)', 'swerve 2 (finding line)', 'swerve back'];
+    'return diagonal', 'swerve 1 (finding line)', 'swerve 2 (finding line)', 'swerve back',
+    'reversing first (too close to turn)', 'turning to face the obstacle (then scans again)'];
   function bypassStep() {
     if (!section('avoidance')?.valid) return '—';
     const state = field('avoidance', 'state');
-    if (!['moving', 'finishing'].includes(state)) return '—';
     const leg = field('avoidance', 'leg');
+    if (!['moving', 'finishing'].includes(state) && !(state === 'scanning' && leg === 10)) return '—';
     const name = state === 'finishing' ? 'on the line, handing back' : (BYPASS_LEGS[leg] || '');
+    if (leg >= 9 && state !== 'finishing') {   // telemetry-only steps around leg 0
+      const route = field('avoidance', 'route');
+      return `${name[0].toUpperCase()}${name.slice(1)}${route && route !== 'unknown' ? `, ${route} side` : ''}`;
+    }
     const pass = leg === 3 && state === 'moving' ? `, ${String(field('avoidance', 'pass_step')).replaceAll('_', ' ')}` : '';
     return `Leg ${leg} ${name}${pass}, ${field('avoidance', 'route')} side${field('avoidance', 'swapped') ? ' (switched)' : ''}`;
+  }
+  // Raw Buddy 5 readings of the latest scan / side peek (car/telemetry/scan_sample).
+  function scanSamplesText() {
+    const view = state?.scan_samples;
+    if (!view) return 'Not received (firmware before 19 Nov 2026 or no scan yet)';
+    const list = view.samples.map(s => `${s.angle_deg}°: ${s.valid ? `${s.distance_mm} mm` : 'no reading'}`).join(' · ');
+    const missing = view.received < view.count ? ` (${view.count - view.received} not received)` : '';
+    return `${view.peek ? 'Side peek' : 'Scan'} #${view.scan_id}, ${view.received}/${view.count}${missing} — ${list}`;
+  }
+  function scanSamplesSource() {
+    const view = state?.scan_samples;
+    if (!view) return 'Not received';
+    return transportError ? 'Service offline' : age(view.age_s);
   }
   function scanField(key, unit, missing = 'No profile') {
     if (!section('scan')?.valid) return '—';
@@ -277,8 +331,10 @@
       ['Assigned action', field('barcode', 'action') === null ? null : titleCase(field('barcode', 'action')), '', 'barcode'],
       ['Faults', faultText(), '', 'faults']
     ];
-    if (section('heading')?.received_at) rows.push(['Heading', field('heading', 'heading_deg'), '°', 'heading']);
+    if (routeRun()?.point_count) rows.push(['Distance since START', routeDistance(), '', 'route'], ['Heading since START (wheels)', routeHeading(), '°', 'route']);
+    if (section('heading')?.received_at) rows.push(['Compass heading (Buddy 4)', field('heading', 'heading_deg'), '°', 'heading']);
     if (section('terrain')?.received_at) rows.push(['Pitch (+ nose up)', tiltAngle('pitch_deg'), field('terrain', 'pitch_deg') === null ? '' : '°', 'terrain'], ['Roll (+ right side up)', tiltAngle('roll_deg'), field('terrain', 'roll_deg') === null ? '' : '°', 'terrain'], ['Terrain', field('terrain', 'state') === null ? null : titleCase(field('terrain', 'state')), '', 'terrain'], ['Climb on current hump', climbText(), field('terrain', 'on_hump') ? 'mm' : '', 'terrain'], ['Highest hump this run', peakText(), field('terrain', 'peak_valid') ? 'mm' : '', 'terrain']);
+    if (section('terrain')?.received_at && ['lifted', 'overturned'].includes(field('terrain', 'safety'))) rows.push(['Car lifted / overturned', titleCase(field('terrain', 'safety')), '', 'terrain']);
     if (section('hump')?.received_at) rows.push(['Humps reported', field('hump', 'count'), '', 'hump'], ['Reported hump height', field('hump', 'height_mm'), 'mm', 'hump']);
     if (section('avoidance')?.received_at) rows.push(['Front range', field('avoidance', 'range_mm') ?? (field('avoidance', 'no_echo') ? 'No echo' : 'Unavailable'), field('avoidance', 'range_mm') === null ? '' : 'mm', 'avoidance'], ['Obstacle avoidance', titleCase(String(field('avoidance', 'state') ?? '').replaceAll('_', ' ')), '', 'avoidance']);
     if (section('obstacle')?.received_at) rows.push(['Obstacle distance', field('obstacle', 'distance_mm'), 'mm', 'obstacle'], ['Obstacle width', field('obstacle', 'width_mm'), 'mm', 'obstacle'], ['Selected route', readable(field('obstacle', 'route')), '', 'obstacle']);
@@ -286,10 +342,10 @@
     const body = document.createDocumentFragment();
     for (const [label, value, unit, source] of rows) {
       const tr = element('tr');
-      const item = section(source);
+      const item = source === 'route' ? null : section(source);
       if (item?.received_at && (item.stale || transportError)) tr.className = 'stale';
       if (source === 'faults' && Array.isArray(field('faults', 'active')) && field('faults', 'active').length) tr.classList.add('has-fault');
-      tr.append(element('td', label), element('td', shown(value)), element('td', unit), element('td', received(item)));
+      tr.append(element('td', label), element('td', shown(value)), element('td', unit), element('td', source === 'route' ? routeSource() : received(item)));
       body.append(tr);
     }
     $('readings-body').replaceChildren(body);
@@ -438,6 +494,9 @@
         rows: [
           ['Left reported speed', valueUnit('motion', 'left_mms', 'mm/s'), source('motion'), 'motion'],
           ['Right reported speed', valueUnit('motion', 'right_mms', 'mm/s'), source('motion'), 'motion'],
+          ['Distance since START (encoders)', routeDistance() ?? '—', routeSource(), 'route'],
+          ['Heading since START (encoders)', routeHeading() === null ? '—' : `${routeHeading()} °`, routeSource(), 'route'],
+          ['At last snapshot reply (distance / heading)', snapshotPoseText(), state?.snapshot_pose?.received_at ? 'Snapshot reply' : 'No snapshot yet', null],
           ['Left / right PID setpoint', cd?.motion_valid ? `${cd.setpoint_left} / ${cd.setpoint_right} mm/s` : '—', cdAge,'controller'],
           ['Left / right motor duty', cd?.motion_valid ? `${cd.duty_left} / ${cd.duty_right} %` : '—', cdAge,'controller'],
           ['Left / right encoder counts', cd?.motion_valid ? `${cd.encoder_left} / ${cd.encoder_right}` : '—', cdAge,'controller'],
@@ -468,18 +527,20 @@
         unavailable: 'The updated diagnostic firmware adds line position, pending action, controller reason, calibration and event counts at up to 5 Hz. A sampled candidate is not a junction event; use the cumulative count. Both front sensors may read white when the line runs between them. These observations cannot prove original-line identity after avoidance. Use Sensors for 20 Hz IR curves and Runs for high-rate recorded barcode evidence.'
       },
       '4': {
-        title: 'Buddy 4 · IMU / terrain', description: 'Live pitch/roll, terrain state (incl. impact), climb height and this run’s highest hump (5 Hz), completed-hump count and the IMU fault bit, published by firmware built with S4=1.',
+        title: 'Buddy 4 · IMU / terrain', description: 'Live pitch/roll, terrain state (incl. impact), climb height, this run’s highest hump, compass turn rate and lifted/overturned (5 Hz), completed-hump count and the IMU fault bit, published by firmware built with S4=1.',
         rows: [
           ['Pitch (+ nose up)', tiltAngle('pitch_deg') === null ? '—' : `${tiltAngle('pitch_deg')}${field('terrain','pitch_deg') === null ? '' : ' °'}`, source('terrain'), 'terrain'],
           ['Roll (+ right side up)', tiltAngle('roll_deg') === null ? '—' : `${tiltAngle('roll_deg')}${field('terrain','roll_deg') === null ? '' : ' °'}`, source('terrain'), 'terrain'],
           ['Terrain state', field('terrain', 'state') === null ? '—' : titleCase(field('terrain', 'state')), source('terrain'), 'terrain'],
           ['Climb on current hump', climbText() === null ? '—' : `${climbText()}${field('terrain','on_hump') ? ' mm' : ''}`, source('terrain'), 'terrain'],
           ['Highest hump this run (resets at START)', peakText() === null ? '—' : `${peakText()}${field('terrain','peak_valid') ? ' mm' : ''}`, source('terrain'), 'terrain'],
-          ['Heading', valueUnit('heading', 'heading_deg', '°'), source('heading'), 'heading'],
+          ['Turn rate (compass, + = left)', turnText(), source('terrain'), 'terrain'],
+          ['Lifted / overturned', safetyText(), source('terrain'), 'terrain'],
+          ['Compass heading', section('heading')?.received_at ? valueUnit('heading', 'heading_deg', '°') : 'Not sent (compass not calibrated); wheel heading is in Buddy 2', source('heading'), 'heading'],
           ['Hump count', shown(humpCount), terrainRun ? 'Recorded for this drive' : source('hump'), 'hump'],
           ['IMU fault bit', faultGroup(['imu_fault']), source('faults'), 'faults']
         ],
-        unavailable: 'Firmware built with S4=1 reports tilt and terrain about every 200 ms, including while stopped. A completed hump requires valid wheel travel and a return to level. The right-wheel detector estimates height from roll, pitch and wheel spacing. Open Runs to see the reported count and highest completed hump for each drive.'
+        unavailable: 'Firmware built with S4=1 reports tilt and terrain about every 200 ms, including while stopped. Turn rate comes from the compass and stays unavailable until Buddy 4’s magnetometer calibration is loaded; firmware from before 19 Nov 2026 sends neither turn rate nor lifted/overturned. A completed hump requires valid wheel travel and a return to level. The right-wheel detector estimates height from roll, pitch and wheel spacing. Open Runs to see the reported count and highest completed hump for each drive.'
       },
       '5': {
         title: 'Buddy 5 · Obstacle / recovery', description: 'Live front range, servo angle and bypass progress (5 Hz), the full obstacle profile of every scan or side peek, the no-echo fault and the avoidance state, published by firmware built with S5=1.',
@@ -493,6 +554,7 @@
           ['Closest distance', scanField('closest_mm', 'mm'), source('scan'), 'scan'],
           ['Obstacle width', scanField('width_mm', 'mm'), source('scan'), 'scan'],
           ['Obstacle position (left / right edge, + = left)', scanEdges(), source('scan'), 'scan'],
+          ['Scan readings (angle: distance)', scanSamplesText(), scanSamplesSource(), null],
           ['Depth to far face', scanField('forward_mm', 'mm'), source('scan'), 'scan'],
           ['Left-side clearance', scanField('left_clear_mm', 'mm'), source('scan'), 'scan'],
           ['Right-side clearance', scanField('right_clear_mm', 'mm'), source('scan'), 'scan'],
@@ -500,7 +562,7 @@
           ['No-echo fault bit', faultGroup(['no_echo']), source('faults'), 'faults'],
           commonState
         ],
-        unavailable: 'Firmware built with S5=1 (and S5_HARDWARE_CONFIRMED=1) publishes car/telemetry/avoidance every 200 ms (front range, no-echo, last commanded servo angle, bypass state, fault reason, route, leg, leg-3 step and side swap) and car/telemetry/scan after every finished scan or side peek (closest distance, width, left/right edge position, depth, left/right clearance; a failed scan is shown as "no profile"). Also the per-scan summary (car/telemetry/obstacle), the no-echo fault bit and the "avoiding obstacle" state. Default builds (S5=0) publish none of them. The servo angle is the last commanded angle, not a measured one. Individual scan samples stay USB-only ([S5SCAN]). Detecting a line alone does not prove it is the original line.'
+        unavailable: 'Firmware built with S5=1 (and S5_HARDWARE_CONFIRMED=1) publishes car/telemetry/avoidance every 200 ms (front range, no-echo, last commanded servo angle, bypass state, fault reason, route, leg, leg-3 step and side swap) and car/telemetry/scan after every finished scan or side peek (closest distance, width, left/right edge position, depth, left/right clearance; a failed scan is shown as "no profile"). Also the per-scan summary (car/telemetry/obstacle), the no-echo fault bit and the "avoiding obstacle" state. Every raw reading of each scan or side peek follows on car/telemetry/scan_sample (firmware from 19 Nov 2026). Default builds (S5=0) publish none of them. The servo angle is the last commanded angle, not a measured one. Detecting a line alone does not prove it is the original line.'
       }
     };
     return definitions[buddy];

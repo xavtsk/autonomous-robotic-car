@@ -11,17 +11,27 @@ from pathlib import Path
 VERSION = 3
 NAMES = ("motion", "barcode", "hump", "heading", "obstacle", "state", "faults")
 WIDTHS = (18, 8, 25, 9, 26, 3, 6)
-SNAPSHOT_BITS = 7 + sum(WIDTHS)
+POSE_BITS = 12 + 9        # distance since START (cm mod 4096) + heading since START
+# 19 Nov 2026: pose (valid bit + 21 bits) appended after the original 102 bits.
+SNAPSHOT_LEGACY_BITS = 7 + sum(WIDTHS)
+SNAPSHOT_BITS = SNAPSHOT_LEGACY_BITS + 1 + POSE_BITS
 SNAPSHOT_BYTES = 1 + (SNAPSHOT_BITS + 7) // 8
+SNAPSHOT_LEGACY_BYTES = 1 + (SNAPSHOT_LEGACY_BITS + 7) // 8
 STATES = ("stopped", "line_following", "turning_left", "turning_right", "uturn",
           "avoiding_obstacle", "complete", "error")
 ACTIONS = ("unknown", "forward", "left", "right", "uturn")
 FAULTS = ("motor_stall", "encoder_fault", "imu_fault", "no_echo", "wifi_loss", "ir_sensor_fault")
 POSE_DISTANCE_BITS = 12
 POSE_DISTANCE_MOD = 1 << POSE_DISTANCE_BITS
+assert POSE_BITS == POSE_DISTANCE_BITS + 9
 TILT_BITS = 11            # signed 0.1 degree, -90.0..+90.0 (Buddy 4 widths)
 TILT_LIMIT_X10 = 900
-TERRAIN_BITS = 1 + 2 * TILT_BITS + 3 + 10 + 10  # 46: tilt, state, climb, run peak
+TURN_BITS = 10            # signed whole deg/s, -360..+360 (Buddy 4 width)
+TURN_LIMIT_DPS = 360
+# 59: tilt, state, climb, run peak, compass turn rate, lifted/overturned (19 Nov 2026)
+TERRAIN_BITS = 1 + 2 * TILT_BITS + 3 + 10 + 10 + 1 + TURN_BITS + 2
+TERRAIN_LEGACY_BITS = 46  # firmware before 19 Nov 2026: no turn rate / safety
+SAFETY = ("none", "lifted", "overturned")
 # Buddy 5 (car/telemetry/avoidance and car/telemetry/scan, live only).
 S5_STATES = ("idle", "waiting_for_stop", "scanning", "moving", "finishing", "complete", "fault")
 S5_FAULTS = ("none", "bad_range", "no_path", "scan_failed", "deadline", "no_line",
@@ -30,6 +40,7 @@ S5_PASSES = ("approach", "peek", "peeking", "step", "extra")
 S5_ROUTES = ("unknown", "left", "right")
 AVOIDANCE_BITS = 38
 SCAN_BITS = 95
+SCAN_SAMPLE_BITS = 35     # one reading: id, peek, index, count-1, angle, valid, mm
 TERRAIN_STATES = ("unknown", "stationary", "moving", "accelerating", "turning",
                   "climbing", "descending", "impact")
 
@@ -120,7 +131,8 @@ def decode(topic, payload):
         value = _check(payload, 2)
         return dict(ok=value == 0, result=("ok", "invalid", "busy", "internal")[value])
     if topic == "car/reply/snapshot":
-        value = _check(payload, SNAPSHOT_BITS)
+        legacy = len(payload) == SNAPSHOT_LEGACY_BYTES   # firmware before 19 Nov 2026: no pose
+        value = _check(payload, SNAPSHOT_LEGACY_BITS if legacy else SNAPSHOT_BITS)
         flags, offset, result = value & 127, 7, {}
         for i, (section, width) in enumerate(zip(NAMES, WIDTHS)):
             raw = (value >> offset) & ((1 << width) - 1)
@@ -129,6 +141,16 @@ def decode(topic, payload):
                 raise ValueError("nonzero data in invalid snapshot section")
             result[section] = dict(valid=valid, **(_section(section, raw) if valid else {}))
             offset += width
+        if not legacy:
+            valid = bool(value >> offset & 1)
+            raw = (value >> (offset + 1)) & ((1 << POSE_BITS) - 1)
+            heading = raw >> POSE_DISTANCE_BITS
+            if not valid and raw:
+                raise ValueError("nonzero data in invalid snapshot section")
+            if heading > 359:
+                raise ValueError("invalid heading")
+            result["pose"] = dict(valid=valid, **(dict(distance_cm_mod=raw & (POSE_DISTANCE_MOD - 1),
+                                                       heading_deg=heading) if valid else {}))
         return result
     if topic == "car/status" or name == "heartbeat":
         value = _check(payload, 8)
@@ -186,8 +208,25 @@ def decode(topic, payload):
                 raise ValueError("invalid profile with nonzero values")
             out = {k: None for k in values}
         return dict(valid=bool(fields["valid"]), scan_id=fields["scan_id"], **out)
+    if topic == "car/telemetry/scan_sample":
+        value = _check(payload, SCAN_SAMPLE_BITS)
+        fields, shift = {}, 0
+        for name, width in (("scan_id", 8), ("peek", 1), ("index", 4), ("count", 4), ("angle", 5),
+                            ("valid", 1), ("distance_mm", 12)):
+            fields[name] = (value >> shift) & ((1 << width) - 1)
+            shift += width
+        count, angle = fields["count"] + 1, 30 + 5 * fields["angle"]
+        if fields["index"] >= count or angle > 150:
+            raise ValueError("scan sample index/angle out of range")
+        if fields["valid"] and not 30 <= fields["distance_mm"] <= 4000 or \
+                not fields["valid"] and fields["distance_mm"]:
+            raise ValueError("invalid scan sample distance")
+        return dict(scan_id=fields["scan_id"], peek=bool(fields["peek"]), index=fields["index"],
+                    count=count, angle_deg=angle, valid=bool(fields["valid"]),
+                    distance_mm=fields["distance_mm"] if fields["valid"] else None)
     if topic == "car/telemetry/terrain":
-        value = _check(payload, TERRAIN_BITS)
+        legacy = len(payload) == 1 + (TERRAIN_LEGACY_BITS + 7) // 8
+        value = _check(payload, TERRAIN_LEGACY_BITS if legacy else TERRAIN_BITS)
         valid = bool(value & 1)
         angles = []
         for shift in (1, 1 + TILT_BITS):
@@ -202,12 +241,24 @@ def decode(topic, payload):
             raise ValueError("tilt outside -90.0..+90.0 degrees")
         if climb > 500 or peak > 500 or (not on_hump and climb) or (not peak_valid and peak):
             raise ValueError("invalid hump height field")
+        turn_valid, turn, safety = False, 0, None
+        if not legacy:
+            turn_valid = bool(value >> 46 & 1)
+            turn = (value >> 47) & ((1 << TURN_BITS) - 1)
+            turn = turn - (1 << TURN_BITS) if turn >> (TURN_BITS - 1) else turn
+            safety = (value >> 57) & 3
+            if safety >= len(SAFETY):
+                raise ValueError("reserved safety code")
+            if abs(turn) > TURN_LIMIT_DPS or (not turn_valid and turn):
+                raise ValueError("invalid turn rate")
+            safety = SAFETY[safety]
         return dict(tilt_valid=valid,
                     pitch_deg=angles[0] / 10 if valid else None,
                     roll_deg=angles[1] / 10 if valid else None,
                     state=TERRAIN_STATES[state],
                     on_hump=on_hump, climb_mm=climb if on_hump else None,
-                    peak_valid=peak_valid, peak_mm=peak if peak_valid else None)
+                    peak_valid=peak_valid, peak_mm=peak if peak_valid else None,
+                    turn_valid=turn_valid, turn_dps=turn if turn_valid else None, safety=safety)
     if topic.startswith("car/telemetry/") and name in NAMES:
         return _section(name, _check(payload, WIDTHS[NAMES.index(name)]))
     raise ValueError("unknown topic; use car/status when decoding a custom heartbeat topic")

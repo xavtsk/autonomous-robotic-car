@@ -8,7 +8,7 @@
 
 #define MQTT_UTK_APP_WIRE_VERSION 3U /* binary fallback heartbeat contract */
 #define MQTT_UTK_APP_TOPIC_MAX    64
-#define MQTT_UTK_APP_PAYLOAD_MAX 14
+#define MQTT_UTK_APP_PAYLOAD_MAX 17 /* Buddy 1 snapshot: version + 124 bits */
 
 typedef struct {
 	char		topic[MQTT_UTK_APP_TOPIC_MAX];

@@ -1,0 +1,6 @@
+Buddy 4 host tests PASS: driver, calibration, tilt, hump geometry, packing, pickup, overturn and recovery
+PASS: live terrain every 20 cycles: tilt valid/invalid/out-of-range/stale, state, climb height, run peak, latched impact
+PASS: hump reports retry repeated timeouts with latest count/height, stop retrying on acceptance, survive STOP and discard pending prior-run data on START reset
+PASS: pickup and overturn brake before further velocity commands and require safe IMU data, RESET and START
+PASS: IMU START/reset acknowledgement and timeout, STOP priority, stale data, lost/impact events, latched reset, cumulative humps and owned fault bit
+PASS: real S4 transport/task reset acknowledgement, count/saturation, event overflow, safety/impact delivery, stale validity, token wrap and feedback freshness

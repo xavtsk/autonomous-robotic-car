@@ -1,0 +1,10 @@
+PASS: acquisition, calibration, line detection, steering, Code 39 and simulated navigation
+PASS: physical GP27 left, GP26 right, GP28 barcode routing and barcode-independent line observations
+PASS: provisional thresholds, hysteresis, polarity, clamping, invalid inputs and recovery
+PASS: merged wide-bar midpoint dip and rebound, 104 A-Z/both-direction scans
+PASS: isolated 20 ms white-gap spikes, 624 scans (342 correct, remainder rejected; no wrong letter)
+PASS: 728 dense-ripple A-Z/direction/quantization and strict marker/bar/quiet/capacity checks
+PASS: record-then-decide barcode reader (26 letters x 2 directions x sharp/blurred/faint at 100/200 Hz, 200 Hz long frames beyond 1024 samples, unchanged minimum widths and complete-frame requirement, scratch trim, grey shelf, 3000 frames with +/-25 % width jitter and no wrong letter, cut pass, quiet zones, line crossing, overflow, timing, invalid input, sentinel-only bias both signs/all letters/directions, invalid payload, inconsistent stars, corrected quiet, adaptive faint peaks/noise, faint starts, real pre-trigger history, weak opening stars, history wrap/reset, no invented quiet and faint-patch rearming)
+PASS: 781 faint-bar A-Z/both-direction recovery and real-quiet/truncation/extra-pulse checks
+PASS: varying sentinel correction, all letters/signs/directions/slopes, payload independence, invalid payload, inconsistent stars, bounded drift, unchanged failure inputs, measured A and actual quiet waiting
+PASS: 468 synthetic A-Z scans at 8/14/19 mm wide gaps and 40 mm/s, real large-frame quiet, truncation/absolute bounds, one extended narrow payload white gap, strict markers/bars and measured Z payload

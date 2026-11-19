@@ -1,0 +1,64 @@
+PASS: 17 Nov bypass rules: swerve stops on the tape, side check turns away while passing, measured return distance, line seen while passing, hand-back re-centring, confirmed block -> right side, too close for left -> right, no aim at a wide picture
+PASS: 45-degree bypass legs (equal out/back diagonals, left-only, reverse-if-too-close, realign+sweep line search); range/codec exhaustive boundaries, hostile packets, coarse/fine scans, invalid echo, route clearance, bounded FSM, faults and line evidence
+PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered
+PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, bypass with side-peek depth search, real tape gate, STOP, stale range and report loss
+PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered
+PASS: impact, pickup and overturn cancel an active S5 bypass and brake both Buddy 2 motors
+PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, bypass with side-peek depth search, real tape gate, STOP, stale range and report loss
+Car model: sensor gap 22 mm, sensors 135 mm ahead of the axle, tape 18 mm
+PASS straight 1.5 m, start +0 mm off centre               reached x=1.50 m, worst centre error 0.0 mm, FOLLOW
+PASS straight 1.5 m, start +2 mm off centre               reached x=1.50 m, worst centre error 4.2 mm, FOLLOW
+PASS straight 1.5 m, start -2 mm off centre               reached x=1.50 m, worst centre error 4.1 mm, FOLLOW
+PASS left U-shaped curve, radius 20 cm                    end (-0.00, 0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS right U-shaped curve, radius 20 cm                   end (-0.00, -0.40) m, worst centre error 5.3 mm, FOLLOW
+PASS left U-shaped curve, radius 15 cm                    end (-0.00, 0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS right U-shaped curve, radius 15 cm                   end (-0.00, -0.30) m, worst centre error 9.2 mm, FOLLOW
+PASS left U-shaped curve, radius 14 cm                    end (-0.00, 0.28) m, worst centre error 9.8 mm, FOLLOW
+PASS right U-shaped curve, radius 14 cm                   end (-0.00, -0.28) m, worst centre error 10.1 mm, FOLLOW
+PASS left U-shaped curve, radius 12 cm                    end (-0.00, 0.24) m, worst centre error 10.6 mm, FOLLOW
+PASS right U-shaped curve, radius 12 cm                   end (-0.00, -0.24) m, worst centre error 10.5 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 15 cm         end (1.20, 0.30) m, worst centre error 6.6 mm, FOLLOW
+PASS S-bend, two 90 degree curves of radius 14 cm         end (1.20, 0.28) m, worst centre error 7.0 mm, FOLLOW
+PASS crossing, no barcode: straight across                end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS crossing, STRAIGHT action: across                    end (1.20, 0.000) m, worst centre error 0.0 mm, FOLLOW ok
+PASS LEFT at crossing, advance 140 mm                     end (0.60, 0.40) m heading 89 deg, FOLLOW ok, advances=1
+PASS RIGHT at crossing, advance 140 mm                    end (0.60, -0.40) m heading 271 deg, FOLLOW ok, advances=1
+PASS U-TURN at crossing, advance 140 mm                   end (-0.10, 0.00) m heading 180 deg, FOLLOW ok, advances=0
+PASS LEFT at crossing, advance 0 mm (expected: halt)      end (0.46, 0.01) m heading 53 deg, HALTED line lost, advances=0
+PASS RIGHT at crossing, advance 0 mm (expected: halt)     end (0.46, -0.01) m heading 307 deg, HALTED line lost, advances=0
+PASS LEFT, spin ends at 63 deg: search finds line         end (0.60, 0.40) m heading 89 deg, FOLLOW ok
+PASS RIGHT, spin ends at 63 deg: search finds line        end (0.60, -0.40) m heading 272 deg, FOLLOW ok
+PASS LEFT, spin ends at 117 deg: search finds line        end (0.60, 0.40) m heading 92 deg, FOLLOW ok
+PASS RIGHT, spin ends at 117 deg: search finds line       end (0.60, -0.40) m heading 269 deg, FOLLOW ok
+PASS tape ends at 0.6 m: keeps driving straight           end (1.20, 0.000) m, FOLLOW (no line-lost stop by design; GP21 stops it)
+COURSE SIM PASS: 0 failure(s)
+Bypass course sim: car 126 mm wide, sonar 75 mm / IR 135 mm ahead of the axle, sonar cone +/-15 deg, turns x1.00, LEFT preferred, other side allowed
+PASS straight, 10x10 cm box                               rejoined, clear  90 mm, off-line max 203 mm, follow err  0.6 mm, left, side turns 0, 19 s, FOLLOW/COMPLETE
+PASS straight, 20x20 cm box                               rejoined, clear  51 mm, off-line max 215 mm, follow err  0.7 mm, left, side turns 0, 23 s, FOLLOW/COMPLETE
+PASS straight, 20x20 cm box, turned 45                    rejoined, clear  53 mm, off-line max 257 mm, follow err  4.2 mm, left, side turns 0, 23 s, FOLLOW/COMPLETE
+PASS straight, 20x10 cm box, 3 cm off-centre              rejoined, clear  22 mm, off-line max 254 mm, follow err  0.7 mm, left, side turns 1, 21 s, FOLLOW/COMPLETE
+PASS straight, 20 cm box, wall 23 cm away on the LEFT     rejoined, clear  12 mm, off-line max 262 mm, follow err  4.3 mm, RIGHT (swapped), side turns 2, 25 s, FOLLOW/COMPLETE
+PASS left bend r=30 cm starts 10 cm after a 20 cm box     rejoined, clear  52 mm, off-line max 217 mm, follow err  5.3 mm, left, side turns 0, 23 s, FOLLOW/COMPLETE
+PASS left bend r=30 cm starts 25 cm after a 20 cm box     rejoined, clear  52 mm, off-line max 217 mm, follow err  5.4 mm, left, side turns 0, 23 s, FOLLOW/COMPLETE
+PASS left bend r=20 cm starts 10 cm after a 20 cm box     rejoined, clear  52 mm, off-line max 216 mm, follow err  4.3 mm, left, side turns 0, 22 s, FOLLOW/COMPLETE
+PASS left bend r=20 cm starts 25 cm after a 10 cm box     rejoined, clear  90 mm, off-line max 203 mm, follow err  5.3 mm, left, side turns 0, 19 s, FOLLOW/COMPLETE
+PASS left bend r=30 cm ends 15 cm before a 20 cm box      rejoined, clear  23 mm, off-line max 226 mm, follow err  0.6 mm, left, side turns 2, 22 s, FOLLOW/COMPLETE
+PASS left bend r=20 cm ends 25 cm before a 20 cm box      rejoined, clear  23 mm, off-line max 230 mm, follow err  0.7 mm, left, side turns 1, 22 s, FOLLOW/COMPLETE
+PASS right bend r=30 cm starts 10 cm after a 20 cm box    rejoined, clear  52 mm, off-line max 218 mm, follow err  4.3 mm, left, side turns 0, 23 s, FOLLOW/COMPLETE
+PASS right bend r=30 cm starts 25 cm after a 20 cm box    rejoined, clear  52 mm, off-line max 217 mm, follow err  5.3 mm, left, side turns 0, 22 s, FOLLOW/COMPLETE
+     (known limit, expected to miss: missed)
+PASS right bend r=20 cm starts 10 cm after a 20 cm box    NOT rejoined, clear  52 mm, off-line max 218 mm, follow err  0.0 mm, left, side turns 0, 0 s, FAULT/FAULT NO_LINE
+PASS right bend r=20 cm starts 25 cm after a 10 cm box    rejoined, clear  90 mm, off-line max 203 mm, follow err  5.3 mm, left, side turns 0, 18 s, FOLLOW/COMPLETE
+PASS right bend r=30 cm ends 15 cm before a 20 cm box     rejoined, clear  59 mm, off-line max 290 mm, follow err  4.3 mm, left, side turns 0, 26 s, FOLLOW/COMPLETE
+PASS right bend r=20 cm ends 25 cm before a 20 cm box     rejoined, clear  29 mm, off-line max 222 mm, follow err  4.1 mm, left, side turns 0, 24 s, FOLLOW/COMPLETE
+Telemetry status updates: 0 reversing (leg 9), 234 aiming (leg 10), 0 out of place
+BYPASS SIM PASS: 0 failure(s)
+bypass sim with turns 10% short: see README (wall + short turns is a known miss)
+PASS: production PIO/PWM drivers with fake registers; confirmed pins, echo/timeout/stuck-high, clear-path vs no-pulse, servo limits, encoder SM ownership
+PASS: production sensing task with fake clock/kernel/sensor; stop-gated scan, bounded mailbox, packed snapshots, cancellation/recentering, confirmed no-echo, side peek
+PASS: unconfirmed hardware cannot initialise or start Buddy 5
+PASS: one-owner facade, explicit queued start/stop, full fault-bit ownership, unknown-status preservation, map freeze, telemetry and out-of-range invalidation
+PASS: production telemetry adapter preserves Wi-Fi/motor faults, owns only no-echo, publishes obstacle profile and avoidance/error state
+PASS: barcode, state, fault, scan-profile and obstacle events retried while the Buddy 1 outbox is full, sent once when space frees
+PASS: Buddy 5 raw scan readings after each profile, spare outbox capacity only, paced, retried when the outbox is full or Buddy 5 is busy, never under another scan id
+PASS: Buddy 5 live avoidance (range, no-echo, servo angle, state/fault/route/leg/pass/swap at 5 Hz) and full FR6 scan profile per scan

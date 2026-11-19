@@ -128,8 +128,11 @@ and is retried without waiting for queue space, including after STOP. It is
 marked sent only when queued successfully; a new run supersedes an unqueued
 previous-run report. Successful enqueue is not a broker delivery acknowledgement.
 USB `[S4]` logs expose run ID, terrain state, validity flags, pitch/roll in tenths
-of a degree, turn rate, count, peak and impact. The existing heading packet remains
-unavailable: compass-derived turn rate is not an absolute heading measurement.
+of a degree, turn rate, count, peak and impact. Since 19 Nov 2026 the live
+`car/telemetry/terrain` packet also carries the compass turn rate (with its
+validity) and lifted/overturned, so they are on Wi-Fi too. The existing heading
+packet remains unavailable: compass-derived turn rate is not an absolute heading
+measurement. Turn rate is valid only after `subsystem4_set_magnetic_calibration()`.
 
 `subsystem4_set_magnetic_calibration()` accepts measured vehicle-axis hard-iron
 bias and diagonal soft-iron scale. Identity coefficients must not be used as a

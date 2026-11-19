@@ -1,6 +1,7 @@
 #include "../../app_program/controller/vehicle_controller.h"
 #include "../../app_program/controller/run_timing.h"
 #define LIVE_CYCLES (200U / S3_SAMPLE_PERIOD_MS)
+#define SC (40U / S3_SAMPLE_PERIOD_MS) /* scan-sample pacing, cycles */
 #include "../../app_program/subsystem1/subsystem1.h"
 #include "../../app_program/subsystem2/motion_pack.h"
 #include "../../app_program/subsystem5/s5_api.h"
@@ -29,10 +30,12 @@ ER buddy1_update_faults(UB changed,UB active)
     if(mirror_result==E_OK||mirror_result==E_TMOUT)mask=(mask&~changed)|active;
     return mirror_result;
 }
+/* E_TMOUT = Buddy 1 outbox full: the controller must retry the event. */
+static ER event_result=E_OK;
 ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state)
-{states++;last_state=state;return E_OK;}
+{states++;if(event_result!=E_OK)return event_result;last_state=state;return E_OK;}
 ER buddy1_report_barcode(UB letter)
-{assert(letter=='B');barcodes++;return E_OK;}
+{assert(letter=='B');barcodes++;return event_result;}
 ER buddy1_report_pose(UH cm,H deg) { (void)cm;(void)deg;return E_OK; }
 ER buddy1_report_motion(H left,H right)
 {reports++;left_report=left;right_report=right;return E_OK;}
@@ -73,14 +76,22 @@ int baseline(void)
     status_ok=true;status.fault_bits=0;cycles(1);assert(mask==BUDDY1_FAULT_WIFI);
     runtime.navigation.events=S3_EVENT_BARCODE;runtime.navigation.barcode.letter='B';
     runtime.navigation.action=S3_NAV_LEFT;cycles(1);assert(barcodes==1);
-    runtime.navigation.events=0;runtime.state=S3_DRIVE_MANOEUVRE;cycles(1);
+    runtime.navigation.events=0;cycles(3);assert(barcodes==1);   /* one event, one report */
+    /* Full outbox: barcode and state are retried every cycle, not dropped. */
+    event_result=E_TMOUT;runtime.navigation.events=S3_EVENT_BARCODE;cycles(1);
+    runtime.navigation.events=0;cycles(2);assert(barcodes==4);
+    runtime.state=S3_DRIVE_MANOEUVRE;{unsigned s0=states;cycles(3);assert(states==s0+3&&barcodes==7&&last_state!=BUDDY1_STATE_TURNING_LEFT);}
+    event_result=E_OK;cycles(1);assert(barcodes==8&&last_state==BUDDY1_STATE_TURNING_LEFT);
+    {unsigned s0=states;cycles(3);assert(barcodes==8&&states==s0);}
     assert(last_state==BUDDY1_STATE_TURNING_LEFT);
     runtime.state=S3_DRIVE_FAULT;cycles(1);assert(last_state==BUDDY1_STATE_ERROR);
     status.speed_left_mps=0.884f;before=invalidations;{unsigned sent=reports;cycles(LIVE_CYCLES);
     assert(invalidations>before&&reports==sent);} /* Never clip into a valid 510. */
     status.b_valid=false;before=invalidations;cycles(LIVE_CYCLES);assert(invalidations>before);
     runtime.navigation.fault_mask=1;mirror_result=E_OBJ;before=updates;cycles(2);assert(updates==before+2);
-    mirror_result=E_TMOUT;cycles(1);before=updates;cycles(1);assert(updates==before);
+    /* Full outbox (E_TMOUT): the fault change is retried until it is queued. */
+    mirror_result=E_TMOUT;before=updates;cycles(2);assert(updates==before+2);
+    mirror_result=E_OK;cycles(1);before=updates;cycles(1);assert(updates==before);
     s3_nav_action_t map[26]={S3_NAV_STRAIGHT,S3_NAV_LEFT,S3_NAV_RIGHT,S3_NAV_UTURN};
     assert(vehicle_controller_apply_mapping(map));map[4]=S3_NAV_LEFT;assert(!vehicle_controller_apply_mapping(map));map[4]=S3_NAV_NONE;
     s3_navigation_t nav={0};assert(vehicle_controller_prepare_start(&nav)&&frozen);
@@ -117,10 +128,33 @@ ER buddy1_report_avoidance(const BUDDY1_AVOIDANCE *a)
     assert(a->range_valid ? (a->range_mm>=30U && a->range_mm<=4000U && !a->no_echo) : a->range_mm==0U);
     avoidance_reports++;last_avoidance=*a;return E_OK;
 }
+static ER scan_result=E_OK, obstacle_result=E_OK;
 ER buddy1_report_scan(const BUDDY1_SCAN *q)
-{ assert(q);scan_reports++;last_scan=*q;return E_OK; }
+{ assert(q);scan_reports++;last_scan=*q;return scan_result; }
+/* Raw readings kept by Buddy 5 for the last scan (car/telemetry/scan_sample). */
+static s5_sample_t kept[S5_SAMPLES_MAX];
+static unsigned kept_count, sample_reports, busy_reads;
+static uint16_t kept_id;
+static bool kept_peek;
+static ER sample_result=E_OK;
+static BOOL outbox_idle=TRUE;
+BOOL buddy1_outbox_idle(void) { return outbox_idle; }
+static BUDDY1_SCAN_SAMPLE sent[S5_SAMPLES_MAX+4];
+bool subsystem5_scan_samples(uint16_t *id,bool *peek,s5_sample_t out[S5_SAMPLES_MAX],unsigned *count)
+{
+    if(busy_reads) { busy_reads--;return false; }
+    *id=kept_id;*peek=kept_peek;*count=kept_count;
+    for(unsigned i=0;i<kept_count;i++) out[i]=kept[i];
+    return true;
+}
+ER buddy1_report_scan_sample(const BUDDY1_SCAN_SAMPLE *q)
+{
+    assert(q && q->index<q->count && q->count<=BUDDY1_SCAN_SAMPLES_MAX);
+    if(sample_result!=E_OK) { ER er=sample_result;sample_result=E_OK;return er; }
+    assert(sample_reports<sizeof sent/sizeof sent[0]);sent[sample_reports++]=*q;return E_OK;
+}
 ER buddy1_report_obstacle(UH distance,UH width,BUDDY1_OBSTACLE_ROUTE route)
-{ assert(distance==250 && width==400 && route<=BUDDY1_ROUTE_RIGHT);obstacle_reports++;return E_OK; }
+{ assert(distance==250 && width==400 && route<=BUDDY1_ROUTE_RIGHT);obstacle_reports++;return obstacle_result; }
 int main(void)
 {
     baseline();available=true;obstacle.no_echo=true;
@@ -161,6 +195,37 @@ int main(void)
              last_scan.right_edge_mm==-250 && last_scan.forward_mm==380U);
       obstacle.scan_id=8;obstacle.profile.valid=false;cycles(1);
       assert(scan_reports==before+2U && !last_scan.valid && last_scan.scan_id==8U && last_scan.closest_mm==0U); }
+    /* Raw readings follow the profile one by one, 1 per 4 cycles, only
+     * while the outbox is empty; a full outbox retries the same reading; a
+     * busy Buddy 5 mutex is retried; another scan id is never reused. */
+    { assert(s5_sample_pack(90,250,true,&kept[0]) && s5_sample_pack(95,262,true,&kept[1]) &&
+             s5_sample_pack(100,0,false,&kept[2]));
+      kept_count=3;kept_id=9;kept_peek=false;busy_reads=2;
+      obstacle.scan_id=9;obstacle.scan_done=true;obstacle.profile.valid=true;
+      cycles(1);assert(last_scan.scan_id==9U && sample_reports==0U);
+      cycles(2U*SC);assert(sample_reports==0U);             /* two busy Buddy 5 reads */
+      outbox_idle=FALSE;cycles(10U*SC);assert(sample_reports==0U); /* events queued: wait */
+      outbox_idle=TRUE;cycles(SC);assert(sample_reports==1U);
+      sample_result=E_TMOUT;cycles(SC);assert(sample_reports==1U); /* outbox full */
+      cycles(2U*SC);assert(sample_reports==3U);
+      cycles(10U*SC);assert(sample_reports==3U);
+      for(unsigned i=0;i<3U;i++) assert(sent[i].scan_id==9U && !sent[i].peek && sent[i].index==i && sent[i].count==3U);
+      assert(sent[0].angle_deg==90U && sent[0].valid && sent[0].distance_mm==250U);
+      assert(sent[1].angle_deg==95U && sent[1].distance_mm==262U);
+      assert(sent[2].angle_deg==100U && !sent[2].valid && sent[2].distance_mm==0U);
+      kept_id=9;obstacle.scan_id=10;cycles(10U*SC);assert(last_scan.scan_id==10U && sample_reports==3U);
+      assert(s5_sample_pack(135,410,true,&kept[0]));kept_count=1;kept_id=11;kept_peek=true;
+      obstacle.scan_id=11;cycles(2U*SC);
+      assert(sample_reports==4U && sent[3].peek && sent[3].count==1U && sent[3].angle_deg==135U && sent[3].distance_mm==410U); }
+    /* Full outbox: the scan profile and obstacle summary are retried every
+     * cycle until queued (then exactly once more nothing). */
+    { unsigned s0=scan_reports,o0=obstacle_reports;
+      scan_result=obstacle_result=E_TMOUT;
+      obstacle.scan_id=12;obstacle.scan_done=true;
+      obstacle.profile=(s5_profile_t){.valid=true,.closest_mm=250,.width_mm=400};
+      cycles(3);assert(scan_reports==s0+3U && obstacle_reports==o0+3U);
+      scan_result=obstacle_result=E_OK;cycles(1);assert(scan_reports==s0+4U && obstacle_reports==o0+4U);
+      cycles(5);assert(scan_reports==s0+4U && obstacle_reports==o0+4U); }
     /* Quarter-period initial phase, then exactly 200 ms between reports. */
     assert(vehicle_controller_init()==E_OK);
     { unsigned before=avoidance_reports;
@@ -175,5 +240,7 @@ int main(void)
       cycles(1);assert(avoidance_reports==before+2U);
       assert(runtime.navigation.timestamp_us-started==200000U); }
     puts("PASS: production telemetry adapter preserves Wi-Fi/motor faults, owns only no-echo, publishes obstacle profile and avoidance/error state");
+    puts("PASS: barcode, state, fault, scan-profile and obstacle events retried while the Buddy 1 outbox is full, sent once when space frees");
+    puts("PASS: Buddy 5 raw scan readings after each profile, spare outbox capacity only, paced, retried when the outbox is full or Buddy 5 is busy, never under another scan id");
     puts("PASS: Buddy 5 live avoidance (range, no-echo, servo angle, state/fault/route/leg/pass/swap at 5 Hz) and full FR6 scan profile per scan");
 }

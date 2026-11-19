@@ -1,0 +1,4 @@
+Current teammate calibration decoded view: 36 bytes (includes abort flag)
+Equivalent decoded reporting view / new packed copy: 12 / 4 bytes
+Teammate status/report/command: 8/2/4 bytes; bounded report capacity 8
+Buddy 1 MQTT motion packet remains 4 bytes including version.

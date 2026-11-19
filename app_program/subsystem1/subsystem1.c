@@ -82,6 +82,9 @@ LOCAL ER store_section(UB type, const BUDDY1_SNAPSHOT *v)
         cache.obstacle_width_mm = v->obstacle_width_mm; cache.obstacle_route = v->obstacle_route; break;
     case BUDDY1_TOPIC_STATE:
         cache.robot_state_valid = 1; cache.robot_state = v->robot_state; break;
+    case BUDDY1_TOPIC_POSE:
+        cache.pose_valid = 1; cache.pose_distance_cm = v->pose_distance_cm;
+        cache.pose_heading_deg = v->pose_heading_deg; break;
     default: return E_PAR;
     }
     return buddy1_encode(BUDDY1_TOPIC_SNAPSHOT, &cache, latest, sizeof(latest)) ? E_OK : E_PAR;
@@ -93,10 +96,12 @@ LOCAL ER report(UB type, const BUDDY1_SNAPSHOT *v)
     unsigned length = buddy1_encode(type, v, payload, sizeof(payload));
     ER er;
     if (!length) return E_PAR;
-    /* Pose, terrain, avoidance and scan are live-only: no snapshot section,
-     * so skip the cache. */
-    if (type != BUDDY1_TOPIC_POSE && type != BUDDY1_TOPIC_TERRAIN &&
-        type != BUDDY1_TOPIC_AVOIDANCE && type != BUDDY1_TOPIC_SCAN) {
+    /* Terrain, avoidance, scan and scan samples are live-only: no snapshot
+     * section, so skip the cache. Pose is cached since 19 Nov 2026 (the
+     * snapshot reply carries distance/heading since START). */
+    if (type != BUDDY1_TOPIC_TERRAIN &&
+        type != BUDDY1_TOPIC_AVOIDANCE && type != BUDDY1_TOPIC_SCAN &&
+        type != BUDDY1_TOPIC_SCAN_SAMPLE) {
         er = tk_loc_mtx(mtx_buddy1_state, TMO_FEVR);
         if (er < E_OK) return er;
         er = store_section(type, v);
@@ -152,6 +157,13 @@ EXPORT ER buddy1_report_scan(const BUDDY1_SCAN *scan)
     if (!scan) return E_PAR;
     v.scan = *scan;
     return report(BUDDY1_TOPIC_SCAN, &v);
+}
+EXPORT ER buddy1_report_scan_sample(const BUDDY1_SCAN_SAMPLE *sample)
+{
+    BUDDY1_SNAPSHOT v = {0};
+    if (!sample) return E_PAR;
+    v.scan_sample = *sample;
+    return report(BUDDY1_TOPIC_SCAN_SAMPLE, &v);
 }
 EXPORT ER buddy1_report_terrain(const BUDDY1_TERRAIN *terrain)
 {
@@ -223,6 +235,11 @@ EXPORT BOOL buddy1_motion_snapshot(H *left_mms, H *right_mms)
     BUDDY1_SNAPSHOT v;
     if (!left_mms || !right_mms || !buddy1_snapshot(&v) || !v.motion_valid) return FALSE;
     *left_mms = v.left_mms; *right_mms = v.right_mms; return TRUE;
+}
+EXPORT BOOL buddy1_outbox_idle(void)
+{
+    T_RMBF ref;
+    return mbf_buddy1_outbox > 0 && tk_ref_mbf(mbf_buddy1_outbox, &ref) == E_OK && ref.msgsz == 0;
 }
 EXPORT BOOL buddy1_outbox_take(BUDDY1_TELEMETRY_MSG *out)
 {

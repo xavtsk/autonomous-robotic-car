@@ -33,7 +33,7 @@ class StateTests(unittest.TestCase):
         packets = {"motion": "033c7602", "barcode": "0356",
                    "hump": "0302002d00", "heading": "036701",
                    "obstacle": "03b4c00801", "state": "0301", "faults": "0331",
-                   "terrain": "03f7d0fcbe3005",
+                   "terrain": "03f7d0fcbe30c5d401",
                    "avoidance": "037186e5e02c",
                    "scan": "030ff40132680128f8c2069a3a"}
         for name, value in packets.items():
@@ -47,7 +47,54 @@ class StateTests(unittest.TestCase):
         self.assertEqual(sections["barcode"]["data"], dict(letter="W", action="left"))
         self.assertEqual(sections["terrain"]["data"],
                          dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, state="climbing",
-                              on_hump=True, climb_mm=23, peak_valid=True, peak_mm=41))
+                              on_hump=True, climb_mm=23, peak_valid=True, peak_mm=41,
+                              turn_valid=True, turn_dps=-87, safety="none"))
+
+    def test_buddy4_lifted_overturned_and_turn_rate(self):
+        def pack(turn, safety):
+            body = 2 << 23 | (turn is not None) << 46 | ((turn or 0) & 0x3ff) << 47 | safety << 57
+            return bytes([3]) + body.to_bytes(8, "little")
+        self.state.ingest("car/telemetry/terrain", pack(None, 0))
+        data = self.state.snapshot()["sections"]["terrain"]["data"]
+        self.assertEqual((data["turn_valid"], data["turn_dps"], data["safety"]), (False, None, "none"))
+        self.state.ingest("car/telemetry/terrain", pack(-45, 1))
+        self.state.ingest("car/telemetry/terrain", pack(-45, 1))
+        self.state.ingest("car/telemetry/terrain", pack(12, 2))
+        data = self.state.snapshot()["sections"]["terrain"]["data"]
+        self.assertEqual((data["turn_dps"], data["safety"]), (12, "overturned"))
+        messages = [e["message"] for e in self.state.snapshot()["events"]]
+        self.assertEqual(sum("Buddy 4: car lifted" in m for m in messages), 1)
+        self.assertEqual(sum("Buddy 4: car overturned" in m for m in messages), 1)
+
+    def test_snapshot_reply_carries_distance_and_heading(self):
+        body = 1 << 102 | 1234 << 103 | 270 << 115          # pose valid, 12.34 m, 270 deg
+        self.state.ingest("car/reply/snapshot", bytes([3]) + body.to_bytes(16, "little"))
+        snap = self.state.snapshot()
+        self.assertEqual(snap["snapshot_pose"]["distance_cm_mod"], 1234)
+        self.assertEqual(snap["snapshot_pose"]["heading_deg"], 270)
+        self.assertNotIn("pose", snap["sections"])          # still not a live section
+        self.assertTrue(any("Distance since START 12.34 m, heading 270°" in e["message"] for e in snap["events"]))
+        self.state.ingest("car/reply/snapshot", bytes([3]) + bytes(13))   # older firmware, 14 bytes
+        self.assertEqual(self.state.snapshot()["snapshot_pose"]["distance_cm_mod"], 1234)
+        self.assertTrue(any("not included" in e["message"] for e in self.state.snapshot()["events"]))
+
+    def test_buddy5_raw_scan_samples(self):
+        self.assertIsNone(self.state.snapshot()["scan_samples"])
+        def pack(sid, peek, index, count, angle, mm):
+            body = (sid | peek << 8 | index << 9 | (count - 1) << 13 | (angle - 30) // 5 << 17 |
+                    (mm is not None) << 22 | (mm or 0) << 23)
+            return bytes([3]) + body.to_bytes(5, "little")
+        for index, (angle, mm) in enumerate(((90, 250), (95, 262), (100, None))):
+            self.state.ingest("car/telemetry/scan_sample", pack(7, 0, index, 3, angle, mm))
+        view = self.state.snapshot()["scan_samples"]
+        self.assertEqual((view["scan_id"], view["peek"], view["count"], view["received"]), (7, False, 3, 3))
+        self.assertEqual([(s["angle_deg"], s["distance_mm"]) for s in view["samples"]],
+                         [(90, 250), (95, 262), (100, None)])
+        self.state.ingest("car/telemetry/scan_sample", pack(8, 1, 0, 1, 135, 410))  # next: a side peek
+        view = self.state.snapshot()["scan_samples"]
+        self.assertEqual((view["scan_id"], view["peek"], view["received"]), (8, True, 1))
+        self.state.ingest("car/telemetry/scan_sample", pack(8, 1, 0, 1, 135, 410)[:-1])
+        self.assertEqual(self.state.snapshot()["counters"]["malformed"], 1)
 
     def test_buddy5_live_status_and_scan_profile(self):
         self.state.ingest("car/telemetry/avoidance", bytes.fromhex("037186e5e02c"))
@@ -71,7 +118,7 @@ class StateTests(unittest.TestCase):
         self.assertEqual([r["data"]["range_mm"] for r in reports], [412, None])
 
     def test_terrain_is_live_and_unavailable_is_not_zero(self):
-        self.state.ingest("car/telemetry/terrain", bytes.fromhex("03f7d0fcbe3005"))
+        self.state.ingest("car/telemetry/terrain", bytes.fromhex("03f7d0fcbe3005"))  # legacy 7-byte
         terrain = self.state.snapshot()["sections"]["terrain"]
         self.assertEqual((terrain["freshness"], terrain["stale"]), ("live", False))
         self.now += 3.5

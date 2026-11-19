@@ -12,13 +12,13 @@ static unsigned failures;
 static unsigned delayed_logs, discarded_logs;
 static pthread_mutex_t cache_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
-static struct { unsigned capacity, size, head, tail, count; UB data[4][17]; } buffers[2];
+static struct { unsigned capacity, size, head, tail, count; UB data[4][20]; } buffers[2];
 static unsigned created;
 
 ID tk_cre_mbf(const T_CMBF *p)
 {
     unsigned id = created++;
-    assert(id < 2 && p->maxmsz <= 17);
+    assert(id < 2 && p->maxmsz <= 20);
     buffers[id].size = (unsigned)p->maxmsz;
     buffers[id].capacity = (unsigned)p->bufsz / (4U + ((buffers[id].size + 3U) & ~3U));
     return (ID)id + 1;
@@ -40,6 +40,29 @@ ER tk_snd_mbf(ID id, const void *data, INT length, TMO timeout)
     memcpy(buffers[b].data[buffers[b].head], data, (size_t)length);
     buffers[b].head = (buffers[b].head + 1) % buffers[b].capacity;
     ++buffers[b].count;
+    (void)pthread_mutex_unlock(&queue_lock); return E_OK;
+}
+/* Fake sleep for the command task's reply retry: counts calls and, when
+ * sleep_drains is set, lets the "network" take one queued message. */
+static unsigned sleeps, sleep_drains;
+ER tk_dly_tsk(TMO time)
+{
+    unsigned b = 0;
+    assert(time == BUDDY1_REPLY_RETRY_MS);
+    ++sleeps;
+    if (sleep_drains) {
+        (void)pthread_mutex_lock(&queue_lock);
+        if (buffers[b].count) { buffers[b].tail = (buffers[b].tail + 1) % buffers[b].capacity; --buffers[b].count; }
+        (void)pthread_mutex_unlock(&queue_lock);
+    }
+    return E_OK;
+}
+ER tk_ref_mbf(ID id, T_RMBF *ref)
+{
+    unsigned b = (unsigned)(id - 1);
+    assert(b < 2 && ref);
+    (void)pthread_mutex_lock(&queue_lock);
+    ref->msgsz = buffers[b].count ? (INT)buffers[b].size : 0;
     (void)pthread_mutex_unlock(&queue_lock); return E_OK;
 }
 INT tk_rcv_mbf(ID id, void *data, TMO timeout)
@@ -677,12 +700,12 @@ static void test_publish_backpressure(void)
     puts("HOST PASS: MQTT retained FIFO retry, exact binary/QoS, bounded pacing/logging, deferred completion, disconnect recovery, permanent error, clock rollover");
 }
 
-/* Route pose: live-only, exact 4-byte layout, strict ranges, never touches the
- * snapshot cache, published on its own topic at QoS 0. */
+/* Route pose: exact 4-byte layout, strict ranges, published on its own topic
+ * at QoS 0; since 19 Nov 2026 also kept in the snapshot (bits 102-123). */
 static void test_pose(void)
 {
     BUDDY1_SNAPSHOT v = {0}, d, before, after;
-    UB p[16];
+    UB p[32];
     v.pose_distance_cm = 4095; v.pose_heading_deg = 359;
     assert(buddy1_encode(BUDDY1_TOPIC_POSE, &v, p, sizeof p) == 4U);
     assert(p[0] == BUDDY1_WIRE_VERSION && p[1] == 0xffU && p[2] == 0x7fU && p[3] == 0x16U);
@@ -702,20 +725,43 @@ static void test_pose(void)
     p[3] = 0; assert(!buddy1_decode(BUDDY1_TOPIC_POSE, p, 3U, &d)); /* length */
     assert(buddy1_payload_size(BUDDY1_TOPIC_POSE) == 4U &&
            buddy1_payload_bits(BUDDY1_TOPIC_POSE) == 21U);
-    assert(buddy1_invalidate(BUDDY1_TOPIC_POSE) == E_PAR); /* no snapshot section */
+    assert(buddy1_invalidate(BUDDY1_TOPIC_POSE) == E_PAR); /* not one of the seven */
     empty_outbox();
     assert(buddy1_snapshot(&before));
     assert(buddy1_report_pose(4096, 0) == E_PAR && buddy1_report_pose(0, 360) == E_PAR);
+    assert(buddy1_snapshot(&after) && memcmp(&before, &after, sizeof before) == 0); /* rejected: unchanged */
     assert(buddy1_report_pose(1234, 270) == E_OK);
-    assert(buddy1_snapshot(&after) && memcmp(&before, &after, sizeof before) == 0);
+    assert(buddy1_snapshot(&after) && after.pose_valid && after.pose_distance_cm == 1234U &&
+           after.pose_heading_deg == 270 && after.motion_valid == before.motion_valid &&
+           after.faults == before.faults && after.hump_count == before.hump_count);
+    /* Snapshot layout: the original 102 bits unchanged, pose valid at bit 102,
+     * distance bits 103-114, heading bits 115-123, version + 16 body bytes. */
+    {
+        UB snap[BUDDY1_PAYLOAD_MAX];
+        BUDDY1_SNAPSHOT z = {0};
+        assert(buddy1_payload_bits(BUDDY1_TOPIC_SNAPSHOT) == 124U && buddy1_payload_size(BUDDY1_TOPIC_SNAPSHOT) == 17U);
+        z.pose_valid = 1; z.pose_distance_cm = 4095; z.pose_heading_deg = 359;
+        assert(buddy1_encode(BUDDY1_TOPIC_SNAPSHOT, &z, snap, sizeof snap) == 17U);
+        assert(snap[1] == 0U && snap[13] == 0xC0U && snap[14] == 0xFFU && snap[15] == 0x3FU && snap[16] == 0x0BU);
+        assert(buddy1_decode(BUDDY1_TOPIC_SNAPSHOT, snap, 17U, &d) && d.pose_valid &&
+               d.pose_distance_cm == 4095U && d.pose_heading_deg == 359 && !d.motion_valid);
+        snap[16] = 0x1BU; assert(!buddy1_decode(BUDDY1_TOPIC_SNAPSHOT, snap, 17U, &d));        /* padding */
+        snap[16] = 0x0FU; snap[15] |= 0xF8U; assert(!buddy1_decode(BUDDY1_TOPIC_SNAPSHOT, snap, 17U, &d)); /* heading 511 */
+        z.pose_valid = 0; z.pose_distance_cm = 77;          /* stale value, invalid: zero bits */
+        assert(buddy1_encode(BUDDY1_TOPIC_SNAPSHOT, &z, snap, sizeof snap) == 17U &&
+               snap[13] == 0U && snap[14] == 0U && snap[15] == 0U && snap[16] == 0U);
+        snap[14] = 1U; assert(!buddy1_decode(BUDDY1_TOPIC_SNAPSHOT, snap, 17U, &d));          /* data w/o valid */
+        assert(!buddy1_decode(BUDDY1_TOPIC_SNAPSHOT, snap, 14U, &d));                        /* old length */
+    }
     poll_after(20);
     assert(strcmp(published_topic, "car/telemetry/pose") == 0 && published_len == 4U &&
            buddy1_decode(BUDDY1_TOPIC_POSE, published, published_len, &d) &&
            d.pose_distance_cm == 1234U && d.pose_heading_deg == 270);
-    puts("HOST PASS: route pose 21 bits/4 bytes, 4095/359 limits, padding/length rejection, live-only (snapshot unchanged), own topic");
+    puts("HOST PASS: route pose 21 bits/4 bytes, 4095/359 limits, padding/length rejection, own topic; snapshot pose section (bits 102-123), rejected values never cached");
 }
-/* Buddy 4 terrain: live-only, 46 bits/7 bytes, every pitch/roll and height
- * code round-trips, unavailable means canonical zero, never cached. */
+/* Buddy 4 terrain: live-only, 59 bits/9 bytes (19 Nov 2026: + compass turn
+ * rate and lifted/overturned), every pitch/roll, height and turn code
+ * round-trips, unavailable means canonical zero, never cached. */
 /* Buddy 5: live avoidance (38 bits/6 bytes) and FR6 scan profile (95 bits/
  * 13 bytes); every field boundary round-trips, unusable values are zero,
  * out-of-range and noncanonical packets are rejected, never cached. */
@@ -739,7 +785,7 @@ static void test_buddy5(void)
     BUDDY1_SNAPSHOT v, d, before, after;
     BUDDY1_AVOIDANCE a;
     BUDDY1_SCAN q;
-    UB p[16];
+    UB p[32];
     unsigned mm, deg;
     int e;
     assert(buddy1_payload_size(BUDDY1_TOPIC_AVOIDANCE) == 6U && buddy1_payload_bits(BUDDY1_TOPIC_AVOIDANCE) == 38U);
@@ -820,55 +866,164 @@ static int same_terrain(const BUDDY1_TERRAIN *a, const BUDDY1_TERRAIN *b)
 {
     return a->tilt_valid == b->tilt_valid && a->pitch_x10 == b->pitch_x10 &&
            a->roll_x10 == b->roll_x10 && a->state == b->state && a->on_hump == b->on_hump &&
-           a->climb_mm == b->climb_mm && a->peak_valid == b->peak_valid && a->peak_mm == b->peak_mm;
+           a->climb_mm == b->climb_mm && a->peak_valid == b->peak_valid && a->peak_mm == b->peak_mm &&
+           a->turn_valid == b->turn_valid && a->turn_dps == b->turn_dps && a->safety == b->safety;
 }
 static void test_terrain(void)
 {
     BUDDY1_SNAPSHOT v = {0}, d, before, after;
     BUDDY1_TERRAIN t;
-    UB p[16];
+    UB p[32];
     int x;
-    assert(buddy1_payload_size(BUDDY1_TOPIC_TERRAIN) == 7U &&
-           buddy1_payload_bits(BUDDY1_TOPIC_TERRAIN) == 46U);
+    assert(buddy1_payload_size(BUDDY1_TOPIC_TERRAIN) == 9U &&
+           buddy1_payload_bits(BUDDY1_TOPIC_TERRAIN) == 59U);
     for (x = -900; x <= 900; ++x) {
         v = (BUDDY1_SNAPSHOT){0};
         v.terrain = (BUDDY1_TERRAIN){1, (int16_t)x, (int16_t)(-x), (uint8_t)((unsigned)(x + 900) % 8U),
-                                     1, (uint16_t)((unsigned)(x + 900) % 501U), 1, (uint16_t)((unsigned)(900 - x) % 501U)};
-        assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 7U && (p[6] >> 6) == 0U);
-        assert(buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d) && d.terrain_valid &&
+                                     1, (uint16_t)((unsigned)(x + 900) % 501U), 1, (uint16_t)((unsigned)(900 - x) % 501U),
+                                     1, (int16_t)(x * 2 / 5), (uint8_t)((unsigned)(x + 900) % 3U)};
+        assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 9U && (p[8] >> 3) == 0U);
+        assert(buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d) && d.terrain_valid &&
                same_terrain(&d.terrain, &v.terrain));
     }
-    v.terrain = (BUDDY1_TERRAIN){1, 901, 0, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
-    v.terrain = (BUDDY1_TERRAIN){1, 0, -901, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
-    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 8, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
-    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 1, 501, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
-    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 1, 501}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
-    v.terrain = (BUDDY1_TERRAIN){0, 5, 0, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
-    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 7, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
-    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 0, 7}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    for (x = -360; x <= 360; x += 720) { /* turn-rate extremes */
+        v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 4, 0, 0, 0, 0, 1, (int16_t)x, 0};
+        assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 9U &&
+               buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d) && same_terrain(&d.terrain, &v.terrain));
+    }
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 0, 0, 1, 361, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 0, 0, 1, -361, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 901, 0, 0, 0, 0, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, -901, 0, 0, 0, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 1, 501, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 1, 501, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
+    v.terrain = (BUDDY1_TERRAIN){1, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0}; assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 0U);
     /* Everything unavailable: terrain state still sent, all values zero. */
-    v.terrain = (BUDDY1_TERRAIN){0, 0, 0, 2, 0, 0, 0, 0};
-    assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 7U && p[1] == 0U && p[2] == 0U &&
-           p[3] == 0U && p[4] == 0x01U && p[5] == 0U && p[6] == 0U);
-    assert(buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d) && !d.terrain.tilt_valid && d.terrain.state == 2U);
-    p[1] = 0x02U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d));  /* unavailable + angle */
+    v.terrain = (BUDDY1_TERRAIN){0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0};
+    assert(buddy1_encode(BUDDY1_TOPIC_TERRAIN, &v, p, sizeof p) == 9U && p[1] == 0U && p[2] == 0U &&
+           p[3] == 0U && p[4] == 0x01U && p[5] == 0U && p[6] == 0U && p[7] == 0U && p[8] == 0U);
+    assert(buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d) && !d.terrain.tilt_valid && d.terrain.state == 2U &&
+           !d.terrain.turn_valid && d.terrain.safety == BUDDY1_SAFETY_NONE);
+    p[1] = 0x02U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d));  /* unavailable + angle */
     p[1] = 0xF1U; p[2] = 0x07U; p[4] = 0U;                                  /* pitch +1016 */
-    assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d));
-    p[1] = 0; p[2] = 0; p[4] = 0x08U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d)); /* climb w/o hump */
-    p[4] = 0; p[6] = 0x40U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 7U, &d));            /* padding */
-    p[6] = 0; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 6U, &d));                          /* length */
+    assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d));
+    p[1] = 0; p[2] = 0; p[4] = 0x08U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d)); /* climb w/o hump */
+    p[4] = 0; p[7] = 0x01U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d));            /* turn w/o valid */
+    p[6] = 0xC0U; p[7] = 0xB4U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d)); /* valid, +361 deg/s */
+    p[6] = 0x40U; p[7] = 0xB4U; assert(buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d) && d.terrain.turn_dps == 360); /* +360 */
+    p[6] = 0; p[7] = 0; p[8] = 0x06U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d)); /* safety 3 */
+    p[8] = 0x08U; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 9U, &d));                      /* padding */
+    p[8] = 0; assert(!buddy1_decode(BUDDY1_TOPIC_TERRAIN, p, 8U, &d));                          /* length */
     assert(buddy1_invalidate(BUDDY1_TOPIC_TERRAIN) == E_PAR); /* no snapshot section */
     empty_outbox();
     assert(buddy1_snapshot(&before));
     assert(buddy1_report_terrain(0) == E_PAR);
-    t = (BUDDY1_TERRAIN){1, 901, 0, 1, 0, 0, 0, 0}; assert(buddy1_report_terrain(&t) == E_PAR);
-    t = (BUDDY1_TERRAIN){1, -305, 42, 5, 1, 17, 1, 33}; assert(buddy1_report_terrain(&t) == E_OK);
+    t = (BUDDY1_TERRAIN){1, 901, 0, 1, 0, 0, 0, 0, 0, 0, 0}; assert(buddy1_report_terrain(&t) == E_PAR);
+    t = (BUDDY1_TERRAIN){1, -305, 42, 5, 1, 17, 1, 33, 1, -123, BUDDY1_SAFETY_LIFTED}; assert(buddy1_report_terrain(&t) == E_OK);
     assert(buddy1_snapshot(&after) && memcmp(&before, &after, sizeof before) == 0);
     poll_after(20);
-    assert(strcmp(published_topic, "car/telemetry/terrain") == 0 && published_len == 7U &&
+    assert(strcmp(published_topic, "car/telemetry/terrain") == 0 && published_len == 9U &&
            buddy1_decode(BUDDY1_TOPIC_TERRAIN, published, published_len, &d) &&
            same_terrain(&d.terrain, &t));
-    puts("HOST PASS: Buddy 4 terrain 46 bits/7 bytes, all pitch/roll codes, +/-90.0 and 0..500 mm limits, unavailable=zero, padding/length rejection, live-only, own topic");
+    puts("HOST PASS: Buddy 4 terrain 59 bits/9 bytes, all pitch/roll codes, +/-90.0, 0..500 mm and +/-360 deg/s limits, lifted/overturned, unavailable=zero, padding/length rejection, live-only, own topic");
+}
+static int same_sample(const BUDDY1_SCAN_SAMPLE *a, const BUDDY1_SCAN_SAMPLE *b)
+{
+    return a->scan_id == b->scan_id && a->peek == b->peek && a->index == b->index &&
+           a->count == b->count && a->angle_deg == b->angle_deg && a->valid == b->valid &&
+           a->distance_mm == b->distance_mm;
+}
+/* Buddy 5 raw scan readings (19 Nov 2026): 35 bits/6 bytes, every angle,
+ * index/count pair and range limit round-trips; no reading = canonical zero. */
+static void test_scan_sample(void)
+{
+    BUDDY1_SNAPSHOT v = {0}, d, before, after;
+    BUDDY1_SCAN_SAMPLE q;
+    UB p[32];
+    unsigned angle, count, index, k;
+    static const unsigned mm[] = {30, 31, 999, 3999, 4000};
+    assert(buddy1_payload_size(BUDDY1_TOPIC_SCAN_SAMPLE) == 6U &&
+           buddy1_payload_bits(BUDDY1_TOPIC_SCAN_SAMPLE) == 35U &&
+           strcmp(buddy1_topic_name(BUDDY1_TOPIC_SCAN_SAMPLE), "car/telemetry/scan_sample") == 0);
+    for (angle = 30; angle <= 150; angle += 5)
+        for (count = 1; count <= BUDDY1_SCAN_SAMPLES_MAX; ++count)
+            for (index = 0; index < count; ++index)
+                for (k = 0; k <= sizeof mm / sizeof mm[0]; ++k) {
+                    v.scan_sample = (BUDDY1_SCAN_SAMPLE){(UB)(angle + count), (UB)(count == 1U), (UB)index,
+                        (UB)count, (UB)angle, (UB)(k < sizeof mm / sizeof mm[0]),
+                        (UH)(k < sizeof mm / sizeof mm[0] ? mm[k] : 0U)};
+                    assert(buddy1_encode(BUDDY1_TOPIC_SCAN_SAMPLE, &v, p, sizeof p) == 6U && (p[5] >> 3) == 0U);
+                    assert(buddy1_decode(BUDDY1_TOPIC_SCAN_SAMPLE, p, 6U, &d) && d.scan_sample_valid &&
+                           same_sample(&d.scan_sample, &v.scan_sample));
+                }
+    q = (BUDDY1_SCAN_SAMPLE){1, 0, 0, 1, 90, 1, 200};
+#define REJECT(field, value) do { v.scan_sample = q; v.scan_sample.field = (value); \
+        assert(buddy1_encode(BUDDY1_TOPIC_SCAN_SAMPLE, &v, p, sizeof p) == 0U); } while (0)
+    REJECT(count, 0); REJECT(count, 17); REJECT(index, 1); REJECT(angle_deg, 25);
+    REJECT(angle_deg, 155); REJECT(angle_deg, 92); REJECT(distance_mm, 29);
+    REJECT(distance_mm, 4001); REJECT(peek, 2); REJECT(valid, 2);
+    v.scan_sample = q; v.scan_sample.valid = 0; assert(buddy1_encode(BUDDY1_TOPIC_SCAN_SAMPLE, &v, p, sizeof p) == 0U);
+#undef REJECT
+    v.scan_sample = q; assert(buddy1_encode(BUDDY1_TOPIC_SCAN_SAMPLE, &v, p, sizeof p) == 6U);
+    p[3] |= 0x3EU; assert(!buddy1_decode(BUDDY1_TOPIC_SCAN_SAMPLE, p, 6U, &d)); /* angle index 31 */
+    assert(buddy1_encode(BUDDY1_TOPIC_SCAN_SAMPLE, &v, p, sizeof p) == 6U);
+    p[2] = 0x02U; assert(!buddy1_decode(BUDDY1_TOPIC_SCAN_SAMPLE, p, 6U, &d));                 /* index 1 of 1 */
+    assert(buddy1_encode(BUDDY1_TOPIC_SCAN_SAMPLE, &v, p, sizeof p) == 6U);
+    p[5] |= 0x08U; assert(!buddy1_decode(BUDDY1_TOPIC_SCAN_SAMPLE, p, 6U, &d));                /* padding */
+    p[5] &= 0x07U; assert(!buddy1_decode(BUDDY1_TOPIC_SCAN_SAMPLE, p, 5U, &d));                /* length */
+    assert(buddy1_invalidate(BUDDY1_TOPIC_SCAN_SAMPLE) == E_PAR); /* no snapshot section */
+    empty_outbox();
+    assert(buddy1_snapshot(&before));
+    assert(buddy1_report_scan_sample(0) == E_PAR);
+    q.angle_deg = 151; assert(buddy1_report_scan_sample(&q) == E_PAR);
+    assert(buddy1_outbox_idle());
+    q = (BUDDY1_SCAN_SAMPLE){200, 1, 0, 1, 135, 1, 287}; assert(buddy1_report_scan_sample(&q) == E_OK);
+    assert(!buddy1_outbox_idle());                    /* readings wait behind it */
+    assert(buddy1_snapshot(&after) && memcmp(&before, &after, sizeof before) == 0);
+    poll_after(20);
+    assert(strcmp(published_topic, "car/telemetry/scan_sample") == 0 && published_len == 6U &&
+           buddy1_decode(BUDDY1_TOPIC_SCAN_SAMPLE, published, published_len, &d) &&
+           same_sample(&d.scan_sample, &q));
+    puts("HOST PASS: Buddy 5 scan sample 35 bits/6 bytes: every angle 30..150, every index/count 1..16, 30/4000 mm limits, no reading=zero, padding/length rejection, live-only, own topic, outbox-idle gate");
+}
+/* A full outbox must delay a map/snapshot reply, not drop it, and the
+ * command itself runs once. */
+static void test_reply_retry(void)
+{
+    BUDDY1_COMMAND_MSG snapshot = {.kind = BUDDY1_COMMAND_SNAPSHOT, .payload = {BUDDY1_WIRE_VERSION}};
+    BUDDY1_COMMAND_MSG map = {.kind = BUDDY1_COMMAND_BARCODE_MAP};
+    BUDDY1_BARCODE_MAP wanted = {'F', 'L', 'R', 'U'};
+    BUDDY1_TELEMETRY_MSG msg;
+    BUDDY1_BARCODE_MAP original;
+    unsigned i, before;
+    const BOOL was_open = buddy1_configuration_allowed();
+    assert(buddy1_configuration_claim(&original, NULL) == E_OK && buddy1_configuration_reopen() == E_OK);
+    assert(buddy1_map_pack(&wanted, map.payload));
+    empty_outbox();
+    for (i = 0; i < BUDDY1_QUEUE_MESSAGES; ++i) assert(buddy1_report_heading((H)i) == E_OK);
+    assert(buddy1_command_process(&snapshot) == E_TMOUT);          /* one attempt, no sleep */
+    sleeps = 0; sleep_drains = 0;
+    assert(buddy1_command_process_retry(&snapshot, 3U) == E_TMOUT && sleeps == 2U);
+    sleeps = 0; sleep_drains = 1;
+    assert(buddy1_command_process_retry(&map, BUDDY1_REPLY_TRIES) == E_OK && sleeps == 1U);
+    assert(buddy1_barcode_action('L') == BUDDY1_ACTION_LEFT);      /* applied once */
+    before = outbox_count();
+    while (buddy1_outbox_take(&msg)) { }
+    assert(before == BUDDY1_QUEUE_MESSAGES && msg.type == BUDDY1_TOPIC_MAP_REPLY &&
+           msg.payload[1] == BUDDY1_REPLY_OK);
+    for (i = 0; i < BUDDY1_QUEUE_MESSAGES; ++i) assert(buddy1_report_heading((H)i) == E_OK);
+    sleeps = 0;
+    assert(buddy1_command_process_retry(&snapshot, BUDDY1_REPLY_TRIES) == E_OK && sleeps == 1U);
+    sleep_drains = 0;
+    empty_outbox();
+    assert(buddy1_apply_barcode_map(&original) == E_OK);            /* restore map and latch */
+    if (!was_open) assert(buddy1_configuration_close() == E_OK);
+    puts("HOST PASS: map/snapshot replies wait for outbox space (10 ms retries, bounded), command applied once");
 }
 static void *producer(void *which)
 {
@@ -884,7 +1039,7 @@ static void *producer(void *which)
 static void emit_vectors(void)
 {
     BUDDY1_SNAPSHOT v = {0};
-    UB packet[16]; unsigned topic, i, len;
+    UB packet[32]; unsigned topic, i, len;
     v.motion_valid = v.barcode_valid = v.hump_valid = v.heading_valid = 1;
     v.obstacle_valid = v.robot_state_valid = v.faults_valid = 1;
     v.left_mms = 120; v.right_mms = -118;
@@ -892,10 +1047,11 @@ static void emit_vectors(void)
     v.hump_count = 2; v.hump_height_mm = 45; v.heading_deg = 359;
     v.obstacle_distance_mm = 180; v.obstacle_width_mm = 140; v.obstacle_route = BUDDY1_ROUTE_LEFT;
     v.robot_state = BUDDY1_STATE_LINE_FOLLOWING; v.faults = 0x31;
-    v.pose_distance_cm = 2049; v.pose_heading_deg = 90;
-    v.terrain = (BUDDY1_TERRAIN){1, 123, -51, 5, 1, 23, 1, 41};
+    v.pose_valid = 1; v.pose_distance_cm = 2049; v.pose_heading_deg = 90;
+    v.terrain = (BUDDY1_TERRAIN){1, 123, -51, 5, 1, 23, 1, 41, 1, -87, BUDDY1_SAFETY_NONE};
     v.avoidance = (BUDDY1_AVOIDANCE){1, 0, 412, 150, 3, 0, 2, 3, 3, 1};
     v.scan = (BUDDY1_SCAN){1, 7, 250, 400, 180, 320, 380, 150, -250};
+    v.scan_sample = (BUDDY1_SCAN_SAMPLE){7, 0, 3, 13, 75, 1, 412};
     for (topic = 0; topic < BUDDY1_TOPIC_COUNT; ++topic) {
         if (topic == BUDDY1_TOPIC_MAP_REPLY) continue;
         len = buddy1_encode((UB)topic, &v, packet, sizeof(packet)); assert(len);
@@ -909,7 +1065,7 @@ static void test_terrain_widths(void)
 {
     BUDDY1_SNAPSHOT v={0},d,before;
     UB p[BUDDY1_PAYLOAD_MAX];
-    assert(BUDDY1_PAYLOAD_MAX==14 && buddy1_payload_bits(BUDDY1_TOPIC_HUMP)==25 &&
+    assert(BUDDY1_PAYLOAD_MAX==17 && buddy1_payload_bits(BUDDY1_TOPIC_HUMP)==25 &&
            buddy1_payload_bits(BUDDY1_TOPIC_OBSTACLE)==26);
     for(unsigned height=0;height<512;++height) {
         v.hump_count=65535;v.hump_height_mm=(UH)height;
@@ -942,7 +1098,7 @@ int main(void)
 {
     BUDDY1_SNAPSHOT v = {0}, decoded;
     BUDDY1_COMMAND_MSG command;
-    UB packet[16], map_packet[4];
+    UB packet[32], map_packet[4];
     BUDDY1_BARCODE_MAP map = {'A', 'B', 'C', 'D'};
     pthread_t workers[8]; unsigned i, before;
     int speed;
@@ -1044,6 +1200,8 @@ int main(void)
     test_capture_mixed_retries();
     test_pose();
     test_terrain();
+    test_scan_sample();
+    test_reply_retry();
     test_buddy5();
     test_terrain_widths();
 #if APP_IR_DEBUG

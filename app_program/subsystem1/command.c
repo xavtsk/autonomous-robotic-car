@@ -126,16 +126,19 @@ EXPORT ER buddy1_command_enqueue(const char *topic, const UB *payload, UH length
     return tk_snd_mbf(mbf_buddy1_commands, &message, sizeof(message), TMO_POL);
 }
 
-EXPORT ER buddy1_command_process(const BUDDY1_COMMAND_MSG *command)
+/* Carry out one command (apply the map / take the snapshot) exactly once and
+ * build its reply. */
+LOCAL ER command_reply(const BUDDY1_COMMAND_MSG *command, UB reply[BUDDY1_PAYLOAD_MAX],
+                       UB *type, UH *length)
 {
-    UB reply[BUDDY1_PAYLOAD_MAX];
     BUDDY1_BARCODE_MAP map;
     ER er;
     if (!command) return E_PAR;
     if (command->kind == BUDDY1_COMMAND_SNAPSHOT) {
         if (command->payload[0] != BUDDY1_WIRE_VERSION) return E_PAR;
         if (!buddy1_snapshot_packet(reply)) return E_SYS;
-        return buddy1_queue_publish(BUDDY1_TOPIC_SNAPSHOT, reply, sizeof(reply));
+        *type = BUDDY1_TOPIC_SNAPSHOT; *length = BUDDY1_PAYLOAD_MAX;
+        return E_OK;
     }
     if (command->kind != BUDDY1_COMMAND_BARCODE_MAP) return E_PAR;
     reply[0] = BUDDY1_WIRE_VERSION;
@@ -146,7 +149,31 @@ EXPORT ER buddy1_command_process(const BUDDY1_COMMAND_MSG *command)
         reply[1] = er == E_OK ? BUDDY1_REPLY_OK :
                    er == E_OBJ ? BUDDY1_REPLY_BUSY : BUDDY1_REPLY_INTERNAL;
     }
-    return buddy1_queue_publish(BUDDY1_TOPIC_MAP_REPLY, reply, 2);
+    *type = BUDDY1_TOPIC_MAP_REPLY; *length = 2;
+    return E_OK;
+}
+
+EXPORT ER buddy1_command_process(const BUDDY1_COMMAND_MSG *command)
+{
+    return buddy1_command_process_retry(command, 1U);
+}
+
+/* The reply shares the 4-slot outbox with live telemetry. While it is full
+ * (E_TMOUT), wait BUDDY1_REPLY_RETRY_MS and try again, up to `tries` attempts,
+ * instead of dropping the reply. The command itself is never repeated. */
+EXPORT ER buddy1_command_process_retry(const BUDDY1_COMMAND_MSG *command, UINT tries)
+{
+    UB reply[BUDDY1_PAYLOAD_MAX];
+    UB type = 0;
+    UH length = 0;
+    UINT attempt;
+    ER er = command_reply(command, reply, &type, &length);
+    if (er != E_OK) return er;
+    for (attempt = 1U; ; ++attempt) {
+        er = buddy1_queue_publish(type, reply, length);
+        if (er != E_TMOUT || attempt >= tries) return er;
+        (void)tk_dly_tsk(BUDDY1_REPLY_RETRY_MS);
+    }
 }
 
 EXPORT void buddy1_command_task(INT stacd, void *exinf)
@@ -155,6 +182,6 @@ EXPORT void buddy1_command_task(INT stacd, void *exinf)
     (void)stacd; (void)exinf;
     for (;;) {
         if (tk_rcv_mbf(mbf_buddy1_commands, &command, TMO_FEVR) == (INT)sizeof(command))
-            (void)buddy1_command_process(&command);
+            (void)buddy1_command_process_retry(&command, BUDDY1_REPLY_TRIES);
     }
 }

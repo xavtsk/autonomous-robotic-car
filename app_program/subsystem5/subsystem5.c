@@ -13,6 +13,14 @@ static volatile uint8_t servo_deg;
 static uint16_t requested;
 static uint8_t requested_angle; /* 0 = full scan, else side peek angle */
 static struct { unsigned cancel:1,busy:1; } shared;
+/* Raw readings of the last finished scan or side peek, for telemetry
+ * (car/telemetry/scan_sample). Written by the S5 task, read by the
+ * controller's report code; both under mutex_id. */
+static struct {
+    s5_sample_t sample[S5_SAMPLES_MAX];
+    uint16_t id;
+    unsigned count:5, peek:1;
+} last_scan;
 static uint32_t now_us(void) { return in_w(TIMER_TIMERAWL); }
 static void servo_to(unsigned angle)
 {
@@ -35,6 +43,16 @@ static void scan_log(const s5_scan_t *s,const s5_profile_t *p)
 #else
     (void)s;(void)p;
 #endif
+}
+static void keep_samples(const s5_scan_t *s,uint16_t id,bool peek)
+{
+    unsigned n=s->count;
+    if(tk_loc_mtx(mutex_id,TMO_FEVR)!=E_OK) { return; }
+    for(unsigned i=0;i<n;i++) { last_scan.sample[i]=s->sample[i]; }
+    /* A failed scan also shows where it stopped: one "no reading" entry. */
+    if(s->failed && n<S5_SAMPLES_MAX && s5_sample_pack(s->angle,0U,false,&last_scan.sample[n])) { n++; }
+    last_scan.count=n;last_scan.id=id;last_scan.peek=peek?1U:0U;
+    tk_unl_mtx(mutex_id);
 }
 static void publish(const s5_observation_t *o)
 {
@@ -114,6 +132,7 @@ static void task(INT code,void *unused)
                 s5_scan_accept(&scan,now,valid,mm);
                 if(scan.done) {
                     obs.scan_done=true;obs.scan_us=now;
+                    keep_samples(&scan,peek_id?peek_id:obs.scan_id,peek_id!=0U);
                     if(peek_id) {
                         obs.scan_id=peek_id;peek_id=0;
                         if(scan.failed || !s5_peek_merge(&obs.profile,&scan.sample[0])) { obs.profile=(s5_profile_t){0}; }
@@ -135,6 +154,7 @@ static void task(INT code,void *unused)
         }
         if(scanning && (uint32_t)(now-scan.started_us)>=S5_SCAN_TIMEOUT_US) {
             ultrasonic_sensor_cancel();pinging=false;scanning=false;
+            scan.failed=1U;keep_samples(&scan,peek_id?peek_id:obs.scan_id,peek_id!=0U);
             if(peek_id) { obs.scan_id=peek_id;peek_id=0; }
             obs.scan_done=true;obs.scan_us=now;obs.profile=(s5_profile_t){0};
             angle=90;servo_to(angle);positioned=now;
@@ -205,6 +225,13 @@ void subsystem5_set_controller_status(unsigned state,unsigned fault,unsigned rou
     }
 }
 uint8_t subsystem5_servo_angle(void) { return servo_deg; }
+bool subsystem5_scan_samples(uint16_t *id,bool *peek,s5_sample_t out[S5_SAMPLES_MAX],unsigned *count)
+{
+    if(!id || !peek || !out || !count || mutex_id<=0 || tk_loc_mtx(mutex_id,TMO_POL)!=E_OK) { return false; }
+    *count=last_scan.count;*id=last_scan.id;*peek=last_scan.peek!=0U;
+    for(unsigned i=0;i<*count;i++) { out[i]=last_scan.sample[i]; }
+    tk_unl_mtx(mutex_id);return true;
+}
 uint16_t subsystem5_controller_status(void)
 {
     uint16_t value=0;
@@ -225,4 +252,6 @@ void subsystem5_set_controller_status(unsigned state,unsigned fault,unsigned rou
 { (void)state;(void)fault;(void)route;(void)leg;(void)pass;(void)swapped; }
 uint16_t subsystem5_controller_status(void) { return 0; }
 uint8_t subsystem5_servo_angle(void) { return 0; }
+bool subsystem5_scan_samples(uint16_t *id,bool *peek,s5_sample_t out[S5_SAMPLES_MAX],unsigned *count)
+{ (void)id;(void)peek;(void)out;(void)count;return false; }
 #endif

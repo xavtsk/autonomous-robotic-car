@@ -43,6 +43,11 @@ IMPORT ER buddy1_report_terrain(const BUDDY1_TERRAIN *terrain);
  * MQTT_PROTOCOL.md. Out-of-range values are rejected (E_PAR). Not cached. */
 IMPORT ER buddy1_report_avoidance(const BUDDY1_AVOIDANCE *avoidance);
 IMPORT ER buddy1_report_scan(const BUDDY1_SCAN *scan);
+/* One reading of the last scan; call once per reading after its profile. */
+IMPORT ER buddy1_report_scan_sample(const BUDDY1_SCAN_SAMPLE *sample);
+/* TRUE when nothing is waiting in the outbox. Optional bulk data (raw scan
+ * readings) is sent only then, so it never takes a slot an event needs. */
+IMPORT BOOL buddy1_outbox_idle(void);
 IMPORT ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state);
 /* Central protected telemetry fault mirror. Each caller updates only its
  * owned bits; active is a subset of changed. Task context only. Controller
@@ -53,6 +58,12 @@ IMPORT ER buddy1_queue_publish(UB type, const UB *payload, UH payload_len);
 IMPORT BOOL buddy1_outbox_take(BUDDY1_TELEMETRY_MSG *out);
 IMPORT ER buddy1_command_enqueue(const char *topic, const UB *payload, UH payload_len);
 IMPORT ER buddy1_command_process(const BUDDY1_COMMAND_MSG *command);
+/* Same, but a full outbox is retried every BUDDY1_REPLY_RETRY_MS, up to
+ * `tries` attempts (the command task uses BUDDY1_REPLY_TRIES = 2 s, well
+ * inside the dashboard's 8 s reply wait). Task context only (it may sleep). */
+#define BUDDY1_REPLY_RETRY_MS     10
+#define BUDDY1_REPLY_TRIES        200U
+IMPORT ER buddy1_command_process_retry(const BUDDY1_COMMAND_MSG *command, UINT tries);
 IMPORT BOOL buddy1_motion_snapshot(H *left_mms, H *right_mms);
 IMPORT BOOL buddy1_snapshot(BUDDY1_SNAPSHOT *out);
 IMPORT BOOL buddy1_snapshot_packet(UB packet[BUDDY1_PAYLOAD_MAX]);

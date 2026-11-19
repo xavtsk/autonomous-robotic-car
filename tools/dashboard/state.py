@@ -22,6 +22,7 @@ POSE_TOPIC = "car/telemetry/pose"
 TERRAIN_TOPIC = "car/telemetry/terrain"
 AVOIDANCE_TOPIC = "car/telemetry/avoidance"
 SCAN_TOPIC = "car/telemetry/scan"
+SCAN_SAMPLE_TOPIC = "car/telemetry/scan_sample"
 LIVE_SECTIONS = ("motion", "terrain", "avoidance")  # periodic 5 Hz streams: stale after MOTION_TIMEOUT
 
 HEARTBEAT_TOPIC = "mtk3smp-pico/heartbeat"
@@ -39,7 +40,7 @@ RUN_SAMPLE_KEYS = {
     "ir_preview": (),
     "navigation": ("state", "reason", "pending", "barcode_status", "barcode_events",
                    "junction_events", "lost_events"),
-    "terrain": ("state", "tilt_valid", "on_hump", "peak_mm"),
+    "terrain": ("state", "tilt_valid", "on_hump", "peak_mm", "safety"),
     "avoidance": ("state", "fault", "route", "leg", "pass_step", "swapped", "no_echo", "range_valid"),
 }
 RUN_SAMPLE_INTERVAL_S = {"ir_preview": 0.2}  # 5 Hz preview, most other streams log at 1 Hz
@@ -82,6 +83,10 @@ class DashboardState:
         self.run_log = RunLog(traces.folder, clock=clock)
         self.imu_captures = ImuCaptures(traces.folder) if capture_imu and mode == "live" else None
         self.route = RouteTracker(clock, self.run_log.record)
+        # Buddy 5 raw readings of the latest scan/peek (car/telemetry/scan_sample).
+        self.scan_samples = None
+        # Distance/heading since START from the last snapshot reply (not a live section).
+        self.snapshot_pose = None
         self._logged_run_id = None
         self._logged_samples = {}
         self._demo_pose_t0 = None
@@ -361,11 +366,36 @@ class DashboardState:
                 previous = self.sections["terrain"]["data"]
                 if decoded["state"] == "impact" and previous.get("state") != "impact":
                     self.add_event(4, "warning", "Buddy 4: sudden impact detected")
+                if decoded.get("safety") in ("lifted", "overturned") and previous.get("safety") != decoded["safety"]:
+                    self.add_event(4, "warning", f"Buddy 4: car {decoded['safety']}")
                 if decoded["peak_valid"] and decoded["peak_mm"] != previous.get("peak_mm"):
                     self.add_event(4, "info", f"Buddy 4: highest hump this run {decoded['peak_mm']} mm")
                 self._update("terrain", decoded)
                 if self.route.terrain(decoded):
                     self._log_run(4, "terrain", decoded, received_at, final=True)
+                return
+            if topic == SCAN_SAMPLE_TOPIC:
+                try:
+                    decoded = decode(topic, payload)
+                except (ValueError, TypeError) as exc:
+                    self.counters["malformed"] += 1
+                    self.add_event(5, "warning", f"Rejected {topic}: {exc}")
+                    return
+                self.last_car = self.clock()
+                self.counters["received"] += 1
+                self.counters["bytes_received"] += len(payload)
+                self.debug.receive(len(payload))
+                self.history.appendleft(dict(time=timestamp(), topic=topic,
+                                              hex=payload.hex(), decoded=decoded))
+                current = self.scan_samples
+                if current is None or (current["scan_id"], current["peek"], current["count"]) != (
+                        decoded["scan_id"], decoded["peek"], decoded["count"]) or decoded["index"] in current["samples"]:
+                    current = self.scan_samples = dict(scan_id=decoded["scan_id"], peek=decoded["peek"],
+                                                       count=decoded["count"], samples={})
+                current["samples"][decoded["index"]] = dict(angle_deg=decoded["angle_deg"], valid=decoded["valid"],
+                                                            distance_mm=decoded["distance_mm"])
+                current["received_at"], current["mono"] = timestamp(), self.clock()
+                self._log_run(5, "scan_sample", decoded, received_at)
                 return
             if topic in (AVOIDANCE_TOPIC, SCAN_TOPIC):
                 try:
@@ -438,10 +468,21 @@ class DashboardState:
             elif topic == "car/reply/snapshot":
                 self._log_run(1, "snapshot_reply", {"valid_sections": [name for name, value in decoded.items()
                                                                        if value["valid"]]}, received_at)
+                pose = decoded.pop("pose", None)
                 for name, value in decoded.items():
                     self._update(name, {k: v for k, v in value.items() if k != "valid"},
                                  source="snapshot", valid=value["valid"])
-                self._reply("snapshot", "accepted", "Snapshot received. Values are cached; sensor sample ages are unknown.")
+                if pose is None:
+                    where = " Distance travelled not included (firmware before 19 Nov 2026)."
+                elif pose["valid"]:
+                    self.snapshot_pose = dict(pose, received_at=timestamp())
+                    where = (f" Distance since START {pose['distance_cm_mod'] / 100:.2f} m, "
+                             f"heading {pose['heading_deg']}° since START.")
+                else:
+                    self.snapshot_pose = dict(pose, received_at=timestamp())
+                    where = " Distance travelled unavailable (no drive since power-up)."
+                self._reply("snapshot", "accepted", "Snapshot received." + where +
+                            " Values are cached; sensor sample ages are unknown.")
             else:
                 name = topic.rsplit("/", 1)[-1]
                 self._update(name, decoded)
@@ -647,7 +688,18 @@ class DashboardState:
                         traces=self.traces.list(), diagnostics={"raw_messages": list(self.history),
                             "ir": self.ir.snapshot(self.connection["status"] == "connected", False),
                             "controller": self.debug.controller.snapshot(self.connection["status"] == "connected",False)},
-                        demo_scenario=self.demo_scenario, route=self.route.snapshot())
+                        demo_scenario=self.demo_scenario, route=self.route.snapshot(),
+                        scan_samples=self._scan_samples_view(now),
+                        snapshot_pose=deepcopy(self.snapshot_pose))
+
+    def _scan_samples_view(self, now):
+        current = self.scan_samples
+        if current is None:
+            return None
+        samples = [dict(index=i, **current["samples"][i]) for i in sorted(current["samples"])]
+        return dict(scan_id=current["scan_id"], peek=current["peek"], count=current["count"],
+                    received=len(samples), samples=samples, received_at=current["received_at"],
+                    age_s=round(max(0, now - current["mono"]), 2))
 
     def demo_select(self, scenario):
         if self.mode != "demo":
@@ -669,6 +721,8 @@ class DashboardState:
                 self._demo_control_last = -1
                 self._demo_encoders = [0,0]
                 self.route = RouteTracker(self.clock, self.run_log.record)
+                self.scan_samples = None
+                self.snapshot_pose = None
                 self._demo_pose_t0 = None
                 self._demo_barcode_last = None
                 self._demo_humps = 0
@@ -782,7 +836,8 @@ class DashboardState:
         peak = 30 if self._demo_humps else None
         body = (1 | (pitch & 0x7ff) << 1 | (roll & 0x7ff) << 12 | state << 23 |
                 int(on) << 26 | climb << 27 | int(peak is not None) << 36 | (peak or 0) << 37)
-        self.ingest(TERRAIN_TOPIC, bytes([VERSION]) + body.to_bytes(6, "little"))
+        # Compass turn rate is unavailable (no magnetometer calibration), as on the car.
+        self.ingest(TERRAIN_TOPIC, bytes([VERSION]) + body.to_bytes(8, "little"))
 
     def _demo_avoidance(self, t, active):
         """Simulated Buddy 5: an obstacle approaches, is scanned, then bypassed."""
@@ -807,6 +862,12 @@ class DashboardState:
                 value |= f << shift
                 shift += w
             self.ingest(SCAN_TOPIC, bytes([VERSION]) + value.to_bytes(12, "little"))
+            readings = ((30, 640), (60, 420), (90, 200), (120, 380), (150, 700),
+                        (75, 230), (80, 212), (85, 204), (90, 200), (95, 206), (100, 218), (105, 236))
+            for index, (angle, mm) in enumerate(readings):
+                sample = (int(t) & 255 | index << 9 | (len(readings) - 1) << 13 | (angle - 30) // 5 << 17 |
+                          1 << 22 | mm << 23)
+                self.ingest(SCAN_SAMPLE_TOPIC, bytes([VERSION]) + sample.to_bytes(5, "little"))
 
     def _demo_pose(self, t, active):
         """Simulated pose on an oval: 60 cm straights, 15 cm radius ends, 4 cm/s."""

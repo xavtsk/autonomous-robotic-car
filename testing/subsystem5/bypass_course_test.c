@@ -120,9 +120,17 @@ bool subsystem5_request_peek(uint16_t id, unsigned angle)
 }
 void subsystem5_cancel_scan(void) { pending = false; }
 static unsigned st_leg, st_route, st_swapped;
+/* Telemetry-only legs (s3_drive.c): 9 = reversing in leg 0, 10 = aiming turn
+ * while scanning. Counted in status updates; anything else is a bug. */
+static unsigned tel_reverse, tel_aim, tel_bad;
 void subsystem5_set_controller_status(unsigned state, unsigned fault, unsigned route,
                                       unsigned leg, unsigned pass, unsigned swapped)
-{ (void)state; (void)fault; (void)pass; st_leg = leg; st_route = route; st_swapped = swapped; }
+{
+    (void)fault; (void)pass; st_leg = leg; st_route = route; st_swapped = swapped;
+    if (leg == 9U) { if (state == S5_MOVING) tel_reverse++; else tel_bad++; }
+    else if (leg == 10U) { if (state == S5_SCANNING) tel_aim++; else tel_bad++; }
+    else if (leg > 8U) tel_bad++;
+}
 uint16_t subsystem5_controller_status(void) { return 0U; }
 uint8_t subsystem5_servo_angle(void) { return 90U; }
 motion_result_t motion_request_turn(float degrees, float speed) { return turn_deg(degrees, speed); }
@@ -286,6 +294,9 @@ int main(int argc, char **argv)
         bend_before_case(0.30, dir, 0.15, 0.20);
         bend_before_case(0.20, dir, 0.25, 0.20);
     }
+    printf("Telemetry status updates: %u reversing (leg 9), %u aiming (leg 10), %u out of place\n",
+           tel_reverse, tel_aim, tel_bad);
+    if (tel_bad) failures++;
     printf("%s: %d failure(s)\n", failures ? "BYPASS SIM FAIL" : "BYPASS SIM PASS", failures);
     return failures ? 1 : 0;
 }

@@ -6,18 +6,19 @@ _Static_assert(BUDDY1_FAULT_MASK == (1U << BUDDY1_FAULT_BITS) - 1U,
                "fault mask and declared width must agree");
 static const uint8_t body_bits[BUDDY1_TOPIC_COUNT] = {
     18, 8, 25, 9, 26, 3, BUDDY1_FAULT_BITS,
-    96U + BUDDY1_FAULT_BITS, 2, 2U + BUDDY1_FAULT_BITS,
+    96U + BUDDY1_FAULT_BITS + 1U + BUDDY1_POSE_DISTANCE_BITS + 9U, 2, 2U + BUDDY1_FAULT_BITS,
     BUDDY1_POSE_DISTANCE_BITS + 9U,
-    1U + 2U * BUDDY1_TILT_BITS + 3U + 1U + 9U + 1U + 9U,
+    1U + 2U * BUDDY1_TILT_BITS + 3U + 1U + 9U + 1U + 9U + 1U + BUDDY1_TURN_BITS + 2U,
     1U + 1U + 12U + 8U + 3U + 3U + 2U + 4U + 3U + 1U,
-    1U + 8U + 5U * 12U + 2U * 13U
+    1U + 8U + 5U * 12U + 2U * 13U,
+    8U + 1U + 4U + 4U + 5U + 1U + 12U
 };
 static const char *const topics[BUDDY1_TOPIC_COUNT] = {
     "car/telemetry/motion", "car/telemetry/barcode", "car/telemetry/hump",
     "car/telemetry/heading", "car/telemetry/obstacle", "car/telemetry/state",
     "car/telemetry/faults", "car/reply/snapshot", "car/reply/barcode_map", "car/status",
     "car/telemetry/pose", "car/telemetry/terrain", "car/telemetry/avoidance",
-    "car/telemetry/scan"
+    "car/telemetry/scan", "car/telemetry/scan_sample"
 };
 _Static_assert(BUDDY1_TOPIC_COUNT <= 16U, "outbox topic selector is four bits");
 
@@ -129,6 +130,9 @@ static int write_fields(uint8_t topic, const BUDDY1_SNAPSHOT *v,
                 t->roll_x10 < -BUDDY1_TILT_LIMIT_X10 || t->roll_x10 > BUDDY1_TILT_LIMIT_X10) return 0;
         } else if (t->pitch_x10 != 0 || t->roll_x10 != 0) return 0; /* canonical zero */
         if ((!t->on_hump && t->climb_mm != 0U) || (!t->peak_valid && t->peak_mm != 0U)) return 0;
+        if (t->turn_valid ? (t->turn_dps < -BUDDY1_TURN_LIMIT_DPS || t->turn_dps > BUDDY1_TURN_LIMIT_DPS)
+                          : t->turn_dps != 0) return 0;
+        if (t->safety > BUDDY1_SAFETY_OVERTURNED) return 0;
         put(p, bit, t->tilt_valid != 0U, 1);
         /* Two's complement in 11 bits. */
         put(p, bit, (uint32_t)(int32_t)t->pitch_x10 & 0x7FFU, BUDDY1_TILT_BITS);
@@ -136,6 +140,9 @@ static int write_fields(uint8_t topic, const BUDDY1_SNAPSHOT *v,
         put(p, bit, t->state, 3);
         put(p, bit, t->on_hump != 0U, 1); put(p, bit, t->climb_mm, 9);
         put(p, bit, t->peak_valid != 0U, 1); put(p, bit, t->peak_mm, 9);
+        put(p, bit, t->turn_valid != 0U, 1);
+        put(p, bit, (uint32_t)(int32_t)t->turn_dps & 0x3FFU, BUDDY1_TURN_BITS);
+        put(p, bit, t->safety, 2);
         return 1;
     }
     case BUDDY1_TOPIC_AVOIDANCE: {
@@ -169,6 +176,19 @@ static int write_fields(uint8_t topic, const BUDDY1_SNAPSHOT *v,
         put(p, bit, q->forward_mm, 12);
         put(p, bit, (uint32_t)(q->left_edge_mm + BUDDY1_SCAN_EDGE_MAX_MM), 13);
         put(p, bit, (uint32_t)(q->right_edge_mm + BUDDY1_SCAN_EDGE_MAX_MM), 13);
+        return 1;
+    }
+    case BUDDY1_TOPIC_SCAN_SAMPLE: {
+        const BUDDY1_SCAN_SAMPLE *s = &v->scan_sample;
+        if (s->peek > 1U || s->valid > 1U || s->count < 1U || s->count > BUDDY1_SCAN_SAMPLES_MAX ||
+            s->index >= s->count || s->angle_deg < 30U || s->angle_deg > 150U ||
+            (s->angle_deg - 30U) % 5U != 0U ||
+            (s->valid ? (s->distance_mm < BUDDY1_OBSTACLE_MIN_MM || s->distance_mm > BUDDY1_OBSTACLE_MAX_MM)
+                      : s->distance_mm != 0U)) return 0;
+        put(p, bit, s->scan_id, 8); put(p, bit, s->peek, 1);
+        put(p, bit, s->index, 4); put(p, bit, (uint32_t)s->count - 1U, 4);
+        put(p, bit, (uint32_t)(s->angle_deg - 30U) / 5U, 5);
+        put(p, bit, s->valid, 1); put(p, bit, s->distance_mm, 12);
         return 1;
     }
     default: return 0;
@@ -220,7 +240,7 @@ static int read_fields(uint8_t topic, const uint8_t *p, unsigned *bit,
         v->pose_valid = 1; return v->pose_heading_deg <= 359;
     case BUDDY1_TOPIC_TERRAIN: {
         BUDDY1_TERRAIN *t = &v->terrain;
-        uint32_t pitch, roll;
+        uint32_t pitch, roll, turn;
         t->tilt_valid = (uint8_t)get(p, bit, 1);
         pitch = get(p, bit, BUDDY1_TILT_BITS); roll = get(p, bit, BUDDY1_TILT_BITS);
         t->pitch_x10 = (int16_t)((pitch & 0x400U) ? (int32_t)pitch - 0x800 : (int32_t)pitch);
@@ -228,9 +248,15 @@ static int read_fields(uint8_t topic, const uint8_t *p, unsigned *bit,
         t->state = (uint8_t)get(p, bit, 3);
         t->on_hump = (uint8_t)get(p, bit, 1); t->climb_mm = (uint16_t)get(p, bit, 9);
         t->peak_valid = (uint8_t)get(p, bit, 1); t->peak_mm = (uint16_t)get(p, bit, 9);
+        t->turn_valid = (uint8_t)get(p, bit, 1); turn = get(p, bit, BUDDY1_TURN_BITS);
+        t->turn_dps = (int16_t)((turn & 0x200U) ? (int32_t)turn - 0x400 : (int32_t)turn);
+        t->safety = (uint8_t)get(p, bit, 2);
         v->terrain_valid = 1;
         if (t->climb_mm > BUDDY1_HUMP_HEIGHT_MAX_MM || t->peak_mm > BUDDY1_HUMP_HEIGHT_MAX_MM ||
             (!t->on_hump && t->climb_mm) || (!t->peak_valid && t->peak_mm)) return 0;
+        if (t->safety > BUDDY1_SAFETY_OVERTURNED ||
+            (t->turn_valid ? (t->turn_dps < -BUDDY1_TURN_LIMIT_DPS || t->turn_dps > BUDDY1_TURN_LIMIT_DPS)
+                           : t->turn_dps != 0)) return 0;
         if (!t->tilt_valid) return t->pitch_x10 == 0 && t->roll_x10 == 0;
         return t->pitch_x10 >= -BUDDY1_TILT_LIMIT_X10 && t->pitch_x10 <= BUDDY1_TILT_LIMIT_X10 &&
                t->roll_x10 >= -BUDDY1_TILT_LIMIT_X10 && t->roll_x10 <= BUDDY1_TILT_LIMIT_X10;
@@ -264,6 +290,17 @@ static int read_fields(uint8_t topic, const uint8_t *p, unsigned *bit,
                         : !(q->closest_mm || q->width_mm || q->left_clear_mm || q->right_clear_mm ||
                             q->forward_mm || q->left_edge_mm || q->right_edge_mm);
     }
+    case BUDDY1_TOPIC_SCAN_SAMPLE: {
+        BUDDY1_SCAN_SAMPLE *s = &v->scan_sample;
+        s->scan_id = (uint8_t)get(p, bit, 8); s->peek = (uint8_t)get(p, bit, 1);
+        s->index = (uint8_t)get(p, bit, 4); s->count = (uint8_t)(get(p, bit, 4) + 1U);
+        s->angle_deg = (uint8_t)(30U + 5U * get(p, bit, 5));
+        s->valid = (uint8_t)get(p, bit, 1); s->distance_mm = (uint16_t)get(p, bit, 12);
+        v->scan_sample_valid = 1;
+        return s->index < s->count && s->angle_deg <= 150U &&
+               (s->valid ? (s->distance_mm >= BUDDY1_OBSTACLE_MIN_MM && s->distance_mm <= BUDDY1_OBSTACLE_MAX_MM)
+                         : s->distance_mm == 0U);
+    }
     default: return 0;
     }
 }
@@ -287,6 +324,14 @@ unsigned buddy1_encode(uint8_t topic, const BUDDY1_SNAPSHOT *v,
             } else {
                 put(packet + 1, &bit, 0, body_bits[i]);
             }
+        }
+        /* 19 Nov 2026: distance/heading since START appended after the
+         * original seven sections (bits 102-123), with its own validity bit. */
+        put(packet + 1, &bit, v->pose_valid != 0U, 1);
+        if (v->pose_valid) {
+            if (!write_fields(BUDDY1_TOPIC_POSE, v, packet + 1, &bit)) return 0;
+        } else {
+            put(packet + 1, &bit, 0, body_bits[BUDDY1_TOPIC_POSE]);
         }
     } else if (topic == BUDDY1_TOPIC_STATUS) {
         if (v->faults_valid && (v->faults & ~BUDDY1_FAULT_MASK) != 0U) return 0;
@@ -318,6 +363,13 @@ int buddy1_decode(uint8_t topic, const uint8_t *packet, unsigned length,
                 for (n = 0; n < body_bits[i]; ++n)
                     if (get(packet + 1, &bit, 1) != 0U) return 0;
             }
+        }
+        if (get(packet + 1, &bit, 1) != 0U) {
+            if (!read_fields(BUDDY1_TOPIC_POSE, packet + 1, &bit, &v)) return 0;
+        } else {
+            unsigned n;
+            for (n = 0; n < body_bits[BUDDY1_TOPIC_POSE]; ++n)
+                if (get(packet + 1, &bit, 1) != 0U) return 0;
         }
     } else if (topic == BUDDY1_TOPIC_STATUS) {
         if (get(packet + 1, &bit, 1) != 1U) return 0;

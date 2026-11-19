@@ -22,4 +22,9 @@ uint16_t subsystem5_controller_status(void);
 /* Angle the scanning servo was last commanded to, 1..180 degrees
  * (90 = straight ahead); 0 before the servo has been positioned. */
 uint8_t subsystem5_servo_angle(void);
+/* Raw readings of the last finished scan or side peek (for telemetry): copies
+ * them to out with their number (0 before the first scan) and that scan's id;
+ * peek = single side-peek reading. A failed scan ends with one "no reading"
+ * entry at the angle where it stopped. False = mutex busy, try again. */
+bool subsystem5_scan_samples(uint16_t *id,bool *peek,s5_sample_t out[S5_SAMPLES_MAX],unsigned *count);
 #endif

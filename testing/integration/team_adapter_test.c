@@ -28,10 +28,12 @@ ER buddy1_update_faults(UB changed,UB active)
     if(mirror_result==E_OK||mirror_result==E_TMOUT)mask=(mask&~changed)|active;
     return mirror_result;
 }
+/* E_TMOUT = Buddy 1 outbox full: the controller must retry the event. */
+static ER event_result=E_OK;
 ER buddy1_report_robot_state(BUDDY1_ROBOT_STATE state)
-{states++;last_state=state;return E_OK;}
+{states++;if(event_result!=E_OK)return event_result;last_state=state;return E_OK;}
 ER buddy1_report_barcode(UB letter)
-{assert(letter=='B');barcodes++;return E_OK;}
+{assert(letter=='B');barcodes++;return event_result;}
 ER buddy1_report_motion(H left,H right)
 {reports++;left_report=left;right_report=right;return E_OK;}
 static unsigned poses; static int pose_cm=-1, pose_deg=-1;
@@ -124,14 +126,22 @@ int main(void)
     status_ok=true;status.fault_bits=0;cycles(1);assert(mask==BUDDY1_FAULT_WIFI);
     runtime.navigation.events=S3_EVENT_BARCODE;runtime.navigation.barcode.letter='B';
     runtime.navigation.action=S3_NAV_LEFT;cycles(1);assert(barcodes==1);
-    runtime.navigation.events=0;runtime.state=S3_DRIVE_MANOEUVRE;cycles(1);
+    runtime.navigation.events=0;cycles(3);assert(barcodes==1);   /* one event, one report */
+    /* Full outbox: barcode and state are retried every cycle, not dropped. */
+    event_result=E_TMOUT;runtime.navigation.events=S3_EVENT_BARCODE;cycles(1);
+    runtime.navigation.events=0;cycles(2);assert(barcodes==4);
+    runtime.state=S3_DRIVE_MANOEUVRE;{unsigned s0=states;cycles(3);assert(states==s0+3&&barcodes==7&&last_state!=BUDDY1_STATE_TURNING_LEFT);}
+    event_result=E_OK;cycles(1);assert(barcodes==8&&last_state==BUDDY1_STATE_TURNING_LEFT);
+    {unsigned s0=states;cycles(3);assert(barcodes==8&&states==s0);}
     assert(last_state==BUDDY1_STATE_TURNING_LEFT);
     runtime.state=S3_DRIVE_FAULT;cycles(1);assert(last_state==BUDDY1_STATE_ERROR);
     status.speed_left_mps=0.884f;before=invalidations;unsigned reports_before=reports;cycles(LIVE_CYCLES);
     assert(invalidations>before&&reports==reports_before); /* Never clip into a valid 510. */
     status.b_valid=false;before=invalidations;cycles(LIVE_CYCLES);assert(invalidations>before);
     runtime.navigation.fault_mask=1;mirror_result=E_OBJ;before=updates;cycles(2);assert(updates==before+2);
-    mirror_result=E_TMOUT;cycles(1);before=updates;cycles(1);assert(updates==before);
+    /* Full outbox (E_TMOUT): the fault change is retried until it is queued. */
+    mirror_result=E_TMOUT;before=updates;cycles(2);assert(updates==before+2);
+    mirror_result=E_OK;cycles(1);before=updates;cycles(1);assert(updates==before);
     s3_nav_action_t map[26]={S3_NAV_STRAIGHT,S3_NAV_LEFT,S3_NAV_RIGHT,S3_NAV_UTURN};
     assert(vehicle_controller_apply_mapping(map));map[4]=S3_NAV_LEFT;assert(!vehicle_controller_apply_mapping(map));map[4]=S3_NAV_NONE;
     s3_navigation_t nav={0};assert(vehicle_controller_prepare_start(&nav)&&frozen);

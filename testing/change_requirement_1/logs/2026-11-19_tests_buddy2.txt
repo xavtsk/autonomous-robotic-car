@@ -1,0 +1,3 @@
+PASS: current 64-bit status/16-bit reports/32-bit commands, every mm/s, invalid commands, safe legacy telemetry range
+PASS: production motion feedback timestamps, epochs, calibration exclusion and manoeuvre watchdog
+PASS: real Buddy 2 controller/PID + Buddy 3 navigation bridge; mocked hardware
