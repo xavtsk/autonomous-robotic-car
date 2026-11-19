@@ -21,6 +21,9 @@
 
 #define PROHIBIT_DEF_SIZE_T
 #include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include "../../../../app_program/build_assert.h"
 #include "lwip/apps/mqtt.h"
 #include "lwip/ip_addr.h"
 #include "lwip/sys.h"
@@ -44,13 +47,9 @@
 
 static mqtt_client_t * client;
 static ip_addr_t broker_addr;
-static u8_t connecting;
 
 static char rx_topic[MQTT_UTK_RX_TOPIC_MAX];
 static UB rx_data[MQTT_UTK_RX_DATA_MAX];
-static u16_t rx_len;
-static u8_t rx_truncated;
-static u16_t rx_expected;
 
 /* A fixed, single-owner retry slot, not another queue or a larger lwIP pool.
  * Retain the complete packet until its publish callback succeeds. At most one
@@ -59,8 +58,6 @@ static u16_t rx_expected;
  * No blocking waits or extra timeout objects are needed. */
 static T_MQTT_UTK_APP_MSG pending;
 static u32_t last_publish_ms;
-static u16_t publish_wait_ms;
-static u8_t pending_valid, pending_inflight, pending_warned, publish_paced;
 
 /* One fresh application packet may wait here during a capture turn. Once
  * either source has been attempted, retain that source until completion or a
@@ -72,11 +69,8 @@ enum
     PUBLISH_CAPTURE
 };
 
-static u8_t retry_source, capture_turn;
 /* Separate capture storage keeps a held application packet intact. */
 static unsigned char debug_line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
-static u16_t debug_len;
-static u8_t debug_valid;
 #if APP_IMU_DEBUG
 static unsigned char preview_line[MQTT_UTK_IMU_DEBUG_MAX];
 #elif APP_IR_DEBUG
@@ -89,55 +83,141 @@ static unsigned char preview_line[MQTT_UTK_CONTROL_DEBUG_MAX];
 #define MQTT_UTK_CONTROL_PERIOD_MS 200U
 #define MQTT_UTK_CONTROL_DATA_GAP 2U
 static u32_t last_control_ms;
-static u8_t control_seen, control_data_since = MQTT_UTK_CONTROL_DATA_GAP;
 #endif
 #if APP_IMU_DEBUG
 #define MQTT_UTK_IMU_DATA_GAP 2U
-static u8_t imu_data_since = MQTT_UTK_IMU_DATA_GAP;
 #endif
+
+/* Every field below is owned by the existing CYW43/lwIP task. Callback
+ * reentrancy stays on that owner; no ISR/shared volatile flags are packed here.
+ * Wide hook inputs are validated before these bounded fields are updated.
+ * Native layout is never sent over MQTT. */
+typedef struct
+{
+    bool b_connecting : 1;
+    bool b_rx_truncated : 1;
+    bool b_pending_valid : 1;
+    bool b_pending_inflight : 1;
+    bool b_pending_warned : 1;
+    bool b_publish_paced : 1;
+    bool b_capture_turn : 1;
+    bool b_debug_valid : 1;
+    uint32_t retry_source : 2;     /**< NONE/APPLICATION/CAPTURE, 0..2. */
+    uint32_t rx_len : 5;           /**< Accumulated bytes, saturated at 17. */
+    uint32_t rx_expected : 5;      /**< Valid advertised bytes, 0..17. */
+    uint32_t debug_len : 8;        /**< Validated capture bytes, 1..164 or 0. */
+    uint32_t publish_interval : 2; /**< Exact interval encoding, 0..2. */
+#if APP_IR_DEBUG
+    bool b_control_seen : 1;
+    uint32_t control_data_since : 2;
+#endif
+#if APP_IMU_DEBUG
+    uint32_t imu_data_since : 2;
+#endif
+} mqtt_utk_state_t;
+
+enum
+{
+    MQTT_UTK_WAIT_INITIAL = 0,
+    MQTT_UTK_WAIT_GAP,
+    MQTT_UTK_WAIT_RETRY
+};
+
+BUILD_ASSERT(MQTT_UTK_RX_DATA_MAX <= 31U, mqtt_utk_rx_capacity_t);
+BUILD_ASSERT(MQTT_UTK_DEBUG_PAYLOAD_MAX <= 255U, mqtt_utk_debug_capacity_t);
+BUILD_ASSERT(PUBLISH_CAPTURE <= 3U, mqtt_utk_source_capacity_t);
+#if defined(__arm__)
+/* Target allocation is separate from the host compiler's bitfield ABI. */
+BUILD_ASSERT(sizeof(mqtt_utk_state_t) <= 8U, mqtt_utk_state_allocation_t);
+#endif
+BUILD_ASSERT(MQTT_UTK_PUBLISH_GAP_MS <= UINT16_MAX, mqtt_utk_gap_range_t);
+BUILD_ASSERT(MQTT_UTK_PUBLISH_RETRY_MS <= UINT16_MAX, mqtt_utk_retry_range_t);
+#if APP_IR_DEBUG
+BUILD_ASSERT(MQTT_UTK_CONTROL_DATA_GAP <= 3U, mqtt_utk_control_gap_t);
+#endif
+#if APP_IMU_DEBUG
+BUILD_ASSERT(MQTT_UTK_IMU_DATA_GAP <= 3U, mqtt_utk_imu_gap_t);
+#endif
+
+static mqtt_utk_state_t g_mqtt_state = {
+    .publish_interval = MQTT_UTK_WAIT_INITIAL,
+#if APP_IR_DEBUG
+    .control_data_since = MQTT_UTK_CONTROL_DATA_GAP,
+#endif
+#if APP_IMU_DEBUG
+    .imu_data_since = MQTT_UTK_IMU_DATA_GAP,
+#endif
+};
+
+/** @brief Decode the exact retained publish interval in milliseconds.
+ * @return Zero before pacing, 20 for normal pacing or 100 for retry pacing.
+ * @note Called only by the network owner; no state or clock is changed.
+ */
+static u16_t mqtt_utk_publish_wait_ms (void)
+{
+    switch (g_mqtt_state.publish_interval)
+    {
+        case MQTT_UTK_WAIT_GAP:
+            return MQTT_UTK_PUBLISH_GAP_MS;
+        case MQTT_UTK_WAIT_RETRY:
+            return MQTT_UTK_PUBLISH_RETRY_MS;
+        default:
+            return 0U;
+    }
+}
 
 static void heartbeat_timeout (void * arg);
 
+/** @brief Start the existing publish pacing interval on the network owner.
+ * @param wait_ms One of MQTT_UTK_PUBLISH_GAP_MS or MQTT_UTK_PUBLISH_RETRY_MS.
+ * @return Nothing; updates the same timestamp before recording the interval.
+ * @note Every private caller supplies one of the two named constants. This
+ * representation does not accept a new caller-selected timeout or change the
+ * public MQTT hook's validation behavior.
+ */
 static void pace_publish (u16_t wait_ms)
 {
     last_publish_ms = sys_now();
-    publish_wait_ms = wait_ms;
-    publish_paced = 1;
+    /* All private callers supply one of these two unchanged intervals. */
+    g_mqtt_state.publish_interval =
+        (wait_ms == MQTT_UTK_PUBLISH_GAP_MS) ? MQTT_UTK_WAIT_GAP :
+                                             MQTT_UTK_WAIT_RETRY;
+    g_mqtt_state.b_publish_paced = 1;
 }
 
 static void warn_pending (err_t result)
 {
-    if (!pending_warned)
+    if (!g_mqtt_state.b_pending_warned)
     {
         tm_printf(
             (UB *)"mqtt: application publish delayed, err=%d; retaining packet\n",
             (int)result);
-        pending_warned = 1;
+        g_mqtt_state.b_pending_warned = 1;
     }
 }
 
 static void data_publish_completed (void)
 {
 #if APP_IR_DEBUG
-    if (control_data_since < MQTT_UTK_CONTROL_DATA_GAP)
-        ++control_data_since;
+    if (g_mqtt_state.control_data_since < MQTT_UTK_CONTROL_DATA_GAP)
+        ++g_mqtt_state.control_data_since;
 #endif
 #if APP_IMU_DEBUG
-    if (imu_data_since < MQTT_UTK_IMU_DATA_GAP)
-        ++imu_data_since;
+    if (g_mqtt_state.imu_data_since < MQTT_UTK_IMU_DATA_GAP)
+        ++g_mqtt_state.imu_data_since;
 #endif
 }
 
 static void application_publish_done_cb (void * arg, err_t result)
 {
     (void)arg;
-    pending_inflight = 0;
+    g_mqtt_state.b_pending_inflight = 0;
     if (result == ERR_OK)
     {
-        pending_valid = 0;
-        pending_warned = 0;
-        retry_source = PUBLISH_NONE;
-        capture_turn = 1;
+        g_mqtt_state.b_pending_valid = 0;
+        g_mqtt_state.b_pending_warned = 0;
+        g_mqtt_state.retry_source = PUBLISH_NONE;
+        g_mqtt_state.b_capture_turn = 1;
         data_publish_completed();
     }
     else
@@ -152,12 +232,12 @@ static void application_publish_done_cb (void * arg, err_t result)
 static void debug_publish_done_cb (void * arg, err_t result)
 {
     (void)arg;
-    pending_inflight = 0;
+    g_mqtt_state.b_pending_inflight = 0;
     if (result == ERR_OK)
     {
-        debug_valid = 0;
-        retry_source = PUBLISH_NONE;
-        capture_turn = 0;
+        g_mqtt_state.b_debug_valid = 0;
+        g_mqtt_state.retry_source = PUBLISH_NONE;
+        g_mqtt_state.b_capture_turn = 0;
         data_publish_completed();
     }
     else
@@ -203,17 +283,17 @@ static void preview_publish_done_cb (void * arg, err_t result)
 {
     (void)arg;
     (void)result;
-    pending_inflight = 0; /* best effort: never retry an old preview */
+    g_mqtt_state.b_pending_inflight = 0; /* best effort: never retry an old preview */
 }
 
 static void publish_preview (const char * topic, unsigned int size)
 {
-    pending_inflight = 1;
+    g_mqtt_state.b_pending_inflight = 1;
     pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
     err_t err = mqtt_publish(client, topic, preview_line, (u16_t)size, 0, 0,
                              preview_publish_done_cb, NULL);
     if (err != ERR_OK)
-        pending_inflight = 0;
+        g_mqtt_state.b_pending_inflight = 0;
 }
 #endif
 
@@ -267,9 +347,9 @@ static void incoming_publish_cb (void * arg, const char * topic, u32_t tot_len)
     }
     rx_topic[i] = '\0';
 
-    rx_len = 0;
-    rx_truncated = (topic[i] != '\0' || tot_len > MQTT_UTK_RX_DATA_MAX);
-    rx_expected = (tot_len <= MQTT_UTK_RX_DATA_MAX) ? (u16_t)tot_len : 0;
+    g_mqtt_state.rx_len = 0;
+    g_mqtt_state.b_rx_truncated = (topic[i] != '\0' || tot_len > MQTT_UTK_RX_DATA_MAX);
+    g_mqtt_state.rx_expected = (tot_len <= MQTT_UTK_RX_DATA_MAX) ? (u16_t)tot_len : 0;
 }
 
 static void incoming_data_cb (void * arg, const u8_t * data, u16_t len,
@@ -281,25 +361,25 @@ static void incoming_data_cb (void * arg, const u8_t * data, u16_t len,
 
     for (i = 0; i < len; i++)
     {
-        if (rx_len < MQTT_UTK_RX_DATA_MAX)
+        if (g_mqtt_state.rx_len < MQTT_UTK_RX_DATA_MAX)
         {
-            rx_data[rx_len++] = data[i];
+            rx_data[g_mqtt_state.rx_len++] = data[i];
         }
         else
         {
-            rx_truncated = 1;
+            g_mqtt_state.b_rx_truncated = 1;
         }
     }
 
     if ((flags & MQTT_DATA_FLAG_LAST) != 0)
     {
-        if (rx_len != rx_expected)
-            rx_truncated = 1;
+        if (g_mqtt_state.rx_len != g_mqtt_state.rx_expected)
+            g_mqtt_state.b_rx_truncated = 1;
         tm_printf((UB *)"mqtt: RX [%s] %u binary bytes%s\n", rx_topic,
-                  (unsigned)rx_len, rx_truncated ? " (rejected)" : "");
-        if (!rx_truncated)
+                  (unsigned)g_mqtt_state.rx_len, g_mqtt_state.b_rx_truncated ? " (rejected)" : "");
+        if (!g_mqtt_state.b_rx_truncated)
         {
-            mqtt_utk_app_receive(rx_topic, rx_data, rx_len);
+            mqtt_utk_app_receive(rx_topic, rx_data, g_mqtt_state.rx_len);
         }
     }
 }
@@ -365,7 +445,7 @@ static void heartbeat_timeout (void * arg)
 static void retry_timeout (void * arg)
 {
     (void)arg;
-    connecting = 0;
+    g_mqtt_state.b_connecting = 0;
     mqtt_utk_start();
 }
 
@@ -384,8 +464,8 @@ static void connection_cb (mqtt_client_t * c, void * arg,
 		 * connection later drops, the poll loop's mqtt_utk_start() call
 		 * is allowed to reconnect. Leaving it set would wedge the client
 		 * permanently after the first disconnect. */
-        connecting = 0;
-        pending_inflight = 0;
+        g_mqtt_state.b_connecting = 0;
+        g_mqtt_state.b_pending_inflight = 0;
 
         tm_printf((UB *)"mqtt: connected to " MQTT_BROKER_IP "\n");
 
@@ -429,7 +509,7 @@ static void connection_cb (mqtt_client_t * c, void * arg,
 		 * the existing connection retry without adding a publish timer. */
         tm_printf((UB *)"mqtt: connection status %d, retrying in %ds\n",
                   (int)status, MQTT_UTK_RETRY_MS / 1000);
-        pending_inflight = 0;
+        g_mqtt_state.b_pending_inflight = 0;
         sys_timeout(MQTT_UTK_RETRY_MS, retry_timeout, NULL);
     }
 }
@@ -439,7 +519,7 @@ void mqtt_utk_start (void)
     struct mqtt_connect_client_info_t client_info = {0};
     err_t err;
 
-    if (connecting || (client != NULL && mqtt_client_is_connected(client)))
+    if (g_mqtt_state.b_connecting || (client != NULL && mqtt_client_is_connected(client)))
     {
         return;
     }
@@ -464,14 +544,14 @@ void mqtt_utk_start (void)
     client_info.client_id = MQTT_CLIENT_ID;
     client_info.keep_alive = MQTT_UTK_KEEPALIVE_S;
 
-    connecting = 1;
+    g_mqtt_state.b_connecting = 1;
     err = mqtt_client_connect(client, &broker_addr, MQTT_BROKER_PORT,
                               connection_cb, NULL, &client_info);
     if (err != ERR_OK)
     {
         tm_printf((UB *)"mqtt: mqtt_client_connect() failed, err=%d\n",
                   (int)err);
-        connecting = 0;
+        g_mqtt_state.b_connecting = 0;
     }
 }
 
@@ -482,24 +562,24 @@ void mqtt_utk_poll (void)
 
     if (client == NULL || !mqtt_client_is_connected(client))
     {
-        pending_inflight = 0;
+        g_mqtt_state.b_pending_inflight = 0;
         return;
     }
-    if (pending_inflight ||
-        (publish_paced &&
-         (u32_t)(sys_now() - last_publish_ms) < publish_wait_ms))
+    if (g_mqtt_state.b_pending_inflight ||
+        (g_mqtt_state.b_publish_paced &&
+         (u32_t)(sys_now() - last_publish_ms) < mqtt_utk_publish_wait_ms()))
     {
         return;
     }
 
     /* A timeout/disconnect can leave delivery ambiguous. Finish the exact
 	 * attempted packet before taking another packet from either source. */
-    if (retry_source == PUBLISH_APPLICATION)
+    if (g_mqtt_state.retry_source == PUBLISH_APPLICATION)
         goto publish_application;
-    if (retry_source == PUBLISH_CAPTURE)
+    if (g_mqtt_state.retry_source == PUBLISH_CAPTURE)
         goto publish_capture;
 
-    if (!pending_valid)
+    if (!g_mqtt_state.b_pending_valid)
     {
         pending.routine =
             0; /* default for application hooks without metadata */
@@ -514,20 +594,20 @@ void mqtt_utk_poll (void)
                 pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
                 return;
             }
-            pending_valid = 1;
-            pending_warned = 0;
+            g_mqtt_state.b_pending_valid = 1;
+            g_mqtt_state.b_pending_warned = 0;
         }
     }
 
     /* Do not reorder the application FIFO. Its head event/reply takes
 	 * priority, while recurring samples share slots one-for-one with BCAP.
 	 * Urgent events behind a held sample still wait for the existing FIFO. */
-    if (pending_valid && !pending.routine)
+    if (g_mqtt_state.b_pending_valid && !pending.routine)
         goto publish_application;
 #if APP_IR_DEBUG || APP_IMU_DEBUG
     /* With no queued application packet, check for BCAP before treating the
 	 * link as idle. Diagnostics use separate storage from the staged capture. */
-    if (!pending_valid && !debug_valid)
+    if (!g_mqtt_state.b_pending_valid && !g_mqtt_state.b_debug_valid)
     {
         n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
         capture_checked = 1;
@@ -535,16 +615,16 @@ void mqtt_utk_poll (void)
             return;
         if (n != 0U)
         {
-            debug_len = (u16_t)n;
-            debug_valid = 1;
+            g_mqtt_state.debug_len = (u16_t)n;
+            g_mqtt_state.b_debug_valid = 1;
         }
     }
 #endif
 #if APP_IR_DEBUG
-    if ((!control_seen ||
+    if ((!g_mqtt_state.b_control_seen ||
          (u32_t)(sys_now() - last_control_ms) >= MQTT_UTK_CONTROL_PERIOD_MS) &&
-        ((!pending_valid && !debug_valid) ||
-         control_data_since >= MQTT_UTK_CONTROL_DATA_GAP))
+        ((!g_mqtt_state.b_pending_valid && !g_mqtt_state.b_debug_valid) ||
+         g_mqtt_state.control_data_since >= MQTT_UTK_CONTROL_DATA_GAP))
     {
         n = mqtt_utk_control_debug_take(preview_line,
                                         MQTT_UTK_CONTROL_DEBUG_MAX);
@@ -553,44 +633,44 @@ void mqtt_utk_poll (void)
         if (n != 0U)
         {
             last_control_ms = sys_now();
-            control_seen = 1;
-            control_data_since = 0;
+            g_mqtt_state.b_control_seen = 1;
+            g_mqtt_state.control_data_since = 0;
             publish_preview(MQTT_UTK_CONTROL_DEBUG_TOPIC, n);
             return;
         }
     }
 #endif
 #if APP_IMU_DEBUG
-    if ((!pending_valid && !debug_valid) ||
-        imu_data_since >= MQTT_UTK_IMU_DATA_GAP)
+    if ((!g_mqtt_state.b_pending_valid && !g_mqtt_state.b_debug_valid) ||
+        g_mqtt_state.imu_data_since >= MQTT_UTK_IMU_DATA_GAP)
     {
         n = mqtt_utk_imu_debug_take(preview_line, MQTT_UTK_IMU_DEBUG_MAX);
         if (n > MQTT_UTK_IMU_DEBUG_MAX)
             return;
         if (n != 0U)
         {
-            imu_data_since = 0;
+            g_mqtt_state.imu_data_since = 0;
             publish_preview(MQTT_UTK_IMU_DEBUG_TOPIC, n);
             return;
         }
     }
 #endif
-    if (pending_valid && !capture_turn)
+    if (g_mqtt_state.b_pending_valid && !g_mqtt_state.b_capture_turn)
         goto publish_application;
-    if (!debug_valid && !capture_checked)
+    if (!g_mqtt_state.b_debug_valid && !capture_checked)
     {
         n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
         if (n > sizeof debug_line)
             return;
         if (n != 0U)
         {
-            debug_len = (u16_t)n;
-            debug_valid = 1;
+            g_mqtt_state.debug_len = (u16_t)n;
+            g_mqtt_state.b_debug_valid = 1;
         }
     }
-    if (debug_valid)
+    if (g_mqtt_state.b_debug_valid)
         goto publish_capture;
-    if (pending_valid)
+    if (g_mqtt_state.b_pending_valid)
         goto publish_application;
 
 #if APP_IR_DEBUG
@@ -602,23 +682,23 @@ void mqtt_utk_poll (void)
     return;
 
 publish_capture:
-    retry_source = PUBLISH_CAPTURE;
-    pending_inflight = 1;
+    g_mqtt_state.retry_source = PUBLISH_CAPTURE;
+    g_mqtt_state.b_pending_inflight = 1;
     pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-    err = mqtt_publish(client, MQTT_UTK_DEBUG_TOPIC, debug_line, debug_len, 0,
+    err = mqtt_publish(client, MQTT_UTK_DEBUG_TOPIC, debug_line, g_mqtt_state.debug_len, 0,
                        0, debug_publish_done_cb, NULL);
     if (err != ERR_OK)
     {
-        pending_inflight = 0;
+        g_mqtt_state.b_pending_inflight = 0;
         if (err == ERR_MEM || err == ERR_CONN)
         {
             pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
         }
         else
         {
-            debug_valid = 0; /* cannot improve with a retry */
-            retry_source = PUBLISH_NONE;
-            capture_turn = 0;
+            g_mqtt_state.b_debug_valid = 0; /* cannot improve with a retry */
+            g_mqtt_state.retry_source = PUBLISH_NONE;
+            g_mqtt_state.b_capture_turn = 0;
         }
     }
     return;
@@ -626,15 +706,15 @@ publish_capture:
 publish_application:
     /* Set state before calling lwIP; test ports may complete synchronously.
 	 * The next packet cannot overtake this one or consume another request slot. */
-    retry_source = PUBLISH_APPLICATION;
-    pending_inflight = 1;
+    g_mqtt_state.retry_source = PUBLISH_APPLICATION;
+    g_mqtt_state.b_pending_inflight = 1;
     pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
     err = mqtt_publish(client, pending.topic, pending.payload,
                        (u16_t)pending.payload_len, pending.qos, pending.retain,
                        application_publish_done_cb, NULL);
     if (err != ERR_OK)
     {
-        pending_inflight = 0;
+        g_mqtt_state.b_pending_inflight = 0;
         if (err == ERR_MEM || err == ERR_CONN)
         {
             warn_pending(err);
@@ -646,9 +726,9 @@ publish_application:
 			 * explicitly, then allow the next FIFO item on a later poll. */
             tm_printf((UB *)"mqtt: application packet discarded, err=%d\n",
                       (int)err);
-            pending_valid = 0;
-            pending_warned = 0;
-            retry_source = PUBLISH_NONE;
+            g_mqtt_state.b_pending_valid = 0;
+            g_mqtt_state.b_pending_warned = 0;
+            g_mqtt_state.retry_source = PUBLISH_NONE;
         }
     }
 }
