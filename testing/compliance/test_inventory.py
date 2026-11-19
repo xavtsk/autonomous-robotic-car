@@ -239,10 +239,8 @@ class DiscoveryTests(unittest.TestCase):
 
     def test_record_threshold_envelopes_remain_open_until_minimum_proof(self):
         policies = inventory.read_json(HERE / "inventory_policies.json")
-        for owner, name, safe_bits in [("s3_barcode_work_t", "runs", 28),
-                ("s3_barcode_work_t", "required_us", 31),
+        for owner, name, safe_bits in [
                 ("s3_barcode_record_t", "required_us", 31),
-                ("s3_barcode_work_t", "quiet_required_us", 31),
                 ("s3_barcode_record_t", "quiet_required_us", 31)]:
             row = {"path": "app_program/subsystem3/bc_decoder.h", "owner": owner,
                    "name": name, "kind": "FIELD_DECL", "stored_bits": safe_bits,
@@ -251,6 +249,34 @@ class DiscoveryTests(unittest.TestCase):
             self.assertEqual(result["status"], "unresolved")
             self.assertIsNone(result["required_bits"])
             self.assertEqual(result["safe_upper_bound_bits"], safe_bits)
+
+    def test_mutable_workspace_ranges_include_existing_adversarial_traces(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        cases = [("phase", 255, 8, 18), ("cursor", 65535, 16, 4096),
+                 ("ext_us", 4294967295, 32, 128992500),
+                 ("bound", 2147483647, 32, 16124062),
+                 ("chosen", 2147483647, 32, 16124062)]
+        for name, maximum, width, initialized_max in cases:
+            row = {"path": "app_program/subsystem3/bc_decoder.h", "owner": "s3_barcode_work_t",
+                   "name": name, "kind": "FIELD_DECL", "stored_bits": width,
+                   "method": "libclang-ast"}
+            result = inventory.classify(row, policies)
+            self.assertEqual(result["status"], "boundary")
+            self.assertEqual(result["domain"]["max"], maximum)
+            self.assertEqual(result["required_bits"], width)
+            self.assertEqual(result["domain"]["initialized_domain"]["max"], initialized_max)
+            self.assertNotIn("step", result["domain"])
+            self.assertTrue(any("barcode_work_test.c:" in source for source in result["evidence"]))
+
+    def test_public_workspace_boundaries_do_not_certify_retained_instances(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        for path, owner, name in [("bc_decoder.h", "s3_barcode_record_t", "work"),
+                                  ("line_navigation.h", "s3_navigation_t", "barcode_record")]:
+            row = {"path": "app_program/subsystem3/" + path, "owner": owner,
+                   "name": name, "kind": "FIELD_DECL", "type_category": "RECORD"}
+            result = inventory.classify(row, policies)
+            self.assertEqual(result["status"], "unresolved")
+            self.assertIsNone(result["required_bits"])
 
     def test_macro_schema_does_not_claim_wire_width_is_ram_width(self):
         fields, _ = inventory.lexical_fields("""

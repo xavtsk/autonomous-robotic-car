@@ -564,6 +564,8 @@ def table_row(row):
         "type": row.get("type", "unresolved"), "range_or_domain": range_text,
         "producer_valid_range": (f"{domain['valid_min']}..{domain['valid_max']}"
                                   if "valid_min" in domain and "valid_max" in domain else "not separately established"),
+        "initialized_producer_domain_only": (json.dumps(domain["initialized_domain"], sort_keys=True)
+                                             if "initialized_domain" in domain else "not separately established"),
         "units": domain.get("units", "unresolved"), "resolution": resolution,
         "required_encoding": domain.get("encoding", "retain existing numeric representation unless separately reviewed"),
         "required_bits": row.get("required_bits") if row.get("required_bits") is not None else "unresolved / preservation boundary",
@@ -614,7 +616,9 @@ def render_retained(ledger):
         row = table_row(source)
         label = f"{row['owner']}.{row['name']}"
         values = [f"[{label}](../../{row['source']}#L{row['line']}) ({row['type']})",
-                  f"{row['range_or_domain']}; units: {row['units']}; resolution: {row['resolution']}",
+                  f"{row['range_or_domain']}; units: {row['units']}; resolution: {row['resolution']}" +
+                  (f"; initialized-only envelope: {row['initialized_producer_domain_only']}"
+                   if row['initialized_producer_domain_only'] != "not separately established" else ""),
                   f"{row['required_bits']} / {row['stored_bits_per_scalar_or_bitfield']}; {row['storage_duration']}",
                   f"{row['ownership']} Sync: {row['synchronization']}",
                   f"{row['rationale']} [{row['status']}; {row['policy']}]"]

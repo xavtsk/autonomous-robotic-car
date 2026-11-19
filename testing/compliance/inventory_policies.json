@@ -25,6 +25,752 @@
       "type_category": ".*"
     },
     {
+      "id": "mutable-work-barcode-work-sample-index",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "best|dip|ext|peak",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "sample index",
+        "initialized_domain": {
+          "min": 0,
+          "max": 4095,
+          "units": "sample index"
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-fit-signed-envelope-review",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "best_bias|chosen|trial_bias",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": -2147483648,
+        "max": 2147483647,
+        "units": "us",
+        "initialized_domain": {
+          "min": -16124062,
+          "max": 16124062,
+          "units": "us",
+          "minimum_width_proved": false
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing large-valid-config seeds200000000us runs, deriving200000000 narrow and150000000 bound; apply-large-valid-widths seeds100000000 bias. Those values exceed several initialized-frame envelopes before any narrowing or validation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing large-valid-config seeds200000000us runs, deriving200000000 narrow and150000000 bound; apply-large-valid-widths seeds100000000 bias. Those values exceed several initialized-frame envelopes before any narrowing or validation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215",
+        "testing/compliance/barcode_work_test.c:408-416"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-quantized-timestamps",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "best_us|dip_us|ext_us|peak_us|segment_us|total_us",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "us",
+        "initialized_domain": {
+          "min": 0,
+          "max": 128992500,
+          "step": 500,
+          "units": "us",
+          "encoding": "Store exact 500-us step count; reconstruct microseconds at private arithmetic/array boundaries."
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing primary/prune/edge wrap cases and leading/required saturation cases seed UINT32_MAX or near-wrap values; 500us quantization would alter their exact traces."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing primary/prune/edge wrap cases and leading/required saturation cases seed UINT32_MAX or near-wrap values; 500us quantization would alter their exact traces.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215",
+        "testing/compliance/barcode_work_test.c:396-406"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-fit-nonnegative-bound",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "bound",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": -2147483648,
+        "max": 2147483647,
+        "units": "us",
+        "initialized_domain": {
+          "min": 0,
+          "max": 16124062,
+          "units": "us"
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing large-valid-config seeds200000000us runs, deriving200000000 narrow and150000000 bound; apply-large-valid-widths seeds100000000 bias. Those values exceed several initialized-frame envelopes before any narrowing or validation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing large-valid-config seeds200000000us runs, deriving200000000 narrow and150000000 bound; apply-large-valid-widths seeds100000000 bias. Those values exceed several initialized-frame envelopes before any narrowing or validation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215",
+        "testing/compliance/barcode_work_test.c:408-416"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-pruning-indices",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "copy|cut|scan",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "extrema index",
+        "initialized_domain": {
+          "min": 0,
+          "max": 125,
+          "units": "extrema index"
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-record-count",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "cursor|edge_cursor|frozen_count",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "sample position/count",
+        "initialized_domain": {
+          "min": 0,
+          "max": 4096,
+          "units": "sample position/count"
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-interpolated-time",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "edge_previous_us|edge_us|first_us|integral_us|last_us",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "us",
+        "initialized_domain": {
+          "min": 0,
+          "max": 128992500,
+          "units": "us"
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing primary/prune/edge wrap cases and leading/required saturation cases seed UINT32_MAX or near-wrap values; 500us quantization would alter their exact traces."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing primary/prune/edge wrap cases and leading/required saturation cases seed UINT32_MAX or near-wrap values; 500us quantization would alter their exact traces.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215",
+        "testing/compliance/barcode_work_test.c:396-406"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-edges",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "edges|segment",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "segment/edge count",
+        "initialized_domain": {
+          "min": 0,
+          "max": 30,
+          "units": "segment/edge count"
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-found",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "found",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code",
+        "initialized_domain": {
+          "min": 0,
+          "max": 2
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-faint-low-elapsed",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "low_us",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "us",
+        "initialized_domain": {
+          "min": 0,
+          "max": 61500,
+          "step": 500,
+          "units": "us",
+          "encoding": "Store exact 500-us units (0..123); decode before threshold comparisons."
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-largest-step",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "max_step_us",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds",
+        "initialized_domain": {
+          "min": 0,
+          "max": 31500,
+          "units": "microseconds"
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-extrema-count",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "n",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "extrema count",
+        "initialized_domain": {
+          "min": 0,
+          "max": 127,
+          "units": "extrema count"
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-fit-prevalidation-narrow",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "narrow",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "us",
+        "initialized_domain": {
+          "min": 0,
+          "max": 21498750,
+          "units": "us"
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing large-valid-config seeds200000000us runs, deriving200000000 narrow and150000000 bound; apply-large-valid-widths seeds100000000 bias. Those values exceed several initialized-frame envelopes before any narrowing or validation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing large-valid-config seeds200000000us runs, deriving200000000 narrow and150000000 bound; apply-large-valid-widths seeds100000000 bias. Those values exceed several initialized-frame envelopes before any narrowing or validation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215",
+        "testing/compliance/barcode_work_test.c:408-416"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-orientation",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "orientation",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code",
+        "initialized_domain": {
+          "min": 0,
+          "max": 2
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-phase",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "phase",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code",
+        "initialized_domain": {
+          "min": 0,
+          "max": 18
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. The fixture exercises phase255, and source default rejects unknown phase values. A five-bit phase would alias33 to RW_PRIMARY instead of taking the default rejection."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. The fixture exercises phase255, and source default rejects unknown phase values. A five-bit phase would alias33 to RW_PRIMARY instead of taking the default rejection.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215",
+        "testing/compliance/barcode_work_test.c:393-395",
+        "app_program/subsystem3/bc_decoder.c:2035-2037"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-record-quiet-envelope-review",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "quiet_required_us",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds",
+        "initialized_domain": {
+          "min": 0,
+          "max": 2147483647,
+          "units": "microseconds",
+          "minimum_width_proved": false
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-record-required-envelope-review",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "required_us",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds",
+        "initialized_domain": {
+          "min": 0,
+          "max": 2147483647,
+          "units": "microseconds",
+          "minimum_width_proved": false
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-run-envelope-review",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "runs",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds",
+        "initialized_domain": {
+          "min": 0,
+          "max": 214748364,
+          "units": "microseconds",
+          "minimum_width_proved": false
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing large-valid-config seeds200000000us runs, deriving200000000 narrow and150000000 bound; apply-large-valid-widths seeds100000000 bias. Those values exceed several initialized-frame envelopes before any narrowing or validation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation. Existing large-valid-config seeds200000000us runs, deriving200000000 narrow and150000000 bound; apply-large-valid-widths seeds100000000 bias. Those values exceed several initialized-frame envelopes before any narrowing or validation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215",
+        "testing/compliance/barcode_work_test.c:408-416"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-star",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "star_index",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code",
+        "initialized_domain": {
+          "min": 0,
+          "max": 1
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-work-barcode-work-tick",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "tick",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": -32768,
+        "max": 32767,
+        "units": "integer code",
+        "initialized_domain": {
+          "min": -64,
+          "max": 65
+        },
+        "description": "Full public/white-box mutable scalar domain; initialized-only producer envelope is separate.",
+        "encoding": "Retain existing scalar value, signedness and arithmetic in the exposed workspace; initialized-domain encoding needs a separate private adapter."
+      },
+      "ownership": "Caller owns the exposed record/workspace; production navigation sampling owns its instance, and fixtures explicitly seed independent instances.",
+      "synchronization": "Single navigation owner; retain publication/mutex boundaries. No singleton scratch or shared bitfield word across tasks.",
+      "constraints": [
+        "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation."
+      ],
+      "reason": "The initialized work_begin path has the separately recorded producer envelope. It is not the domain of this exposed mutable workspace: the unchanged characterization traces every named scalar/array, including exhausted-budget and RW_DONE no-op states that retain caller-seeded values. Preserve the full declared scalar domain and defined arithmetic/validation behavior here; compact only a separate proven-private owner representation.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:138-169",
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1737-1748",
+        "testing/compliance/barcode_work_test.c:98-183",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "mutable-record-leading-input",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "leading_us",
+      "kind": "FIELD_DECL",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds",
+        "initialized_domain": {
+          "min": 0,
+          "max": 2147483647
+        },
+        "description": "Includes explicit UINT32_MAX leading margin seeded before saturation."
+      },
+      "ownership": "Caller-owned record; production navigation sampling owner.",
+      "synchronization": "Preserve existing owner serialization.",
+      "constraints": [
+        "The direct-leading-saturation fixture seeds UINT32_MAX, then the decoder applies existing saturation/validation. The initialized waiting-path envelope does not license truncation of this exposed field."
+      ],
+      "reason": "The direct-leading-saturation fixture seeds UINT32_MAX, then the decoder applies existing saturation/validation. The initialized waiting-path envelope does not license truncation of this exposed field.",
+      "evidence": [
+        "testing/compliance/barcode_work_test.c:403-404",
+        "app_program/subsystem3/bc_decoder.c:1877-1881"
+      ]
+    },
+    {
+      "id": "retained-barcode-work-adapter-review",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "work",
+      "kind": "FIELD_DECL",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained full public workspace instance. Full mutable scalar preservation is required by the current interface/white-box contract; initialized-only producer bounds are candidates for a separate private representation, not a storage compliance pass."
+      },
+      "required_bits": null,
+      "ownership": "Each caller-owned record has independent resumable work. Production sampling owns its record; fixtures retain multiple independent records.",
+      "synchronization": "Do not introduce global scratch, locks, cross-task bitfield sharing, or lose resumability.",
+      "constraints": [
+        "Preserve every existing full-scratch trace, invalid/default phase, no-op budget state, partial correction write and output mutation. A private adapter must prove exact round trips and fallback for noncanonical public inputs; measure target storage and stack before claiming savings."
+      ],
+      "reason": "Public child-field boundaries do not certify minimum retained storage. Private compact-work ownership and compatibility adapter remain unresolved.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:209",
+        "app_program/subsystem3/bc_decoder.c:1336-1343",
+        "testing/compliance/barcode_work_test.c:189-215"
+      ]
+    },
+    {
+      "id": "retained-navigation-record-adapter-review",
+      "path": "app_program/subsystem3/line_navigation.h",
+      "owner": "s3_navigation_t",
+      "name": "barcode_record",
+      "kind": "FIELD_DECL",
+      "status": "unresolved",
+      "domain": {
+        "description": "Navigation retains a public caller-writable barcode record. Public full-domain fields and initialized-only workspace bounds must remain distinct when designing a private retained representation."
+      },
+      "required_bits": null,
+      "ownership": "Production drive/navigation sampling owner; bench sampling has a separate navigation instance.",
+      "synchronization": "Navigation work is owner-local outside publication mutex; readers receive existing packed publications, not shared mutable scratch.",
+      "constraints": [
+        "Preserve public record APIs and fixture snapshots while assessing a separately owned compact context. A whole-record automatic decode copy risks adding roughly10KB stack and is not an acceptable unmeasured adapter."
+      ],
+      "reason": "This retained instance needs a separate private-storage design; public child-domain preservation is not a retained-memory waiver.",
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:129",
+        "app_program/subsystem3/line_navigation.c:337-345",
+        "app_program/controller/s3_integration.c:740-741",
+        "app_program/subsystem3/buddy3.c:68-78"
+      ]
+    },
+    {
       "id": "retained-mqtt-message-review",
       "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
       "owner": "",
