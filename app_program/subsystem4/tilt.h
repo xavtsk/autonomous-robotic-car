@@ -1,4 +1,4 @@
-/** @file tilt_estimation.h
+/** @file tilt.h
  * @brief Estimate tilt and heading and calculate wrapped angle differences.
  */
 #ifndef BUDDY4_TILT_ESTIMATION_H

@@ -76,18 +76,26 @@ def main():
     tool_bin.mkdir()
     tooling = Path(__file__).resolve().parent
     from fixture_binding import select_fixture_root
+    try:
+        from .module_compat import prepare_tilt
+    except ImportError:
+        from module_compat import prepare_tilt
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     tooling_revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
                                                cwd=tooling.parents[1], text=True).strip()
+    binding_stage = 'fixture_bindings'
     try:
         fixtures_root = select_fixture_root(root, tooling.parents[1], revision,
                                              tooling_revision, output/'fixture-bindings.json')
+        binding_stage = 'tilt_module'
+        tilt_name, tilt_includes = prepare_tilt(root, revision, output/'tilt-compat', output/'tilt-module.json')
     except (OSError, ValueError) as error:
         failure = dict(revision=revision, mode=args.mode, fixture_bindings='fixture-bindings.json',
-                       results=[dict(name='fixture_bindings', status='FAIL', returncode=125,
+                       tilt_module='tilt-module.json',
+                       results=[dict(name=binding_stage, status='FAIL', returncode=125,
                                      error=str(error))])
         (output/'results.json').write_text(json.dumps(failure, indent=2)+'\n', encoding='utf-8')
-        print('FAIL: fixture bindings: '+str(error), file=sys.stderr)
+        print('FAIL: '+binding_stage+': '+str(error), file=sys.stderr)
         return 1
     compiler_proxy = tool_bin/'cc'
     compiler_proxy.write_text(f'#!{sys.executable}\nimport runpy\nrunpy.run_path({str(tooling/"compiler_proxy.py")!r}, run_name="__main__")\n', encoding='utf-8')
@@ -172,9 +180,10 @@ def main():
     terrain_app = root/'app_program/subsystem4'
     terrain_fixture = fixtures_root/'testing/subsystem4'
     run('terrain_production_build', [compiler, *shlex.split(flags), '-DAPP_IMU_DEBUG=0',
+        *['-I'+str(path) for path in tilt_includes],
         '-I'+str(terrain_app), '-I'+str(terrain_fixture), str(terrain_fixture/'host_test.c'),
         *[str(terrain_app/(name+'.c')) for name in
-          ('imu_sensor', 'imu_calibration', 'tilt_estimation', 'hump_detection', 'events_motion', 'terr_data')],
+          ('imu_sensor', 'imu_calibration', tilt_name, 'hump_detection', 'events_motion', 'terr_data')],
         '-lm', '-o', str(terrain_binary)])
     run('terrain_production', [str(terrain_binary)])
     make('integration', 'testing/integration', ['test'], 'controller_test.mk')
@@ -265,6 +274,7 @@ def main():
     manifest = dict(recorded_at=datetime.now(timezone.utc).isoformat(),
                     revision=revision, mode=args.mode, results=results,
                     fixture_bindings='fixture-bindings.json',
+                    tilt_module='tilt-module.json',
                     additional_host_recipes='additional-host-recipes.json',
                     runner_image={key: os.environ.get(key) for key in ('ImageOS', 'ImageVersion', 'RUNNER_OS', 'RUNNER_ARCH')},
                     limits=['Host fakes do not prove physical timing or hardware behavior.',

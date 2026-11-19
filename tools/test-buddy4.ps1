@@ -17,7 +17,7 @@ $originalPath = $env:PATH
 try {
     $env:PATH = "$compilerDir;$originalPath"
     "Buddy 4 host tests: $(Get-Date -Format o)" | Set-Content -LiteralPath $logPath
-    $sources = @('imu_sensor', 'imu_calibration', 'tilt_estimation',
+    $sources = @('imu_sensor', 'imu_calibration', 'tilt',
                  'hump_detection', 'events_motion', 'terr_data') |
         ForEach-Object { Join-Path $repoRoot "app_program\subsystem4\$_.c" }
     # Never define NDEBUG: the test's assertions must execute.

@@ -4,7 +4,7 @@
 #include "host_test.h"
 #include "imu_sensor.h"
 #include "terr_data.h"
-#include "tilt_estimation.h"
+#include "tilt.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>

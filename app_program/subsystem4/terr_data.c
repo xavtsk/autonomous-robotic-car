@@ -4,7 +4,7 @@
  */
 #include "terr_data.h"
 #include "../app_types.h"
-#include "tilt_estimation.h"
+#include "tilt.h"
 #if APP_IMU_DEBUG
 #include <float.h>
 #endif

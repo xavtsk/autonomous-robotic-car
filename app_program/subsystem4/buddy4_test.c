@@ -3,7 +3,7 @@
  */
 #include "buddy4_test.h"
 #include "../app_types.h"
-#include "tilt_estimation.h"
+#include "tilt.h"
 #include "../test_report.h"
 #if APP_TEST
 void subsystem4_test (void)

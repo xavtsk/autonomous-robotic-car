@@ -10,6 +10,7 @@ from replay_audit import audit
 from instrument_harnesses import runtime_source, mqtt_source, operator_source, integration_storage_flags
 from run_host import motion_estimation_module, motion_storage_flags
 from fixture_binding import select_fixture_root
+from module_compat import prepare_tilt
 
 
 def main():
@@ -40,11 +41,16 @@ def main():
 
     try:
         results['fixture_bindings'] = {}
+        results['tilt_modules'] = {}
         for label, root in roots.items():
             receipt = output/(label+'-fixture-bindings.json')
             results['fixture_bindings'][label] = receipt.name
             fixtures_root = select_fixture_root(root, roots['candidate'],
                 results['revisions'][label], results['revisions']['candidate'], receipt)
+            tilt_receipt = output/(label+'-tilt-module.json')
+            results['tilt_modules'][label] = tilt_receipt.name
+            tilt_name, tilt_includes = prepare_tilt(root, results['revisions'][label],
+                output/(label+'-tilt-compat'), tilt_receipt)
             trace_harness = fixtures_root/'testing/compliance/control_debug_trace.c'
             shared = fixtures_root/'tools/compliance/traces'
             debug_binary = build(label, 'control_debug', [trace_harness, root / 'app_program/controller/control_debug.c'], [root])
@@ -56,9 +62,9 @@ def main():
             suites = {
                 'motion': (2, ['motion', 'ctrl_motion', 'motion_pack', estimation_module, 'speed_pid'],
                            fixtures/'subsystem3', ['-include', str(fixtures/'subsystem3/motion_kernel_stub.h')]),
-                'terrain': (4, ['imu_sensor', 'imu_calibration', 'tilt_estimation', 'hump_detection', 'events_motion', 'terr_data'],
+                'terrain': (4, ['imu_sensor', 'imu_calibration', tilt_name, 'hump_detection', 'events_motion', 'terr_data'],
                             fixtures/'subsystem4', ['-DAPP_IMU_DEBUG=1']),
-                'terrain_production': (4, ['imu_sensor', 'imu_calibration', 'tilt_estimation', 'hump_detection', 'events_motion', 'terr_data'],
+                'terrain_production': (4, ['imu_sensor', 'imu_calibration', tilt_name, 'hump_detection', 'events_motion', 'terr_data'],
                                        fixtures/'subsystem4', ['-DAPP_IMU_DEBUG=0']),
                 'obstacle': (5, ['profile_obstacle', 'scan_obstacle', 'avoidance_planner', 'line_recovery', 'avoid_obstacle', 's5_codec', 'ultrasonic_sensor'],
                              fixtures/'subsystem5', ['-DS5_HOST_TEST']),
@@ -66,8 +72,9 @@ def main():
             for name, (number, modules, harness_dir, flags) in suites.items():
                 directory = app / f'subsystem{number}'
                 trace_name = 'terrain' if name == 'terrain_production' else name
+                compatibility_includes = tilt_includes if number == 4 else []
                 binary = build(label, name, [shared/(trace_name+'_trace.c'), *[directory/(module+'.c') for module in modules]],
-                               [directory, harness_dir], flags)
+                               [*compatibility_includes, directory, harness_dir], flags)
                 with (output / (label + '-' + name + '.trace')).open('wb') as stream:
                     subprocess.run([str(binary)], stdout=stream, check=True, timeout=120)
             binary = build(label, 'motion_storage',
