@@ -157,12 +157,12 @@ static u16_t mqtt_utk_publish_wait_ms (void)
 {
     switch (g_mqtt_state.publish_interval)
     {
-        case MQTT_UTK_WAIT_GAP:
-            return MQTT_UTK_PUBLISH_GAP_MS;
-        case MQTT_UTK_WAIT_RETRY:
-            return MQTT_UTK_PUBLISH_RETRY_MS;
-        default:
-            return 0U;
+    case MQTT_UTK_WAIT_GAP:
+        return MQTT_UTK_PUBLISH_GAP_MS;
+    case MQTT_UTK_WAIT_RETRY:
+        return MQTT_UTK_PUBLISH_RETRY_MS;
+    default:
+        return 0U;
     }
 }
 
@@ -179,9 +179,9 @@ static void pace_publish (u16_t wait_ms)
 {
     last_publish_ms = sys_now();
     /* All private callers supply one of these two unchanged intervals. */
-    g_mqtt_state.publish_interval =
-        (wait_ms == MQTT_UTK_PUBLISH_GAP_MS) ? MQTT_UTK_WAIT_GAP :
-                                             MQTT_UTK_WAIT_RETRY;
+    g_mqtt_state.publish_interval = (wait_ms == MQTT_UTK_PUBLISH_GAP_MS)
+                                        ? MQTT_UTK_WAIT_GAP
+                                        : MQTT_UTK_WAIT_RETRY;
     g_mqtt_state.b_publish_paced = 1;
 }
 
@@ -283,7 +283,8 @@ static void preview_publish_done_cb (void * arg, err_t result)
 {
     (void)arg;
     (void)result;
-    g_mqtt_state.b_pending_inflight = 0; /* best effort: never retry an old preview */
+    g_mqtt_state.b_pending_inflight =
+        0; /* best effort: never retry an old preview */
 }
 
 static void publish_preview (const char * topic, unsigned int size)
@@ -348,8 +349,10 @@ static void incoming_publish_cb (void * arg, const char * topic, u32_t tot_len)
     rx_topic[i] = '\0';
 
     g_mqtt_state.rx_len = 0;
-    g_mqtt_state.b_rx_truncated = (topic[i] != '\0' || tot_len > MQTT_UTK_RX_DATA_MAX);
-    g_mqtt_state.rx_expected = (tot_len <= MQTT_UTK_RX_DATA_MAX) ? (u16_t)tot_len : 0;
+    g_mqtt_state.b_rx_truncated =
+        (topic[i] != '\0' || tot_len > MQTT_UTK_RX_DATA_MAX);
+    g_mqtt_state.rx_expected =
+        (tot_len <= MQTT_UTK_RX_DATA_MAX) ? (u16_t)tot_len : 0;
 }
 
 static void incoming_data_cb (void * arg, const u8_t * data, u16_t len,
@@ -376,7 +379,8 @@ static void incoming_data_cb (void * arg, const u8_t * data, u16_t len,
         if (g_mqtt_state.rx_len != g_mqtt_state.rx_expected)
             g_mqtt_state.b_rx_truncated = 1;
         tm_printf((UB *)"mqtt: RX [%s] %u binary bytes%s\n", rx_topic,
-                  (unsigned)g_mqtt_state.rx_len, g_mqtt_state.b_rx_truncated ? " (rejected)" : "");
+                  (unsigned)g_mqtt_state.rx_len,
+                  g_mqtt_state.b_rx_truncated ? " (rejected)" : "");
         if (!g_mqtt_state.b_rx_truncated)
         {
             mqtt_utk_app_receive(rx_topic, rx_data, g_mqtt_state.rx_len);
@@ -519,7 +523,8 @@ void mqtt_utk_start (void)
     struct mqtt_connect_client_info_t client_info = {0};
     err_t err;
 
-    if (g_mqtt_state.b_connecting || (client != NULL && mqtt_client_is_connected(client)))
+    if (g_mqtt_state.b_connecting ||
+        (client != NULL && mqtt_client_is_connected(client)))
     {
         return;
     }
@@ -685,8 +690,9 @@ publish_capture:
     g_mqtt_state.retry_source = PUBLISH_CAPTURE;
     g_mqtt_state.b_pending_inflight = 1;
     pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-    err = mqtt_publish(client, MQTT_UTK_DEBUG_TOPIC, debug_line, g_mqtt_state.debug_len, 0,
-                       0, debug_publish_done_cb, NULL);
+    err =
+        mqtt_publish(client, MQTT_UTK_DEBUG_TOPIC, debug_line,
+                     g_mqtt_state.debug_len, 0, 0, debug_publish_done_cb, NULL);
     if (err != ERR_OK)
     {
         g_mqtt_state.b_pending_inflight = 0;
@@ -734,4 +740,3 @@ publish_application:
 }
 
 /* End of file. */
-

@@ -1,0 +1,16 @@
+{
+  "before_commit": "d26a9808f00add85ee3b6701b415cdec21444e29",
+  "batch_kind": "whitespace only; no production tokens changed",
+  "formatter_command": [
+    "build/tooling/clang-format-18/clang_format/data/bin/clang-format.exe",
+    "--style={BasedOnStyle: InheritParentConfig, InsertBraces: false, BreakStringLiterals: false, ReflowComments: false}",
+    "--assume-filename=lib\\liblwip\\sysdepend\\pico_rp2040\\mqtt_utk.c"
+  ],
+  "files": [
+    {
+      "before_lf_sha256": "4fee096aee26145b8f7f2bd2a56e6eaa9c99329e998952db126b8264b9361329",
+      "after_lf_sha256": "606dba4251771fc466cb23a2b4f7cb6e662b17c72d423b8699c64cd979a3291b",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c"
+    }
+  ]
+}
