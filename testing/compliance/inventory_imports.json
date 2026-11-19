@@ -9,6 +9,26 @@
     "git diff --name-status 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 4ad2cc42595722cedb47102e4343298339040d40 -- config device include kernel lib tools"
   ],
   "files": {
+    "config/config_func.h": {
+      "classification": "imported-with-prior-formatting",
+      "upstream_blob": "f60546abd6ca0303c8e3f8f8afc3d87174fd739e",
+      "template_blob": "f60546abd6ca0303c8e3f8f8afc3d87174fd739e",
+      "baseline_blob": "d40a291515354339ef616ebd4c553fae9f3d7d05",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "5e71275f9be6fb04b2610ef5e2617f536aa936155fc9e2247c4f1f7a18ce9f06",
+      "upstream_semantic_sha256": "f99caaae055122b03519b1523c1336c0e54c9f44bcd0f41749c96282d4d93778",
+      "evidence": "Upstream and adoption blobs byte-identical; baseline preprocessing tokens unchanged; existing formatting is pinned, not authorization for further imported edits."
+    },
+    "config/config_tm.h": {
+      "classification": "imported-with-prior-formatting",
+      "upstream_blob": "791443a71dc7b84ed68ff7ebe444f91225655560",
+      "template_blob": "791443a71dc7b84ed68ff7ebe444f91225655560",
+      "baseline_blob": "d47f15978f85eedb6f4828e5b7c14e4b6e788d6b",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "05f555826cae20c8cdcb866bdfbb4923fda778d43e974e7cb4a2825522913799",
+      "upstream_semantic_sha256": "9e9a35f41f0c3412a9d58f5387559f440288fc040694623892ade2e5d1c13dbf",
+      "evidence": "Upstream and adoption blobs byte-identical; baseline preprocessing tokens unchanged; existing formatting is pinned, not authorization for further imported edits."
+    },
     "device/adc/adc.c": {
       "classification": "imported",
       "template_blob": "339f9d6932049b61bfddc658080c02fd9b3c6a96",
@@ -29,6 +49,36 @@
       "baseline_blob": "8074deeb9ea28e6a12968815baf4c1772fd8a0a0",
       "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
       "baseline_content_sha256_lf": "20fc914c2082a72fc5e42b33ae5c21f81fd4ba6a47d245839dba8c75642e4931"
+    },
+    "device/adc/sysdepend/rp2040/adc_cnf_sysdep.h": {
+      "classification": "imported",
+      "upstream_blob": "8b61d9638caabc24129d00bb0b13747dfc09ce81",
+      "template_blob": "8b61d9638caabc24129d00bb0b13747dfc09ce81",
+      "baseline_blob": "8b61d9638caabc24129d00bb0b13747dfc09ce81",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "f101e6378e67e50fc512ea458ac136dc92f736ec8c4fb00719529d343e4fd7d6",
+      "upstream_semantic_sha256": "205e07dbaaab21226c2cffdf4972d1fc06deef267a0ed581d13faa1f9004a6c8",
+      "evidence": "Upstream and adoption blobs byte-identical; baseline preprocessing tokens unchanged; existing formatting is pinned, not authorization for further imported edits."
+    },
+    "device/adc/sysdepend/rp2040/adc_rp2040.c": {
+      "classification": "imported",
+      "upstream_blob": "29f347dbc29c84af3a6ba45343db268e1dcb22c4",
+      "template_blob": "29f347dbc29c84af3a6ba45343db268e1dcb22c4",
+      "baseline_blob": "29f347dbc29c84af3a6ba45343db268e1dcb22c4",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "2a9e94f415cad18e89765179051660f31f9720739992e402770c9959257845fb",
+      "upstream_semantic_sha256": "31ed74705b61bdfaca9216a7e83380966b9060accc2f650a45583633d3ded21b",
+      "evidence": "Upstream and adoption blobs byte-identical; baseline preprocessing tokens unchanged; existing formatting is pinned, not authorization for further imported edits."
+    },
+    "device/adc/sysdepend/rp2040/adc_sysdep.h": {
+      "classification": "imported",
+      "upstream_blob": "304932b3726eb4fc9d45d745be4882cd865ff083",
+      "template_blob": "304932b3726eb4fc9d45d745be4882cd865ff083",
+      "baseline_blob": "304932b3726eb4fc9d45d745be4882cd865ff083",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "2b2092013a90893914fd1ea272d6cb2c81042230eb8812c11b6a0a9325243890",
+      "upstream_semantic_sha256": "157a2c20d05e97fb9180d317d34c5a7cd73e3a51d0ffebbafbb58608c63e0ac5",
+      "evidence": "Upstream and adoption blobs byte-identical; baseline preprocessing tokens unchanged; existing formatting is pinned, not authorization for further imported edits."
     },
     "device/adc/sysdepend/rx231/adc_cnf_sysdep.h": {
       "classification": "imported",

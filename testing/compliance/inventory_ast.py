@@ -179,7 +179,7 @@ def parse_one(job, root, owned, lexical_index):
         parent = cursor.semantic_parent
         owner = parent.spelling if parent and parent.kind.name != "TRANSLATION_UNIT" else ""
         if cursor.kind.name == "FIELD_DECL":
-            fallback = lexical_index.get((path, cursor.spelling, cursor.location.line))
+            fallback = lexical_index.get((path, cursor.spelling, cursor.location.line, cursor.location.column))
             if fallback:
                 owner = fallback
         if cursor.kind.name == "VAR_DECL" and parent and parent.kind.name == "FUNCTION_DECL":
@@ -189,7 +189,7 @@ def parse_one(job, root, owned, lexical_index):
         scalar_size = scalar.get_size()
         declared_size = cursor.type.get_size()
         row = {"path": path, "owner": owner, "name": cursor.spelling,
-               "kind": cursor.kind.name, "line": cursor.location.line,
+               "kind": cursor.kind.name, "line": cursor.location.line, "column": cursor.location.column,
                "type": cursor.type.spelling, "canonical_type": scalar.spelling,
                "type_category": scalar.kind.name, "array_count": count,
                "stored_bits": width if width is not None else scalar_size * 8 if scalar_size >= 0 else None,
@@ -220,7 +220,7 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
     lexical_index = {}
     for file in owned:
         rows, _ = inventory.lexical_fields(file.read_text(encoding="utf-8-sig"), file.relative_to(root).as_posix())
-        lexical_index.update({(r["path"], r["name"], r["line"]): r["owner"] for r in rows})
+        lexical_index.update({(r["path"], r["name"], r["line"], r.get("column")): r["owner"] for r in rows})
     commands, common = {}, None
     for database in databases:
         entries = ([json.loads(line) for line in database.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -265,6 +265,7 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
             receipts.append({k: v for k, v in result.items() if k not in {"declarations", "seen"}})
             for path in result["seen"]:
                 receipt = files.setdefault(path, {"profiles": [], "status": "partial",
+                    "source_location_sha256": inventory.source_location_digest((root / path).read_text(encoding="utf-8-sig")),
                     "semantic_sha256": inventory.semantic_digest((root / path).read_text(encoding="utf-8-sig"))})
                 if result["profile"] not in receipt["profiles"]:
                     receipt["profiles"].append(result["profile"])

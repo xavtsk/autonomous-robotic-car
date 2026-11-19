@@ -25,6 +25,1133 @@
       "type_category": ".*"
     },
     {
+      "id": "motion-private-feedback-time-epoch",
+      "path": "app_program/subsystem2/motion.c",
+      "owner": "motion_stored_feedback_t",
+      "name": "timestamp_us|epoch",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "timestamp microseconds or modulo-2^32 epoch"
+      },
+      "ownership": "Motion task and feedback API readers use the existing motion mutex.",
+      "synchronization": "Preserve existing owner and mutex boundaries; no new cross-task shared storage unit.",
+      "constraints": [
+        "timestamp_us copies the full caller time; epoch increments and wraps at uint32_t width. The private adapter must preserve all bits under the existing motion mutex."
+      ],
+      "reason": "timestamp_us copies the full caller time; epoch increments and wraps at uint32_t width. The private adapter must preserve all bits under the existing motion mutex.",
+      "evidence": [
+        "app_program/subsystem2/motion.c"
+      ]
+    },
+    {
+      "id": "barcode-public-letter-validation",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_result_t",
+      "name": "letter",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "char object-representation bits",
+        "valid_min": 0,
+        "valid_max": 90
+      },
+      "ownership": "Single owning task updates this internal state; preserve existing synchronization.",
+      "synchronization": "Preserve existing owner and mutex boundaries; no new cross-task shared storage unit.",
+      "constraints": [
+        "The public serializer validates NUL or A-Z before encoding; callers can supply every other byte for rejection. Preserve the public byte. Private s3_barcode_stored_result_t already uses a five-bit code. valid_min/max is an envelope only; the valid set is NUL or A-Z."
+      ],
+      "reason": "The public serializer validates NUL or A-Z before encoding; callers can supply every other byte for rejection. Preserve the public byte. Private s3_barcode_stored_result_t already uses a five-bit code. valid_min/max is an envelope only; the valid set is NUL or A-Z.",
+      "evidence": [
+        "app_program/subsystem3/navigation_codec.c",
+        "app_program/subsystem3/bc_decoder.c"
+      ]
+    },
+    {
+      "id": "obstacle-searched-step-distance",
+      "path": "app_program/subsystem5/avoid_obstacle.h",
+      "owner": "s5_avoidance_t",
+      "name": "searched_mm",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4075,
+        "step": 25,
+        "units": "mm",
+        "encoding": "Store count of 25-mm steps (0..163); multiply by 25 before existing comparisons/outputs."
+      },
+      "ownership": "Single owning task updates this internal state; preserve existing synchronization.",
+      "synchronization": "Preserve existing owner and mutex boundaries; no new cross-task shared storage unit.",
+      "constraints": [
+        "Initialized/reset to zero. Only S5_PASS_STEP adds S5_PEEK_STEP_MM=25; that phase is entered only after searched_mm+25 <= the 12-bit max_depth_mm (maximum4095). Thus the largest stored multiple is4075. Preserve guard ordering and encode/decode explicitly rather than truncating millimetres."
+      ],
+      "reason": "Initialized/reset to zero. Only S5_PASS_STEP adds S5_PEEK_STEP_MM=25; that phase is entered only after searched_mm+25 <= the 12-bit max_depth_mm (maximum4095). Thus the largest stored multiple is4075. Preserve guard ordering and encode/decode explicitly rather than truncating millimetres.",
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.c",
+        "app_program/subsystem5/s5_config.h"
+      ]
+    },
+    {
+      "id": "imu-debug-raw-milligravity",
+      "path": "app_program/subsystem4/buddy4.c",
+      "owner": "imu_debug_row_t",
+      "name": "raw_mg",
+      "status": "compare",
+      "domain": {
+        "min": -4094,
+        "max": 4094,
+        "step": 2,
+        "units": "mg",
+        "encoding": "Store signed source sensor units (mg/2); reconstruct exact even mg for packet output."
+      },
+      "ownership": "Terrain task produces debug rows; g_imu_debug_mutex protects queue readers/writers.",
+      "synchronization": "Preserve existing owner and mutex boundaries; no new cross-task shared storage unit.",
+      "constraints": [
+        "Only imu_sensor_read supplies this private queue: signed12-bit samples at the rails -2048/+2047 are rejected, leaving -2047..2046; axis inversion expands the union to -2047..2047. Multiplication by2mg/LSB and existing rounding produce even -4094..4094; zero-initialized invalid rows remain zero. Preserve the conversion arithmetic before storage."
+      ],
+      "reason": "Only imu_sensor_read supplies this private queue: signed12-bit samples at the rails -2048/+2047 are rejected, leaving -2047..2046; axis inversion expands the union to -2047..2047. Multiplication by2mg/LSB and existing rounding produce even -4094..4094; zero-initialized invalid rows remain zero. Preserve the conversion arithmetic before storage.",
+      "evidence": [
+        "app_program/subsystem4/imu_sensor.c",
+        "app_program/subsystem4/buddy4.c"
+      ]
+    },
+    {
+      "id": "imu-debug-calibrated-milligravity",
+      "path": "app_program/subsystem4/buddy4.c",
+      "owner": "imu_debug_row_t",
+      "name": "calibrated_mg",
+      "status": "compare",
+      "domain": {
+        "min": -4244,
+        "max": 4244,
+        "units": "mg"
+      },
+      "ownership": "Terrain task produces debug rows; g_imu_debug_mutex protects queue readers/writers.",
+      "synchronization": "Preserve existing owner and mutex boundaries; no new cross-task shared storage unit.",
+      "constraints": [
+        "The private sensor path supplies -4.094..4.094g; accepted calibration bias is within0.15g. Existing float32 accumulation error is far below the half-mg rounding margin. Calibrated rounded output is bounded by +/-4244mg, including zero-initialized unevaluated rows. Preserve float arithmetic and rounding; only the resulting integer storage may change."
+      ],
+      "reason": "The private sensor path supplies -4.094..4.094g; accepted calibration bias is within0.15g. Existing float32 accumulation error is far below the half-mg rounding margin. Calibrated rounded output is bounded by +/-4244mg, including zero-initialized unevaluated rows. Preserve float arithmetic and rounding; only the resulting integer storage may change.",
+      "evidence": [
+        "app_program/subsystem4/imu_sensor.c",
+        "app_program/subsystem4/imu_calibration.c",
+        "app_program/subsystem4/buddy4.c"
+      ]
+    },
+    {
+      "id": "barcode-record-quantized-elapsed",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "frame_us|turn_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 128992500,
+        "step": 500,
+        "units": "us",
+        "encoding": "Store exact 500-us step count (0..257985), reconstruct microseconds before existing arithmetic."
+      },
+      "ownership": "Single owning task updates this internal state; preserve existing synchronization.",
+      "synchronization": "Preserve existing owner and mutex boundaries; no new cross-task shared storage unit.",
+      "constraints": [
+        "A record holds at most4096 samples; the first retained sample has zero incoming step, and each remaining step is0..63 times500us. frame_us equals the retained prefix plus appended steps; turn_us resets at turns and is no greater than that sum. Even the terminal append before timeout rejection is bounded by4095*31500=128992500us. The saturating helper cannot reach its larger cap in this bounded record."
+      ],
+      "reason": "A record holds at most4096 samples; the first retained sample has zero incoming step, and each remaining step is0..63 times500us. frame_us equals the retained prefix plus appended steps; turn_us resets at turns and is no greater than that sum. Even the terminal append before timeout rejection is bounded by4095*31500=128992500us. The saturating helper cannot reach its larger cap in this bounded record.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-work-quantized-timestamps",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "total_us|best_us|peak_us|dip_us|ext_us|segment_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 128992500,
+        "step": 500,
+        "units": "us",
+        "encoding": "Store exact 500-us step count; reconstruct microseconds at private arithmetic/array boundaries."
+      },
+      "ownership": "Single owning task updates this internal state; preserve existing synchronization.",
+      "synchronization": "Preserve existing owner and mutex boundaries; no new cross-task shared storage unit.",
+      "constraints": [
+        "work_advance_cursor sums at most4095 packed incoming steps, each0..31500us. Extrema/best/peak/dip timestamps copy that cumulative total; segment_us starts from an extrema timestamp and advances through the same bounded interval. These values preserve exact500us resolution; interpolated edge/integral values are separately classified and must not use this encoding."
+      ],
+      "reason": "work_advance_cursor sums at most4095 packed incoming steps, each0..31500us. Extrema/best/peak/dip timestamps copy that cumulative total; segment_us starts from an extrema timestamp and advances through the same bounded interval. These values preserve exact500us resolution; interpolated edge/integral values are separately classified and must not use this encoding.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-work-faint-low-elapsed",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "low_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 61500,
+        "step": 500,
+        "units": "us",
+        "encoding": "Store exact 500-us units (0..123); decode before threshold comparisons."
+      },
+      "ownership": "Single owning task updates this internal state; preserve existing synchronization.",
+      "synchronization": "Preserve existing owner and mutex boundaries; no new cross-task shared storage unit.",
+      "constraints": [
+        "RW_FAINT_INK clears low_us on ink. On white it adds one packed step and transitions to RW_FAINT_VALLEY as soon as low_us>30000; the largest transient is30000+31500=61500. No further addition occurs in valley."
+      ],
+      "reason": "RW_FAINT_INK clears low_us on ink. On white it adds one packed step and transitions to RW_FAINT_VALLEY as soon as low_us>30000; the largest transient is30000+31500=61500. No further addition occurs in valley.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-work-interpolated-time",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "first_us|last_us|edge_us|integral_us|edge_previous_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 128992500,
+        "units": "us"
+      },
+      "ownership": "Single owning task updates this internal state; preserve existing synchronization.",
+      "synchronization": "Preserve existing owner and mutex boundaries; no new cross-task shared storage unit.",
+      "constraints": [
+        "rec_frac clamps0..1024, so trapezoid contribution is0..step. Crossing interpolation lies within its source interval; fallback edge is segment-start plus a bounded integral. All timestamps/integrals stay within the4095*31500us sample span. Keep individual microseconds: these interpolated values do not have the500us resolution of source timestamps."
+      ],
+      "reason": "rec_frac clamps0..1024, so trapezoid contribution is0..step. Crossing interpolation lies within its source interval; fallback edge is segment-start plus a bounded integral. All timestamps/integrals stay within the4095*31500us sample span. Keep individual microseconds: these interpolated values do not have the500us resolution of source timestamps.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "debug-schema-bit-offset",
+      "path": "app_program/controller/control_debug.c",
+      "owner": "control_debug_field_info_t",
+      "name": "bit",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 535,
+        "units": "bit offset"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Immutable protocol schema offsets range from 0 through final field offset 535. Ten bits retain the complete numeric offset; no packet layout changes."
+      ],
+      "reason": "Immutable protocol schema offsets range from 0 through final field offset 535. Ten bits retain the complete numeric offset; no packet layout changes.",
+      "evidence": [
+        "app_program/controller/control_debug.c"
+      ]
+    },
+    {
+      "id": "debug-schema-width",
+      "path": "app_program/controller/control_debug.c",
+      "owner": "control_debug_field_info_t",
+      "name": "width",
+      "status": "compare",
+      "domain": {
+        "min": 1,
+        "max": 32,
+        "units": "bits",
+        "encoding": "Store width minus one; decode by adding one before all existing uses."
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Immutable schema widths are 1..32. Five encoded bits require storing width minus one and restoring the original width before validation/shifts; a direct numeric bitfield would need six."
+      ],
+      "reason": "Immutable schema widths are 1..32. Five encoded bits require storing width minus one and restoring the original width before validation/shifts; a direct numeric bitfield would need six.",
+      "evidence": [
+        "app_program/controller/control_debug.c"
+      ]
+    },
+    {
+      "id": "operator-sensor-order",
+      "path": "app_program/controller/op_logic.c",
+      "owner": "g_k_order",
+      "name": "sensor",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Constant calibration order names the three sensor IDs 0, 1 and 2; no COUNT sentinel is stored."
+      ],
+      "reason": "Constant calibration order names the three sensor IDs 0, 1 and 2; no COUNT sentinel is stored.",
+      "evidence": [
+        "app_program/controller/op_logic.c"
+      ]
+    },
+    {
+      "id": "operator-gpio-order",
+      "path": "app_program/controller/op_logic.c",
+      "owner": "g_k_order",
+      "name": "gpio",
+      "status": "compare",
+      "domain": {
+        "min": 26,
+        "max": 28,
+        "units": "GPIO number",
+        "encoding": "Store GPIO minus 26; restore by adding 26."
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "The single wiring definition maps ADC channels 0..2 to GP26..28. Two encoded bits require subtracting 26 in storage and adding it for the existing printed GPIO number."
+      ],
+      "reason": "The single wiring definition maps ADC channels 0..2 to GP26..28. Two encoded bits require subtracting 26 in storage and adding it for the existing printed GPIO number.",
+      "evidence": [
+        "app_program/controller/op_logic.c"
+      ]
+    },
+    {
+      "id": "drive-command-identifiers",
+      "path": "app_program/controller/s3_drive.h",
+      "owner": "s3_drive_t",
+      "name": "command_id|cancel_id",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Full byte IDs come from command_id callback; zero means none. Cancellation correlation preserves all byte codes."
+      ],
+      "reason": "Full byte IDs come from command_id callback; zero means none. Cancellation correlation preserves all byte codes.",
+      "evidence": [
+        "app_program/controller/s3_drive.h"
+      ]
+    },
+    {
+      "id": "drive-scan-identifier",
+      "path": "app_program/controller/s3_drive.h",
+      "owner": "s3_drive_t",
+      "name": "obstacle_scan_id",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Initial zero and incrementing uint16 scan IDs; wrap through zero is immediately changed to one. All nonzero codes remain valid."
+      ],
+      "reason": "Initial zero and incrementing uint16 scan IDs; wrap through zero is immediately changed to one. All nonzero codes remain valid.",
+      "evidence": [
+        "app_program/controller/s3_drive.h"
+      ]
+    },
+    {
+      "id": "drive-packed-obstacle",
+      "path": "app_program/controller/s3_drive.h",
+      "owner": "s3_drive_t",
+      "name": "obstacle_snapshot",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "raw octet"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Cache contains the exact 23 encoded observation bytes, not a native observation struct; all octet bits are preserved."
+      ],
+      "reason": "Cache contains the exact 23 encoded observation bytes, not a native observation struct; all octet bits are preserved.",
+      "evidence": [
+        "app_program/controller/s3_drive.h"
+      ]
+    },
+    {
+      "id": "drive-filter-fixed-point",
+      "path": "app_program/controller/s3_drive.h",
+      "owner": "s3_drive_t",
+      "name": "turn_q",
+      "status": "compare",
+      "domain": {
+        "min": -10000,
+        "max": 10000,
+        "units": "turn fraction in 1/10000 units"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Filter clamps the stored result to -10000..10000 after int32/int64 intermediate arithmetic; keep those intermediate widths and integer division order."
+      ],
+      "reason": "Filter clamps the stored result to -10000..10000 after int32/int64 intermediate arithmetic; keep those intermediate widths and integer division order.",
+      "evidence": [
+        "app_program/controller/s3_drive.h"
+      ]
+    },
+    {
+      "id": "drive-turn-percent",
+      "path": "app_program/controller/s3_drive.h",
+      "owner": "s3_drive_t",
+      "name": "obstacle_turn_pct",
+      "status": "compare",
+      "domain": {
+        "min": -100,
+        "max": 100,
+        "units": "percent"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Latched from turn_q / 100 with truncation toward zero; valid turn_q is clamped to +/-10000. Eight signed bits are already required."
+      ],
+      "reason": "Latched from turn_q / 100 with truncation toward zero; valid turn_q is clamped to +/-10000. Eight signed bits are already required.",
+      "evidence": [
+        "app_program/controller/s3_drive.h"
+      ]
+    },
+    {
+      "id": "integration-calibration-selector",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "",
+      "name": "g_sensor|g_label",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Sensor assignment follows an explicit sensor<COUNT check; surface label is WHITE or BLACK, with initial zero. Both retained selectors fit two bits."
+      ],
+      "reason": "Sensor assignment follows an explicit sensor<COUNT check; surface label is WHITE or BLACK, with initial zero. Both retained selectors fit two bits.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ]
+    },
+    {
+      "id": "integration-retained-barcode-status",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "",
+      "name": "g_last_barcode_status",
+      "status": "preserve",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "status byte"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Stored as an explicit uint8 cast from the wide status view before the next change comparison. Preserve invalid status codes rather than inferring the wire range."
+      ],
+      "reason": "Stored as an explicit uint8 cast from the wide status view before the next change comparison. Preserve invalid status codes rather than inferring the wire range.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ]
+    },
+    {
+      "id": "builtin-calibration-input-table",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "apply_builtin_calibration#L.*",
+      "name": "table",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "raw calibration input"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Measured-range table is fed through the same public calibration validation as manual input. Preserve full uint16 values so an out-of-ADC-range future configuration is rejected rather than truncated."
+      ],
+      "reason": "Measured-range table is fed through the same public calibration validation as manual input. Preserve full uint16 values so an out-of-ADC-range future configuration is rejected rather than truncated.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ]
+    },
+    {
+      "id": "debug-event-mask-table",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "capture_control_debug#L.*",
+      "name": "event_bits",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 7,
+        "units": "event mask"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Constant masks are 1, 2 and 4 for barcode/junction/line-lost; three direct numeric bits retain each mask."
+      ],
+      "reason": "Constant masks are 1, 2 and 4 for barcode/junction/line-lost; three direct numeric bits retain each mask.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ]
+    },
+    {
+      "id": "integration-sensor-order",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "sensor_sample_task#L.*",
+      "name": "order",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Immutable scan order lists the three sensor IDs only; no COUNT sentinel is stored."
+      ],
+      "reason": "Immutable scan order lists the three sensor IDs only; no COUNT sentinel is stored.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ]
+    },
+    {
+      "id": "integration-status-sensor-view",
+      "path": "app_program/controller/s3_integration.h",
+      "owner": "s3_integration_status_t",
+      "name": "calibration_sensor",
+      "status": "boundary",
+      "domain": {
+        "description": "Public status view remains wide for existing codec and operator comparisons. Retained producer selector is separately bounded; this view must not truncate caller-supplied invalid enum values.",
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Public status view remains wide for existing codec and operator comparisons. Retained producer selector is separately bounded; this view must not truncate caller-supplied invalid enum values."
+      ],
+      "reason": "Public status view remains wide for existing codec and operator comparisons. Retained producer selector is separately bounded; this view must not truncate caller-supplied invalid enum values.",
+      "evidence": [
+        "app_program/controller/s3_integration.h"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "terrain-event-safety-copy",
+      "path": "app_program/controller/terr_link.c",
+      "owner": "",
+      "name": "g_safety_seen",
+      "status": "preserve",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Copies the wide event safety value through an explicit uint8 cast, retaining unknown/reserved values until later comparisons. Do not silently turn an invalid event into NONE/LIFTED/OVERTURNED."
+      ],
+      "reason": "Copies the wide event safety value through an explicit uint8 cast, retaining unknown/reserved values until later comparisons. Do not silently turn an invalid event into NONE/LIFTED/OVERTURNED.",
+      "evidence": [
+        "app_program/controller/terr_link.c"
+      ]
+    },
+    {
+      "id": "terrain-report-divider",
+      "path": "app_program/controller/terr_link.c",
+      "owner": "terrain_live_report#L.*",
+      "name": "divider",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 40,
+        "units": "sample calls"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Current period is 200/5=40 calls. Prefix increment stores terminal 40 before resetting to zero; initialization is half the period."
+      ],
+      "reason": "Current period is 200/5=40 calls. Prefix increment stores terminal 40 before resetting to zero; initialization is half the period.",
+      "evidence": [
+        "app_program/controller/terr_link.c"
+      ]
+    },
+    {
+      "id": "controller-report-divider",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "g_pose|g_obstacle_report",
+      "name": "divider",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 40,
+        "units": "sample calls"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Current telemetry period is 40 sample calls; prefix increment reaches terminal 40 before reset. Existing six-bit members include the terminal."
+      ],
+      "reason": "Current telemetry period is 40 sample calls; prefix increment reaches terminal 40 before reset. Existing six-bit members include the terminal.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "controller-sample-divider",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "g_scan_samples",
+      "name": "divider",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 8,
+        "units": "sample calls"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Current raw-sample report period is 40/5=8 calls; prefix increment reaches terminal 8 before reset. Existing four bits are necessary."
+      ],
+      "reason": "Current raw-sample report period is 40/5=8 calls; prefix increment reaches terminal 8 before reset. Existing four bits are necessary.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "controller-obstacle-route-mask",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "g_obstacle_report",
+      "name": "route",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Copied from (control>>6)&3 even when the downstream report returns E_PAR. Reserved route 3 must remain representable; not only the valid 0..2 enum."
+      ],
+      "reason": "Copied from (control>>6)&3 even when the downstream report returns E_PAR. Reserved route 3 must remain representable; not only the valid 0..2 enum.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "controller-obstacle-echo",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "g_obstacle_report",
+      "name": "echo",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Initial 2 means unknown, then stores boolean no_echo 0 or 1. Two bits include the sentinel."
+      ],
+      "reason": "Initial 2 means unknown, then stores boolean no_echo 0 or 1. Two bits include the sentinel.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "controller-scan-identifiers",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "g_obstacle_report|g_scan_samples",
+      "name": "scan|profile_scan|id",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Copies full uint16 scan identifiers including wrap; no smaller run-length assumption."
+      ],
+      "reason": "Copies full uint16 scan identifiers including wrap; no smaller run-length assumption.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "controller-scan-counts",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "g_scan_samples",
+      "name": "count|next",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 16,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Count validated against BUDDY1_SCAN_SAMPLES_MAX=16; next retains terminal count after the final report. Five bits are needed for 16."
+      ],
+      "reason": "Count validated against BUDDY1_SCAN_SAMPLES_MAX=16; next retains terminal count after the final report. Five bits are needed for 16.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "controller-action-state",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "",
+      "name": "g_last_action",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "action_for maps every input into UNKNOWN/FORWARD/LEFT/RIGHT/UTURN; initialization and drive-off reset use UNKNOWN."
+      ],
+      "reason": "action_for maps every input into UNKNOWN/FORWARD/LEFT/RIGHT/UTURN; initialization and drive-off reset use UNKNOWN.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "controller-robot-state",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "",
+      "name": "g_last_state",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 8,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "wire_state plus the obstacle override produce the nine declared robot-state values; update occurs only after successful report."
+      ],
+      "reason": "wire_state plus the obstacle override produce the nine declared robot-state values; update occurs only after successful report.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "controller-fault-mask",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "",
+      "name": "g_last_faults",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 35,
+        "units": "fault mask",
+        "values": [
+          0,
+          1,
+          2,
+          3,
+          32,
+          33,
+          34,
+          35
+        ],
+        "encoding": "Store the three independent flags; restore IR to original mask bit5 before use."
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Only STALL bit0, ENCODER bit1 and IR bit5 are retained. Three encoded flag bits suffice, but the original mask must be reconstructed before all comparisons/API calls."
+      ],
+      "reason": "Only STALL bit0, ENCODER bit1 and IR bit5 are retained. Three encoded flag bits suffice, but the original mask must be reconstructed before all comparisons/API calls.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "controller-pending-letter",
+      "path": "app_program/controller/vehicle_controller.c",
+      "owner": "",
+      "name": "g_pending_barcode",
+      "status": "preserve",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "raw letter byte"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Public observed status supplies a letter cast to UB and cached before buddy1_report_barcode validates it. Preserve all byte values and zero=no pending; invalid letters are not A-Z codes."
+      ],
+      "reason": "Public observed status supplies a letter cast to UB and cached before buddy1_report_barcode validates it. Preserve all byte values and zero=no pending; invalid letters are not A-Z codes.",
+      "evidence": [
+        "app_program/controller/vehicle_controller.c"
+      ]
+    },
+    {
+      "id": "buddy1-public-command-view",
+      "path": "app_program/subsystem1/buddy1.h",
+      "owner": "buddy1_command_msg_t",
+      "name": "kind",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Public buddy1_command_execute rejects unknown kinds. Narrowing to two bits before that call could turn invalid kind254 into BARCODE_MAP; retain the full input byte."
+      ],
+      "reason": "Public buddy1_command_execute rejects unknown kinds. Narrowing to two bits before that call could turn invalid kind254 into BARCODE_MAP; retain the full input byte.",
+      "evidence": [
+        "app_program/subsystem1/buddy1.h"
+      ]
+    },
+    {
+      "id": "buddy1-topic-selector",
+      "path": "app_program/subsystem1/buddy1.h",
+      "owner": "buddy1_telemetry_msg_t",
+      "name": "type",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 14,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "buddy1_queue_publish validates the topic and payload before assigning the message selector. Fifteen topics require four bits; RTOS slot copy boundaries must remain intact."
+      ],
+      "reason": "buddy1_queue_publish validates the topic and payload before assigning the message selector. Fifteen topics require four bits; RTOS slot copy boundaries must remain intact.",
+      "evidence": [
+        "app_program/subsystem1/buddy1.h"
+      ]
+    },
+    {
+      "id": "buddy1-payload-octets",
+      "path": "app_program/subsystem1/buddy1.h",
+      "owner": "buddy1_command_msg_t|buddy1_telemetry_msg_t",
+      "name": "payload",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "raw octet"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Exact packed binary payload bytes are copied by the RTOS and validated by the public decoders; retain all octet values."
+      ],
+      "reason": "Exact packed binary payload bytes are copied by the RTOS and validated by the public decoders; retain all octet values.",
+      "evidence": [
+        "app_program/subsystem1/buddy1.h"
+      ]
+    },
+    {
+      "id": "buddy1-map-packet",
+      "path": "app_program/subsystem1/command.c",
+      "owner": "",
+      "name": "g_active_map",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "packed map bits"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Packed map bytes also use version-byte bit7 as a local configuration latch, masked only for decoding. All stored bits remain meaningful."
+      ],
+      "reason": "Packed map bytes also use version-byte bit7 as a local configuration latch, masked only for decoding. All stored bits remain meaningful.",
+      "evidence": [
+        "app_program/subsystem1/command.c"
+      ]
+    },
+    {
+      "id": "c-string-byte-interface",
+      "path": "app_program/subsystem1/mqtt_bridge.c|app_program/controller/s3_integration.c|lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": ".*",
+      "name": "wanted|prefix|line|rx_topic",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "char object bits"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "C string/input-output buffers use byte-addressable char storage with NUL terminators and library/callback byte pointers. Preserve exact bytes, capacity and terminator behavior."
+      ],
+      "reason": "C string/input-output buffers use byte-addressable char storage with NUL terminators and library/callback byte pointers. Preserve exact bytes, capacity and terminator behavior.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "telemetry-width-table",
+      "path": "app_program/subsystem1/telemetry_codec.c",
+      "owner": "",
+      "name": "g_body_bits",
+      "status": "compare",
+      "domain": {
+        "min": 2,
+        "max": 124,
+        "units": "payload bits"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Immutable topic payload schema ranges from 2 through 124 body bits; seven numeric bits retain every declared width."
+      ],
+      "reason": "Immutable topic payload schema ranges from 2 through 124 body bits; seven numeric bits retain every declared width.",
+      "evidence": [
+        "app_program/subsystem1/telemetry_codec.c"
+      ]
+    },
+    {
+      "id": "motion-public-observation-fields",
+      "path": "app_program/subsystem2/motion.h",
+      "owner": "motion_status_t|motion_debug_snapshot_t",
+      "name": "fault_bits|encoder",
+      "status": "boundary",
+      "domain": {
+        "description": "Wide public status/debug view remains address-compatible and retains existing signed count/fault inputs. Actual encoder retained counts and controller fault mask are separately inventoried.",
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Wide public status/debug view remains address-compatible and retains existing signed count/fault inputs. Actual encoder retained counts and controller fault mask are separately inventoried."
+      ],
+      "reason": "Wide public status/debug view remains address-compatible and retains existing signed count/fault inputs. Actual encoder retained counts and controller fault mask are separately inventoried.",
+      "evidence": [
+        "app_program/subsystem2/motion.h"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "pio-instruction-storage",
+      "path": "app_program/subsystem2/wheel_encoder.c|app_program/subsystem5/ultrasonic_sensor.c",
+      "owner": "",
+      "name": "g_qe_program|g_program",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "PIO instruction bits"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Immutable 16-bit PIO instruction words are supplied through the Pico SDK instruction-pointer ABI; preserve exact opcodes, word stride and program offsets."
+      ],
+      "reason": "Immutable 16-bit PIO instruction words are supplied through the Pico SDK instruction-pointer ABI; preserve exact opcodes, word stride and program offsets.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "barcode-symbol-table",
+      "path": "app_program/subsystem3/bc_decoder.c",
+      "owner": "",
+      "name": "g_letters",
+      "status": "compare",
+      "domain": {
+        "min": 7,
+        "max": 448,
+        "units": "nine-element symbol mask"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Immutable Code39 nine-element patterns span 0x007..0x1c0; nine direct numeric bits preserve all symbol masks and bit order."
+      ],
+      "reason": "Immutable Code39 nine-element patterns span 0x007..0x1c0; nine direct numeric bits preserve all symbol masks and bit order.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c"
+      ]
+    },
+    {
+      "id": "bench-last-action",
+      "path": "app_program/subsystem3/buddy3.c",
+      "owner": "s3_bench_snapshot_t",
+      "name": "last_action",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Bench stores navigation action NONE/FORWARD/LEFT/RIGHT/UTURN, including initial NONE; existing three bits preserve the enum."
+      ],
+      "reason": "Bench stores navigation action NONE/FORWARD/LEFT/RIGHT/UTURN, including initial NONE; existing three bits preserve the enum.",
+      "evidence": [
+        "app_program/subsystem3/buddy3.c"
+      ]
+    },
+    {
+      "id": "s5-last-scan-count",
+      "path": "app_program/subsystem5/buddy5.c",
+      "owner": "g_last_scan",
+      "name": "count",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 16,
+        "units": "samples"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Copies completed scan count bounded by S5_SAMPLES_MAX=16; include full16 terminal."
+      ],
+      "reason": "Copies completed scan count bounded by S5_SAMPLES_MAX=16; include full16 terminal.",
+      "evidence": [
+        "app_program/subsystem5/buddy5.c"
+      ]
+    },
+    {
+      "id": "s5-last-scan-id",
+      "path": "app_program/subsystem5/buddy5.c",
+      "owner": "g_last_scan",
+      "name": "id",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "integer code"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Copies the full uint16 scan/request ID across the mutex-protected last-scan snapshot."
+      ],
+      "reason": "Copies the full uint16 scan/request ID across the mutex-protected last-scan snapshot.",
+      "evidence": [
+        "app_program/subsystem5/buddy5.c"
+      ]
+    },
+    {
+      "id": "obstacle-sine-table",
+      "path": "app_program/subsystem5/profile_obstacle.c",
+      "owner": "",
+      "name": "g_sx",
+      "status": "compare",
+      "domain": {
+        "min": -866,
+        "max": 866,
+        "units": "sine times 1000"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Read-only integer sine table is explicitly listed at 5-degree increments; eleven signed bits preserve every exact coefficient without changing rounding."
+      ],
+      "reason": "Read-only integer sine table is explicitly listed at 5-degree increments; eleven signed bits preserve every exact coefficient without changing rounding.",
+      "evidence": [
+        "app_program/subsystem5/profile_obstacle.c"
+      ]
+    },
+    {
+      "id": "obstacle-cosine-table",
+      "path": "app_program/subsystem5/profile_obstacle.c",
+      "owner": "",
+      "name": "g_cy",
+      "status": "compare",
+      "domain": {
+        "min": 500,
+        "max": 1000,
+        "units": "cosine times 1000",
+        "encoding": "Store coefficient minus 500, then restore the original integer coefficient."
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Read-only cosine table spans 500..1000. Nine encoded bits require storing value minus 500 and restoring it before the unchanged integer geometry arithmetic."
+      ],
+      "reason": "Read-only cosine table spans 500..1000. Nine encoded bits require storing value minus 500 and restoring it before the unchanged integer geometry arithmetic.",
+      "evidence": [
+        "app_program/subsystem5/profile_obstacle.c"
+      ]
+    },
+    {
+      "id": "obstacle-scan-angle-values",
+      "path": "app_program/subsystem5/scan_obstacle.h",
+      "owner": "s5_scan_t",
+      "name": "angle|fine_end|nearest",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 150,
+        "units": "degrees"
+      },
+      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
+      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "constraints": [
+        "Zero initialization plus validated coarse/fine/peek angles up to150; increments never exceed the computed endpoint. Existing eight numeric bits retain these degrees."
+      ],
+      "reason": "Zero initialization plus validated coarse/fine/peek angles up to150; increments never exceed the computed endpoint. Existing eight numeric bits retain these degrees.",
+      "evidence": [
+        "app_program/subsystem5/scan_obstacle.h"
+      ]
+    },
+    {
+      "id": "adc-owned-completion-state",
+      "path": "device/adc/sysdepend/rp2040/adc_rp2040.c",
+      "owner": "ll_devcb",
+      "name": "active|asz",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "integer code"
+      },
+      "ownership": "Conversion task and ADC ISR access the same device state.",
+      "synchronization": "ADC_LOCK/ADC_UNLOCK preserves SMP spinlock or interrupt masking.",
+      "constraints": [
+        "Driver writes active FALSE/TRUE and completed size0/1 only. These are private task/ISR state, not RTOS parameter typedef exemptions; narrowing requires preserving the shared lock."
+      ],
+      "reason": "Driver writes active FALSE/TRUE and completed size0/1 only. These are private task/ISR state, not RTOS parameter typedef exemptions; narrowing requires preserving the shared lock.",
+      "evidence": [
+        "device/adc/sysdepend/rp2040/adc_rp2040.c"
+      ]
+    },
+    {
       "id": "usb-rtos-error-and-id",
       "path": "lib/libtm/sysdepend/pico_rp2040/usb/(usb_console|usb_sdk_compat).c",
       "owner": ".*",
@@ -1265,7 +2392,8 @@
       ],
       "required_bits": null,
       "kind": "VAR_DECL|FIELD_DECL",
-      "type_category": "RECORD"
+      "type_category": "RECORD",
+      "canonical_type": "motion_calibration_t"
     },
     {
       "id": "retained-sampling-view-review",
@@ -1311,7 +2439,8 @@
       ],
       "required_bits": null,
       "kind": "VAR_DECL|FIELD_DECL",
-      "type_category": "RECORD"
+      "type_category": "RECORD",
+      "canonical_type": "s3_navigation_config_t|s3_sensor_frame_t|s3_navigation_output_t"
     },
     {
       "id": "retained-terrain-result-review",
@@ -1503,7 +2632,7 @@
     {
       "id": "floating-object-bit-alias",
       "path": "app_program/controller/integration_codec.c",
-      "owner": "value_v",
+      "owner": "value_v(?:@\\d+)?",
       "name": "u",
       "status": "compare",
       "domain": {
@@ -1519,12 +2648,35 @@
       "reason": "Union view preserves every bit of the existing double object representation, including nonfinite values and signed zero; not a numeric magnitude bound.",
       "evidence": [
         "app_program/controller/integration_codec.c"
-      ]
+      ],
+      "type": "uint64_t"
+    },
+    {
+      "id": "floating-object-bit-alias32",
+      "path": "app_program/controller/integration_codec.c",
+      "owner": "value_v(?:@\\d+)?",
+      "name": "u",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "object representation bits"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Union view preserves every bit of the existing double object representation, including nonfinite values and signed zero; not a numeric magnitude bound."
+      ],
+      "reason": "Union view preserves all32 float object bits including nonfinite values and signed zero; do not merge it with a different local64-bit union.",
+      "evidence": [
+        "app_program/controller/integration_codec.c"
+      ],
+      "type": "uint32_t"
     },
     {
       "id": "navigation-floating-bit-alias",
       "path": "app_program/subsystem3/navigation_codec.c",
-      "owner": "copy",
+      "owner": "copy(?:@\\d+)?",
       "name": "bits",
       "status": "compare",
       "domain": {
@@ -1540,7 +2692,30 @@
       "reason": "Union/object view preserves every float bit for explicit serialization; do not quantize control precision.",
       "evidence": [
         "app_program/subsystem3/navigation_codec.c"
-      ]
+      ],
+      "type": "uint32_t"
+    },
+    {
+      "id": "navigation-floating-bit-alias64",
+      "path": "app_program/subsystem3/navigation_codec.c",
+      "owner": "copy(?:@\\d+)?",
+      "name": "bits",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 18446744073709551615,
+        "units": "object representation bits"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Union/object view preserves every binary64 bit for explicit serialization; do not quantize control precision."
+      ],
+      "reason": "Union/object view preserves every binary64 bit for explicit serialization; do not quantize control precision.",
+      "evidence": [
+        "app_program/subsystem3/navigation_codec.c"
+      ],
+      "type": "uint64_t"
     },
     {
       "id": "capture-letter-bytes",
@@ -2040,7 +3215,13 @@
       "domain": {
         "min": 0,
         "max": 100,
-        "units": "milliseconds"
+        "units": "milliseconds",
+        "values": [
+          0,
+          20,
+          100
+        ],
+        "encoding": "Encode the three states and decode to the exact original millisecond values before comparison."
       },
       "ownership": "Single CYW43 network task.",
       "synchronization": "Single-owner state.",

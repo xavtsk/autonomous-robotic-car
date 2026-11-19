@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "baseline_sha": "4ad2cc42595722cedb47102e4343298339040d40",
   "imports_manifest": "testing/compliance/inventory_imports.json",
   "include_globs": [
@@ -11,8 +11,6 @@
     "tools/compliance/**/*.h",
     "config/*.h",
     "device/i2c/sysdepend/rp2040/i2c_cnf_sysdep.h",
-    "device/adc/sysdepend/rp2040/*.c",
-    "device/adc/sysdepend/rp2040/*.h",
     "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk*.c",
     "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk*.h",
     "lib/libwifi/sysdepend/pico_rp2040/cyw43_configport.h",
@@ -24,6 +22,8 @@
     "lib/libtm/sysdepend/pico_rp2040/usb/tusb_config.h"
   ],
   "exclude_globs": [
+    "config/config_func.h",
+    "config/config_tm.h",
     "config/wifi_secrets.h"
   ],
   "mixed_files": {
@@ -39,9 +39,76 @@
       "review_status": "pending_manual_review",
       "template_blob": "88128f160a52a251f6343b02eb8d9784ae5b1603",
       "baseline_blob": "98ba6cace1dedcbc3df3d8222f5e47a100f8ed4b",
-      "project_region_start": "#if APP_S4",
-      "project_region_end": "#endif",
-      "preserved_body_sha256": "9fb9dc9c90d1fda6372cbc15a61d9800287654eac1735904cd208147d4899d6a"
+      "preserved_body_sha256": "e7e7d1b721fcf4c66c58e7c48dc24dd9ff3f2269f589e23d972785d2062746e9",
+      "owned_regions": [
+        {
+          "kind": "conditional",
+          "directive": "#if APP_S4"
+        }
+      ]
+    },
+    "config/config.h": {
+      "owned_regions": [
+        {
+          "kind": "macro",
+          "name": "CNF_TIMER_PERIOD"
+        }
+      ],
+      "project_change": "Timer period changed from10 to5ms for200Hz sampling.",
+      "evidence": "git diff 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 4ad2cc42595722cedb47102e4343298339040d40 -- config/config.h; git diff c3b09544cb1fd6dac6ad4b8f523be0af59b44482 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 -- config/config.h (empty)",
+      "boundary": "Only listed project configuration directives are owned. Preserve surrounding imported body, including pre-existing formatting.",
+      "review_status": "provenance_reviewed",
+      "upstream_blob": "57e956a5b5f02f305afa8a76559bd7fc578989ba",
+      "template_blob": "57e956a5b5f02f305afa8a76559bd7fc578989ba",
+      "baseline_blob": "894fd525efdc647d692e609424599183ea39eb34",
+      "upstream_revision": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "preserved_body_sha256": "1c05515aceaa064f369d7cd6ba99225ea09622e31567ec8b7e65bb85a5b5616f"
+    },
+    "config/config_device.h": {
+      "owned_regions": [
+        {
+          "kind": "conditional",
+          "directive": "#ifndef APP_S4"
+        },
+        {
+          "kind": "macro",
+          "name": "DEVCNF_USE_IIC"
+        }
+      ],
+      "project_change": "APP_S4 fallback and I2C device enable selection.",
+      "evidence": "git diff 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 4ad2cc42595722cedb47102e4343298339040d40 -- config/config_device.h; git diff c3b09544cb1fd6dac6ad4b8f523be0af59b44482 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 -- config/config_device.h (empty)",
+      "boundary": "Only listed project configuration directives are owned. Preserve surrounding imported body, including pre-existing formatting.",
+      "review_status": "provenance_reviewed",
+      "upstream_blob": "68a0485e3848743ad5dd041d62c6c3b6cbebd162",
+      "template_blob": "68a0485e3848743ad5dd041d62c6c3b6cbebd162",
+      "baseline_blob": "199ba66b61779d5a777b3aa9609da0aed64e9fc4",
+      "upstream_revision": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "preserved_body_sha256": "8f668417cf27d97dc179f6897f048045b6d61e90c5e9162f13a8442324370e83"
+    },
+    "device/i2c/sysdepend/rp2040/i2c_cnf_sysdep.h": {
+      "owned_regions": [
+        {
+          "kind": "macro",
+          "name": "DEVCNF_I2C1_SDA_PIN"
+        },
+        {
+          "kind": "macro",
+          "name": "DEVCNF_I2C1_SCL_PIN"
+        },
+        {
+          "kind": "macro",
+          "name": "DEVCNF_I2C1_TMO"
+        }
+      ],
+      "project_change": "I2C1 SDA6 to2, SCL7 to3, timeout1000 to20; other bus settings preserved.",
+      "evidence": "git diff 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 4ad2cc42595722cedb47102e4343298339040d40 -- device/i2c/sysdepend/rp2040/i2c_cnf_sysdep.h; git diff c3b09544cb1fd6dac6ad4b8f523be0af59b44482 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 -- device/i2c/sysdepend/rp2040/i2c_cnf_sysdep.h (empty)",
+      "boundary": "Only listed project configuration directives are owned. Preserve surrounding imported body, including pre-existing formatting.",
+      "review_status": "provenance_reviewed",
+      "upstream_blob": "0ef890bfc069c1488b04f24452915c22d1c0afee",
+      "template_blob": "0ef890bfc069c1488b04f24452915c22d1c0afee",
+      "baseline_blob": "5b4cedbfd27a7a3ad103c7fc1e4850de08d3d0b2",
+      "upstream_revision": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "preserved_body_sha256": "5eb113d14ea608510cb417b231d9af12ab1543abfa4eaaaf3730d18556141d1a"
     }
   },
   "excluded_roots": [
@@ -54,6 +121,7 @@
     "Repository-wide tracked and nonignored untracked C/H files must match owned or provenance-bound imported coverage; ignored private Wi-Fi credentials are excluded.",
     "The imported kernel, SDK libraries, generated PIO program and generated SDK version/config headers remain unchanged.",
     "Only explicitly listed team-owned adapters are included outside app_program and testing; imported generic device layers and other CPU ports are excluded.",
-    "RTOS/SDK callback signatures, handles, register types and ABI structures are preserved even inside an owned adapter."
+    "RTOS/SDK callback signatures, handles, register types and ABI structures are preserved even inside an owned adapter.",
+    "Upstream c3b09544 and adoption437f46 blobs are identical for eight ADC/config/I2C provenance-reviewed files. ADC is imported; config_func/config_tm have only pinned prior formatting; three config/I2C files own exact listed macro/conditional regions."
   ]
 }

@@ -27,6 +27,14 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(inventory_ast.storage_duration("VAR_DECL", "TRANSLATION_UNIT", "NONE"), "static")
         self.assertEqual(inventory_ast.storage_duration("FIELD_DECL", "STRUCT_DECL", "INVALID"), "enclosing-object")
 
+    def test_reused_local_record_names_have_distinct_declarations(self):
+        source = "void first(void) { union { unsigned long long bits; } value; }\n" \
+                 "void second(void) { union { unsigned int bits; } value; }\n"
+        rows, unsupported = inventory.lexical_fields(source, "app.c")
+        self.assertEqual(unsupported, [])
+        self.assertEqual([row["owner"] for row in rows], ["value", "value@2"])
+        self.assertEqual(len({inventory.row_id(row) for row in rows}), 2)
+
     def test_compiler_observes_address_use_and_function_linkage(self):
         try:
             from clang import cindex
@@ -40,8 +48,12 @@ class DiscoveryTests(unittest.TestCase):
             file = root / "fixture.c"
             file.write_text("struct state { int count; }; static struct state saved;\n"
                             "static void private_fn(int arg) { static int held; int local = arg; int *p = &saved.count; }\n"
-                            "void public_fn(int external) { private_fn(external); }\n")
-            result = inventory_ast.parse_one((file, ["-std=c99"], "configured"), root, {file}, {})
+                            "void public_fn(int external) { private_fn(external); }\n"
+                            "void first(void) { union { unsigned long long bits; } value; }\n"
+                            "void second(void) { union { unsigned int bits; } value; }\n")
+            fields, _ = inventory.lexical_fields(file.read_text(), "fixture.c")
+            lexical = {(r["path"], r["name"], r["line"], r["column"]): r["owner"] for r in fields}
+            result = inventory_ast.parse_one((file, ["-std=c99"], "configured"), root, {file}, lexical)
             self.assertEqual(result["errors"], [])
             rows = {row["name"]: row for row in result["declarations"]}
             self.assertEqual(rows["held"]["storage_duration"], "static")
@@ -50,6 +62,9 @@ class DiscoveryTests(unittest.TestCase):
             self.assertEqual(rows["external"]["function_linkage"], "EXTERNAL")
             self.assertEqual(rows["count"]["address_taken"], "observed-direct")
             self.assertEqual(rows["local"]["address_taken"], "not-observed-in-recorded-TUs")
+            bits = {inventory.row_id(row): (row["owner"], row["stored_bits"])
+                    for row in result["declarations"] if row["name"] == "bits"}
+            self.assertEqual(sorted(bits.values()), [("value", 64), ("value@2", 32)])
 
     def test_width_variants_cannot_claim_minimum_bit_compliance(self):
         rule = {"id": "reviewed", "status": "compare", "domain": {"min": 0, "max": 7}}
@@ -95,7 +110,7 @@ class DiscoveryTests(unittest.TestCase):
         policies = inventory.read_json(HERE / "inventory_policies.json")
         row = {"path": "app_program/subsystem2/motion.c", "owner": "", "name": "g_cal_result",
                "kind": "VAR_DECL", "type_category": "RECORD", "storage_duration": "static",
-               "method": "libclang-ast"}
+               "method": "libclang-ast", "canonical_type": "motion_calibration_t"}
         self.assertEqual(inventory.classify(row, policies)["status"], "unresolved")
 
     def test_inactive_branches_are_discovered(self):
@@ -137,6 +152,15 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(inventory.minimum_bits(-64, 65), 8)
         with self.assertRaises(ValueError):
             inventory.minimum_bits(5, 1)
+
+    def test_reviewed_discrete_domain_requires_explicit_lossless_step(self):
+        rule = {"id": "distance", "status": "compare", "domain": {"min": 0, "max": 4075, "step": 25}}
+        result = inventory.classify({"stored_bits": 16, "method": "libclang-ast"}, {"rules": [rule]})
+        self.assertEqual(result["required_bits"], 8)
+        self.assertEqual(result["status"], "gap")
+        rule["domain"]["step"] = 26
+        with self.assertRaises(ValueError):
+            inventory.classify({}, {"rules": [rule]})
 
     def test_macro_schema_does_not_claim_wire_width_is_ram_width(self):
         fields, _ = inventory.lexical_fields("""
@@ -192,15 +216,47 @@ class IntegrityTests(unittest.TestCase):
         source = "void init(void) {\n#if APP_S4\ncall(1);\n#endif\nimported();\n}\n"
         file.write_text(source)
         self.scope["mixed_files"] = {"mixed.c": {
-            "project_region_start": "#if APP_S4", "project_region_end": "#endif",
+            "owned_regions": [{"kind": "conditional", "directive": "#if APP_S4"}],
             "preserved_body_sha256": hashlib.sha256(
-                b"void init(void) {\n<PROJECT_I2C_REGION>\nimported();\n}\n").hexdigest()}}
+                b"void init(void) {\n<PROJECT_REGION:0>\nimported();\n}\n").hexdigest()}}
         self.assertEqual(inventory.repository_errors(self.root, self.scope), [])
         file.write_text(source.replace("call(1)", "call(2)"))
         self.assertEqual(inventory.repository_errors(self.root, self.scope), [])
         file.write_text(source.replace("imported()", "modified()"))
         self.assertTrue(any("MIXED IMPORTED BODY CHANGED" in error for error in
                             inventory.repository_errors(self.root, self.scope)))
+
+    def test_mixed_multiple_macros_and_nested_conditionals_preserve_lines(self):
+        source = "#define IMPORTED 1\n#define OWNED 2\n#if APP\n#if CHILD\nint x;\n#endif\n#endif\nint foreign;\n"
+        entry = {"owned_regions": [{"kind": "macro", "name": "OWNED"},
+                                   {"kind": "conditional", "directive": "#if APP"}]}
+        masked = inventory.mixed_owned_text(source, entry)
+        self.assertEqual(len(masked), len(source))
+        self.assertEqual(masked.count("\n"), source.count("\n"))
+        self.assertNotIn("IMPORTED", masked)
+        self.assertNotIn("foreign", masked)
+        self.assertIn("#if CHILD\nint x;\n#endif\n#endif", masked)
+        self.assertIn("#define OWNED 2", masked)
+        self.assertEqual(inventory.mixed_preserved_body(source, entry),
+                         "#define IMPORTED 1\n<PROJECT_REGION:0>\n<PROJECT_REGION:1>\nint foreign;\n")
+
+    def test_mixed_missing_duplicate_or_overlapping_selectors_fail(self):
+        macro = {"owned_regions": [{"kind": "macro", "name": "OWNED"}]}
+        for source in ["#define ELSE 1\n", "#define OWNED 1\n#define OWNED 2\n"]:
+            with self.assertRaises(ValueError):
+                inventory.mixed_region_spans(source, macro)
+        entry = {"owned_regions": [{"kind": "conditional", "directive": "#if APP"},
+                                   {"kind": "macro", "name": "OWNED"}]}
+        with self.assertRaises(ValueError):
+            inventory.mixed_region_spans("#if APP\n#define OWNED 1\n#endif\n", entry)
+
+    def test_mixed_inventory_excludes_imported_declarations(self):
+        source = "struct imported { int value; };\n#if APP\nstruct owned { int value; };\n#endif\n"
+        (self.root / "mixed.h").write_text(source)
+        self.scope["mixed_files"] = {"mixed.h": {"owned_regions": [
+            {"kind": "conditional", "directive": "#if APP"}]}}
+        rows = inventory.collect(self.root, self.scope, self.policies)["fields"]
+        self.assertEqual([r["owner"] for r in rows if r["path"] == "mixed.h"], ["owned"])
 
     def test_removed_owned_file_fails(self):
         (self.root / "app/a.h").unlink()
@@ -228,6 +284,13 @@ class IntegrityTests(unittest.TestCase):
         file = self.root / "app/a.h"
         file.write_text(file.read_text().replace("head : 3", "head : 8"))
         self.assertTrue(any("SOURCE CHANGED" in e for e in self.errors()))
+
+    def test_token_preserving_line_shift_invalidates_source_links(self):
+        file = self.root / "app/a.h"
+        before = file.read_text()
+        file.write_text("/* New documentation line. */\n" + before)
+        self.assertEqual(inventory.semantic_digest(before), inventory.semantic_digest(file.read_text()))
+        self.assertTrue(any("SOURCE LOCATIONS CHANGED" in e for e in self.errors()))
 
     def test_scope_drift_is_not_silent(self):
         self.scope["include_globs"].append("adapter/*.c")

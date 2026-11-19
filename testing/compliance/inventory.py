@@ -63,6 +63,64 @@ def imported_files(root, scope):
     return read_json(root / name).get("files", {}) if name else {}
 
 
+def mixed_region_spans(text, entry):
+    """Resolve explicitly owned directives; reject ambiguous or nested overlap."""
+    lines = text.splitlines(keepends=True)
+    offsets, offset = [], 0
+    for line in lines:
+        offsets.append(offset)
+        offset += len(line)
+    spans = []
+    for region in entry["owned_regions"]:
+        if region["kind"] == "macro":
+            pattern = r"^\s*#\s*define\s+" + re.escape(region["name"]) + r"\b"
+            found = [i for i, line in enumerate(lines) if re.match(pattern, line)]
+        elif region["kind"] == "conditional":
+            expected = TOKEN.findall(region["directive"])
+            found = [i for i, line in enumerate(lines)
+                     if TOKEN.findall(uncomment(line)) == expected]
+        else:
+            raise ValueError("Unknown mixed-region selector kind")
+        if len(found) != 1:
+            raise ValueError(f"Mixed-region selector must match once: {region}")
+        start = end = found[0]
+        if region["kind"] == "macro":
+            while lines[end].rstrip().endswith("\\"):
+                end += 1
+                if end >= len(lines):
+                    raise ValueError("Unterminated owned macro")
+        else:
+            depth = 0
+            for end in range(start, len(lines)):
+                directive = re.match(r"^\s*#\s*(if|ifdef|ifndef|endif)\b", uncomment(lines[end]))
+                if directive:
+                    depth += -1 if directive[1] == "endif" else 1
+                    if depth == 0:
+                        break
+            if depth != 0:
+                raise ValueError("Unterminated owned conditional")
+        spans.append((offsets[start], offsets[end] + len(lines[end])))
+    spans.sort()
+    if any(left[1] > right[0] for left, right in zip(spans, spans[1:])):
+        raise ValueError("Overlapping owned regions")
+    return spans
+
+
+def mixed_owned_text(text, entry):
+    """Return only project-owned spans, preserving source offsets and lines."""
+    chars = list(re.sub(r"[^\n]", " ", text))
+    for start, end in mixed_region_spans(text, entry):
+        chars[start:end] = text[start:end]
+    return "".join(chars)
+
+
+def mixed_preserved_body(text, entry):
+    """Replace owned spans while retaining exact imported bytes around them."""
+    for index, (start, end) in reversed(list(enumerate(mixed_region_spans(text, entry)))):
+        text = text[:start] + f"<PROJECT_REGION:{index}>\n" + text[end:]
+    return text.replace("\r\n", "\n")
+
+
 def repository_errors(root, scope):
     owned = {p.relative_to(root).as_posix() for p in owned_files(root, scope)}
     imports = imported_files(root, scope)
@@ -76,11 +134,12 @@ def repository_errors(root, scope):
             errors.append(f"MIXED-OWNERSHIP FILE MISSING: {path}")
             continue
         text = file.read_text(encoding="utf-8-sig")
-        pattern = (r"^[ \t]*" + re.escape(region["project_region_start"]) +
-                   r"\b.*?^[ \t]*" + re.escape(region["project_region_end"]) + r"[^\n]*")
-        body, count = re.subn(pattern, "<PROJECT_I2C_REGION>", text, count=1, flags=re.M | re.S)
-        digest = hashlib.sha256(body.replace("\r\n", "\n").encode()).hexdigest()
-        if count != 1 or digest != region.get("preserved_body_sha256"):
+        try:
+            body = mixed_preserved_body(text, region)
+            digest = hashlib.sha256(body.encode()).hexdigest()
+        except ValueError:
+            digest = None
+        if digest != region.get("preserved_body_sha256"):
             errors.append(f"MIXED IMPORTED BODY CHANGED: {path}; only the recorded project integration region is owned")
     # Compare content independently of checkout filters. Historical imported
     # blobs can contain CRLF while the current attributes request LF. The blob
@@ -106,6 +165,18 @@ def uncomment(text):
 def semantic_digest(text):
     """Ignore comments/whitespace, but bind directives, literals and all tokens."""
     return hashlib.sha256("\n".join(TOKEN.findall(uncomment(text))).encode()).hexdigest()
+
+
+def source_location_digest(text):
+    """Bind token line positions without treating comment prose as C data."""
+    clean = uncomment(text)
+    tokens, line, previous = [], 1, 0
+    for match in TOKEN.finditer(clean):
+        line += clean.count("\n", previous, match.start())
+        tokens.append((match[0], line))
+        line += match[0].count("\n")
+        previous = match.end()
+    return semantic_json_digest(tokens)
 
 
 def without_directives(text):
@@ -161,7 +232,7 @@ def lexical_fields(text, path):
     """Conditional-union fallback for record members, not whole-C coverage."""
     clean = without_directives(uncomment(text))
     tokens = [(m[0], m.start(), m.end()) for m in TOKEN.finditer(clean)]
-    rows, unsupported = [], []
+    rows, unsupported, owner_occurrences = [], [], {}
     for index, token in enumerate(tokens):
         if token[0] not in ("struct", "union"):
             continue
@@ -187,6 +258,11 @@ def lexical_fields(text, path):
         header = [t[0] for t in tokens[index + 1:start]]
         if ")" in header and "__attribute__" not in header:
             continue
+        # Different function-local records can reuse the same variable/tag
+        # name. Keep them distinct; their widths are not profile variants.
+        owner_occurrences[owner] = owner_occurrences.get(owner, 0) + 1
+        if owner_occurrences[owner] > 1:
+            owner += f"@{owner_occurrences[owner]}"
         for statement in split_top(tokens[start + 1:end], ";"):
             if not statement:
                 continue
@@ -212,6 +288,7 @@ def lexical_fields(text, path):
                 width = " ".join(values[values.index(":") + 1:]) if ":" in values else None
                 rows.append({"path": path, "owner": owner, "name": name, "kind": "FIELD_DECL",
                              "line": text.count("\n", 0, part[name_at][1]) + 1,
+                             "column": part[name_at][1] - text.rfind("\n", 0, part[name_at][1]),
                              "type": base_type, "bit_width_expression": width,
                              "stored_bits": int(width) if width and width.isdecimal() else None,
                              "method": "lexical-conditional-union", "profiles": []})
@@ -249,8 +326,13 @@ def classify(row, policies):
                       if key not in selectors and key != "id"}
             result["policy"] = rule["id"]
             domain = result.get("domain") or {}
-            if "min" in domain and "max" in domain:
-                result["required_bits"] = minimum_bits(domain["min"], domain["max"])
+            if domain.get("values"):
+                result["required_bits"] = max(1, (len(set(domain["values"])) - 1).bit_length())
+            elif "min" in domain and "max" in domain:
+                step = domain.get("step", 1)
+                if not isinstance(step, int) or step < 1 or (domain["max"] - domain["min"]) % step:
+                    raise ValueError("Reviewed discrete domain requires a positive, exact interval step")
+                result["required_bits"] = minimum_bits(0, (domain["max"] - domain["min"]) // step)
             else:
                 result.setdefault("required_bits", None)
             if result.get("status") == "compare":
@@ -263,18 +345,23 @@ def classify(row, policies):
 
 
 def collect(root, scope, policies, ast=None):
-    files, rows = {}, {}
+    files, rows, mixed_lines = {}, {}, {}
     for file in owned_files(root, scope):
         path = file.relative_to(root).as_posix()
         text = file.read_text(encoding="utf-8-sig")
-        discovered, unsupported = lexical_fields(text, path)
-        files[path] = {"semantic_sha256": semantic_digest(text), "lexical_unsupported": unsupported,
+        owned_text = mixed_owned_text(text, scope["mixed_files"][path]) if path in scope.get("mixed_files", {}) else text
+        if owned_text != text:
+            mixed_lines[path] = {i for i, line in enumerate(owned_text.splitlines(), 1) if line.strip()}
+        discovered, unsupported = lexical_fields(owned_text, path)
+        files[path] = {"semantic_sha256": semantic_digest(text), "source_location_sha256": source_location_digest(text), "lexical_unsupported": unsupported,
                        "compiler_profiles": [], "compiler_status": "unobserved"}
         for row in discovered:
             rows[row_id(row)] = row
     if ast:
         for row in ast.get("declarations", []):
             if row["path"] not in files:
+                continue
+            if row["path"] in mixed_lines and row["line"] not in mixed_lines[row["path"]]:
                 continue
             key = row_id(row)
             old = rows.get(key, {})
@@ -286,6 +373,8 @@ def collect(root, scope, policies, ast=None):
             if path in files:
                 if receipt.get("semantic_sha256") != files[path]["semantic_sha256"]:
                     raise ValueError(f"Stale compiler observations for {path}; recollect AST before refresh")
+                if receipt.get("source_location_sha256") != files[path]["source_location_sha256"]:
+                    raise ValueError(f"Stale or missing compiler source-location binding for {path}; recollect AST before refresh")
                 files[path]["compiler_profiles"] = receipt.get("profiles", [])
                 files[path]["compiler_status"] = receipt.get("status", "partial")
     for key, row in rows.items():
@@ -354,7 +443,10 @@ def validate(root, scope, policies, ledger, require_complete=False):
         text = actual[path].read_text(encoding="utf-8-sig")
         if semantic_digest(text) != recorded[path].get("semantic_sha256"):
             errors.append(f"SOURCE CHANGED: {path}; rediscover declarations and review domains")
-        fields, unsupported = lexical_fields(text, path)
+        if source_location_digest(text) != recorded[path].get("source_location_sha256"):
+            errors.append(f"SOURCE LOCATIONS CHANGED: {path}; refresh compiler rows and generated field links")
+        owned_text = mixed_owned_text(text, scope["mixed_files"][path]) if path in scope.get("mixed_files", {}) else text
+        fields, unsupported = lexical_fields(owned_text, path)
         for field in fields:
             if row_id(field) not in keys:
                 errors.append(f"UNCLASSIFIED FIELD: {row_id(field)}")
@@ -383,7 +475,7 @@ def render(ledger):
     lines += [f"| {status} | {count} |" for status, count in counts.items()]
     lines += ["", "Full machine-readable rows, domains and declaration widths are in [`inventory_fields.json`](../../testing/compliance/inventory_fields.json); each row's `policy` links its ownership, API constraints and evidence in [`inventory_policies.json`](../../testing/compliance/inventory_policies.json). The owned-file boundary is [`inventory_scope.json`](../../testing/compliance/inventory_scope.json).", "",
               "Complete generated tables: [`CR1_FIELDS.csv`](CR1_FIELDS.csv) contains every declaration, and [`CR1_RETAINED_FIELDS.md`](CR1_RETAINED_FIELDS.md) focuses on owned retained objects and record members. Unknown ranges, units and synchronization are explicit; neither artifact treats an unknown as compliant.", "",
-              "Every tracked/nonignored untracked C/header file is classified. Unclassified paths anywhere in the repository fail the check. [`inventory_imports.json`](../../testing/compliance/inventory_imports.json) records template/baseline Git blob provenance for the preserved imported files. The mixed kernel integration region is explicitly listed in the scope manifest; its surrounding imported body is not authorized for wholesale cleanup.", "",
+              "Every tracked/nonignored untracked C/header file is classified. Unclassified paths anywhere in the repository fail the check. [`inventory_imports.json`](../../testing/compliance/inventory_imports.json) records upstream/template/baseline Git blob provenance for the preserved imported files. Mixed kernel/configuration ownership is limited to the explicit macro or balanced conditional regions in the scope manifest; imported declarations outside those regions are excluded and their surrounding content is pinned against changes.", "",
               "Continuous-value precision, invalid-input rejection, sentinels, terminal counters, wire bytes and synchronization remain preservation requirements. Compiler ABI widths and padding are not application minimum-bit proofs.", "",
               "Compiler rows distinguish storage class from C99 storage duration and record external/private function linkage. Automatic arithmetic temporaries and function parameters retain evaluation and validation behavior; these policies do not exempt static locals, globals or record fields. Generic RTOS integer aliases alone do not prove a retained value is an ABI boundary.", "",
               "`address_evidence` records direct address-of expressions seen by the compiler. `not-observed-in-recorded-TUs` is not proof that an object has no aliases or escapes. Before narrowing a retained member, review all owner tasks/ISRs, pointer-compatible API uses and synchronization at the storage-unit level. Callback and retained pointer rules record concrete lifecycle owners where reviewed.", "",
@@ -407,9 +499,11 @@ def table_row(row):
     domain = row.get("domain") or {}
     numeric = "min" in domain and "max" in domain
     range_text = f"{domain['min']}..{domain['max']}" if numeric else domain.get("description", "unresolved")
+    if domain.get("values"):
+        range_text += "; reachable values: " + ", ".join(map(str, domain["values"]))
     resolution = domain.get("resolution", "unresolved")
     if numeric and row.get("type_category") not in {"FLOAT", "DOUBLE", "LONGDOUBLE"}:
-        resolution = "integer code step 1; application units separately reviewed"
+        resolution = f"exact discrete step {domain.get('step', 1)} in listed units"
     if row.get("type_category") in {"FLOAT", "DOUBLE", "LONGDOUBLE"}:
         resolution = "existing binary floating representation/precision preserved; no fixed-point quantization"
     return {
@@ -419,6 +513,7 @@ def table_row(row):
         "producer_valid_range": (f"{domain['valid_min']}..{domain['valid_max']}"
                                   if "valid_min" in domain and "valid_max" in domain else "not separately established"),
         "units": domain.get("units", "unresolved"), "resolution": resolution,
+        "required_encoding": domain.get("encoding", "retain existing numeric representation unless separately reviewed"),
         "required_bits": row.get("required_bits") if row.get("required_bits") is not None else "unresolved / preservation boundary",
         "stored_bits_per_scalar_or_bitfield": row.get("stored_bits") if row.get("stored_bits") is not None else "unresolved",
         "array_count": row.get("array_count") if row.get("array_count") is not None else "unresolved",
