@@ -30,9 +30,38 @@ typedef struct
     imu_write_fn write;
 } imu_bus_t;
 
+/**
+ * @brief Check the sample validity flag and finite enabled measurements.
+ * @param[in] p_sample Borrowed sample, or NULL to return false.
+ * @return True for a valid sample with finite acceleration on all three axes
+ * and, when mag_valid is set, finite magnetic readings on all three axes.
+ * @note Does not check age, physical range or overrun. Reads no bus and changes
+ * no state; the caller must prevent concurrent writes to the sample.
+ */
 bool imu_sample_is_valid (const imu_sample_t * p_sample);
+/**
+ * @brief Configure the sensor using the existing ordered bus transactions.
+ * @param[in] p_bus Borrowed synchronous bus callbacks/context; NULL or a
+ * missing read/write callback returns false without a bus transaction.
+ * @return True after identity, configuration writes and final readback succeed.
+ * @note Failure stops at the first rejected transaction or identity/readback
+ * mismatch. Earlier device writes are not rolled back. The caller serializes
+ * bus/device access and keeps callbacks/context valid throughout the call.
+ */
 bool imu_sensor_init (const imu_bus_t * p_bus);
 /* Returns true for a NEW acceleration sample. mag_valid only for NEW mag data.
+ */
+/**
+ * @brief Read acceleration and opportunistically read magnetic data.
+ * @param[in] p_bus Borrowed synchronous read callback/context; may be NULL.
+ * @param now_us Caller timestamp in microseconds, copied without an age check.
+ * @param[out] p_out Writable sample, or NULL to fail without accessing the bus.
+ * @return True when a new, nonsaturated acceleration sample was read. Missing
+ * or rejected magnetic data leaves mag_valid false without failing the read.
+ * @note A non-NULL output is zeroed and timestamped before bus validation.
+ * Failure may also leave the overrun flag set. Acceleration uses g, magnetic
+ * readings use gauss, and axes are vehicle X forward, Y left, Z up. Calls do
+ * not retain pointers; the caller serializes bus and output access.
  */
 bool imu_sensor_read (const imu_bus_t * p_bus, uint32_t now_us,
                       imu_sample_t * p_out);

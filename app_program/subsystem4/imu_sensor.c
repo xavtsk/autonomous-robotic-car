@@ -6,12 +6,23 @@
 #include "imu_sensor.h"
 #include <math.h>
 
+/**
+ * @brief Decode two bytes into a sign-extended 16-bit value in int32_t.
+ * @param value_hi Most significant byte, 0..255.
+ * @param value_lo Least significant byte, 0..255.
+ * @return Value in -32768..32767; neither input nor external state is changed.
+ */
 static int32_t signed16 (uint8_t value_hi, uint8_t value_lo)
 {
     uint32_t value = ((uint32_t)value_hi << 8) | value_lo;
     return (value & 0x8000U) ? (int32_t)value - 65536 : (int32_t)value;
 }
 
+/**
+ * @brief Validate enabled fields without checking sample age or physical range.
+ * @param[in] p_s Borrowed sample; NULL returns false.
+ * @return The result specified by imu_sample_is_valid() in imu_sensor.h.
+ */
 bool imu_sample_is_valid (const imu_sample_t * p_s)
 {
     unsigned value_i;
@@ -33,6 +44,11 @@ bool imu_sample_is_valid (const imu_sample_t * p_s)
     return true;
 }
 
+/**
+ * @brief Apply the bus/device configuration contract in imu_sensor.h.
+ * @param[in] p_b Borrowed bus; the caller serializes its synchronous callbacks.
+ * @return True on final matching readback; false retains any earlier writes.
+ */
 bool imu_sensor_init (const imu_bus_t * p_b)
 {
     uint8_t value_id[3], value;
@@ -60,6 +76,13 @@ bool imu_sensor_init (const imu_bus_t * p_b)
     return p_b->read(p_b->context, 0x19, 0x23, &value, 1) && value == 0x98;
 }
 
+/**
+ * @brief Acquire one sample with the partial-output contract in imu_sensor.h.
+ * @param[in] p_b Borrowed bus; missing read callback returns false.
+ * @param now Caller timestamp in microseconds, including wraparound values.
+ * @param[out] p_out Caller-owned sample; NULL returns false without bus access.
+ * @return True for accepted acceleration, independently of magnetic validity.
+ */
 bool imu_sensor_read (const imu_bus_t * p_b, uint32_t now, imu_sample_t * p_out)
 {
     uint8_t raw[6], status;

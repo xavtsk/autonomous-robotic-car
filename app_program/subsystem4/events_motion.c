@@ -6,6 +6,16 @@
 #include "../app_types.h"
 #include <math.h>
 
+/**
+ * @brief Evaluate the stateless priority contract in events_motion.h.
+ * @param pitch Nose-up pitch in degrees; not range-checked here.
+ * @param speed Signed speed in metres per second.
+ * @param longitudinal_g Longitudinal dynamic acceleration in g.
+ * @param turn Signed turn rate in degrees per second.
+ * @param turn_valid Enables the turn comparison when true.
+ * @param impact Selects impact before all numerical comparisons when true.
+ * @return One category; no input or shared state is modified.
+ */
 terrain_state_t motion_classify (float32_t pitch, float32_t speed,
                                  float32_t longitudinal_g, float32_t turn,
                                  bool turn_valid, bool impact)

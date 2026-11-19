@@ -68,15 +68,50 @@ typedef enum
     HUMP_SAMPLE_ACCELERATION_SPIKE
 } hump_sample_quality_t;
 
+/**
+ * @brief Clear all crossing, historical-peak and optional debug state.
+ * @param[out] p_h Non-NULL caller-owned detector with exclusive write access.
+ * @note Use this reset or equivalent zero initialization before first use.
+ * This module does not acquire locks or retain pointers; the caller serializes
+ * resets, updates and reads of each detector.
+ */
 void hump_reset (hump_detector_t * p_h);
 /* Caller supplies signed distance delta, pitch positive nose-up. Only complete
  * ascent/descent cycles on valid, low-dynamic, forward travel become run peaks.
+ */
+/**
+ * @brief Advance the pitch-integrated ascent/descent detector by one sample.
+ * @param[in,out] p_h Non-NULL initialized detector with exclusive access.
+ * @param pitch Nose-up pitch in degrees; finite with magnitude at most 40.
+ * @param distance_m Forward travel since the last sample, finite in 0..0.05 m.
+ * @param valid Caller measurement-quality gate; false discards this crossing.
+ * @param now Wrapping microsecond clock; active crossings expire after 10 s.
+ * @note Clears completed on every call. Invalid measurements clear active
+ * progress while retaining the highest completed peak. Acceptance needs an
+ * ascent, descent and five level samples; callers read completion from p_h.
+ * This update does not populate right-wheel diagnostic fields.
  */
 void hump_update (hump_detector_t * p_h, float32_t pitch, float32_t distance_m,
                   bool valid, uint32_t now);
 /* Right wheel above a level left wheel: height = track*sin(roll)*cos(pitch).
  * Positive roll raises the right side. Require forward travel and a complete
  * level -> raised -> level excursion; do not integrate pitch in this mode. */
+/**
+ * @brief Advance the right-wheel geometry detector and optional debug record.
+ * @param[in,out] p_h Non-NULL initialized detector with exclusive access.
+ * @param pitch Nose-up pitch in degrees; finite with magnitude at most 40.
+ * @param roll Right-side-up roll in degrees; finite with magnitude below 10.
+ * @param track_m Wheel-track width, finite and greater than 0 up to 0.5 m.
+ * @param distance_m Forward wheel travel since the last sample, 0..0.05 m.
+ * @param quality Caller quality gate; one acceleration spike may be held during
+ * an active crossing. INVALID discards progress; other values use the valid
+ * path except the explicitly handled ACCELERATION_SPIKE value.
+ * @param now Wrapping microsecond clock; active crossings expire after 10 s.
+ * @note Clears completed each call and retains the highest completed peak on
+ * rejection. Level samples arm/rearm the detector; completion also requires
+ * forward travel while raised. Read results from p_h. With APP_IMU_DEBUG, reason,
+ * travel and transition flags are updated after the same state-machine step.
+ */
 void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch,
                               float32_t roll, float32_t track_m,
                               float32_t distance_m,

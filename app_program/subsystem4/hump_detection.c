@@ -5,11 +5,23 @@
 #include "../app_types.h"
 #include <math.h>
 
+/**
+ * @brief Apply the complete reset contract in hump_detection.h.
+ * @param[out] p_h Non-NULL detector; the caller owns exclusive access.
+ */
 void hump_reset (hump_detector_t * p_h)
 {
     *p_h = (hump_detector_t){0};
 }
 
+/**
+ * @brief Update the pitch-integrated crossing described in hump_detection.h.
+ * @param[in,out] p_h Non-NULL initialized, exclusively accessed detector.
+ * @param pitch Nose-up pitch in degrees.
+ * @param value_ds Signed distance increment in metres; invalid values discard.
+ * @param valid Caller quality gate.
+ * @param now Wrapping microsecond timestamp used for the crossing timeout.
+ */
 void hump_update (hump_detector_t * p_h, float32_t pitch, float32_t value_ds,
                   bool valid, uint32_t now)
 {
@@ -69,6 +81,13 @@ void hump_update (hump_detector_t * p_h, float32_t pitch, float32_t value_ds,
     }
 }
 
+/**
+ * @brief Disarm and clear right-wheel progress, retaining historical results.
+ * @param[in,out] p_h Non-NULL detector owned by the current update call.
+ * @param reason Rejection reason passed through unchanged.
+ * @return reason; completed was cleared by the caller before this helper.
+ * @note Does not clear highest_m, highest_valid, descended or started_us.
+ */
 static hump_reason_t right_discard (hump_detector_t * p_h, hump_reason_t reason)
 {
     p_h->active = false;
@@ -81,6 +100,19 @@ static hump_reason_t right_discard (hump_detector_t * p_h, hump_reason_t reason)
     return reason;
 }
 
+/**
+ * @brief Apply one right-wheel state-machine step before debug publication.
+ * @param[in,out] p_h Non-NULL initialized detector; no concurrent access.
+ * @param pitch Nose-up degrees, validated before geometric calculation.
+ * @param roll Right-side-up degrees, validated before geometric calculation.
+ * @param track_m Wheel-track width in metres, validated before use.
+ * @param value_ds Forward distance increment in metres, validated before use.
+ * @param quality Quality discriminator with the public update's semantics.
+ * @param now Wrapping microsecond timestamp used for the crossing timeout.
+ * @return Diagnostic reason; NONE can mean progress or successful completion.
+ * @note Clears completed first. Rejections preserve historical highest results;
+ * a single active acceleration spike holds accepted height and travel.
+ */
 static hump_reason_t right_step (hump_detector_t * p_h, float32_t pitch,
                                  float32_t roll, float32_t track_m,
                                  float32_t value_ds,
@@ -197,6 +229,18 @@ static hump_reason_t right_step (hump_detector_t * p_h, float32_t pitch,
     return HUMP_REASON_NONE;
 }
 
+/**
+ * @brief Apply the right-wheel update contract in hump_detection.h.
+ * @param[in,out] p_h Non-NULL initialized, exclusively accessed detector.
+ * @param pitch Nose-up pitch in degrees.
+ * @param roll Right-side-up roll in degrees.
+ * @param track_m Wheel-track width in metres.
+ * @param value_ds Signed wheel-distance increment in metres.
+ * @param quality Caller quality discriminator; no implicit enum validation.
+ * @param now Wrapping microsecond timestamp.
+ * @note The same step runs with debugging on or off; debug fields are derived
+ * from the retained pre-step state and the completed step, without extra I/O.
+ */
 void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch,
                               float32_t roll, float32_t track_m,
                               float32_t value_ds, hump_sample_quality_t quality,
