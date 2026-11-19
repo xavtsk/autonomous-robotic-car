@@ -1,6 +1,7 @@
 /** @file control_debug_test.c
  * @brief Exercise controller debug packet fields and malformed-input rejection.
  */
+#include "control_debug_test.h"
 #include "../../app_program/controller/control_debug.h"
 #include <assert.h>
 #include <stdio.h>

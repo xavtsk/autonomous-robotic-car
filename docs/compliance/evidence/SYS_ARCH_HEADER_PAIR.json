@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "status": "matching-root header resolution confirmed; direct source inclusion still open",
+  "source": "lib/liblwip/sysdepend/pico_rp2040/sys_arch.c",
+  "header": "lib/liblwip/sysdepend/pico_rp2040/include/arch/sys_arch.h",
+  "source_lf_sha256": "6c3de17e02361d8e510093f086640886d0e021e68bcce001f25cde696044eeba",
+  "header_lf_sha256": "e62cd7b4695343e5713ad03064a3d715bc57dde6bf605582f9317709d22f9725",
+  "compile_database": "build/compliance-ci/44584191817/artifact-14561042452/candidate/compile_commands.json",
+  "compile_database_sha256": "0ee197a061acfa73f3325cf04e61d2cf311657f8b9a50ad8e1ab4b569f1c0f07",
+  "run_id": 44584191817,
+  "artifact_id": 14561042452,
+  "compiler": "libclang18.1.1 with recorded Arm GCC source arguments",
+  "probe": "#include \"arch/sys_arch.h\"\n",
+  "normalization": [
+    "Map Linux candidate checkout to local repository",
+    "Map Linux pico-sdk checkout to build/tooling/pico-sdk",
+    "Use local Arm GNU14.3.1 compiler implicit include directories",
+    "Remove output/dependency artifact options; keep target macros and include order"
+  ],
+  "diagnostics": [],
+  "source_edited": false,
+  "tests_executed": false
+}

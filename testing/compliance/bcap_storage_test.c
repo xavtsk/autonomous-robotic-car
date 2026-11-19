@@ -6,6 +6,7 @@
  * inputs; recorder counters are seeded only within their initialized domain.
  * Traces print logical fields, never struct padding or layout-dependent bytes.
  */
+#include "bcap_storage_test.h"
 #include "app_program/controller/bc_capture.h"
 #include <assert.h>
 #include <inttypes.h>

@@ -2,6 +2,7 @@
  * @brief Exercise scan codecs, avoidance planning, manoeuvres and line
  * recovery.
  */
+#include "host_test.h"
 #include "avoid_obstacle.h"
 #include "scan_obstacle.h"
 #include "ultrasonic_sensor.h"

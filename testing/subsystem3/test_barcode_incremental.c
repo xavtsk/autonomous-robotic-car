@@ -4,6 +4,7 @@
 /* Bounded-work and cancellation tests. The synchronous reference is used only
  * here to compare candidate semantics; firmware never builds that function. */
 #define S3_BARCODE_SYNC_REFERENCE
+#include "test_barcode_incremental.h"
 #include <assert.h>
 #include <stdio.h>
 #include "../../app_program/subsystem3/bc_decoder.c"

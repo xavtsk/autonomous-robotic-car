@@ -4,6 +4,7 @@
  */
 /* Host evidence for a width bias that changes between the two known stars.
  * Synthetic edges and one measured-width fixture; not hardware proof. */
+#include "test_barcode_varying.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

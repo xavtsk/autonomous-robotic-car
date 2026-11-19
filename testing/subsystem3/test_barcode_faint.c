@@ -6,6 +6,7 @@
  * Code 39 widths are fixed first; a common optical bias shortens every black
  * bar and lengthens every white space. Narrow bars have the weak contrast
  * seen in the November captures, independently of their payload letter. */
+#include "test_barcode_faint.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>

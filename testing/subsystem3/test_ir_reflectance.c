@@ -3,6 +3,7 @@
  * accuracy.
  */
 /* Host tests: synthetic inputs verify software, not physical sensor accuracy. */
+#include "test_ir_reflectance.h"
 #include <assert.h>
 #include <stdio.h>
 #include "ir_reflectance.h"

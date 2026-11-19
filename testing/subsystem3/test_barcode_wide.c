@@ -4,6 +4,7 @@
 /* Synthetic physical-size coverage at 40 mm/s. These tests check the decoder's
  * permitted geometry/timing, not the dimensions or success of an unmeasured
  * printed barcode. One measured Z payload below has synthetic markers/quiet. */
+#include "test_barcode_wide.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

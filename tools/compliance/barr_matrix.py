@@ -63,6 +63,13 @@ required enforcement method, not a claim that its implementation is complete.
 Compiler/profile coverage, promotions, casts, ownership, ISR classification,
 function organization, documentation meaning and other manual rows remain open.
 
+The JSON ledger also records bounded partial evidence while a rule remains
+**unreviewed** across the whole scope. The [first 20 test header pairs](HEADER_PAIRS_BATCH1.md)
+provide such evidence for 4.2.a-c and 4.3.c; the [remaining header plan](HEADER_CLOSURE_PLAN.md)
+keeps unresolved pairs, guards, names and ABI boundaries explicit. A separate
+source/include directory is a compiler-resolution question, not automatic proof
+of a missing header or a second module with a colliding name.
+
 For AST input, pass `--ast-manifest path/to/manifest.json`. The manifest has
 `schema_version: 1`, a `source_sha256` mapping for **every owned C/header file**,
 and `translation_units` entries with `source`, relative `ast` JSON path,

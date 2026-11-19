@@ -1,6 +1,7 @@
 /** @file codec_test.c
  * @brief Exercise round-trip preservation of copied controller packets.
  */
+#include "codec_test.h"
 #include "../../app_program/controller/integration_codec.h"
 #include <assert.h>
 #include <stdio.h>

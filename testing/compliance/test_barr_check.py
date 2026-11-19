@@ -35,6 +35,28 @@ class LexicalTests(unittest.TestCase):
         findings = self.inspect('#include "./sample.h"\n')
         self.assertFalse(any(row.rule == "4.3.c" for row in findings))
 
+    def test_noncolocated_header_is_not_declared_missing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "arch").mkdir()
+            (root / "arch/sample.h").write_text("#ifndef SAMPLE_H\n#define SAMPLE_H\n#endif\n")
+            path = root / "sample.c"
+            path.write_text('#include "arch/sample.h"\n')
+            findings = barr.lexical_checks(path, root)
+            pairing = [row for row in findings if row.rule in {"4.2.a", "4.3.c"}]
+            self.assertTrue(pairing)
+            self.assertTrue(all(row.severity == "review" for row in pairing))
+
+    def test_macro_header_requires_resolution_not_absence_claim(self):
+        findings = self.inspect('#define OWN_HEADER "sample.h"\n#include OWN_HEADER\n')
+        own_header = [row for row in findings if row.rule == "4.3.c"]
+        self.assertEqual([row.severity for row in own_header], ["review"])
+
+    def test_different_root_include_does_not_satisfy_pairing(self):
+        findings = self.inspect('#include "other.h"\n')
+        self.assertEqual([row.severity for row in findings if row.rule == "4.3.c"],
+                         ["violation"])
+
     def test_file_tag_inside_string_is_not_documentation(self):
         findings = self.inspect('const char * p_text = "/** @file sample.c */";\n')
         self.assertTrue(any(row.rule == "2.2.h" for row in findings))
@@ -134,6 +156,20 @@ class EvidenceTests(unittest.TestCase):
             (root / "owned/generated.h").write_text("")
             scope = {"schema_version": 1, "include_globs": ["owned/**/*.c", "owned/**/*.h"], "exclude_globs": ["owned/generated.h"]}
             self.assertEqual([path.name for path in barr.owned_files(root, scope)], ["new.c"])
+
+    def test_split_header_tree_is_not_a_confirmed_module_collision(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "source").mkdir()
+            (root / "include").mkdir()
+            (root / "source/sample.c").write_text('#include "sample.h"\n')
+            (root / "include/sample.h").write_text('#ifndef SAMPLE_H\n#define SAMPLE_H\n#endif\n')
+            report = barr.audit(root, {"schema_version": 1,
+                                "include_globs": ["**/*.c", "**/*.h"]},
+                                {"rules": []})
+            collisions = [row for row in report["findings"] if row["rule"] == "4.1.b"]
+            self.assertTrue(collisions)
+            self.assertTrue(all(row["severity"] == "review" for row in collisions))
 
     def test_approved_deviation_needs_named_approval_and_evidence(self):
         ledger = {"rules": [{"id": "1.1.a", "strength": "mandatory", "status": "approved_deviation", "evidence": []}]}

@@ -1,6 +1,7 @@
 /** @file timing_test.c
  * @brief Exercise run timing accumulation and diagnostic counters.
  */
+#include "timing_test.h"
 #include "../../app_program/controller/run_timing.h"
 #include <assert.h>
 #include <stdio.h>

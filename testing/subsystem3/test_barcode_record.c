@@ -7,6 +7,7 @@
  * Each trace: paper, a Code 39 "*X*" frame (bars/gaps at chosen darkness
  * levels, optional blur = moving average over an aperture, optional noise),
  * then paper again. */
+#include "test_barcode_record.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

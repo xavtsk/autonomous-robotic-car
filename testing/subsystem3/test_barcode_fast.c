@@ -5,6 +5,7 @@
 /* Synthetic fast-scan regressions, not claims about physical test success.
  * F and P share their wide-bar centres: the narrow bar between them must
  * remain observed and distinguish the letters in either travel direction. */
+#include "test_barcode_fast.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>

@@ -3,6 +3,7 @@
  * traces.
  */
 /* Physical GPIO routing regression; independent of historical algorithm traces. */
+#include "test_mapping.h"
 #include <assert.h>
 #include <stdio.h>
 #include "ir_acquisition.h"

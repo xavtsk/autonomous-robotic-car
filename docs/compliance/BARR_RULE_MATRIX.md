@@ -52,6 +52,13 @@ required enforcement method, not a claim that its implementation is complete.
 Compiler/profile coverage, promotions, casts, ownership, ISR classification,
 function organization, documentation meaning and other manual rows remain open.
 
+The JSON ledger also records bounded partial evidence while a rule remains
+**unreviewed** across the whole scope. The [first 20 test header pairs](HEADER_PAIRS_BATCH1.md)
+provide such evidence for 4.2.a-c and 4.3.c; the [remaining header plan](HEADER_CLOSURE_PLAN.md)
+keeps unresolved pairs, guards, names and ABI boundaries explicit. A separate
+source/include directory is a compiler-resolution question, not automatic proof
+of a missing header or a second module with a colliding name.
+
 For AST input, pass `--ast-manifest path/to/manifest.json`. The manifest has
 `schema_version: 1`, a `source_sha256` mapping for **every owned C/header file**,
 and `translation_units` entries with `source`, relative `ast` JSON path,
@@ -155,10 +162,10 @@ and [ABBREVIATIONS.md](ABBREVIATIONS.md). Generate this matrix with
 | 3.6.a | qualified | lexical | Use LF line endings whenever possible. | unreviewed |
 | 3.6.b | mandatory | lexical | Permit no other control character except form feed. | unreviewed |
 | 4.1.a | mandatory | lexical | Use lowercase letters, digits and underscores in module filenames. | unreviewed |
-| 4.1.b | mandatory | lexical | Make module basenames unique in their first eight characters and use .c/.h suffixes. | unreviewed |
+| 4.1.b | mandatory | lexical/compiler-review | Make module basenames unique in their first eight characters and use .c/.h suffixes. | unreviewed |
 | 4.1.c | mandatory | lexical | Do not reuse a C or C++ standard-library header filename. | verified |
 | 4.1.d | mandatory | ast-review | Include main in the filename of a module defining main. | unreviewed |
-| 4.2.a | mandatory | lexical | Give each C source exactly one same-basename header. | unreviewed |
+| 4.2.a | mandatory | lexical/compiler-review | Give each C source exactly one same-basename header. | unreviewed |
 | 4.2.b | mandatory | lexical-review | Protect every header from repeated inclusion. | unreviewed |
 | 4.2.c | mandatory | manual | Expose only the interface necessary to other modules. | unreviewed |
 | 4.2.c.i | preferred | ast-review | Prefer no extern object declarations in headers. | unreviewed |
@@ -166,7 +173,7 @@ and [ABBREVIATIONS.md](ABBREVIATIONS.md). Generate this matrix with
 | 4.2.d | mandatory | manual | Do not include private headers from public headers. | unreviewed |
 | 4.3.a | mandatory | manual | Limit each module to behaviors belonging to one entity. | unreviewed |
 | 4.3.b | mandatory | ast-review | Order source sections: comment, includes, types/constants/macros, static data, private prototypes, public bodies, private bodies. | unreviewed |
-| 4.3.c | mandatory | lexical | Include the corresponding same-basename header in each C source. | unreviewed |
+| 4.3.c | mandatory | lexical/compiler-review | Include the corresponding same-basename header in each C source. | unreviewed |
 | 4.3.d | mandatory | lexical | Do not use absolute include paths. | verified |
 | 4.3.e | mandatory | compiler-review | Remove unused includes after checking every supported profile. | unreviewed |
 | 4.3.f | mandatory | lexical | Do not include C source files. | unreviewed |

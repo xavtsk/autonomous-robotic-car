@@ -1,6 +1,7 @@
 /** @file policy_test.c
  * @brief Exercise Wi-Fi retry policy across radio link states.
  */
+#include "policy_test.h"
 #include "cyw43.h"
 #include "wifi_retry_policy.h"
 #include <assert.h>

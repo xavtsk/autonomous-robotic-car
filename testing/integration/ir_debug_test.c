@@ -1,6 +1,7 @@
 /** @file ir_debug_test.c
  * @brief Exercise IR debug packet encoding, decoding and validation.
  */
+#include "ir_debug_test.h"
 #include "../../app_program/controller/ir_debug.h"
 #include <assert.h>
 #include <stdio.h>

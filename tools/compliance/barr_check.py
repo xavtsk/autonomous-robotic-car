@@ -149,10 +149,19 @@ def lexical_checks(path: Path, root: Path, source_override=None, file_level=True
     comments = [match for match in TOKEN.finditer(text) if match.lastgroup == "comment"]
     if file_level and path.suffix == ".c":
         if not path.with_suffix(".h").is_file():
-            add("4.2.a", 1, "Same-basename header is missing")
-        if not any((path.parent / item[1]).resolve() == path.with_suffix(".h").resolve()
-                   for item in includes):
-            add("4.3.c", 1, "Same-basename header is not directly included")
+            # The standard requires the same root name, not the same directory.
+            # Include-search paths can bind a header in a separate include tree.
+            add("4.2.a", 1, "No colocated same-root header; resolve the module's header in its compiler context", "review")
+        own_includes = [item for item in includes
+                        if Path(item[1]).name == path.with_suffix(".h").name]
+        if not own_includes:
+            macro_include = re.search(r"(?m)^\s*#\s*include\s+[^<\"\s]", without_comments(text))
+            add("4.3.c", 1, "No literal same-root header include; macro includes require compiler resolution"
+                if macro_include else "Same-root header is not directly included",
+                "review" if macro_include else "violation")
+        elif not any((path.parent / item[1]).resolve() == path.with_suffix(".h").resolve()
+                     for item in own_includes):
+            add("4.3.c", 1, "Same-root include uses a separate directory; confirm its resolved module header", "review")
         last = comments[-1] if comments else None
         if not (last and re.search(r"\b(?:end of file|eof)\b", last[0], re.IGNORECASE)
                 and re.fullmatch(r"\n\n[\n]*", text[last.end():])):
@@ -309,7 +318,12 @@ def audit(root: Path, scope: dict, ledger: dict, ast_manifest: Path | None = Non
         module = path.with_suffix("")
         previous = prefixes.setdefault(key, module)
         if previous != module:
-            findings.append(Finding("4.1.b", relative(path, root), 1, f"First-eight-character collision with {relative(previous, root)}"))
+            split_pair = previous.name == module.name
+            message = ("Repeated root name needs module-pair resolution with " if split_pair
+                       else "First-eight-character collision with ")
+            findings.append(Finding("4.1.b", relative(path, root), 1,
+                                    message + relative(previous, root),
+                                    "review" if split_pair else "violation"))
     gaps = validate_ledger(ledger)
     from testing.compliance.inventory import repository_errors
     gaps.extend(repository_errors(root, scope))

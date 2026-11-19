@@ -1,6 +1,7 @@
 /** @file host_test.c
  * @brief Exercise IMU, terrain, hump, pickup and overturn processing.
  */
+#include "host_test.h"
 #include "imu_sensor.h"
 #include "terr_data.h"
 #include "tilt_estimation.h"

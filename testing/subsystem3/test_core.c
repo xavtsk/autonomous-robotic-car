@@ -2,6 +2,7 @@
  * @brief Exercise IR acquisition, calibration, line, barcode and navigation
  * logic.
  */
+#include "test_core.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

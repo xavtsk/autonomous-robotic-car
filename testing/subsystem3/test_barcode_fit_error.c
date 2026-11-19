@@ -4,6 +4,7 @@
 /* Exact-equivalence regression for the RP2040 fit-score optimization.
  * Include the implementation to exercise its private arithmetic helper;
  * compile this file alone, without a second bc_decoder.c object. */
+#include "test_barcode_fit_error.h"
 #include <assert.h>
 #include <stdio.h>
 #include "../../app_program/subsystem3/bc_decoder.c"

@@ -1,0 +1,655 @@
+{
+  "schema_version": 1,
+  "before_commit": "d26a9808f00add85ee3b6701b415cdec21444e29",
+  "compiler": "GCC 15.2.0 MinGW; preprocessing and syntax-only, no linked C execution",
+  "function_parser": "libclang 18.1.1; source definitions only, observed host contexts",
+  "limits": [
+    "Added include shifts source/assert diagnostic line numbers by one.",
+    "Preprocessing token comparison overrides __LINE__ to 0; normal syntax checks do not.",
+    "Target application sources are unchanged; Linux host execution remains required."
+  ],
+  "files": [
+    {
+      "path": "testing/integration/bcap_test.c",
+      "header_path": "testing/integration/bcap_test.h",
+      "include_line": 7,
+      "guard": "TESTING_INTEGRATION_BCAP_TEST_H",
+      "before_lf_sha256": "33c97e197a86e94d48cec052ef2e7d34cf70d9ce4cff466888ddc9949077c142",
+      "after_lf_sha256": "fd6572393d9f7fdddccd86627eba58ad88ebaf8d737b7a8b910125438b328a97",
+      "header_lf_sha256": "6ae79189ee6988db1cd18c51de7cb36b08b6a350b48df024f07ea15b1bff636c",
+      "source_tokens_before_sha256": "8f4592db5fe924091d9c4a518215a286e30b17aa88ed2fa6fe29d4e918cfd4f8",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\controller",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 4,
+          "preprocessed_tokens_sha256": "4d6824d8263f379a1bf046dc51938a95e6781ad1d592aaaf956a9fd4e16334f5",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/integration/bcap_wire_test.c",
+      "header_path": "testing/integration/bcap_wire_test.h",
+      "include_line": 5,
+      "guard": "TESTING_INTEGRATION_BCAP_WIRE_TEST_H",
+      "before_lf_sha256": "abc721149788e51e26be16b554b912c57631b91e2025088df49036c4057364d7",
+      "after_lf_sha256": "4967d905e5b2621a8b010b197d1448fe7daa24849e4c71b19b62a81d9f528a6b",
+      "header_lf_sha256": "0b15bb2fb44ddc9e71ea7348b2cdbfccf059d079fafa1319e76167ec341694d9",
+      "source_tokens_before_sha256": "fb8938fcd7ca80b61a62a99bc7d77acbec36fb68356ece8f07c40fafd42a72bc",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\controller",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 1,
+          "preprocessed_tokens_sha256": "1836eac0289cc1287432f24c1f3ecea1ed34805587c0d4d87b4f278259291cf3",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/integration/codec_test.c",
+      "header_path": "testing/integration/codec_test.h",
+      "include_line": 4,
+      "guard": "TESTING_INTEGRATION_CODEC_TEST_H",
+      "before_lf_sha256": "317b7278e490e9f4ca9a267283bcfb7cea43160bb44ce3db39a2683183218596",
+      "after_lf_sha256": "edd046be4b29879fd57720c87980c3f4b6bbe6c0f2c7c09bfaf67b16f23f49e4",
+      "header_lf_sha256": "62e50ec3d95e85d66e69971c0316c0f1a72330cbe8ace2c8b3f56e4838dca85e",
+      "source_tokens_before_sha256": "cd1ab240e5d8c07657673ee1d096add97d583a58ea28531d3a4cc98014ccac6c",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 1,
+          "preprocessed_tokens_sha256": "49b5e07d6e63568af1e52dad87c02d3f02520167185f78dd3f8d9a775e35aecd",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/integration/control_debug_test.c",
+      "header_path": "testing/integration/control_debug_test.h",
+      "include_line": 4,
+      "guard": "TESTING_INTEGRATION_CONTROL_DEBUG_TEST_H",
+      "before_lf_sha256": "82e80a5f62a158deb3b26f86e8437447331d21c2a12d58bbe0f66bd0cab3ff28",
+      "after_lf_sha256": "64d9e1c148f0138cf5b10d13803f5905aaaebf9a0a10b78d43ab45cd23df6950",
+      "header_lf_sha256": "69b1be1cf7204fb57954e35f3f72121921a563813b3442c8b1e235513d170247",
+      "source_tokens_before_sha256": "8403fc96e4c2e5c3a61c9e2f14eb46966352038ddd9c94b726dd7051bd4022f7",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 0,
+          "preprocessed_tokens_sha256": "a7e458dae62a42e0357bc86bb43cd65d3ea53b4b738950d2b13cbfce27f95a1e",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/integration/ir_debug_test.c",
+      "header_path": "testing/integration/ir_debug_test.h",
+      "include_line": 4,
+      "guard": "TESTING_INTEGRATION_IR_DEBUG_TEST_H",
+      "before_lf_sha256": "cec3d010a5a51bdd96f7d227943959ec4f2d581b53d1e22f591ceb09636c745e",
+      "after_lf_sha256": "d745857ff0850e03285914dc79d894454eef799597baa0212258a3b07ee4a02b",
+      "header_lf_sha256": "708e55331996bc13dd0684e64df4a635a863d0fa4a9e98a49a03bfa5470c0f00",
+      "source_tokens_before_sha256": "fbef33c6b9a48fe3458efa3d12723b3f78eb047a5430fc918ad60971df5041f3",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 0,
+          "preprocessed_tokens_sha256": "5fe27efdda34e06380f3cf3ca0343dbaac21954c9f2d2bd44b910f62f0d02b4f",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/integration/timing_test.c",
+      "header_path": "testing/integration/timing_test.h",
+      "include_line": 4,
+      "guard": "TESTING_INTEGRATION_TIMING_TEST_H",
+      "before_lf_sha256": "64922f06067ee2e0fdffe4ee08629e280cd976289fb48119d8498046f8c8cbfc",
+      "after_lf_sha256": "08ea863a4e95f70f2b285ca43d3021a07863a65c0b6df8ec3a421ad257da6db7",
+      "header_lf_sha256": "e8f499d447c6d178456ff8c58f8f3a4399433c1eb1ddb690e3de15ce1627e988",
+      "source_tokens_before_sha256": "1ba2ec9a0e02a182e347ee0262ef8a25db526c809753fa38e44179e99199b80e",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 0,
+          "preprocessed_tokens_sha256": "4735e140cef6189123c0ce4b655d446e711a448b349adc9196c36a7550359e43",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/network_wifi/policy_test.c",
+      "header_path": "testing/network_wifi/policy_test.h",
+      "include_line": 4,
+      "guard": "TESTING_NETWORK_WIFI_POLICY_TEST_H",
+      "before_lf_sha256": "b732332b8b1b3774d5eba97c29e8b2049e6b04baf4f41ba4ad894558d4cd67af",
+      "after_lf_sha256": "b96745b7f6597e8980166e314984e7ee5a6261119b41cd76efae08fa03219c88",
+      "header_lf_sha256": "4c7566c37ace3a984b56d260bb807d56e55d049694b0cf3e778c10856fa130cb",
+      "source_tokens_before_sha256": "464c7005837411cca34415e93e31d4ca7a806f8ca28e2d4912dd513cf789c025",
+      "contexts": [
+        {
+          "context_source": "testing/network_wifi/Makefile",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-O2",
+            "-g",
+            "-I${REPO}\\testing\\network_wifi\\fakes",
+            "-I${REPO}\\lib\\libwifi\\sysdepend\\pico_rp2040",
+            "-DCNF_SMP=1",
+            "-DTM_NET_LWIP=1",
+            "-DTM_MQTT=1"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 0,
+          "preprocessed_tokens_sha256": "1a0dfeaa5e10743c63e6c472b7e294ffd4e75eadeec04838230f507e7a137add",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_faint.c",
+      "header_path": "testing/subsystem3/test_barcode_faint.h",
+      "include_line": 9,
+      "guard": "TESTING_SUBSYSTEM3_TEST_BARCODE_FAINT_H",
+      "before_lf_sha256": "eef4a5a1ef22f76f4dcfc4c24bec5f59f24523cad1a06772dfd821e3db0a9f80",
+      "after_lf_sha256": "67b8b802c931360bb31c8005edfb45b866e19ed3c471d1f888549db040f2ca0c",
+      "header_lf_sha256": "eeb221c3d27184c5234205a1f501e53733133c6f1f3f57a3aafb880f46ef0a7d",
+      "source_tokens_before_sha256": "c088811ae96075244861f5c3afc195bcf96932d44fa9f2550ec76747a0a6163f",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\subsystem3",
+            "-I${REPO}\\testing\\subsystem3",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 3,
+          "preprocessed_tokens_sha256": "a3c4b9ae7f6ef74a2b821e555b7ec9524a283d11e6779e704bf731479d1abc31",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_fast.c",
+      "header_path": "testing/subsystem3/test_barcode_fast.h",
+      "include_line": 8,
+      "guard": "TESTING_SUBSYSTEM3_TEST_BARCODE_FAST_H",
+      "before_lf_sha256": "4b9926599bde49135362cacbcb83aa486d33f60c6aa27459e89cbac19b9e6f45",
+      "after_lf_sha256": "baa0a92369ffc42795c282f37b082f2f42445bd6ca39c93a1adf627fb8a4ce3d",
+      "header_lf_sha256": "06448fa8387067008be89edf42c2ee685f3e980ff535fa1feca0782a4d1c2477",
+      "source_tokens_before_sha256": "d9c6c54e4496af105dbd96e5714d77f75806ede8a7c9e516679b0c302444d0e2",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\subsystem3",
+            "-I${REPO}\\testing\\subsystem3",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 6,
+          "preprocessed_tokens_sha256": "87a8d4b8a89bbc34d651a2a7ed31a894c7eb1842d965694ac0b6e4cd4e9d6181",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_fit_error.c",
+      "header_path": "testing/subsystem3/test_barcode_fit_error.h",
+      "include_line": 7,
+      "guard": "TESTING_SUBSYSTEM3_TEST_BARCODE_FIT_ERROR_H",
+      "before_lf_sha256": "39f093475ba3ea9b2d9a9e44b2b299b825b826d768538f572d992511289afc72",
+      "after_lf_sha256": "e49a9a32baa5ecfbf9c3e2c5dabb84d16e2d0b03ab646e970afd80a14990ef99",
+      "header_lf_sha256": "232a43450023c03bd4457482c48ddbb5c9fca5dea26f44999b90c124c9d7108e",
+      "source_tokens_before_sha256": "f6cbfe0fe1019bef223331c2e90c41fe51ba92cfef71f5e30798f8cb0b1fa0e5",
+      "contexts": [
+        {
+          "context_source": "tools/test-buddy3.ps1",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-I${REPO}\\app_program\\subsystem3"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 5,
+          "preprocessed_tokens_sha256": "456ce0707bc65eed3d1f2998f2891767604c9e34a360581ddf043eaab32d6162",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_incremental.c",
+      "header_path": "testing/subsystem3/test_barcode_incremental.h",
+      "include_line": 7,
+      "guard": "TESTING_SUBSYSTEM3_TEST_BARCODE_INCREMENTAL_H",
+      "before_lf_sha256": "a9f23f3246c0c63cbd51a75e13388161177f527a3d7bf9cc5f757e6395750c80",
+      "after_lf_sha256": "069ad7668383bec3f83763e3eb32b4134df790fde8c3d9b3c3f59792ded27a6d",
+      "header_lf_sha256": "6fb71b3ee13fb47cb83f123a93aebe89987c943d7350c7a4c2ab009b1e97b3c2",
+      "source_tokens_before_sha256": "e4bb625e45993f2fb40c0f35213a4676e47963a0cce2fd71ed9216ed3ba6191d",
+      "contexts": [
+        {
+          "context_source": "tools/test-buddy3.ps1",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-I${REPO}\\app_program\\subsystem3"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 5,
+          "preprocessed_tokens_sha256": "6b3b17b598347aa35136f8d13c64c24a37598462e93a671642d0b8a4187269aa",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_record.c",
+      "header_path": "testing/subsystem3/test_barcode_record.h",
+      "include_line": 10,
+      "guard": "TESTING_SUBSYSTEM3_TEST_BARCODE_RECORD_H",
+      "before_lf_sha256": "6ffde293e01c6cd4796a7b616f1a4eb8ac260b7dc0a7464fb0e54429169b8d11",
+      "after_lf_sha256": "99e8ee4a03d17c7a956ee77db74119d4bda21fb2464aea66f25df4f4eb839217",
+      "header_lf_sha256": "c1b753d5a5ed5e87c058062d5d8ddd00925c7f8fb2b6624b6b67da742eb5dddb",
+      "source_tokens_before_sha256": "af7a102bde01d27fc56e47faf864912b6bbeb999c9ba43db2355aabd00d9a974",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\subsystem3",
+            "-I${REPO}\\testing\\subsystem3",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 26,
+          "preprocessed_tokens_sha256": "66c6cd5194ee65144458de2c14df006296ba490c9ca493b6d6dfdba6b5704efd",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_varying.c",
+      "header_path": "testing/subsystem3/test_barcode_varying.h",
+      "include_line": 7,
+      "guard": "TESTING_SUBSYSTEM3_TEST_BARCODE_VARYING_H",
+      "before_lf_sha256": "9500471caae875f4b3cceba0444c776180e6df9eed3a79ed8095c19cc2ae83a7",
+      "after_lf_sha256": "941ebc7e6674c695797fbc863bc08ad1fa85fece9c8161710739c855df4e6009",
+      "header_lf_sha256": "14378c8e387ec3949c9933e9d15a13b27511abae9d9c2de09af56e003f2d306c",
+      "source_tokens_before_sha256": "dd83fd83626330f1271a079b7c806824a854e46d88613ffac53e558b084d90d4",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\subsystem3",
+            "-I${REPO}\\testing\\subsystem3",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 8,
+          "preprocessed_tokens_sha256": "8743e6dfdd3507397fa4f1da7016483c4f8ca9198fff01c1d36eac834dbbbeb2",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_barcode_wide.c",
+      "header_path": "testing/subsystem3/test_barcode_wide.h",
+      "include_line": 7,
+      "guard": "TESTING_SUBSYSTEM3_TEST_BARCODE_WIDE_H",
+      "before_lf_sha256": "1bf204d0043082c46482c87333dd6864286640bd7638ac1136377a20ac649d42",
+      "after_lf_sha256": "c23bb8538b988ca3df0e7a26c2ea01a1abf54223d1b9f48ed356f73b5d2a127d",
+      "header_lf_sha256": "0ea6593e1efd56c2c7bd8c4d72ee193f04323efcd53772734aef0261940b095c",
+      "source_tokens_before_sha256": "355029eb01d09b14c21d42cea6e505685343fb5f28bacba56bd5a243932c3bf0",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\subsystem3",
+            "-I${REPO}\\testing\\subsystem3",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 9,
+          "preprocessed_tokens_sha256": "ae957e9432d0a1e0f2eb8881f035bab506585d04e93f500e8b0d1054c7ff5720",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_core.c",
+      "header_path": "testing/subsystem3/test_core.h",
+      "include_line": 5,
+      "guard": "TESTING_SUBSYSTEM3_TEST_CORE_H",
+      "before_lf_sha256": "a87fbc4ddc4e323cb4953356b99dd4132021a1caa12e8601797a15f9a4ceda6a",
+      "after_lf_sha256": "11a3a0d0759417a1420d272b1fef7a661a7c07538cae266ff2bcea4d0ff2b5f1",
+      "header_lf_sha256": "ed4eeead2f7d10c3dcd7084cb4fbff444c5ca121e8915cac25099bf9f02474cc",
+      "source_tokens_before_sha256": "79bb6b755e8da7847df9e8bcb67c01e0ea6a1c0f12015a55c9c23d0108664285",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\subsystem3",
+            "-I${REPO}\\testing\\subsystem3",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 8,
+          "preprocessed_tokens_sha256": "e53715e422c03f5b50844b807eaa0f0043462634db954e312991ed1b2cb11910",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_ir_reflectance.c",
+      "header_path": "testing/subsystem3/test_ir_reflectance.h",
+      "include_line": 6,
+      "guard": "TESTING_SUBSYSTEM3_TEST_IR_REFLECTANCE_H",
+      "before_lf_sha256": "3b288fad1ae364f5ca55f212e3cd5fe65ea8fb931b9c5450f822ec207b04d9f0",
+      "after_lf_sha256": "af5c42f4054a92f1ea950d99af067706d54427874c1a6440d4ec5c06b36f1bd7",
+      "header_lf_sha256": "ba72d30b2c3d085468cfc56f9f7438d4968baa13763f9d07a3a338d5943f273e",
+      "source_tokens_before_sha256": "a0445658a37914def3050e8fd0438e92429c2df40b702e33c34ed6e68e4977cb",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\subsystem3",
+            "-I${REPO}\\testing\\subsystem3",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 1,
+          "preprocessed_tokens_sha256": "9424d25b889f4cbae1880d50c92180e94a2dec1e90ec53abc68a8a5a09fd20fe",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem3/test_mapping.c",
+      "header_path": "testing/subsystem3/test_mapping.h",
+      "include_line": 6,
+      "guard": "TESTING_SUBSYSTEM3_TEST_MAPPING_H",
+      "before_lf_sha256": "e7bfdf79a2c40b15eb73ac99b1f2fb8d9130db98223731b0ea3d2f95c80a4dd8",
+      "after_lf_sha256": "8215db10b663367f9c37476083834d0b907f7d533c08ba40240066acd52da5fc",
+      "header_lf_sha256": "13c0086b705c670e69508b6b5288920a616ffce9b5f9da58cf7b959244902d68",
+      "source_tokens_before_sha256": "78eb2664a50613101c7e3cebc4490fa22272b03908f2e159430cd986e0094b45",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-I${REPO}\\app_program\\subsystem3",
+            "-I${REPO}\\testing\\subsystem3",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 4,
+          "preprocessed_tokens_sha256": "9079e16e331cc9fb919481cd923bcc841f105dc446e6000a3db7f673c9a31577",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem4/host_test.c",
+      "header_path": "testing/subsystem4/host_test.h",
+      "include_line": 4,
+      "guard": "TESTING_SUBSYSTEM4_HOST_TEST_H",
+      "before_lf_sha256": "0233989e13fce5a8974d3a0b3674c1fef105e8102c120c0f78cddafa486addbc",
+      "after_lf_sha256": "f2e197c583f9d818f02f439f72ff4cd5f794c433b7b5eeee92e012e526609076",
+      "header_lf_sha256": "c92e0090cb479c51854b8cae1e715ab9e4fbfc550a94c32649de0b01255b7b76",
+      "source_tokens_before_sha256": "5086c5420cd299ca879361fb762324336af1ffdbc3858dde1e8b942a11610482",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g",
+            "-DAPP_IMU_DEBUG=1",
+            "-I${REPO}\\app_program\\subsystem4"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 13,
+          "preprocessed_tokens_sha256": "f39f14346077193214cdec9bbe41dbec01fbe11737db1fdf964bbe8f8d15775e",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/subsystem5/host_test.c",
+      "header_path": "testing/subsystem5/host_test.h",
+      "include_line": 5,
+      "guard": "TESTING_SUBSYSTEM5_HOST_TEST_H",
+      "before_lf_sha256": "aab485311c02f583f0818e5895d01b6ff77ac9b0165c72664c234220a69c0662",
+      "after_lf_sha256": "e4fb081ab313241f42f7295e7c753acba8e70dfd463caca1c497e760fd854f2a",
+      "header_lf_sha256": "cd7ce1a1d8434cbe2f936d2a1b58dd272261c4946f45abdae5604e66363bbe6b",
+      "source_tokens_before_sha256": "02eaf67c5bc4b14546fe7dcf93146740e8666849d0798032f9f6dde7c3d0f126",
+      "contexts": [
+        {
+          "context_source": "build/compliance-review-20261119/host/compile-results.json",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-O2",
+            "-g",
+            "-I${REPO}\\app_program\\subsystem5",
+            "-I${REPO}\\app_program\\subsystem3",
+            "-I${REPO}\\app_program\\subsystem2",
+            "-I${REPO}\\app_program\\controller",
+            "-DS5_HOST_TEST"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 13,
+          "preprocessed_tokens_sha256": "84ef3a48fa628669e5063be5f33c5995f6e57427addb593aa7c43d3451abbc23",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    },
+    {
+      "path": "testing/compliance/bcap_storage_test.c",
+      "header_path": "testing/compliance/bcap_storage_test.h",
+      "include_line": 9,
+      "guard": "TESTING_COMPLIANCE_BCAP_STORAGE_TEST_H",
+      "before_lf_sha256": "550494edbcfbee5c5d58a19e9a499129829cff1d7cf9fa450a372995b87a0c0a",
+      "after_lf_sha256": "0e2fb4b73f62ed45a1756fbae6fbdb51355eeb5eb795415762bb9d7ddc2f3cb3",
+      "header_lf_sha256": "a3226bdca443d67cb7ff8a107e7f513234f0f73761b875045e6ae1b172ff6a83",
+      "source_tokens_before_sha256": "87caa6f052b204f349b3bb5356bd0c8f096d71fbe3c6099fddfd57ff99375cde",
+      "contexts": [
+        {
+          "context_source": "tools/compliance/run_host.py: bcap_storage_build",
+          "arguments": [
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-O2",
+            "-I${REPO}"
+          ],
+          "external_definitions": [
+            "main"
+          ],
+          "private_definition_count": 17,
+          "preprocessed_tokens_sha256": "811d5f9141e38a92933892d0485460b33a232d017ec0c2b88639a582a5ddfb27",
+          "preprocessed_tokens_equal_with_line_normalized": true,
+          "syntax_before_after": "PASS"
+        }
+      ]
+    }
+  ]
+}

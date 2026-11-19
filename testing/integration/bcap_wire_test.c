@@ -2,6 +2,7 @@
  * @brief Real capture encoder; vectors are independently decoded by Python.
  */
 /* Real capture encoder; vectors are independently decoded by Python. */
+#include "bcap_wire_test.h"
 #include "bc_capture.h"
 #include <assert.h>
 #include <stdio.h>
