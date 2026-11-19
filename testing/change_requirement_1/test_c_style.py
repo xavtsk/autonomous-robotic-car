@@ -40,19 +40,29 @@ class StyleCheckTests(unittest.TestCase):
     @patch.object(style.subprocess, "run")
     def test_formatter_rejection_is_reported(self, run):
         run.return_value = subprocess.CompletedProcess([], 1, "", "missing braces")
-        status, errors = style.check([], "formatter")
-        self.assertEqual(status, 1)
-        self.assertIn("missing braces", errors[-1])
-        self.assertIn("--dry-run", run.call_args.args[0])
-        self.assertNotIn("-i", run.call_args.args[0])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sample.c"
+            original = "int value;\n\n"
+            path.write_text(original)
+            status, errors = style.check([path], "formatter")
+            self.assertEqual(status, 1)
+            self.assertIn("missing braces", errors[-1])
+            self.assertIn("--style=file", run.call_args.args[0])
+            self.assertNotIn("-i", run.call_args.args[0])
+            self.assertEqual(path.read_text(), original)
 
     @patch.object(style.subprocess, "run")
     def test_success_requires_formatter_and_text_checks(self, run):
-        run.return_value = subprocess.CompletedProcess([], 0, "", "")
+        run.return_value = subprocess.CompletedProcess([], 0, "int value;\n", "")
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "sample.c"
-            path.write_text("int value;\n")
+            path.write_text("int value;\n\n")
             self.assertEqual(style.check([path], "formatter"), (0, []))
+            path.write_text("int  value;\n\n")
+            self.assertEqual(style.check([path], "formatter")[0], 1)
+
+    def test_empty_selection_is_incomplete(self):
+        self.assertEqual(style.check([], "formatter")[0], 2)
 
 
 if __name__ == "__main__":

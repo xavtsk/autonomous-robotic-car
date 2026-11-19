@@ -55,6 +55,8 @@ def canonical_format(text):
 
 
 def check(paths, formatter):
+    if not paths:
+        return 2, ["INCOMPLETE: no C/header files selected for checking."]
     errors = [error for path in paths for error in text_errors(path)]
     if not formatter:
         return 2, errors + ["INCOMPLETE: clang-format is unavailable; use --formatter."]
