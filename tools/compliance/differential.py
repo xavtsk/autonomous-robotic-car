@@ -32,6 +32,8 @@ def main():
         command = ['gcc-13', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O2', '-g',
                    *flags, *['-I' + str(path) for path in includes], *map(str, sources), '-lm', '-o', str(binary)]
         with (output / (label + '-' + name + '-build.log')).open('w') as log:
+            log.write('COMMAND ' + json.dumps(command) + '\n')
+            log.flush()
             subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=120)
         return binary
 
@@ -69,6 +71,9 @@ def main():
                 [*motion_storage_flags(root), '-include', str(fixtures/'subsystem3/motion_kernel_stub.h')])
             with (output/(label+'-motion_storage.trace')).open('wb') as stdout, (output/(label+'-motion_storage.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
+            binary = build(label, 'barcode_work', [fixtures/'compliance/barcode_work_test.c'], [root])
+            with (output/(label+'-barcode_work.trace')).open('wb') as stdout, (output/(label+'-barcode_work.log')).open('wb') as stderr:
+                subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
             runtime = runtime_source(roots['candidate'], root, output/(label+'-runtime.c'))
             runtime_sources = [app/'controller'/(name+'.c') for name in
                                ('bc_capture', 'integration_codec', 's3_drive', 'ir_debug', 'control_debug')]
@@ -84,12 +89,21 @@ def main():
             mqtt_sources = [app/'subsystem1'/(name+'.c') for name in
                             ('telemetry_codec', 'buddy1', 'command', 'mqtt_bridge', 'buddy1_test')]
             mqtt_sources += [root/'lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c']
-            binary = build(label, 'mqtt', [mqtt, *mqtt_sources],
+            for name, ir_debug, imu_debug in (('mqtt', 1, 1), ('mqtt_plain', 0, 0),
+                                             ('mqtt_production', 1, 0), ('mqtt_imu', 0, 1)):
+                binary = build(label, name, [mqtt, *mqtt_sources],
+                    [fixtures/'subsystem1', fixtures/'subsystem1/fakes', app/'subsystem1', root/'lib/liblwip/sysdepend/pico_rp2040'],
+                    ['-pthread', '-DAPP_H', '-DAPP_TEST=1', '-DTM_MQTT=1',
+                     f'-DAPP_IR_DEBUG={ir_debug}', f'-DAPP_IMU_DEBUG={imu_debug}',
+                     '-include', str(fixtures/'subsystem1/host_kernel.h')])
+                with (output/(label+'-'+name+'.trace')).open('wb') as stream:
+                    subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
+            binary = build(label, 'mqtt_receive', [fixtures/'compliance/mqtt_receive_test.c', *mqtt_sources],
                 [fixtures/'subsystem1', fixtures/'subsystem1/fakes', app/'subsystem1', root/'lib/liblwip/sysdepend/pico_rp2040'],
-                ['-pthread', '-DAPP_H', '-DAPP_TEST=1', '-DTM_MQTT=1', '-DAPP_IR_DEBUG=1', '-DAPP_IMU_DEBUG=1',
-                 '-include', str(fixtures/'subsystem1/host_kernel.h')])
-            with (output/(label+'-mqtt.trace')).open('wb') as stream:
-                subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
+                ['-pthread', '-DAPP_H', '-DAPP_TEST=1', '-DTM_MQTT=1',
+                 '-DAPP_IR_DEBUG=1', '-DAPP_IMU_DEBUG=1', '-include', str(fixtures/'subsystem1/host_kernel.h')])
+            with (output/(label+'-mqtt_receive.trace')).open('wb') as stdout, (output/(label+'-mqtt_receive.log')).open('wb') as stderr:
+                subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=180)
             source = root / 'app_program/subsystem3'
             harness = root / 'testing/subsystem3'
             modules = ['ir_acquisition', 'ir_calibration', 'ir_reflectance', 'line_detection',
@@ -101,12 +115,22 @@ def main():
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=180)
             binaries[label] = build(label, 'replay', [roots['candidate']/'testing/compliance/barcode_replay_trace.c', source/'bc_decoder.c'], [root])
         for name, prefix in (('motion', b'M '), ('terrain', b'T '), ('terrain_production', b'T '), ('obstacle', b'O '),
-                             ('runtime', b'RUNTIME '), ('mqtt', b'MQTT_'),
-                             ('motion_storage', b'MSTORE ')):
+                             ('runtime', b'RUNTIME '), ('mqtt', b'MQTT_'), ('mqtt_plain', b'MQTT_'),
+                             ('mqtt_production', b'MQTT_'), ('mqtt_imu', b'MQTT_'),
+                             ('mqtt_receive', b'MQSTORE '),
+                             ('motion_storage', b'MSTORE '), ('barcode_work', b'BWORK ')):
             before_trace = (output / ('baseline-' + name + '.trace')).read_bytes()
             after_trace = (output / ('candidate-' + name + '.trace')).read_bytes()
+            if name.startswith('mqtt'):
+                # Compare actual callbacks/fragments/payloads, never a harness
+                # PASS summary; retain the complete stdout artifact separately.
+                before_trace = b'\n'.join(line for line in before_trace.splitlines() if line.startswith(prefix))
+                after_trace = b'\n'.join(line for line in after_trace.splitlines() if line.startswith(prefix))
             rows = sum(line.startswith(prefix) for line in before_trace.splitlines())
-            minimum_rows = 802 if name == 'motion_storage' else 11
+            minimum_rows = (802 if name == 'motion_storage' else
+                            784 if name == 'barcode_work' else
+                            2093 if name == 'mqtt_receive' else
+                            100 if name.startswith('mqtt') else 11)
             matched = before_trace == after_trace and rows >= minimum_rows
             results['checks'].append(dict(name=name+'_semantic_trace', matched=matched, semantic_rows=rows,
                 baseline_sha256=hashlib.sha256(before_trace).hexdigest(), candidate_sha256=hashlib.sha256(after_trace).hexdigest()))

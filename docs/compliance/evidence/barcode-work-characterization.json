@@ -1,0 +1,95 @@
+{
+  "batch": "Barcode private phase-boundary characterization",
+  "status": "fixture compiled against baseline and candidate; Linux execution pending",
+  "fixture": "testing/compliance/barcode_work_test.c",
+  "fixed_baseline": "4ad2cc42595722cedb47102e4343298339040d40",
+  "production_changes": [],
+  "purpose": "Record existing resumable work behavior before extracting any production switch phases into helpers.",
+  "shared_fixture_contract": "The candidate fixture is compiled against each subject checkout through -I SUBJECT. It directly includes that subject's app_program/subsystem3/bc_decoder.c; no production test hook or replacement decoder is introduced.",
+  "coverage": {
+    "synthetic_boundary_scenarios": 98,
+    "budget_variants_per_scenario": 4,
+    "work_units_fit_ticks_inputs": [
+      [
+        127,
+        0
+      ],
+      [
+        128,
+        0
+      ],
+      [
+        127,
+        31
+      ],
+      [
+        127,
+        32
+      ]
+    ],
+    "synthetic_boundary_calls": 392,
+    "minimum_full_scratch_rows": 784,
+    "phases": "Every existing RW_* phase, plus unknown phase values 0 and 255.",
+    "boundaries": [
+      "Primary extrema update/reversal/capacity and EOF with rising/falling state",
+      "Faint white/ink/valley transitions, exact 30000 us dip boundary and same-cursor transitions",
+      "Pruning minimum tie, scan/copy endpoints and exact/excess extrema counts",
+      "Strong/weak/faint edges, missing crossing, repeated crossing, intermediate and final segment samples",
+      "Direct decode, reversed widths, conflicting retained candidate and zero-width input",
+      "Fit orientation/star selection, ticks -64/0/63/64, fit budget 31/32, shared/varying outcomes, sign and half-narrow delta boundaries",
+      "Apply positive/negative/odd biases, invalid input and partial scratch mutation before failure",
+      "Leading quiet validation, faint fallback, terminal and unknown phases",
+      "Defined uint32 timestamp arithmetic wrap, leading/required-time saturation and valid maximum-range configuration arithmetic"
+    ],
+    "complete_sampled_paths": [
+      "strong forward",
+      "faint forward",
+      "strong reversed",
+      "biased widths",
+      "flat/no ink"
+    ],
+    "complete_path_execution": "work_begin followed by work_advance calls with budgets reset between calls; each call is traced until RW_DONE, with a 4096-call nontermination guard.",
+    "trace": "Before/after rows contain every named s3_barcode_work_t scalar, all 127 ext entries, all 127 ext_us entries, all 29 runs, both narrow/chosen/trial_bias entries and candidate bits, plus configuration and relevant record counters/input state. Struct padding is excluded from semantic comparison."
+  },
+  "assertions": [
+    "Each supplied configuration satisfies the existing config_valid predicate.",
+    "work_units and fit_ticks remain monotonic and within their existing per-call caps; fit increments do not exceed work increments.",
+    "Exhausted work budget, exhausted fit budget at RW_FIT_TICK and RW_DONE preserve the entire input record.",
+    "A nonterminal single-unit boundary call consumes its one available work unit.",
+    "work_advance changes no bytes outside work, work_units and fit_ticks.",
+    "Fixture buffers and the complete-path loop stay bounded."
+  ],
+  "exception_inventory": [
+    {
+      "file": "testing/compliance/barcode_work_test.c",
+      "exception": "Host-only direct implementation include and private enum/helper access",
+      "reason": "Observe otherwise inaccessible phase/budget boundaries without changing firmware or public interfaces.",
+      "limit": "Synthetic internal states are bounded inputs to characterization; not every state is asserted publicly reachable. Unknown-phase and arithmetic results are recorded rather than assigned invented decoder expectations."
+    },
+    {
+      "file": "testing/compliance/barcode_work_test.c",
+      "exception": "TRACE_U, TRACE_S and CASE fixture-local macros",
+      "reason": "Keep the named-field trace complete and reset every scenario from the same initialized seed. These macros do not enter production builds."
+    }
+  ],
+  "local_validation": {
+    "kind": "compile/link only; no generated Windows executable run",
+    "command": "gcc -std=c99 -Wall -Wextra -Werror -pedantic-errors -O2 -I SUBJECT testing/compliance/barcode_work_test.c -o OUTPUT",
+    "baseline_result": "PASS",
+    "candidate_result": "PASS",
+    "candidate_compile_database": "build/barcode-work-compile/compile_commands.json",
+    "candidate_subject_revision": "133115478bb204df3e8e346810959a691eb245e2",
+    "candidate_decoder_lf_sha256": "c5dd69e9c3ff84470325eb90184ffb3e292f652db62360db6a5eafc80f1c7a21"
+  },
+  "linux_gates_added": [
+    "run_host.py: barcode_work_build and barcode_work for both subjects under GCC, Clang and ASan/UBSan",
+    "differential.py: exact shared-fixture BWORK trace comparison, at least 784 semantic rows, full stdout/stderr artifacts",
+    "No change to the existing recorded-replay fixtures or their assertion predicates"
+  ],
+  "pending": [
+    "Actual baseline/candidate Linux execution, sanitizer results and trace equality",
+    "Production phase extraction is not part of this fixture batch",
+    "Later decomposition needs target code/stack measurement and existing replay/runtime traces; host characterization alone does not establish RTOS timing or physical behavior"
+  ],
+  "fixture_lf_sha256": "2ca4bbe70caadb1ac9976dcada0e12665c82d49c773d8cf5b6d65f1c690b0714"
+}

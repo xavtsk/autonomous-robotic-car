@@ -164,6 +164,30 @@ def main():
             ('ctrl_motion', 'motion_pack', 'estimate_motion', 'speed_pid')],
         '-o', str(motion_binary)])
     run('motion_storage', [str(motion_binary)])
+    barcode_fixture = tooling.parents[1]/'testing/compliance/barcode_work_test.c'
+    barcode_binary = output/'barcode_work_test'
+    run('barcode_work_build', [compiler, *shlex.split(flags), '-I'+str(root),
+        str(barcode_fixture), '-o', str(barcode_binary)])
+    run('barcode_work', [str(barcode_binary)])
+    # The existing S1 make targets cover 0/0 and 1/1. Exercise each independent
+    # debug layout with the same assertions, including under ASan/UBSan.
+    mqtt_fixtures = tooling.parents[1]/'testing/subsystem1'
+    mqtt_app = root/'app_program/subsystem1'
+    mqtt_driver = root/'lib/liblwip/sysdepend/pico_rp2040'
+    for name, ir_debug, imu_debug, fixture in (
+            ('mqtt_production', 1, 0, mqtt_fixtures/'host_test.c'),
+            ('mqtt_imu', 0, 1, mqtt_fixtures/'host_test.c'),
+            ('mqtt_receive', 1, 1, tooling.parents[1]/'testing/compliance/mqtt_receive_test.c')):
+        mqtt_binary = output/name
+        run(name+'_build', [compiler, *shlex.split(flags), '-DAPP_H', '-DAPP_TEST=1',
+            '-DTM_MQTT=1', f'-DAPP_IR_DEBUG={ir_debug}', f'-DAPP_IMU_DEBUG={imu_debug}',
+            '-include', str(mqtt_fixtures/'host_kernel.h'),
+            *['-I'+str(path) for path in (mqtt_fixtures, mqtt_fixtures/'fakes', mqtt_app, mqtt_driver)],
+            str(fixture),
+            *[str(mqtt_app/(module+'.c')) for module in
+                ('telemetry_codec', 'buddy1', 'command', 'mqtt_bridge', 'buddy1_test')],
+            str(mqtt_driver/'mqtt_utk.c'), '-o', str(mqtt_binary)])
+        run(name, [str(mqtt_binary)])
     if args.mode != 'sanitize':
         for folder in ('dashboard', 'change_requirement_1', 'diagnostics'):
             run('python_' + folder, [sys.executable, '-m', 'unittest', 'discover', '-v',
