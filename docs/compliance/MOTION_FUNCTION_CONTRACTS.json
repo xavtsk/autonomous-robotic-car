@@ -1,0 +1,626 @@
+{
+  "schema_version": 1,
+  "mode": "apply",
+  "production_source_written": true,
+  "before_commit": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
+  "batch_kind": "manually reviewed function contracts; comments only",
+  "source_operations_changed": false,
+  "files": [
+    {
+      "path": "app_program/subsystem2/speed_pid.c",
+      "before_lf_sha256": "3422ed5e1d144d6018682315b1abeed3ea60d806c177fcab9afff7a054d7b255",
+      "after_lf_sha256": "ebfef9c290abac4eb68c2dbb00e9c8783dfc47384edf3b4cc8b826cbbb8af812",
+      "token_sha256": "bb9d646c386e6b0b4f137cf73f455655dc395f5de24d1e5b65253dea403de035",
+      "tokens_identical": true,
+      "original_comments_preserved_in_order": true,
+      "functions": [
+        {
+          "name": "speed_pid_init",
+          "line": 18,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_pid",
+            "value_kp",
+            "value_ki",
+            "value_kd",
+            "kff",
+            "accel_mps2"
+          ]
+        },
+        {
+          "name": "speed_pid_reset",
+          "line": 33,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_pid"
+          ]
+        },
+        {
+          "name": "speed_pid_update",
+          "line": 42,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_pid",
+            "target_mps",
+            "speed_mps",
+            "accel_mps2",
+            "dt_s"
+          ]
+        },
+        {
+          "name": "speed_pid_setpoint",
+          "line": 106,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_pid"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem2/speed_pid.h",
+      "before_lf_sha256": "dd9c0915cbd80a98666cecaf00cf6f81655a96873b1c04e7d341a700bb27808b",
+      "after_lf_sha256": "6db80e4a8054a5b23be6b2515aa959a9c3f9bf809fa96c25fc42d0f3fbe6cfe2",
+      "token_sha256": "852ccb0fc80130058608d5514b37ab3f2f1f087d6ff6939988f6cbbe32908723",
+      "tokens_identical": true,
+      "original_comments_preserved_in_order": true,
+      "functions": [
+        {
+          "name": "speed_pid_init",
+          "line": 42,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_pid",
+            "value_kp",
+            "value_ki",
+            "value_kd",
+            "kff",
+            "accel_mps2"
+          ]
+        },
+        {
+          "name": "speed_pid_reset",
+          "line": 52,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_pid"
+          ]
+        },
+        {
+          "name": "speed_pid_update",
+          "line": 74,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_pid",
+            "target_mps",
+            "speed_mps",
+            "accel_mps2",
+            "dt_s"
+          ]
+        },
+        {
+          "name": "speed_pid_setpoint",
+          "line": 84,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_pid"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem2/motion_pack.c",
+      "before_lf_sha256": "18157ea850e692f60f56dfc1b906c5b462d977601c5d061599e1ab4a992b31d5",
+      "after_lf_sha256": "5749c5a034f4b4d2c22773a8a36fc45cc275f5a1d47e41e98cee9a229d925046",
+      "token_sha256": "1174ba37448101527af4204e0bd495ffeef922413060df539f8232ca11408052",
+      "tokens_identical": true,
+      "original_comments_preserved_in_order": true,
+      "functions": [
+        {
+          "name": "abs_f",
+          "line": 62,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "value_x"
+          ]
+        },
+        {
+          "name": "mask_of",
+          "line": 72,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "bits"
+          ]
+        },
+        {
+          "name": "field_get",
+          "line": 84,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "word",
+            "lsb",
+            "bits"
+          ]
+        },
+        {
+          "name": "field_put",
+          "line": 96,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "value",
+            "lsb",
+            "bits"
+          ]
+        },
+        {
+          "name": "is_finite",
+          "line": 108,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "value_x"
+          ]
+        },
+        {
+          "name": "to_steps",
+          "line": 125,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "magnitude",
+            "step",
+            "bits"
+          ]
+        },
+        {
+          "name": "sm_pack",
+          "line": 151,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "value",
+            "step",
+            "mag_bits"
+          ]
+        },
+        {
+          "name": "sm_unpack",
+          "line": 167,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "field",
+            "step",
+            "mag_bits"
+          ]
+        },
+        {
+          "name": "heading_pack",
+          "line": 180,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "degrees"
+          ]
+        },
+        {
+          "name": "motion_fault_first",
+          "line": 211,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "fault_bits"
+          ]
+        },
+        {
+          "name": "motion_pack_status",
+          "line": 231,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_status"
+          ]
+        },
+        {
+          "name": "motion_unpack_status",
+          "line": 267,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "word",
+            "p_status"
+          ]
+        },
+        {
+          "name": "motion_pack_report",
+          "line": 299,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_report"
+          ]
+        },
+        {
+          "name": "motion_unpack_report",
+          "line": 319,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "word",
+            "p_report"
+          ]
+        },
+        {
+          "name": "cmd_type",
+          "line": 345,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "type"
+          ]
+        },
+        {
+          "name": "fits",
+          "line": 360,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "value",
+            "step",
+            "mag_bits"
+          ]
+        },
+        {
+          "name": "move_speed_ok",
+          "line": 373,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "speed_mps"
+          ]
+        },
+        {
+          "name": "motion_cmd_velocity",
+          "line": 383,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "left_mps",
+            "right_mps"
+          ]
+        },
+        {
+          "name": "motion_cmd_drive",
+          "line": 406,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "meters",
+            "speed_mps"
+          ]
+        },
+        {
+          "name": "motion_cmd_turn",
+          "line": 428,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "degrees",
+            "speed_mps"
+          ]
+        },
+        {
+          "name": "motion_cmd_manoeuvre",
+          "line": 452,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "value_m"
+          ]
+        },
+        {
+          "name": "motion_cmd_stop",
+          "line": 467,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": []
+        },
+        {
+          "name": "motion_cmd_cancel",
+          "line": 475,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "command_id"
+          ]
+        },
+        {
+          "name": "motion_cmd_reset",
+          "line": 484,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": []
+        },
+        {
+          "name": "cmd_bits",
+          "line": 495,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "type"
+          ]
+        },
+        {
+          "name": "motion_unpack_cmd",
+          "line": 527,
+          "definition": true,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "word",
+            "p_cmd"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem2/motion_pack.h",
+      "before_lf_sha256": "09134bb800778ded1e4be2bdf5e41ec3c14449e1213c4fdcf3c72e59edf75100",
+      "after_lf_sha256": "ed3ca677679fcb5b38a419305a3e6fc597fa6584a0f5c5948ea117d74cdf5c9c",
+      "token_sha256": "c1fff45055a5c33776adff3b6f979b76ffcfb118251a11ce0c52ce4c5c9a7472",
+      "tokens_identical": true,
+      "original_comments_preserved_in_order": true,
+      "functions": [
+        {
+          "name": "motion_fault_bit",
+          "line": 55,
+          "definition": true,
+          "linkage": "INTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "fault"
+          ]
+        },
+        {
+          "name": "motion_fault_first",
+          "line": 71,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "fault_bits"
+          ]
+        },
+        {
+          "name": "motion_pack_status",
+          "line": 112,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_status"
+          ]
+        },
+        {
+          "name": "motion_unpack_status",
+          "line": 123,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "word",
+            "p_status"
+          ]
+        },
+        {
+          "name": "motion_pack_report",
+          "line": 132,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "p_report"
+          ]
+        },
+        {
+          "name": "motion_unpack_report",
+          "line": 139,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "word",
+            "p_report"
+          ]
+        },
+        {
+          "name": "motion_cmd_velocity",
+          "line": 164,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "left_mps",
+            "right_mps"
+          ]
+        },
+        {
+          "name": "motion_cmd_drive",
+          "line": 176,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "meters",
+            "speed_mps"
+          ]
+        },
+        {
+          "name": "motion_cmd_turn",
+          "line": 187,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "degrees",
+            "speed_mps"
+          ]
+        },
+        {
+          "name": "motion_cmd_manoeuvre",
+          "line": 194,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "value_m"
+          ]
+        },
+        {
+          "name": "motion_cmd_stop",
+          "line": 199,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": []
+        },
+        {
+          "name": "motion_cmd_cancel",
+          "line": 206,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "command_id"
+          ]
+        },
+        {
+          "name": "motion_cmd_reset",
+          "line": 212,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": []
+        },
+        {
+          "name": "motion_unpack_cmd",
+          "line": 229,
+          "definition": false,
+          "linkage": "EXTERNAL",
+          "definition_or_declaration_comment_attached": true,
+          "parameters_documented_in_own_or_canonical_comment": true,
+          "parameters": [
+            "word",
+            "p_cmd"
+          ]
+        }
+      ]
+    }
+  ],
+  "compiler_documentation_check": {
+    "compiler": "libclang18.1.1",
+    "compile_context": "actual source arguments from build/compliance-review-20261119/compile_commands.json, applied to corresponding source and header",
+    "flags": [
+      "-Wdocumentation",
+      "-Wdocumentation-unknown-command",
+      "-ferror-limit=8"
+    ],
+    "warnings": 0,
+    "errors": 0,
+    "doxygen_generator_executed": false
+  },
+  "function_definitions": 31,
+  "prototypes": 17
+}

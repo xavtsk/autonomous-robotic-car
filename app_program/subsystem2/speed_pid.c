@@ -12,6 +12,9 @@
 
 #define DUTY_MAX (1.0f)
 
+/** @brief Initialize one wheel controller with the supplied gains.
+ * @see speed_pid.h for the units, validation and ownership contract.
+ */
 void speed_pid_init (speed_pid_t * p_pid, float32_t value_kp,
                      float32_t value_ki, float32_t value_kd, float32_t kff,
                      float32_t accel_mps2)
@@ -24,12 +27,18 @@ void speed_pid_init (speed_pid_t * p_pid, float32_t value_kp,
     speed_pid_reset(p_pid);
 }
 
+/** @brief Clear the ramped setpoint and integral without changing gains.
+ * @see speed_pid.h for the units, validation and ownership contract.
+ */
 void speed_pid_reset (speed_pid_t * p_pid)
 {
     p_pid->setpoint_mps = 0.0f;
     p_pid->integral = 0.0f;
 }
 
+/** @brief Advance the ramp and calculate one wheel's signed motor duty.
+ * @see speed_pid.h for the units, validation and ownership contract.
+ */
 float32_t speed_pid_update (speed_pid_t * p_pid, float32_t target_mps,
                             float32_t speed_mps, float32_t accel_mps2,
                             float32_t dt_s)
@@ -91,6 +100,9 @@ float32_t speed_pid_update (speed_pid_t * p_pid, float32_t target_mps,
     return duty;
 }
 
+/** @brief Read the current ramped wheel-speed setpoint.
+ * @see speed_pid.h for the units, validation and ownership contract.
+ */
 float32_t speed_pid_setpoint (const speed_pid_t * p_pid)
 {
     return p_pid->setpoint_mps;

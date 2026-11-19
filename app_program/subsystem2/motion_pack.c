@@ -53,26 +53,58 @@
 #define HEADING_TURN_DEG (360)
 #define HEADING_LIMIT_DEG (1000000.0f) /* keeps the int cast safe */
 
+/** @brief Apply the existing sign comparison used for magnitude conversion.
+ * @param value_x Floating value, including signed zero or non-finite input.
+ * @return Negated input when it compares below zero, otherwise the input.
+ * @note Negative zero retains its sign; NaN is passed through. No state
+ * changes.
+ */
 static float32_t abs_f (float32_t value_x)
 {
     return (value_x < 0.0f) ? -value_x : value_x;
 }
 
+/** @brief Create a low-bit mask without shifting by 32 or more.
+ * @param bits Requested bit count; all uint32_t values are accepted.
+ * @return Zero for zero bits, the low-bit mask for 1..31, or UINT32_MAX for
+ * 32 or more. Used only as a value; no stored object is modified.
+ */
 static uint32_t mask_of (uint32_t bits)
 {
     return (bits >= 32U) ? 0xFFFFFFFFU : ((1UL << bits) - 1U);
 }
 
+/** @brief Extract a field from a packed 64-bit value.
+ * @param word Source word.
+ * @param lsb First bit position, below 64.
+ * @param bits Width from 0 through 32; caller keeps lsb plus width at most 64.
+ * @return The selected low-order field, with all other bits cleared.
+ * @note Internal layout constants supply the shift bounds; no checks occur.
+ */
 static uint32_t field_get (uint64_t word, uint32_t lsb, uint32_t bits)
 {
     return (uint32_t)(word >> lsb) & mask_of(bits);
 }
 
+/** @brief Position the masked portion of a field in a 64-bit value.
+ * @param value Field value; bits above the declared width are discarded.
+ * @param lsb Destination bit position, below 64.
+ * @param bits Width from 0 through 32; caller keeps lsb plus width at most 64.
+ * @return Shifted field suitable for OR into an initially cleared word.
+ * @note Does not modify an existing word or validate layout constants.
+ */
 static uint64_t field_put (uint32_t value, uint32_t lsb, uint32_t bits)
 {
     return (uint64_t)(value & mask_of(bits)) << lsb;
 }
 
+/** @brief Test finiteness using the retained floating arithmetic checks.
+ * @param value_x Value to classify.
+ * @return True for finite values, including both zeros; false for NaN/infinity
+ * under the project's floating compiler semantics.
+ * @note Uses self-comparison and subtraction; floating exception flags are not
+ * managed here. This documents the existing classification, not a replacement.
+ */
 static bool is_finite (float32_t value_x)
 {
     return (value_x == value_x) &&
@@ -81,6 +113,15 @@ static bool is_finite (float32_t value_x)
 
 /* Rounded, saturated magnitude in steps; NaN or negative gives 0 (no cast
  * of a negative float to unsigned) */
+/** @brief Round a magnitude into a saturated unsigned step count.
+ * @param magnitude Magnitude in the same unit as step; non-finite is allowed.
+ * @param step Positive finite quantization step from the module constants.
+ * @param bits Magnitude width, 1..15 for the present callers.
+ * @return Truncated magnitude/step plus 0.5, bounded to the field. NaN,
+ * negative input and values whose rounded expression is below one give zero;
+ * positive infinity or a value at/above the field maximum gives that maximum.
+ * @note Bounds are tested before the unsigned conversion; no state changes.
+ */
 static uint32_t to_steps (float32_t magnitude, float32_t step, uint32_t bits)
 {
     uint32_t max_steps = mask_of(bits);
@@ -99,6 +140,14 @@ static uint32_t to_steps (float32_t magnitude, float32_t step, uint32_t bits)
 }
 
 /* Direction bit + magnitude; never a "negative zero" */
+/** @brief Encode a direction bit and a rounded magnitude.
+ * @param value Signed quantity; finite and non-finite inputs are handled.
+ * @param step Positive finite step in the quantity's unit.
+ * @param mag_bits Magnitude width, 1..15 for the present callers.
+ * @return Saturated magnitude with direction at bit mag_bits. Direction is
+ * set only for a negative value whose rounded magnitude is nonzero.
+ * @note NaN encodes zero; infinities saturate. Both input zeros encode zero.
+ */
 static uint32_t sm_pack (float32_t value, float32_t step, uint32_t mag_bits)
 {
     uint32_t mag = to_steps(abs_f(value), step, mag_bits);
@@ -107,6 +156,14 @@ static uint32_t sm_pack (float32_t value, float32_t step, uint32_t mag_bits)
     return (dir << mag_bits) | mag;
 }
 
+/** @brief Decode a direction bit and magnitude into a floating value.
+ * @param field Raw sign-magnitude bits; higher bits are ignored.
+ * @param step Positive finite step in the decoded quantity's unit.
+ * @param mag_bits Magnitude width, 1..15 for the present callers.
+ * @return Low magnitude times step, negated when the direction bit is set.
+ * @note A raw direction bit with zero magnitude produces negative zero;
+ * this decoder does not require the packer's canonical zero representation.
+ */
 static float32_t sm_unpack (uint32_t field, float32_t step, uint32_t mag_bits)
 {
     float32_t value = (float32_t)(field & mask_of(mag_bits)) * step;
@@ -114,6 +171,12 @@ static float32_t sm_unpack (uint32_t field, float32_t step, uint32_t mag_bits)
     return (((field >> mag_bits) & 1U) != 0U) ? -value : value;
 }
 
+/** @brief Round and wrap a status heading to whole degrees.
+ * @param degrees Heading in degrees; all floating inputs are handled.
+ * @return Zero for NaN. Otherwise clamp to +/-1000000, round halfway away
+ * from zero, and reduce modulo 360 to a result from 0 through 359.
+ * @note The clamp bounds the signed integer conversion, including infinities.
+ */
 static uint32_t heading_pack (float32_t degrees)
 {
     int32_t whole;
@@ -142,6 +205,9 @@ static uint32_t heading_pack (float32_t degrees)
 
 /* ---- Fault bits ---------------------------------------------------------- */
 
+/** @brief Select the lowest numbered fault represented by a mask.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 motion_fault_t motion_fault_first (uint8_t fault_bits)
 {
     uint32_t value_i;
@@ -159,6 +225,9 @@ motion_fault_t motion_fault_first (uint8_t fault_bits)
 
 /* ---- Status -------------------------------------------------------------- */
 
+/** @brief Quantize a status snapshot into the 64-bit status layout.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 uint64_t motion_pack_status (const motion_status_t * p_status)
 {
     uint64_t word = 0U;
@@ -192,6 +261,9 @@ uint64_t motion_pack_status (const motion_status_t * p_status)
     return word;
 }
 
+/** @brief Decode every field of a raw 64-bit status word.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 void motion_unpack_status (uint64_t word, motion_status_t * p_status)
 {
     if (p_status == NULL)
@@ -221,6 +293,9 @@ void motion_unpack_status (uint64_t word, motion_status_t * p_status)
 
 /* ---- Report -------------------------------------------------------------- */
 
+/** @brief Encode a completion report in the low 14 bits of a word.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 uint16_t motion_pack_report (const motion_report_t * p_report)
 {
     uint64_t word = 0U;
@@ -238,6 +313,9 @@ uint16_t motion_pack_report (const motion_report_t * p_report)
     return (uint16_t)word;
 }
 
+/** @brief Decode the report fields without consuming a report queue.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 void motion_unpack_report (uint16_t word, motion_report_t * p_report)
 {
     if (p_report == NULL)
@@ -260,12 +338,25 @@ void motion_unpack_report (uint16_t word, motion_report_t * p_report)
 #define CMD_MANOEUVRE_BITS (TYPE_BITS + MANOEUVRE_BITS) /*  5 */
 #define CMD_CANCEL_BITS (TYPE_BITS + ID_BITS)           /* 11 */
 
+/** @brief Place a command type in the low three bits.
+ * @param type Command type; conversion is masked to three bits.
+ * @return Type bits with all payload bits clear; no validity check is made.
+ */
 static uint32_t cmd_type (motion_cmd_type_t type)
 {
     return (uint32_t)field_put((uint32_t)type, 0U, TYPE_BITS);
 }
 
 /* Finite and within the field after rounding (no silent saturation) */
+/** @brief Check whether a finite signed value rounds into a magnitude field.
+ * @param value Signed quantity to test.
+ * @param step Positive finite quantization step.
+ * @param mag_bits Magnitude width, 9 or 13 for current command callers.
+ * @return True exactly when value is finite and the floating expression
+ * abs(value)/step + 0.5 is below two to the power mag_bits.
+ * @note Does not quantize or change output; thresholds follow float
+ * arithmetic.
+ */
 static bool fits (float32_t value, float32_t step, uint32_t mag_bits)
 {
     return is_finite(value) && (((abs_f(value) / step) + 0.5f) <
@@ -273,6 +364,12 @@ static bool fits (float32_t value, float32_t step, uint32_t mag_bits)
 }
 
 /* A drive / turn speed: finite, at least one step, within the field */
+/** @brief Validate the rounded positive drive/turn speed field.
+ * @param speed_mps Requested wheel-speed magnitude in metres per second.
+ * @return True for finite input rounding to 1..511 steps of 0.002 m/s.
+ * @note Rejects negative, zero and rounded-zero speed; a positive value below
+ * one complete step can pass when it rounds up. No controller limits are read.
+ */
 static bool move_speed_ok (float32_t speed_mps)
 {
     return fits(speed_mps, MOTION_PACK_SPEED_STEP_MPS, MOVE_SPEED_BITS) &&
@@ -280,6 +377,9 @@ static bool move_speed_ok (float32_t speed_mps)
             0U);
 }
 
+/** @brief Build a quantized two-wheel velocity command.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 uint32_t motion_cmd_velocity (float32_t left_mps, float32_t right_mps)
 {
     uint32_t left = sm_pack(left_mps, MOTION_PACK_SPEED_STEP_MPS,
@@ -300,6 +400,9 @@ uint32_t motion_cmd_velocity (float32_t left_mps, float32_t right_mps)
            (uint32_t)field_put(right, CMD_ARG_LSB + SPEED_BITS, SPEED_BITS);
 }
 
+/** @brief Build a signed-distance drive command with positive speed.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 uint32_t motion_cmd_drive (float32_t meters, float32_t speed_mps)
 {
     uint32_t dist =
@@ -319,6 +422,9 @@ uint32_t motion_cmd_drive (float32_t meters, float32_t speed_mps)
                                MOVE_SPEED_BITS);
 }
 
+/** @brief Build a signed-angle turn command with positive wheel speed.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 uint32_t motion_cmd_turn (float32_t degrees, float32_t speed_mps)
 {
     /* Positive = left; a negative angle (right) sets the direction bit */
@@ -340,6 +446,9 @@ uint32_t motion_cmd_turn (float32_t degrees, float32_t speed_mps)
                                MOVE_SPEED_BITS);
 }
 
+/** @brief Build a command for one of the four named manoeuvres.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 uint32_t motion_cmd_manoeuvre (manoeuvre_t value_m)
 {
     /* Out-of-range values must not be masked into a different manoeuvre */
@@ -352,23 +461,37 @@ uint32_t motion_cmd_manoeuvre (manoeuvre_t value_m)
            (uint32_t)field_put((uint32_t)value_m, CMD_ARG_LSB, MANOEUVRE_BITS);
 }
 
+/** @brief Build a STOP command with no payload.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 uint32_t motion_cmd_stop (void)
 {
     return cmd_type(MOTION_CMD_STOP);
 }
 
+/** @brief Build a cancellation word for an eight-bit command ID.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 uint32_t motion_cmd_cancel (uint8_t command_id)
 {
     return cmd_type(MOTION_CMD_CANCEL) |
            (uint32_t)field_put(command_id, CMD_ARG_LSB, ID_BITS);
 }
 
+/** @brief Build a RESET command with no payload.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 uint32_t motion_cmd_reset (void)
 {
     return cmd_type(MOTION_CMD_RESET);
 }
 
 /* Number of bits a valid word of this type may use */
+/** @brief Return the envelope width permitted for a command type.
+ * @param type Numeric type; current decoding supplies a three-bit value.
+ * @return Type plus payload width for payload-bearing commands, or three for
+ * STOP, RESET and any unrecognized value. The caller rejects unknown types.
+ */
 static uint32_t cmd_bits (uint32_t type)
 {
     uint32_t bits;
@@ -398,6 +521,9 @@ static uint32_t cmd_bits (uint32_t type)
     return bits;
 }
 
+/** @brief Validate the command envelope and decode its payload.
+ * @see motion_pack.h for the units, validation and ownership contract.
+ */
 bool motion_unpack_cmd (uint32_t word, motion_cmd_t * p_cmd)
 {
     uint32_t type = field_get(word, 0U, TYPE_BITS);

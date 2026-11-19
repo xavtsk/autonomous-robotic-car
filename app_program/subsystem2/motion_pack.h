@@ -44,6 +44,14 @@
 #define MOTION_FAULT_BITS_WIDTH (5U)
 
 /** Return the bit for a valid fault code, evaluating the argument once. */
+/** @brief Map a valid fault code to its one-bit status representation.
+ * @param fault Code from MOTION_FAULT_NONE through MOTION_FAULT_TIMEOUT.
+ * @return Zero for NONE; otherwise bit fault-minus-one, within the low five
+ * bits.
+ * @pre The caller supplies a valid code; out-of-domain shift counts are not
+ * validated. The inline function evaluates its argument once and changes no
+ * state.
+ */
 static inline uint8_t motion_fault_bit (motion_fault_t fault)
 {
     /* Codes NONE through TIMEOUT produce zero or one of the five fault bits;
@@ -54,6 +62,12 @@ static inline uint8_t motion_fault_bit (motion_fault_t fault)
 }
 
 /* Lowest set fault bit as a fault code; MOTION_FAULT_NONE if none is set */
+/** @brief Select the lowest numbered fault represented by a mask.
+ * @param fault_bits Mask whose low five bits represent the defined faults.
+ * @return The code for the lowest set low-five bit, or MOTION_FAULT_NONE.
+ * @note Ignores the upper three bits; does not modify the mask or shared
+ * state.
+ */
 motion_fault_t motion_fault_first (uint8_t fault_bits);
 
 /* Command types (bits 0-2 of a command word) */
@@ -82,11 +96,46 @@ typedef struct
 } motion_cmd_t;
 
 /* Status / telemetry: 64 bits */
+/** @brief Quantize a status snapshot into the 64-bit status layout.
+ * @param p_status Readable caller-owned snapshot, or null to return zero.
+ * Its fault code must be NONE through TIMEOUT for motion_fault_bit().
+ * @return Packed word; null returns zero. State and fault-mask bits are masked
+ * to their field widths, and the individual fault code is ORed into the mask.
+ * @note Wheel speeds use 0.002 m/s steps and 9 magnitude bits; distance uses
+ * 0.001 m steps and 15 magnitude bits. Magnitudes round by adding half a step
+ * then truncating, saturate on overflow/infinity, and encode NaN as zero.
+ * Zero magnitude has no direction bit. Heading NaN becomes zero; other values
+ * clamp to +/-1000000 degrees, round halfway away from zero, then wrap to
+ * 0..359.
+ * No lock or snapshot acquisition occurs; the caller owns all source access.
+ */
 uint64_t motion_pack_status (const motion_status_t * p_status);
+/** @brief Decode every field of a raw 64-bit status word.
+ * @param word Raw word; all bit patterns are accepted without semantic checks.
+ * @param p_status Writable output, or null for no action.
+ * @post Writes every status member when non-null, including the lowest fault
+ * code derived from the five fault bits. Speeds are m/s and distance metres.
+ * @note Raw state values 6/7 and heading values 360..511 remain representable;
+ * they are not rejected or normalized. Raw sign-magnitude zero can become
+ * negative floating zero. The caller serializes output access; no lock is
+ * taken.
+ */
 void motion_unpack_status (uint64_t word, motion_status_t * p_status);
 
 /* Done / cancelled / fault report: 16 bits */
+/** @brief Encode a completion report in the low 14 bits of a word.
+ * @param p_report Readable caller-owned report, or null to return zero.
+ * @return Command ID, two-bit outcome, three-bit fault and lost flag; bits
+ * 14..15 are zero. Enum values are masked, not semantically validated.
+ * @note No queue access, report consumption or synchronization occurs.
+ */
 uint16_t motion_pack_report (const motion_report_t * p_report);
+/** @brief Decode the report fields without consuming a report queue.
+ * @param word Raw 16-bit word; the upper two bits are ignored.
+ * @param p_report Writable caller-owned output, or null for no action.
+ * @post Writes all four report members when non-null. Raw fault values 6/7
+ * are retained rather than rejected; no semantic validation or lock occurs.
+ */
 void motion_unpack_report (uint16_t word, motion_report_t * p_report);
 
 /* Type 7 is not a command: what the builders return for invalid input */
@@ -102,16 +151,81 @@ void motion_unpack_report (uint16_t word, motion_report_t * p_report);
  * unknown manoeuvre) gives MOTION_CMD_INVALID_WORD, which
  * motion_request_packed() rejects with MOTION_ERR_BAD_ARG: never a
  * clipped or different command. */
+/** @brief Build a quantized two-wheel velocity command.
+ * @param left_mps Signed left wheel speed in metres per second.
+ * @param right_mps Signed right wheel speed in metres per second.
+ * @return Packed command, or MOTION_CMD_INVALID_WORD for non-finite input or
+ * a magnitude whose computed abs(value)/0.002 + 0.5 is not below 512.
+ * @note Decoded speeds span -1.022..+1.022 m/s in 0.002 m/s steps. Acceptance
+ * uses the floating rounding expression, not a separate nominal-range clamp.
+ * Zero magnitude is canonical positive zero. This only builds a word; it does
+ * not submit a request, change motion state or reserve a command ID.
+ */
 uint32_t motion_cmd_velocity (float32_t left_mps, float32_t right_mps);
+/** @brief Build a signed-distance drive command with positive speed.
+ * @param meters Signed distance in metres; negative requests backward travel.
+ * @param speed_mps Wheel-speed magnitude in metres per second.
+ * @return Packed command, or MOTION_CMD_INVALID_WORD unless both inputs are
+ * finite, distance rounds within 13 magnitude bits at 0.001 m per step, and
+ * speed rounds to 1..511 steps of 0.002 m/s without overflowing that field.
+ * @note Zero distance is representable. Positive sub-step speed that rounds to
+ * one step is accepted; zero, negative and rounded-zero speeds are rejected.
+ * The word encodes a magnitude up to 8.191 m; it does not start the drive or
+ * validate the motion controller's current state, calibration or deadline.
+ */
 uint32_t motion_cmd_drive (float32_t meters, float32_t speed_mps);
+/** @brief Build a signed-angle turn command with positive wheel speed.
+ * @param degrees Angle in degrees; positive turns left, negative turns right.
+ * @param speed_mps Wheel-speed magnitude in metres per second.
+ * @return Packed command, or MOTION_CMD_INVALID_WORD unless both inputs are
+ * finite, angle rounds within 9 magnitude bits at one degree per step, and
+ * speed rounds to 1..511 steps of 0.002 m/s without overflowing that field.
+ * @note Zero angle and positive sub-step speed rounding to one step are
+ * representable. The encoded angle magnitude is at most 511 degrees; it is not
+ * wrapped like status heading. This builds a word without submitting motion.
+ */
 uint32_t motion_cmd_turn (float32_t degrees, float32_t speed_mps);
+/** @brief Build a command for one of the four named manoeuvres.
+ * @param value_m MANOEUVRE_LEFT, RIGHT, STRAIGHT or U_TURN.
+ * @return Packed command, or MOTION_CMD_INVALID_WORD for an out-of-range code.
+ * @note The unsigned range check also rejects a negative code. No manoeuvre
+ * is started and no motion-controller state is read.
+ */
 uint32_t motion_cmd_manoeuvre (manoeuvre_t value_m);
+/** @brief Build a STOP command with no payload.
+ * @return The canonical STOP word with all non-type bits clear.
+ * @note Building the word does not brake hardware; the receiver executes it.
+ */
 uint32_t motion_cmd_stop (void);
+/** @brief Build a cancellation word for an eight-bit command ID.
+ * @param command_id ID copied verbatim, including zero.
+ * @return Packed CANCEL word; no ID is rejected by the builder.
+ * @note The eventual receiver decides whether the ID names an active command;
+ * this function neither cancels a command nor consumes its report.
+ */
 uint32_t motion_cmd_cancel (uint8_t command_id);
+/** @brief Build a RESET command with no payload.
+ * @return The canonical RESET word with all non-type bits clear.
+ * @note Building the word does not clear faults; the receiver decides
+ * readiness.
+ */
 uint32_t motion_cmd_reset (void);
 
 /* False if the type is unknown, any bit outside the type's fields is set,
  * or a drive / turn has speed 0 */
+/** @brief Validate the command envelope and decode its payload.
+ * @param word Raw command word, including malformed input.
+ * @param p_cmd Writable caller-owned output; null is rejected.
+ * @return False for null output, type 7, nonzero unused bits, or a drive/turn
+ * with zero encoded speed. Failure leaves all output bytes unchanged.
+ * True means the representation is valid, not that motion will accept it.
+ * @post On success, initializes every member, then decodes the selected
+ * payload. Unused numeric members are zero, manoeuvre defaults to STRAIGHT,
+ * and command_id defaults to zero. Raw sign-magnitude negative zero is
+ * retained.
+ * @note No command submission, locking, calibration or controller-state check
+ * occurs. The caller owns output access and handles the receiver's result.
+ */
 bool motion_unpack_cmd (uint32_t word, motion_cmd_t * p_cmd);
 
 #endif /* BUDDY2_MOTION_PACK_H */
