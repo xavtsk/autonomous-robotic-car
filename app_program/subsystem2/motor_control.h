@@ -11,6 +11,7 @@
 #ifndef BUDDY2_MOTOR_CONTROL_H
 #define BUDDY2_MOTOR_CONTROL_H
 
+#include "../app_types.h"
 #include <stdbool.h>
 #include "wheel_encoder.h" /* wheel_id_t */
 
@@ -18,12 +19,12 @@
 void motor_control_init (bool b_m1_inverted, bool b_m2_inverted);
 
 /* duty: -1.0 (full backward) .. 0.0 (brake) .. +1.0 (full forward) */
-void motor_control_set (wheel_id_t wheel, float duty);
+void motor_control_set (wheel_id_t wheel, float32_t duty);
 
 /* Safe output state: both driver inputs low (brake) on both motors */
 void motor_control_brake_all (void);
 
 /* Last duty sent to a motor (after inversion is undone), for diagnostics */
-float motor_control_duty (wheel_id_t wheel);
+float32_t motor_control_duty (wheel_id_t wheel);
 
 #endif /* BUDDY2_MOTOR_CONTROL_H */

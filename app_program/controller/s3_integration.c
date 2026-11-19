@@ -1,6 +1,7 @@
 /* Opt-in runtime. One sampling owner serialises all navigation/control calls.
  */
 #include "s3_integration.h"
+#include "../app_types.h"
 #include "vehicle_controller.h"
 #include "integration_codec.h"
 #include "../diagnostics/robot_diagnostics.h"
@@ -482,13 +483,13 @@ static void reset_completed (void)
     }
 }
 #if APP_IR_DEBUG
-static bool debug_scaled (float value, float scale, int32_t limit,
+static bool debug_scaled (float32_t value, float32_t scale, int32_t limit,
                           int32_t * p_out)
 {
-    const float value_v = value * scale;
+    const float32_t value_v = value * scale;
     /* Ordered comparisons also reject NaN/infinity, without newlib headers
      * (whose size_t conflicts with this kernel's freestanding types). */
-    if (!(value_v >= -(float)limit && value_v <= (float)limit))
+    if (!(value_v >= -(float32_t)limit && value_v <= (float32_t)limit))
     {
         return false;
     }
@@ -500,8 +501,8 @@ static bool debug_scaled (float value, float scale, int32_t limit,
  * The sampling owner alone uses the builder. A failed conversion leaves its
  * target field untouched, preserving the original short-circuit sequence. */
 static bool debug_builder_scaled (control_debug_builder_t * p_builder,
-                                  control_debug_field_t field, float value,
-                                  float scale, int32_t limit)
+                                  control_debug_field_t field, float32_t value,
+                                  float32_t scale, int32_t limit)
 {
     int32_t converted = 0;
     if (!debug_scaled(value, scale, limit, &converted))
@@ -1326,12 +1327,12 @@ static void cleanup (void)
  * itself is untouched. Tune on the car; set to 0 to disable. */
 #define S3_MIN_WHEEL_MPS (0.01f)
 
-static float floor_wheel (float mps)
+static float32_t floor_wheel (float32_t mps)
 {
     return ((mps > 0.0f) && (mps < S3_MIN_WHEEL_MPS)) ? S3_MIN_WHEEL_MPS : mps;
 }
 
-static motion_result_t velocity_with_floor (float left_mps, float right_mps)
+static motion_result_t velocity_with_floor (float32_t left_mps, float32_t right_mps)
 {
     return motion_request_velocity(floor_wheel(left_mps),
                                    floor_wheel(right_mps));

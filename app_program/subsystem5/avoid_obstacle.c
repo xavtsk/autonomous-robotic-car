@@ -1,4 +1,5 @@
 #include "avoid_obstacle.h"
+#include "../app_types.h"
 
 static s5_action_t action (s5_action_kind_t kind, int value, unsigned speed)
 {
@@ -121,13 +122,13 @@ static bool diagonal_clear (const s5_avoidance_t * p_a, unsigned offset_mm)
 }
 
 /* Bearing of the obstacle centre from the wheel axle, degrees, + = left. */
-static double bearing_deg (const s5_profile_t * p_p)
+static float64_t bearing_deg (const s5_profile_t * p_p)
 {
-    double value_x, value_y, value_t, value_t2 = 0.0;
-    value_x = ((double)p_p->left_edge_mm + (double)p_p->right_edge_mm) /
+    float64_t value_x, value_y, value_t, value_t2 = 0.0;
+    value_x = ((float64_t)p_p->left_edge_mm + (float64_t)p_p->right_edge_mm) /
               2.0; /* + = left */
     value_y =
-        (double)p_p->closest_mm + (double)S5_SONAR_AXLE_MM; /* axle to face */
+        (float64_t)p_p->closest_mm + (float64_t)S5_SONAR_AXLE_MM; /* axle to face */
     if (value_y <= 0.0)
     {
         return 0.0;
@@ -145,7 +146,7 @@ static double bearing_deg (const s5_profile_t * p_p)
            57.29578;
 }
 
-static int round_clamp (double deg, int max)
+static int round_clamp (float64_t deg, int max)
 {
     int value_d = (int)(deg + (deg >= 0.0 ? 0.5 : -0.5));
     return value_d > max ? max : (value_d < -max ? -max : value_d);
@@ -178,7 +179,7 @@ int s5_aim_deg (
 
 int s5_aim_deg_bend (const s5_profile_t * p_p, int turn, bool * p_bend)
 {
-    double deg;
+    float64_t deg;
     *p_bend = turn >= S5_BEND_PCT || turn <= -S5_BEND_PCT;
     if (!*p_bend)
     {
@@ -201,7 +202,7 @@ int s5_aim_deg_bend (const s5_profile_t * p_p, int turn, bool * p_bend)
     {
         return round_clamp(deg, S5_AIM_MAX_DEG);
     }
-    return round_clamp(deg * (double)S5_BEND_AIM_PCT / 100.0,
+    return round_clamp(deg * (float64_t)S5_BEND_AIM_PCT / 100.0,
                        S5_BEND_AIM_MAX_DEG);
 }
 
@@ -454,9 +455,9 @@ s5_action_t s5_avoidance_step (s5_avoidance_t * p_a, const s5_input_t * p_in)
                 if (p_a->leg == 3U && s5_rel_get(p_a) > 0 &&
                     p_a->pass != S5_PASS_APPROACH)
                 {
-                    const double value_mm =
+                    const float64_t value_mm =
                         (p_in->centre_m - p_a->leg_start_m) * 1000.0 *
-                        (double)s5_rel_get(p_a) * 0.017453;
+                        (float64_t)s5_rel_get(p_a) * 0.017453;
                     if (value_mm > 0.0)
                     {
                         const unsigned sum =

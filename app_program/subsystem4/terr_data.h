@@ -1,5 +1,6 @@
 #ifndef BUDDY4_TERRAIN_MONITOR_H
 #define BUDDY4_TERRAIN_MONITOR_H
+#include "../app_types.h"
 #include "imu_calibration.h"
 #include "hump_detection.h"
 #include "events_motion.h"
@@ -27,8 +28,8 @@ typedef enum
 typedef struct
 {
     uint32_t timestamp_us;
-    float pitch_deg, roll_deg, turn_dps, peak_m;
-    float hump_height_m; /* current height on a hump in progress (0..0.5 m) */
+    float32_t pitch_deg, roll_deg, turn_dps, peak_m;
+    float32_t hump_height_m; /* current height on a hump in progress (0..0.5 m) */
     terrain_state_t state;
     terrain_safety_t safety;
     uint8_t flags;
@@ -37,7 +38,7 @@ typedef struct
 
 typedef struct
 {
-    double distance_m;
+    float64_t distance_m;
     uint32_t epoch;
     bool valid, stationary;
 } terrain_odometry_t;
@@ -47,14 +48,14 @@ typedef struct
     imu_calibration_t calibration;
     hump_detector_t hump;
     terrain_result_t result;
-    double previous_distance;
-    float filtered[3], heading, mag_offset[3], mag_scale[3];
+    float64_t previous_distance;
+    float32_t filtered[3], heading, mag_offset[3], mag_scale[3];
     uint32_t previous_us, heading_us, epoch, safety_since_us;
     unsigned stable_count;
     terrain_state_t candidate;
     terrain_hump_geometry_t hump_geometry;
     terrain_safety_t safety;
-    float wheel_track_m;
+    float32_t wheel_track_m;
     bool seen, odometry_seen, heading_seen, magnetic_calibrated,
         safety_tracking;
 #if APP_IMU_DEBUG
@@ -68,15 +69,15 @@ void terrain_monitor_init (terrain_monitor_t * p_t);
  * Selecting a geometry clears run statistics and retains IMU calibration. */
 bool terrain_monitor_set_geometry (terrain_monitor_t * p_t,
                                    terrain_hump_geometry_t geometry,
-                                   float track_m);
+                                   float32_t track_m);
 /* New run clears peaks/history but retains calibration and an active safety
  * trip. Owner task only. */
 void terrain_monitor_reset_run (terrain_monitor_t * p_t);
 /* Vehicle-axis hard-iron offsets and diagonal soft-iron scale. Must come from
  * measured calibration; calling this asserts calibration was performed. */
 bool terrain_monitor_set_mag_cal (terrain_monitor_t * p_t,
-                                  const float p_offset[3],
-                                  const float p_scale[3]);
+                                  const float32_t p_offset[3],
+                                  const float32_t p_scale[3]);
 void terrain_monitor_process (terrain_monitor_t * p_t, const imu_sample_t * p_s,
                               const terrain_odometry_t * p_odo);
 /* Explicit bit packing, never C struct memcpy. See DATA_FORMAT.md. */

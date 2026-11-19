@@ -15,6 +15,7 @@
 #include <stddef.h>
 
 #include "ctrl_motion.h"
+#include "../app_types.h"
 #include "estimate_motion.h"
 #include "motion_pack.h"
 #include "motor_control.h"
@@ -87,44 +88,44 @@ typedef struct
 static wheel_ctrl_t g_wheel[WHEEL_COUNT];
 static ctrl_t g_ctl = {(uint32_t)MOTION_IDLE, 0U, 0U, 0U, 0U, 0U, 0U};
 static uint16_t g_still_ms = 0U; /* 0 ... STILL_MS_MAX              */
-static float g_max_speed_mps = 1.0f;
-static float g_lead_drive_m = 0.0f;
-static float g_lead_turn_m = 0.0f;
+static float32_t g_max_speed_mps = 1.0f;
+static float32_t g_lead_drive_m = 0.0f;
+static float32_t g_lead_turn_m = 0.0f;
 
 /* Reports go to the sink (the queue in motion.c) */
 static motion_report_sink_t g_p_sink = NULL;
 
 /* VELOCITY CONTROL */
-static float g_vel_target[WHEEL_COUNT];
+static float32_t g_vel_target[WHEEL_COUNT];
 static uint32_t g_vel_stamp_us = 0U;
 
 /* DRIVE / TURN */
 static wheel_count_t g_mv_start[WHEEL_COUNT];
-static float g_mv_dist_m = 0.0f;
-static float g_mv_speed_mps = 0.0f;
+static float32_t g_mv_dist_m = 0.0f;
+static float32_t g_mv_speed_mps = 0.0f;
 static uint32_t g_mv_deadline_us = 0U;
 
 /* ---- Helpers ------------------------------------------------------------ */
 
-static float abs_f (float value_x)
+static float32_t abs_f (float32_t value_x)
 {
     return (value_x < 0.0f) ? -value_x : value_x;
 }
 
-static float min_f (float value_a, float value_b)
+static float32_t min_f (float32_t value_a, float32_t value_b)
 {
     return (value_a < value_b) ? value_a : value_b;
 }
 
-static float max_f (float value_a, float value_b)
+static float32_t max_f (float32_t value_a, float32_t value_b)
 {
     return (value_a > value_b) ? value_a : value_b;
 }
 
 /* Square root by Newton's method (the build does not link libm) */
-static float sqrt_f (float value_x)
+static float32_t sqrt_f (float32_t value_x)
 {
-    float guess;
+    float32_t guess;
     uint32_t value_i;
 
     if (value_x <= 0.0f)
@@ -174,7 +175,7 @@ static bool is_active (motion_state_t value_s)
 }
 
 /* +1 forward, -1 backward for the running DRIVE / TURN */
-static float mv_sign (wheel_id_t wheel)
+static float32_t mv_sign (wheel_id_t wheel)
 {
     return (((g_ctl.mv_back >> (uint32_t)wheel) & 1U) != 0U) ? -1.0f : 1.0f;
 }
@@ -249,9 +250,9 @@ static void clear_checks (void)
     }
 }
 
-static void wheel_drive (wheel_id_t wheel, float target_mps, float dt_s)
+static void wheel_drive (wheel_id_t wheel, float32_t target_mps, float32_t dt_s)
 {
-    float duty = speed_pid_update(&g_wheel[wheel].pid, target_mps,
+    float32_t duty = speed_pid_update(&g_wheel[wheel].pid, target_mps,
                                   motion_estimation_wheel_speed(wheel),
                                   motion_estimation_wheel_accel(wheel), dt_s);
 
@@ -263,8 +264,8 @@ static motion_fault_t wheel_check (wheel_id_t wheel, uint32_t dt_ms)
 {
     wheel_ctrl_t * p_w = &g_wheel[wheel];
     uint32_t count = wheel_encoder_bits(wheel);
-    float cmd = speed_pid_setpoint(&p_w->pid);
-    float speed = motion_estimation_wheel_speed(wheel);
+    float32_t cmd = speed_pid_setpoint(&p_w->pid);
+    float32_t speed = motion_estimation_wheel_speed(wheel);
 
     /* Stall / no progress: driven, but the encoder has not moved on by at
      * least STALL_MIN_PROGRESS counts (wheel jammed, encoder unplugged, or
@@ -334,24 +335,24 @@ static void track_glitches (void)
 }
 
 /* Distance moved along each wheel's commanded direction */
-static float move_wheel_progress (wheel_id_t wheel)
+static float32_t move_wheel_progress (wheel_id_t wheel)
 {
     return mv_sign(wheel) *
-           (float)wheel_encoder_delta(wheel_encoder_bits(wheel),
+           (float32_t)wheel_encoder_delta(wheel_encoder_bits(wheel),
                                       g_mv_start[wheel].bits) *
            motion_estimation_scale();
 }
 
 /* DRIVE / TURN step. Returns true when the brake point is reached. */
-static bool move_step (float dt_s)
+static bool move_step (float32_t dt_s)
 {
-    float lead = (g_ctl.b_mv_turn != 0U) ? g_lead_turn_m : g_lead_drive_m;
-    float value_dl = move_wheel_progress(WHEEL_LEFT);
-    float value_dr = move_wheel_progress(WHEEL_RIGHT);
-    float to_brake = g_mv_dist_m - lead - (0.5f * (value_dl + value_dr));
-    float crawl = min_f(g_mv_speed_mps, MIN_SPEED_MPS);
-    float value_v;
-    float corr;
+    float32_t lead = (g_ctl.b_mv_turn != 0U) ? g_lead_turn_m : g_lead_drive_m;
+    float32_t value_dl = move_wheel_progress(WHEEL_LEFT);
+    float32_t value_dr = move_wheel_progress(WHEEL_RIGHT);
+    float32_t to_brake = g_mv_dist_m - lead - (0.5f * (value_dl + value_dr));
+    float32_t crawl = min_f(g_mv_speed_mps, MIN_SPEED_MPS);
+    float32_t value_v;
+    float32_t corr;
 
     if (to_brake <= 0.0f)
     {
@@ -378,11 +379,11 @@ static bool move_step (float dt_s)
 
 /* ---- Interface ----------------------------------------------------------- */
 
-void motion_controller_init (float max_speed_mps, float stop_lead_drive_m,
-                             float stop_lead_turn_m,
+void motion_controller_init (float32_t max_speed_mps, float32_t stop_lead_drive_m,
+                             float32_t stop_lead_turn_m,
                              motion_report_sink_t p_sink)
 {
-    float kff;
+    float32_t kff;
     uint32_t value_i;
 
     g_max_speed_mps = (max_speed_mps > 0.0f) ? max_speed_mps : 1.0f;
@@ -406,7 +407,7 @@ void motion_controller_init (float max_speed_mps, float stop_lead_drive_m,
     outputs_safe();
 }
 
-void motion_controller_step (float dt_s, uint32_t now_us)
+void motion_controller_step (float32_t dt_s, uint32_t now_us)
 {
     uint32_t dt_ms = (uint32_t)((dt_s * 1000.0f) + 0.5f);
     bool b_done = false;
@@ -491,10 +492,10 @@ void motion_controller_make_safe (void)
     }
 }
 
-motion_result_t motion_controller_set_velocity (float left_mps, float right_mps,
+motion_result_t motion_controller_set_velocity (float32_t left_mps, float32_t right_mps,
                                                 uint32_t now_us)
 {
-    float cap = motion_controller_speed_cap();
+    float32_t cap = motion_controller_speed_cap();
 
     if (state() == MOTION_FAULT)
     {
@@ -522,11 +523,11 @@ motion_result_t motion_controller_set_velocity (float left_mps, float right_mps,
 motion_result_t motion_controller_request_move (motion_state_t kind,
                                                 int32_t sign_left,
                                                 int32_t sign_right,
-                                                float dist_m, float speed_mps,
+                                                float32_t dist_m, float32_t speed_mps,
                                                 uint32_t now_us)
 {
-    float speed = min_f(speed_mps, motion_controller_speed_cap());
-    float allowed_s = ((dist_m / speed) * TIMEOUT_FACTOR) + TIMEOUT_MARGIN_S;
+    float32_t speed = min_f(speed_mps, motion_controller_speed_cap());
+    float32_t allowed_s = ((dist_m / speed) * TIMEOUT_FACTOR) + TIMEOUT_MARGIN_S;
 
     if (state() == MOTION_FAULT)
     {
@@ -669,12 +670,12 @@ bool motion_controller_is_stopped (void)
            (g_ctl.b_brake_pending == 0U) && (g_still_ms >= STOPPED_STILL_MS);
 }
 
-float motion_controller_speed_cap (void)
+float32_t motion_controller_speed_cap (void)
 {
     return SPEED_LIMIT_FRACTION * g_max_speed_mps;
 }
 
-float motion_controller_setpoint (unsigned int wheel)
+float32_t motion_controller_setpoint (unsigned int wheel)
 {
     return wheel < (unsigned int)WHEEL_COUNT
                ? speed_pid_setpoint(&g_wheel[wheel].pid)

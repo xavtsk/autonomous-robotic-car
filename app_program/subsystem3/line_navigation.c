@@ -1,4 +1,5 @@
 #include "line_navigation.h"
+#include "../app_types.h"
 #include <math.h>
 
 s3_navigation_config_t s3_navigation_defaults (void)
@@ -262,7 +263,7 @@ static bool rearm_ready (s3_navigation_t * p_context,
 {
     const s3_processed_sensor_t * p_barcode =
         &p_output->sensor[S3_SENSOR_BARCODE];
-    double distance;
+    float64_t distance;
     bool clear = p_output->line.valid && p_output->line.present &&
                  !p_output->line.junction_candidate && p_barcode->valid &&
                  (p_barcode->surface == IR_SURFACE_WHITE) &&

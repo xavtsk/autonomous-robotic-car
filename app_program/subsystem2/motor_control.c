@@ -5,6 +5,7 @@
  */
 
 #include "motor_control.h"
+#include "../app_types.h"
 #include "../app.h"
 
 /* Pins (Week 6 Design Review, section 2): Robo Pico motor channels */
@@ -26,7 +27,7 @@ typedef struct
     uint32_t pin_a : 5; /* GPIO 0 ... 29                   */
     uint32_t pin_b : 5;
     uint32_t b_inverted : 1;
-    float duty; /* last duty, control precision    */
+    float32_t duty; /* last duty, control precision    */
 } motor_t;
 
 static motor_t g_motor[WHEEL_COUNT] = {{M1A, M1B, 0U, 0.0f},
@@ -66,11 +67,11 @@ void motor_control_init (bool b_m1_inverted, bool b_m2_inverted)
     motor_control_brake_all();
 }
 
-void motor_control_set (wheel_id_t wheel, float duty)
+void motor_control_set (wheel_id_t wheel, float32_t duty)
 {
     motor_t * p_motor = &g_motor[wheel];
-    float out;
-    float mag;
+    float32_t out;
+    float32_t mag;
     uint32_t level;
 
     if (duty > 1.0f)
@@ -85,7 +86,7 @@ void motor_control_set (wheel_id_t wheel, float duty)
 
     out = (p_motor->b_inverted != 0U) ? -duty : duty;
     mag = (out >= 0.0f) ? out : -out;
-    level = (uint32_t)(mag * (float)(PWM_WRAP + 1U));
+    level = (uint32_t)(mag * (float32_t)(PWM_WRAP + 1U));
     if (level > PWM_WRAP + 1U)
     {
         level = PWM_WRAP + 1U;
@@ -114,7 +115,7 @@ void motor_control_brake_all (void)
     motor_control_set(WHEEL_RIGHT, 0.0f);
 }
 
-float motor_control_duty (wheel_id_t wheel)
+float32_t motor_control_duty (wheel_id_t wheel)
 {
     return g_motor[wheel].duty;
 }

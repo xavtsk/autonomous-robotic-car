@@ -1,10 +1,11 @@
 #include "tilt_estimation.h"
+#include "../app_types.h"
 #include <math.h>
 #define DEG 57.295779513f
 
-bool tilt_estimation (const float p_a[3], float * p_pitch, float * p_roll)
+bool tilt_estimation (const float32_t p_a[3], float32_t * p_pitch, float32_t * p_roll)
 {
-    float value_n = p_a[0] * p_a[0] + p_a[1] * p_a[1] + p_a[2] * p_a[2];
+    float32_t value_n = p_a[0] * p_a[0] + p_a[1] * p_a[1] + p_a[2] * p_a[2];
     if (!isfinite(value_n) || value_n < 0.81f || value_n > 1.21f ||
         p_a[2] <= 0.0f)
     {
@@ -18,13 +19,13 @@ bool tilt_estimation (const float p_a[3], float * p_pitch, float * p_roll)
     return true;
 }
 
-bool tilt_heading (const float p_a[3], const float p_m[3], float * p_heading)
+bool tilt_heading (const float32_t p_a[3], const float32_t p_m[3], float32_t * p_heading)
 {
     /* Project vehicle forward and magnetic north onto the gravity-normal plane.
      * Heading increases anticlockwise, matching Buddy 2. */
-    float value_n = sqrtf(p_a[0] * p_a[0] + p_a[1] * p_a[1] + p_a[2] * p_a[2]);
-    float norm = p_m[0] * p_m[0] + p_m[1] * p_m[1] + p_m[2] * p_m[2];
-    float value_u[3], value_f[3], left[3], value_fn, value_x, value_y;
+    float32_t value_n = sqrtf(p_a[0] * p_a[0] + p_a[1] * p_a[1] + p_a[2] * p_a[2]);
+    float32_t norm = p_m[0] * p_m[0] + p_m[1] * p_m[1] + p_m[2] * p_m[2];
+    float32_t value_u[3], value_f[3], left[3], value_fn, value_x, value_y;
     unsigned value_i;
     if (!isfinite(value_n) || value_n < 0.9f || value_n > 1.1f ||
         !isfinite(norm) || norm < 0.01f || norm > 0.64f)
@@ -64,9 +65,9 @@ bool tilt_heading (const float p_a[3], const float p_m[3], float * p_heading)
     return true;
 }
 
-float tilt_angle_delta (float now, float previous)
+float32_t tilt_angle_delta (float32_t now, float32_t previous)
 {
-    float value_d = now - previous;
+    float32_t value_d = now - previous;
     if (value_d > 180.0f)
     {
         value_d -= 360.0f;

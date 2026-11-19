@@ -3,6 +3,7 @@
  * through the sampling owner, never modify this object concurrently. */
 #ifndef BUDDY3_LINE_NAVIGATION_H
 #define BUDDY3_LINE_NAVIGATION_H
+#include "../app_types.h"
 #include "ir_acquisition.h"
 #include "ir_calibration.h"
 #include "line_controller.h"
@@ -53,14 +54,14 @@ typedef enum
  * the same wrapping microsecond clock as the sensor frame. */
 typedef struct
 {
-    double centre_m;
+    float64_t centre_m;
     uint32_t timestamp_us, epoch;
     bool valid;
 } s3_odometry_sample_t;
 
 typedef struct
 {
-    double start_m, end_m;
+    float64_t start_m, end_m;
     uint32_t epoch;
     bool start_valid, end_valid;
 } s3_capture_distance_t;
@@ -84,7 +85,7 @@ typedef struct
     s3_nav_action_t map[26];
     uint32_t max_sample_age_us;
     uint32_t rearm_stable_us, fault_clear_us;
-    double rearm_distance_m;
+    float64_t rearm_distance_m;
 } s3_navigation_config_t;
 
 typedef struct
@@ -142,7 +143,7 @@ typedef struct
     uint8_t rearm_stable : 1;
     uint8_t barcode_held
         : 3; /* live failure held while the recorder finishes */
-    double rearm_anchor_m;
+    float64_t rearm_anchor_m;
     uint32_t rearm_epoch, rearm_since_us;
     s3_capture_distance_t capture_distance;
 } s3_navigation_t;

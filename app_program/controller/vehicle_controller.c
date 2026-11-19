@@ -1,6 +1,7 @@
 /* Team facade/telemetry adapter. The upstream s3 integration task is the ONE
  * navigation, motion-request and report-consumer owner. No second task here. */
 #include "vehicle_controller.h"
+#include "../app_types.h"
 #include "s3_integration.h"
 #include "terr_link.h"
 #include "run_timing.h"
@@ -33,7 +34,7 @@ static struct
 {
     unsigned running : 1;
     unsigned divider : 6;
-    float start_distance_m, start_heading_deg;
+    float32_t start_distance_m, start_heading_deg;
 } g_pose;
 
 static buddy1_robot_state_t g_last_state;
@@ -307,7 +308,7 @@ static void motion_report (const s3_integration_status_t * p_status,
                            const motion_status_t * p_m, bool available)
 {
     const uint32_t now = p_status->navigation.timestamp_us;
-    float left = 0.0f, right = 0.0f;
+    float32_t left = 0.0f, right = 0.0f;
     bool usable = available && p_m->b_valid && !p_m->b_busy;
     if (usable)
     {
@@ -350,7 +351,7 @@ static void motion_report (const s3_integration_status_t * p_status,
     }
 }
 
-static int32_t round_to_int (float value_x)
+static int32_t round_to_int (float32_t value_x)
 {
     return (int32_t)(value_x >= 0.0f ? value_x + 0.5f : value_x - 0.5f);
 }

@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "motion_pack.h"
+#include "../app_types.h"
 
 /* Field widths */
 #define STATE_BITS (3U)
@@ -49,7 +50,7 @@
 #define HEADING_TURN_DEG (360)
 #define HEADING_LIMIT_DEG (1000000.0f) /* keeps the int cast safe */
 
-static float abs_f (float value_x)
+static float32_t abs_f (float32_t value_x)
 {
     return (value_x < 0.0f) ? -value_x : value_x;
 }
@@ -69,7 +70,7 @@ static uint64_t field_put (uint32_t value, uint32_t lsb, uint32_t bits)
     return (uint64_t)(value & mask_of(bits)) << lsb;
 }
 
-static bool is_finite (float value_x)
+static bool is_finite (float32_t value_x)
 {
     return (value_x == value_x) &&
            ((value_x - value_x) == 0.0f); /* rejects NaN and infinity */
@@ -77,16 +78,16 @@ static bool is_finite (float value_x)
 
 /* Rounded, saturated magnitude in steps; NaN or negative gives 0 (no cast
  * of a negative float to unsigned) */
-static uint32_t to_steps (float magnitude, float step, uint32_t bits)
+static uint32_t to_steps (float32_t magnitude, float32_t step, uint32_t bits)
 {
     uint32_t max_steps = mask_of(bits);
-    float steps = (magnitude / step) + 0.5f;
+    float32_t steps = (magnitude / step) + 0.5f;
 
     if (!(steps >= 1.0f))
     {
         return 0U;
     }
-    if (steps >= (float)max_steps)
+    if (steps >= (float32_t)max_steps)
     {
         return max_steps;
     }
@@ -95,7 +96,7 @@ static uint32_t to_steps (float magnitude, float step, uint32_t bits)
 }
 
 /* Direction bit + magnitude; never a "negative zero" */
-static uint32_t sm_pack (float value, float step, uint32_t mag_bits)
+static uint32_t sm_pack (float32_t value, float32_t step, uint32_t mag_bits)
 {
     uint32_t mag = to_steps(abs_f(value), step, mag_bits);
     uint32_t dir = ((value < 0.0f) && (mag != 0U)) ? 1U : 0U;
@@ -103,14 +104,14 @@ static uint32_t sm_pack (float value, float step, uint32_t mag_bits)
     return (dir << mag_bits) | mag;
 }
 
-static float sm_unpack (uint32_t field, float step, uint32_t mag_bits)
+static float32_t sm_unpack (uint32_t field, float32_t step, uint32_t mag_bits)
 {
-    float value = (float)(field & mask_of(mag_bits)) * step;
+    float32_t value = (float32_t)(field & mask_of(mag_bits)) * step;
 
     return (((field >> mag_bits) & 1U) != 0U) ? -value : value;
 }
 
-static uint32_t heading_pack (float degrees)
+static uint32_t heading_pack (float32_t degrees)
 {
     int32_t whole;
 
@@ -209,7 +210,7 @@ void motion_unpack_status (uint64_t word, motion_status_t * p_status)
         sm_unpack(field_get(word, ST_DIST_LSB, DIST_BITS),
                   MOTION_PACK_DIST_STEP_M, MOTION_PACK_DIST_MAG_BITS);
     p_status->heading_deg =
-        (float)field_get(word, ST_HEADING_LSB, MOTION_PACK_HEADING_BITS);
+        (float32_t)field_get(word, ST_HEADING_LSB, MOTION_PACK_HEADING_BITS);
     p_status->b_stopped = (field_get(word, ST_STOPPED_BIT, 1U) != 0U);
     p_status->b_busy = (field_get(word, ST_BUSY_BIT, 1U) != 0U);
     p_status->b_valid = (field_get(word, ST_VALID_BIT, 1U) != 0U);
@@ -262,21 +263,21 @@ static uint32_t cmd_type (motion_cmd_type_t type)
 }
 
 /* Finite and within the field after rounding (no silent saturation) */
-static bool fits (float value, float step, uint32_t mag_bits)
+static bool fits (float32_t value, float32_t step, uint32_t mag_bits)
 {
     return is_finite(value) &&
-           (((abs_f(value) / step) + 0.5f) < (float)(mask_of(mag_bits) + 1U));
+           (((abs_f(value) / step) + 0.5f) < (float32_t)(mask_of(mag_bits) + 1U));
 }
 
 /* A drive / turn speed: finite, at least one step, within the field */
-static bool move_speed_ok (float speed_mps)
+static bool move_speed_ok (float32_t speed_mps)
 {
     return fits(speed_mps, MOTION_PACK_SPEED_STEP_MPS, MOVE_SPEED_BITS) &&
            (to_steps(speed_mps, MOTION_PACK_SPEED_STEP_MPS, MOVE_SPEED_BITS) !=
             0U);
 }
 
-uint32_t motion_cmd_velocity (float left_mps, float right_mps)
+uint32_t motion_cmd_velocity (float32_t left_mps, float32_t right_mps)
 {
     uint32_t left = sm_pack(left_mps, MOTION_PACK_SPEED_STEP_MPS,
                             MOTION_PACK_SPEED_MAG_BITS);
@@ -296,7 +297,7 @@ uint32_t motion_cmd_velocity (float left_mps, float right_mps)
            (uint32_t)field_put(right, CMD_ARG_LSB + SPEED_BITS, SPEED_BITS);
 }
 
-uint32_t motion_cmd_drive (float meters, float speed_mps)
+uint32_t motion_cmd_drive (float32_t meters, float32_t speed_mps)
 {
     uint32_t dist =
         sm_pack(meters, MOTION_PACK_DIST_STEP_M, MOTION_PACK_DRIVE_MAG_BITS);
@@ -315,7 +316,7 @@ uint32_t motion_cmd_drive (float meters, float speed_mps)
                                MOVE_SPEED_BITS);
 }
 
-uint32_t motion_cmd_turn (float degrees, float speed_mps)
+uint32_t motion_cmd_turn (float32_t degrees, float32_t speed_mps)
 {
     /* Positive = left; a negative angle (right) sets the direction bit */
     uint32_t angle = sm_pack(degrees, MOTION_PACK_ANGLE_STEP_DEG,
@@ -437,7 +438,7 @@ bool motion_unpack_cmd (uint32_t word, motion_cmd_t * p_cmd)
             sm_unpack(field_get(word, CMD_ARG_LSB, DRIVE_BITS),
                       MOTION_PACK_DIST_STEP_M, MOTION_PACK_DRIVE_MAG_BITS);
         p_cmd->speed_mps =
-            (float)field_get(word, CMD_ARG_LSB + DRIVE_BITS, MOVE_SPEED_BITS) *
+            (float32_t)field_get(word, CMD_ARG_LSB + DRIVE_BITS, MOVE_SPEED_BITS) *
             MOTION_PACK_SPEED_STEP_MPS;
         break;
 
@@ -446,7 +447,7 @@ bool motion_unpack_cmd (uint32_t word, motion_cmd_t * p_cmd)
             sm_unpack(field_get(word, CMD_ARG_LSB, ANGLE_BITS),
                       MOTION_PACK_ANGLE_STEP_DEG, MOTION_PACK_ANGLE_MAG_BITS);
         p_cmd->speed_mps =
-            (float)field_get(word, CMD_ARG_LSB + ANGLE_BITS, MOVE_SPEED_BITS) *
+            (float32_t)field_get(word, CMD_ARG_LSB + ANGLE_BITS, MOVE_SPEED_BITS) *
             MOTION_PACK_SPEED_STEP_MPS;
         break;
 

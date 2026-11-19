@@ -1,5 +1,6 @@
 #ifndef BUDDY4_IMU_SENSOR_H
 #define BUDDY4_IMU_SENSOR_H
+#include "../app_types.h"
 #include <stdbool.h>
 #include <stdint.h>
 #define BUDDY4_I2C_UNIT 1
@@ -10,7 +11,7 @@
  * vehicle = {-sensor Y, sensor X, sensor Z}. No gyro is present. */
 typedef struct
 {
-    float accel_g[3], mag_gauss[3];
+    float32_t accel_g[3], mag_gauss[3];
     uint32_t timestamp_us;
     bool valid, mag_valid, overrun;
 } imu_sample_t;

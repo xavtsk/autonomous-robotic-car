@@ -19,6 +19,7 @@
 #ifndef BUDDY2_MOTION_PACK_H
 #define BUDDY2_MOTION_PACK_H
 
+#include "../app_types.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include "motion.h"
@@ -67,11 +68,11 @@ typedef enum
 typedef struct
 {
     motion_cmd_type_t type;
-    float left_mps;        /* VELOCITY                          */
-    float right_mps;       /* VELOCITY                          */
-    float meters;          /* DRIVE, negative = backward        */
-    float degrees;         /* TURN, positive = left             */
-    float speed_mps;       /* DRIVE, TURN                       */
+    float32_t left_mps;        /* VELOCITY                          */
+    float32_t right_mps;       /* VELOCITY                          */
+    float32_t meters;          /* DRIVE, negative = backward        */
+    float32_t degrees;         /* TURN, positive = left             */
+    float32_t speed_mps;       /* DRIVE, TURN                       */
     manoeuvre_t manoeuvre; /* MANOEUVRE                         */
     uint8_t command_id;    /* CANCEL                            */
 } motion_cmd_t;
@@ -97,9 +98,9 @@ void motion_unpack_report (uint16_t word, motion_report_t * p_report);
  * unknown manoeuvre) gives MOTION_CMD_INVALID_WORD, which
  * motion_request_packed() rejects with MOTION_ERR_BAD_ARG: never a
  * clipped or different command. */
-uint32_t motion_cmd_velocity (float left_mps, float right_mps);
-uint32_t motion_cmd_drive (float meters, float speed_mps);
-uint32_t motion_cmd_turn (float degrees, float speed_mps);
+uint32_t motion_cmd_velocity (float32_t left_mps, float32_t right_mps);
+uint32_t motion_cmd_drive (float32_t meters, float32_t speed_mps);
+uint32_t motion_cmd_turn (float32_t degrees, float32_t speed_mps);
 uint32_t motion_cmd_manoeuvre (manoeuvre_t value_m);
 uint32_t motion_cmd_stop (void);
 uint32_t motion_cmd_cancel (uint8_t command_id);

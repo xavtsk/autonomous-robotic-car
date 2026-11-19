@@ -1,5 +1,6 @@
 #ifndef S3_DRIVE_H
 #define S3_DRIVE_H
+#include "../app_types.h"
 #include "../subsystem2/motion.h"
 #include "../subsystem3/line_navigation.h"
 #include "../subsystem5/s5_config.h"
@@ -49,7 +50,7 @@ typedef enum
  * unchanged. */
 typedef struct
 {
-    motion_result_t (*velocity)(float left, float right);
+    motion_result_t (*velocity)(float32_t left, float32_t right);
     motion_result_t (*manoeuvre)(manoeuvre_t action);
     void (*stop)(void);
     bool (*report)(motion_report_t * p_out);
@@ -70,11 +71,11 @@ typedef struct
      * from where the junction was detected, so the pivot (axle centre) is
      * over the crossing before the on-the-spot turn. Set to the sensor-to-axle
      * distance + ~5 mm. 0 = turn where the car stopped (original). */
-    float turn_advance_m;
-    float advance_mps;
+    float32_t turn_advance_m;
+    float32_t advance_mps;
     /* Drive a distance (Buddy 2 motion_request_drive); required only when
      * turn_advance_m > 0. */
-    motion_result_t (*drive)(float meters, float speed_mps);
+    motion_result_t (*drive)(float32_t meters, float32_t speed_mps);
     uint32_t pending_wait_us; /* barcode -> junction limit (default 5 s) */
     /* After LEFT/RIGHT/U-TURN: a front sensor must have touched the tape at
      * most this long before the turn finished, else the new line was not
@@ -86,9 +87,9 @@ typedef struct
      * sensor touches the tape; not found -> halt LINE_LOST. Keep it below
      * 45 deg so the sweep cannot reach a neighbouring arm of the crossing.
      * 0 = no search (halt at once). Needs turn_line_window_us. */
-    float search_deg;
-    float search_mps; /* each wheel's speed while sweeping */
-    float track_m;    /* wheel centre-to-centre: converts angle to time */
+    float32_t search_deg;
+    float32_t search_mps; /* each wheel's speed while sweeping */
+    float32_t track_m;    /* wheel centre-to-centre: converts angle to time */
 } s3_drive_options_t;
 
 s3_drive_options_t s3_drive_default_options (void);
@@ -110,7 +111,7 @@ typedef struct
     bool configured, waiting_stop;
     unsigned reset_result : 2;
     s3_drive_options_t options;
-    double junction_m;       /* odometry when the junction was detected */
+    float64_t junction_m;       /* odometry when the junction was detected */
     uint32_t touch_us;       /* last time a front sensor touched the tape */
     s3_nav_action_t turn;    /* manoeuvre in progress */
     bool advancing, touched; /* advance leg running; touch_us is valid */

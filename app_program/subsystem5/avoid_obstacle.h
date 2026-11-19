@@ -1,5 +1,6 @@
 #ifndef BUDDY5_OBSTACLE_AVOIDANCE_H
 #define BUDDY5_OBSTACLE_AVOIDANCE_H
+#include "../app_types.h"
 #include "avoidance_planner.h"
 #include "line_recovery.h"
 #include "s5_codec.h"
@@ -60,7 +61,7 @@ typedef struct
 typedef struct
 {
     uint32_t now_us;
-    double centre_m;
+    float64_t centre_m;
     bool stopped, motion_done, healthy, tape, junction, line_ready;
     int8_t turn_pct; /* line follower's turning just before the stop, %, + =
                         left, -100..100 */
@@ -93,7 +94,7 @@ typedef struct
     unsigned peek_lat_mm
         : 12; /* leg 3: distance from the original line, last side peek, mm */
     uint32_t phase_us, started_us;
-    double leg_start_m;
+    float64_t leg_start_m;
 } s5_avoidance_t;
 
 /** Read the relative heading in degrees, positive toward the bypass side. */

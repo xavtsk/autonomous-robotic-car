@@ -1,4 +1,5 @@
 #include "robot_diagnostics.h"
+#include "../app_types.h"
 
 #if APP_DIAGNOSTICS
 #include "../subsystem2/codec_motion.h"
@@ -114,9 +115,9 @@ void robot_diagnostics_record (unsigned source, uint32_t started_us,
     (void)tk_unl_mtx(g_diagnostics_mutex);
 }
 
-static bool estimator_mms (float meters_per_second, int32_t * out)
+static bool estimator_mms (float32_t meters_per_second, int32_t * out)
 {
-    float scaled = meters_per_second * 1000.0f;
+    float32_t scaled = meters_per_second * 1000.0f;
     /* Check before conversion: NaN, infinity and out-of-int32 estimates must
      * not trigger undefined behaviour. Numeric validity is not calibration. */
     if (scaled != scaled || scaled >= 2147483648.0f || scaled < -2147483648.0f)

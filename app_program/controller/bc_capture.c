@@ -1,4 +1,5 @@
 #include "bc_capture.h"
+#include "../app_types.h"
 #include <math.h>
 
 #define BCAP_GAP_FLAG_US (30000U)
@@ -59,7 +60,7 @@ static bcap_sample_t make_sample (bcap_t * p_c, const bcap_input_t * p_in)
     return value_s;
 }
 
-static int64_t position_qmm (double metres)
+static int64_t position_qmm (float64_t metres)
 {
     /* One soft-float conversion per arriving sample. In particular, copying
      * the 300-sample history at a 200 Hz trigger must not repeat that work.
@@ -71,7 +72,7 @@ static int64_t position_qmm (double metres)
     {
         return BCAP_POSITION_INVALID;
     }
-    const double units = metres * 256000.0;
+    const float64_t units = metres * 256000.0;
     if (units >= 0x1p63)
     {
         return INT64_MAX;

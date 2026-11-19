@@ -16,6 +16,7 @@
  */
 
 #include "buddy2_test.h"
+#include "../app_types.h"
 #include "motion.h"
 #include "motion_pack.h"
 
@@ -50,13 +51,13 @@ static void skip (const char * p_id, const char * p_why)
     tm_printf((UB *)"[TEST] %s SKIP  %s\n", p_id, p_why);
 }
 
-static float abs_f (float x)
+static float32_t abs_f (float32_t x)
 {
     return (x < 0.0f) ? -x : x;
 }
 
 /* True when a packed value came back within half a step */
-static bool near_f (float a, float b, float step)
+static bool near_f (float32_t a, float32_t b, float32_t step)
 {
     return abs_f(a - b) <= ((0.5f * step) + 0.0001f);
 }
@@ -88,7 +89,7 @@ static const char * bool_text (bool b_value)
 }
 
 /* Print a speed as a C float literal with 3 decimals, e.g. (0.312f) */
-static void print_mps (const char * p_name, float mps)
+static void print_mps (const char * p_name, float32_t mps)
 {
     int32_t mm = (int32_t)((mps * 1000.0f) + 0.5f);
 
@@ -168,8 +169,8 @@ static void calibrate (void)
 /* S2-U01..U22; see the file header */
 static void run_unit_tests (void)
 {
-    volatile float zero = 0.0f;
-    float not_a_number = zero / zero;
+    volatile float32_t zero = 0.0f;
+    float32_t not_a_number = zero / zero;
     int32_t l0;
     int32_t r0;
     bool b_ok;
@@ -417,8 +418,8 @@ static void run_unit_tests (void)
     /* ---- Moves (robot drives) ------------------------------------------ */
 #if S2_TEST_MOVE
     {
-        float d0 = robot_distance_m();
-        float h0;
+        float32_t d0 = robot_distance_m();
+        float32_t h0;
 
         b_ok = (moveForward(MOVE_DIST_M) == MOTION_OK);
         b_ok = b_ok && (wait_move() == MOTION_COMPLETE);

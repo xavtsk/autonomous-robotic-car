@@ -1,6 +1,7 @@
 #include "line_controller.h"
+#include "../app_types.h"
 
-static bool finite_number (float value_x)
+static bool finite_number (float32_t value_x)
 {
     return (value_x == value_x) && ((value_x - value_x) == 0.0f);
 }
@@ -20,7 +21,7 @@ bool s3_steering_config_valid (const s3_steering_config_t * p_config)
            (p_config->base_mps <= p_config->maximum_mps);
 }
 
-static float clamp_speed (float speed, float maximum)
+static float32_t clamp_speed (float32_t speed, float32_t maximum)
 {
     if (speed < 0.0f)
     {
@@ -34,14 +35,14 @@ s3_steering_compute (const s3_steering_config_t * p_config,
                      const s3_line_observation_t * p_line)
 {
     s3_steering_request_t out = {0};
-    float correction;
+    float32_t correction;
     if (!s3_steering_config_valid(p_config) || (p_line == 0) ||
         !p_line->valid || !p_line->present || p_line->junction_candidate ||
         (p_line->error < -100) || (p_line->error > 100))
     {
         return out;
     }
-    correction = p_config->kp_mps * ((float)p_line->error / 100.0f);
+    correction = p_config->kp_mps * ((float32_t)p_line->error / 100.0f);
     out.left_mps =
         clamp_speed(p_config->base_mps + correction, p_config->maximum_mps);
     out.right_mps =

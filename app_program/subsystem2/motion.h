@@ -29,6 +29,7 @@
 #ifndef BUDDY2_MOTION_H
 #define BUDDY2_MOTION_H
 
+#include "../app_types.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -91,10 +92,10 @@ typedef struct
     motion_state_t state;
     motion_fault_t fault; /* lowest latched fault bit, as a code */
     uint8_t command_id;   /* running / last accepted command     */
-    float speed_left_mps; /* + = forward                         */
-    float speed_right_mps;
-    float distance_m;   /* robot centre, since start           */
-    float heading_deg;  /* 0 ... 359, + = anticlockwise        */
+    float32_t speed_left_mps; /* + = forward                         */
+    float32_t speed_right_mps;
+    float32_t distance_m;   /* robot centre, since start           */
+    float32_t heading_deg;  /* 0 ... 359, + = anticlockwise        */
     bool b_stopped;     /* motion_is_stopped()                 */
     bool b_busy;        /* calibration running                 */
     bool b_valid;       /* false: encoder PIO not running      */
@@ -114,16 +115,16 @@ typedef enum
 typedef struct
 {
     bool b_valid;           /* all checks below passed                   */
-    float counts_per_rev;   /* ENCODER_COUNTS_PER_REV                    */
-    float max_speed_mps;    /* MOTOR_MAX_SPEED_MPS (the slower motor)    */
+    float32_t counts_per_rev;   /* ENCODER_COUNTS_PER_REV                    */
+    float32_t max_speed_mps;    /* MOTOR_MAX_SPEED_MPS (the slower motor)    */
     bool b_m1_inverted;     /* M1_INVERTED                               */
     bool b_m2_inverted;     /* M2_INVERTED                               */
     bool b_enc_l_inverted;  /* ENC_L_INVERTED                            */
     bool b_enc_r_inverted;  /* ENC_R_INVERTED                            */
-    float counts_per_rev_l; /* per wheel, for checking                   */
-    float counts_per_rev_r;
-    float top_speed_l_mps; /* per wheel, wheels off the ground          */
-    float top_speed_r_mps;
+    float32_t counts_per_rev_l; /* per wheel, for checking                   */
+    float32_t counts_per_rev_r;
+    float32_t top_speed_l_mps; /* per wheel, wheels off the ground          */
+    float32_t top_speed_r_mps;
     bool b_enc_l_ok;         /* false: ENC_L did not count                */
     bool b_enc_r_ok;         /* false: ENC_R did not count                */
     bool b_encoders_swapped; /* true: ENC_L / ENC_R cables swapped        */
@@ -142,10 +143,10 @@ void motion_process (void);                /* every period, in the task    */
  * speeds in motion.c and behave like the DRIVE / TURN requests below:
  * accepted in IDLE only, finish with MOTION_COMPLETE.
  * distance in metres, angle in degrees, both >= 0. */
-motion_result_t moveForward (float distance);
-motion_result_t moveBackward (float distance);
-motion_result_t turnLeft (float angle);  /* on the spot, anticlockwise */
-motion_result_t turnRight (float angle); /* on the spot, clockwise     */
+motion_result_t moveForward (float32_t distance);
+motion_result_t moveBackward (float32_t distance);
+motion_result_t turnLeft (float32_t angle);  /* on the spot, anticlockwise */
+motion_result_t turnRight (float32_t angle); /* on the spot, clockwise     */
 
 /* Stop: any active state -> IDLE, both motors braked within one control
  * period, reported as cancelled. Takes priority over any running command:
@@ -161,19 +162,19 @@ void stop (void);
 /* VELOCITY CONTROL. Accepted in IDLE or VELOCITY; each call replaces the
  * targets. Re-send at least every 250 ms or the robot goes to MOTION_FAULT
  * (stale command). Negative = backward. Speeds above the limit are capped. */
-motion_result_t motion_request_velocity (float left_mps, float right_mps);
+motion_result_t motion_request_velocity (float32_t left_mps, float32_t right_mps);
 
 /* DRIVE straight. Negative distance = backward. IDLE only. Drives and turns
  * whose allowed time (distance / speed x 3 + 2 s) exceeds 600 s are
  * rejected with MOTION_ERR_BAD_ARG, so the deadline cannot overflow. */
-motion_result_t motion_request_drive (float meters, float speed_mps);
+motion_result_t motion_request_drive (float32_t meters, float32_t speed_mps);
 
 /* TURN on the spot. Positive = left (anticlockwise), negative = right.
  * speed_mps is how fast each wheel moves while turning. IDLE only. */
-motion_result_t motion_request_turn (float degrees, float speed_mps);
+motion_result_t motion_request_turn (float32_t degrees, float32_t speed_mps);
 
 /* TURN 180 degrees to the left */
-motion_result_t motion_request_u_turn (float speed_mps);
+motion_result_t motion_request_u_turn (float32_t speed_mps);
 
 /* Junction manoeuvre with fixed settings, so every Left (Right, Straight,
  * U-turn) is the same. IDLE only; finishes with MOTION_COMPLETE. */
@@ -237,13 +238,13 @@ const char * manoeuvre_name (manoeuvre_t value_m);
 /* ---- Estimates from encoder feedback (safe from any task) -------------- */
 int32_t enc_l_count (void);         /* left wheel encoder (ENC_L) count  */
 int32_t enc_r_count (void);         /* right wheel encoder (ENC_R) count */
-float wheel_distance_left_m (void); /* since start, + = forward          */
-float wheel_distance_right_m (void);
-float wheel_speed_left_mps (void); /* + = forward                       */
-float wheel_speed_right_mps (void);
-float robot_distance_m (void); /* centre of the robot               */
-float robot_speed_mps (void);
-float robot_heading_deg (void); /* since start, + = anticlockwise    */
+float32_t wheel_distance_left_m (void); /* since start, + = forward          */
+float32_t wheel_distance_right_m (void);
+float32_t wheel_speed_left_mps (void); /* + = forward                       */
+float32_t wheel_speed_right_mps (void);
+float32_t robot_distance_m (void); /* centre of the robot               */
+float32_t robot_speed_mps (void);
+float32_t robot_heading_deg (void); /* since start, + = anticlockwise    */
 
 /* Coherent, non-consuming control feedback for the Vehicle Controller.
  * timestamp_us is the last motion update, never the time a reader calls the
@@ -255,7 +256,7 @@ float robot_heading_deg (void); /* since start, + = anticlockwise    */
  * is unchanged and is not a substitute for this control-feedback contract. */
 typedef struct
 {
-    double centre_m;
+    float64_t centre_m;
     uint32_t timestamp_us, epoch;
     motion_state_t state;
     motion_fault_t fault;
@@ -274,7 +275,7 @@ bool motion_get_feedback (motion_feedback_t * p_feedback);
 typedef struct
 {
     uint32_t timestamp_us;
-    float setpoint_mps[2], measured_mps[2], duty[2];
+    float32_t setpoint_mps[2], measured_mps[2], duty[2];
     int32_t encoder[2];
     motion_state_t state;
     motion_fault_t fault;

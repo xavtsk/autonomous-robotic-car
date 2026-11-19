@@ -9,6 +9,7 @@
  */
 
 #include "motion.h"
+#include "../app_types.h"
 #include "motion_lease.h"
 #include "ctrl_motion.h"
 #include "motion_pack.h"
@@ -126,18 +127,18 @@ static void motion_unlock (void)
     (void)tk_unl_mtx(g_mutex_id);
 }
 
-static float abs_f (float value_x)
+static float32_t abs_f (float32_t value_x)
 {
     return (value_x < 0.0f) ? -value_x : value_x;
 }
 
-static bool is_number (float value_x)
+static bool is_number (float32_t value_x)
 {
     return (value_x == value_x) &&
            ((value_x - value_x) == 0.0f); /* rejects NaN and infinity */
 }
 
-static float m_per_count (float counts_per_rev)
+static float32_t m_per_count (float32_t counts_per_rev)
 {
     return (counts_per_rev > 0.0f) ? (PI_F * WHEEL_DIAMETER_M / counts_per_rev)
                                    : 0.0f;
@@ -267,7 +268,7 @@ void motion_process (void)
     uint32_t now = time_now_us();
     uint32_t elapsed = now - g_last_step_us;
     bool b_cal;
-    float dt_s;
+    float32_t dt_s;
 
     motion_lock();
     b_cal = (g_flags.b_cal_request != 0U);
@@ -318,7 +319,7 @@ void motion_process (void)
     }
 
     g_last_step_us = now;
-    dt_s = (float)elapsed / US_PER_S;
+    dt_s = (float32_t)elapsed / US_PER_S;
     if (dt_s < DT_MIN_S)
     {
         dt_s = DT_MIN_S;
@@ -343,8 +344,8 @@ void motion_process (void)
     {
         uint32_t bits = wheel_encoder_bits((wheel_id_t)wheel);
         g_feedback.centre_m +=
-            0.5 * (double)wheel_encoder_delta(bits, g_feedback_count[wheel]) *
-            (double)motion_estimation_scale();
+            0.5 * (float64_t)wheel_encoder_delta(bits, g_feedback_count[wheel]) *
+            (float64_t)motion_estimation_scale();
         g_feedback_count[wheel] = bits;
     }
     g_feedback.timestamp_us = now;
@@ -356,7 +357,7 @@ void motion_process (void)
 
 /* ---- Requests ------------------------------------------------------------ */
 
-motion_result_t motion_request_velocity (float left_mps, float right_mps)
+motion_result_t motion_request_velocity (float32_t left_mps, float32_t right_mps)
 {
     motion_result_t res;
 
@@ -376,8 +377,8 @@ motion_result_t motion_request_velocity (float left_mps, float right_mps)
 }
 
 static motion_result_t request_move (motion_state_t kind, int32_t sign_left,
-                                     int32_t sign_right, float dist_m,
-                                     float speed_mps)
+                                     int32_t sign_right, float32_t dist_m,
+                                     float32_t speed_mps)
 {
     motion_result_t res;
 
@@ -389,7 +390,7 @@ static motion_result_t request_move (motion_state_t kind, int32_t sign_left,
     return res;
 }
 
-motion_result_t motion_request_drive (float meters, float speed_mps)
+motion_result_t motion_request_drive (float32_t meters, float32_t speed_mps)
 {
     int32_t sign;
 
@@ -406,9 +407,9 @@ motion_result_t motion_request_drive (float meters, float speed_mps)
     return request_move(MOTION_DRIVE, sign, sign, abs_f(meters), speed_mps);
 }
 
-motion_result_t motion_request_turn (float degrees, float speed_mps)
+motion_result_t motion_request_turn (float32_t degrees, float32_t speed_mps)
 {
-    float arc_m;
+    float32_t arc_m;
     int32_t sign_left;
 
     if (!motion_is_calibrated())
@@ -426,7 +427,7 @@ motion_result_t motion_request_turn (float degrees, float speed_mps)
     return request_move(MOTION_TURN, sign_left, -sign_left, arc_m, speed_mps);
 }
 
-motion_result_t motion_request_u_turn (float speed_mps)
+motion_result_t motion_request_u_turn (float32_t speed_mps)
 {
     return motion_request_turn(180.0f, speed_mps);
 }
@@ -460,7 +461,7 @@ motion_result_t motion_request_manoeuvre (manoeuvre_t value_m)
 
 /* ---- Brief API ----------------------------------------------------------- */
 
-motion_result_t moveForward (float distance)
+motion_result_t moveForward (float32_t distance)
 {
     if (!is_number(distance) || (distance < 0.0f))
     {
@@ -470,7 +471,7 @@ motion_result_t moveForward (float distance)
     return motion_request_drive(distance, DEFAULT_DRIVE_SPEED_MPS);
 }
 
-motion_result_t moveBackward (float distance)
+motion_result_t moveBackward (float32_t distance)
 {
     if (!is_number(distance) || (distance < 0.0f))
     {
@@ -480,7 +481,7 @@ motion_result_t moveBackward (float distance)
     return motion_request_drive(-distance, DEFAULT_DRIVE_SPEED_MPS);
 }
 
-motion_result_t turnLeft (float angle)
+motion_result_t turnLeft (float32_t angle)
 {
     if (!is_number(angle) || (angle < 0.0f))
     {
@@ -490,7 +491,7 @@ motion_result_t turnLeft (float angle)
     return motion_request_turn(angle, DEFAULT_TURN_SPEED_MPS);
 }
 
-motion_result_t turnRight (float angle)
+motion_result_t turnRight (float32_t angle)
 {
     if (!is_number(angle) || (angle < 0.0f))
     {
@@ -819,37 +820,37 @@ int32_t enc_r_count (void)
     return wheel_encoder_count(WHEEL_RIGHT);
 }
 
-float wheel_distance_left_m (void)
+float32_t wheel_distance_left_m (void)
 {
     return motion_estimation_wheel_dist(WHEEL_LEFT);
 }
 
-float wheel_distance_right_m (void)
+float32_t wheel_distance_right_m (void)
 {
     return motion_estimation_wheel_dist(WHEEL_RIGHT);
 }
 
-float wheel_speed_left_mps (void)
+float32_t wheel_speed_left_mps (void)
 {
     return motion_estimation_wheel_speed(WHEEL_LEFT);
 }
 
-float wheel_speed_right_mps (void)
+float32_t wheel_speed_right_mps (void)
 {
     return motion_estimation_wheel_speed(WHEEL_RIGHT);
 }
 
-float robot_distance_m (void)
+float32_t robot_distance_m (void)
 {
     return motion_estimation_robot_dist();
 }
 
-float robot_speed_mps (void)
+float32_t robot_speed_mps (void)
 {
     return motion_estimation_robot_speed();
 }
 
-float robot_heading_deg (void)
+float32_t robot_heading_deg (void)
 {
     return motion_estimation_heading_deg();
 }
@@ -973,7 +974,7 @@ static bool cal_wait (int32_t value_ms)
 /* Calibration step 2: run one motor alone at full power (wheels off the
  * ground) and measure how far each encoder moved. False if aborted. */
 static bool cal_spin (wheel_id_t motor, int32_t * p_d_l, int32_t * p_d_r,
-                      float * p_secs)
+                      float32_t * p_secs)
 {
     uint32_t value_l0;
     uint32_t value_r0;
@@ -988,7 +989,7 @@ static bool cal_spin (wheel_id_t motor, int32_t * p_d_l, int32_t * p_d_r,
     b_ok = b_ok && cal_wait(CAL_MEASURE_MS);
     *p_d_l = wheel_encoder_delta(wheel_encoder_bits(WHEEL_LEFT), value_l0);
     *p_d_r = wheel_encoder_delta(wheel_encoder_bits(WHEEL_RIGHT), value_r0);
-    *p_secs = (float)(time_now_us() - value_t0) / US_PER_S;
+    *p_secs = (float32_t)(time_now_us() - value_t0) / US_PER_S;
     motor_control_brake_all();
 
     return b_ok && cal_wait(CAL_SETTLE_MS);
@@ -1011,18 +1012,18 @@ static void run_calibration (motion_calibration_t * p_out)
     uint32_t ref_r;
     int32_t value_tl;
     int32_t value_tr;
-    float cpr_l;
-    float cpr_r;
-    float cpr;
-    float scale;
+    float32_t cpr_l;
+    float32_t cpr_r;
+    float32_t cpr;
+    float32_t scale;
     int32_t m1_l;
     int32_t m1_r;
     int32_t m2_l;
     int32_t m2_r;
-    float value_s1;
-    float value_s2;
-    float value_vl;
-    float value_vr;
+    float32_t value_s1;
+    float32_t value_s2;
+    float32_t value_vl;
+    float32_t value_vr;
     bool b_lenc_flip;
     bool b_renc_flip;
 
@@ -1079,8 +1080,8 @@ static void run_calibration (motion_calibration_t * p_out)
     value_tr = wheel_encoder_delta(wheel_encoder_bits(WHEEL_RIGHT), value_r0);
     b_lenc_flip = (value_tl < 0);
     b_renc_flip = (value_tr < 0);
-    cpr_l = (float)abs_i(value_tl) / (float)CAL_TURNS;
-    cpr_r = (float)abs_i(value_tr) / (float)CAL_TURNS;
+    cpr_l = (float32_t)abs_i(value_tl) / (float32_t)CAL_TURNS;
+    cpr_r = (float32_t)abs_i(value_tr) / (float32_t)CAL_TURNS;
     cpr = 0.5f * (cpr_l + cpr_r);
     scale = m_per_count(cpr);
 
@@ -1107,8 +1108,8 @@ static void run_calibration (motion_calibration_t * p_out)
     p_out->b_encoders_swapped =
         (abs_i(m1_r) > abs_i(m1_l)) && (abs_i(m2_l) > abs_i(m2_r));
 
-    value_vl = (float)m1_l * scale / value_s1;
-    value_vr = (float)m2_r * scale / value_s2;
+    value_vl = (float32_t)m1_l * scale / value_s1;
+    value_vr = (float32_t)m2_r * scale / value_s2;
 
     p_out->counts_per_rev_l = cpr_l;
     p_out->counts_per_rev_r = cpr_r;

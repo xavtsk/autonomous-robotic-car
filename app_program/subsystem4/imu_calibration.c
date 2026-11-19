@@ -1,4 +1,5 @@
 #include "imu_calibration.h"
+#include "../app_types.h"
 #include <math.h>
 
 void imu_calibration_reset (imu_calibration_t * p_c)
@@ -24,7 +25,7 @@ bool imu_calibration_feed (imu_calibration_t * p_c, const imu_sample_t * p_s,
     }
     for (value_i = 0; value_i < 3; ++value_i)
     {
-        float value_a = p_s->accel_g[value_i];
+        float32_t value_a = p_s->accel_g[value_i];
         if (!p_c->count)
         {
             p_c->min[value_i] = value_a;

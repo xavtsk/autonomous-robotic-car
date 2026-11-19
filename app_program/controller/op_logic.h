@@ -10,6 +10,7 @@
  */
 #ifndef OPERATOR_LOGIC_H
 #define OPERATOR_LOGIC_H
+#include "../build_assert.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include "s3_integration.h"
@@ -22,7 +23,9 @@
 #define OP_COLLECT_TIMEOUT_MS (3000U)
 #define OP_PROMPT_REPEAT_MS (5000U)
 #define OP_CAL_STEPS (2U * (unsigned)S3_SENSOR_COUNT)
-_Static_assert(OP_CAL_STEPS <= 7U, "operator_t.step is 3 bits");
+/* Compile-time guarantee: operator_t.step is 3 bits. */
+BUILD_ASSERT(OP_CAL_STEPS <= 7U,
+             op_logic_h_check_a_t);
 
 typedef enum
 {

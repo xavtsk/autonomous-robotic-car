@@ -1,11 +1,12 @@
 #include "buddy4_test.h"
+#include "../app_types.h"
 #include "tilt_estimation.h"
 #include "../test_report.h"
 #if APP_TEST
 void subsystem4_test (void)
 {
-    float pitch = 0, roll = 0;
-    const float acceleration[3] = {0.5f, 0.0f, 0.8660254f};
+    float32_t pitch = 0, roll = 0;
+    const float32_t acceleration[3] = {0.5f, 0.0f, 0.8660254f};
     terrain_result_t source = {0}, decoded = {0};
     uint8_t packet[TERRAIN_PACKET_SIZE];
     TEST_INIT();

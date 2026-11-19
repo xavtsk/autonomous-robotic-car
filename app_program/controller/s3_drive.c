@@ -1,6 +1,7 @@
 /* Temporary controller for Buddy 2 + Buddy 3; replace with the team controller.
  * This is orchestration, not Buddy 3 sensing. No GPIO/RTOS in this file. */
 #include "s3_drive.h"
+#include "../app_types.h"
 #if APP_S5
 #include "../subsystem5/s5_api.h"
 /* Publish the bypass status (state, fault, route, leg, leg-3 step, swap) for
@@ -40,7 +41,7 @@ s3_drive_options_t s3_drive_default_options (void)
                                 0U,    0.0f, 0.05f, 0.116f};
 }
 
-static bool finite_f (float value_x)
+static bool finite_f (float32_t value_x)
 {
     return (value_x == value_x) && ((value_x - value_x) == 0.0f);
 }
@@ -297,8 +298,8 @@ static bool request_turn (s3_drive_t * p_d)
  * travelled since detection is subtracted (same odometry epoch only). */
 static bool start_manoeuvre (s3_drive_t * p_d)
 {
-    const double travelled = p_d->feedback.centre_m - p_d->junction_m;
-    const float advance = p_d->options.turn_advance_m - (float)travelled;
+    const float64_t travelled = p_d->feedback.centre_m - p_d->junction_m;
+    const float32_t advance = p_d->options.turn_advance_m - (float32_t)travelled;
     p_d->touched = false;
     if (((p_d->turn == S3_NAV_LEFT) || (p_d->turn == S3_NAV_RIGHT)) &&
         (p_d->options.turn_advance_m > 0.0f) && (advance > S3_MIN_ADVANCE_M))
@@ -404,8 +405,8 @@ static bool receive_reports (s3_drive_t * p_d, bool running, bool * p_done)
 /* Duration of one search_deg of spin on the spot at search_mps. */
 static uint32_t search_leg_us (const s3_drive_t * p_d)
 {
-    const float rad = p_d->options.search_deg * 0.0174533f;
-    const float value_s =
+    const float32_t rad = p_d->options.search_deg * 0.0174533f;
+    const float32_t value_s =
         rad * 0.5f * p_d->options.track_m / p_d->options.search_mps;
     return (uint32_t)(value_s * 1000000.0f) + 1U;
 }
@@ -429,7 +430,7 @@ static void start_search (s3_drive_t * p_d, uint32_t now)
 
 static void search_step (s3_drive_t * p_d, uint32_t now)
 {
-    float value_v;
+    float32_t value_v;
     if (p_d->output.line.valid && p_d->output.line.touching)
     {
         p_d->searching = false;
@@ -452,7 +453,7 @@ static void search_step (s3_drive_t * p_d, uint32_t now)
         p_d->search_us = now;
     }
     value_v = p_d->options.search_mps *
-              (float)p_d->search_sign; /* + = anticlockwise */
+              (float32_t)p_d->search_sign; /* + = anticlockwise */
     if (p_d->port.velocity(-value_v, value_v) != MOTION_OK)
     {
         halt(p_d, S3_DRIVE_FAULT, S3_DRIVE_REJECTED);
@@ -461,9 +462,9 @@ static void search_step (s3_drive_t * p_d, uint32_t now)
 #if APP_S5
 /* How hard the line follower is turning (+ = left), time-averaged, tau 0.5 s.
  */
-static void turn_track (s3_drive_t * p_d, float left, float right, uint32_t now)
+static void turn_track (s3_drive_t * p_d, float32_t left, float32_t right, uint32_t now)
 {
-    const float sum = left + right;
+    const float32_t sum = left + right;
     const uint32_t value_dt =
         p_d->turn_us ? (uint32_t)(now - p_d->turn_us) : 0U;
     p_d->turn_us = now;
@@ -473,7 +474,7 @@ static void turn_track (s3_drive_t * p_d, float left, float right, uint32_t now)
     }
     {
         /* Fixed point, 1/10000: s += (x - s) * dt / (tau + dt), tau 0.5 s. */
-        float value_r = (right - left) / sum;
+        float32_t value_r = (right - left) / sum;
         int32_t value_x, value_s = p_d->turn_q;
         value_r = value_r > 1.0f ? 1.0f : (value_r < -1.0f ? -1.0f : value_r);
         value_x = (int32_t)(value_r * 10000.0f);
@@ -497,7 +498,7 @@ static int8_t turn_pct (int16_t value_q)
 static void follow (s3_drive_t * p_d, uint32_t now)
 {
     const s3_navigation_output_t * p_out = &p_d->output;
-    float left, right;
+    float32_t left, right;
     if (p_out->events & S3_EVENT_LINE_LOST)
     {
         halt(p_d, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
@@ -729,12 +730,12 @@ static bool obstacle_control (s3_drive_t * p_d, uint32_t now, bool done)
         }
         break;
     case S5_ACT_DRIVE:
-        result = motion_request_drive((float)request.value / 1000.0f,
-                                      (float)request.speed_mms / 1000.0f);
+        result = motion_request_drive((float32_t)request.value / 1000.0f,
+                                      (float32_t)request.speed_mms / 1000.0f);
         break;
     case S5_ACT_TURN:
-        result = motion_request_turn((float)request.value,
-                                     (float)request.speed_mms / 1000.0f);
+        result = motion_request_turn((float32_t)request.value,
+                                     (float32_t)request.speed_mms / 1000.0f);
         break;
     case S5_ACT_RESUME:
         p_d->obstacle_active = false;

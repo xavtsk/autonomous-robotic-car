@@ -1,11 +1,12 @@
 /* Legacy Buddy 1/USB reporting view over the teammate's coherent status API.
  * No request, report consumption, PID input or control precision change. */
 #include "snapshot_motion.h"
+#include "../app_types.h"
 
 bool motion_read_snapshot (motion_snapshot_t * p_out)
 {
     motion_status_t status;
-    float left, right;
+    float32_t left, right;
     bool valid;
     if (!p_out || !motion_get_status(&status))
     {

@@ -1,5 +1,6 @@
 #ifndef BUDDY3_IR_CALIBRATION_H
 #define BUDDY3_IR_CALIBRATION_H
+#include "../app_types.h"
 #include "ir_reflectance.h"
 
 typedef struct __attribute__((packed))
@@ -20,7 +21,7 @@ typedef struct
 {
     uint32_t count;
     uint16_t minimum, maximum;
-    float average;
+    float32_t average;
     bool available;
 } s3_calibration_summary_t;
 

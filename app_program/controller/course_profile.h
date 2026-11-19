@@ -16,6 +16,7 @@
  * Every value here is a compile-time override (-D...). */
 #ifndef S3_COURSE_PROFILE_H
 #define S3_COURSE_PROFILE_H
+#include "../app_types.h"
 #include "s3_drive.h"
 
 /* Explicit table/paper experiment with no line: remove differential IR
@@ -118,7 +119,7 @@ static inline s3_drive_options_t s3_course_options (void)
     }
 #if S3_SENSOR_TO_AXLE_MM > 0
     value_o.turn_advance_m =
-        (float)(S3_SENSOR_TO_AXLE_MM + S3_CROSSING_CENTRE_MM) / 1000.0f;
+        (float32_t)(S3_SENSOR_TO_AXLE_MM + S3_CROSSING_CENTRE_MM) / 1000.0f;
     value_o.advance_mps = S3_ADVANCE_MPS;
     value_o.drive = motion_request_drive;
 #endif

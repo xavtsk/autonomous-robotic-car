@@ -1,4 +1,5 @@
 #include "terr_data.h"
+#include "../app_types.h"
 #include "tilt_estimation.h"
 #if APP_IMU_DEBUG
 #include <float.h>
@@ -10,8 +11,8 @@
 #define SAFETY_LIFT_CONFIRM_US 40000U
 #define SAFETY_RECOVERY_US 300000U
 
-static void safety_update (terrain_monitor_t * p_t, const float p_a[3],
-                           float norm, uint32_t now, bool continuous)
+static void safety_update (terrain_monitor_t * p_t, const float32_t p_a[3],
+                           float32_t norm, uint32_t now, bool continuous)
 {
     bool near_gravity = norm >= 0.8f && norm <= 1.2f;
     bool tipped = norm >= 0.7f && norm <= 1.35f &&
@@ -22,8 +23,8 @@ static void safety_update (terrain_monitor_t * p_t, const float p_a[3],
     /* Use the raw calibrated vector rather than the filtered pitch/roll values.
      * Those values lag and are unavailable when the vehicle is upside down. */
     bool lift_tilt = near_gravity && p_a[2] <= 0.9063078f * norm; /* 25 deg */
-    const float horizontal_sq = p_a[0] * p_a[0] + p_a[1] * p_a[1];
-    const float upward_excess = p_a[2] - 1.0f;
+    const float32_t horizontal_sq = p_a[0] * p_a[0] + p_a[1] * p_a[1];
+    const float32_t upward_excess = p_a[2] - 1.0f;
     const bool gentle_pickup =
         p_a[2] >= 1.10f && horizontal_sq <= 0.15f * 0.15f;
     /* For a firm pickup, upward acceleration above 1 g must be at least
@@ -87,7 +88,7 @@ void terrain_monitor_reset_run (terrain_monitor_t * p_t)
 
 bool terrain_monitor_set_geometry (terrain_monitor_t * p_t,
                                    terrain_hump_geometry_t geometry,
-                                   float track_m)
+                                   float32_t track_m)
 {
     if (!p_t ||
         (geometry != TERRAIN_HUMP_LONGITUDINAL &&
@@ -104,8 +105,8 @@ bool terrain_monitor_set_geometry (terrain_monitor_t * p_t,
 }
 
 bool terrain_monitor_set_mag_cal (terrain_monitor_t * p_t,
-                                  const float p_offset[3],
-                                  const float p_scale[3])
+                                  const float32_t p_offset[3],
+                                  const float32_t p_scale[3])
 {
     unsigned value_i;
     if (!p_t || !p_offset || !p_scale)
@@ -131,9 +132,9 @@ bool terrain_monitor_set_mag_cal (terrain_monitor_t * p_t,
 void terrain_monitor_process (terrain_monitor_t * p_t, const imu_sample_t * p_s,
                               const terrain_odometry_t * p_odo)
 {
-    float value_a[3], value_m[3], pitch = 0, roll = 0, heading, value_ds = 0,
+    float32_t value_a[3], value_m[3], pitch = 0, roll = 0, heading, value_ds = 0,
                                   speed = 0, value_dt = 0;
-    float value_n, dynamic_g;
+    float32_t value_n, dynamic_g;
     uint32_t gap = p_t->seen ? p_s->timestamp_us - p_t->previous_us : 0;
     bool valid = imu_sample_is_valid(p_s), tilt_ok = false, movement_ok = false;
     /* Measure continuity from sample timestamps. A sensor overrun can still
@@ -223,7 +224,7 @@ void terrain_monitor_process (terrain_monitor_t * p_t, const imu_sample_t * p_s,
         uint32_t elapsed = p_s->timestamp_us - p_t->heading_us;
         if (p_t->heading_seen && elapsed >= 10000 && elapsed <= 200000)
         {
-            float rate =
+            float32_t rate =
                 tilt_angle_delta(heading, p_t->heading) * 1000000.0f / elapsed;
             if (fabsf(rate) <= 360)
             {
@@ -252,19 +253,19 @@ void terrain_monitor_process (terrain_monitor_t * p_t, const imu_sample_t * p_s,
 #endif
         if (p_t->odometry_seen && continuity && p_odo->epoch == p_t->epoch)
         {
-            double delta = p_odo->distance_m - p_t->previous_distance;
+            float64_t delta = p_odo->distance_m - p_t->previous_distance;
 #if APP_IMU_DEBUG
             odometry_reason = HUMP_REASON_ODOMETRY_STEP_OUT_OF_RANGE;
             if (isfinite(delta) && fabs(delta) <= FLT_MAX)
             {
-                p_t->hump.debug.wheel_delta_m = (float)delta;
+                p_t->hump.debug.wheel_delta_m = (float32_t)delta;
                 p_t->hump.debug.wheel_delta_valid = true;
             }
 #endif
             value_dt = gap / 1000000.0f;
             if (fabs(delta) <= 0.05)
             {
-                value_ds = (float)delta;
+                value_ds = (float32_t)delta;
                 speed = value_ds / value_dt;
                 movement_ok = fabsf(speed) <= 1.5f;
             }
@@ -475,7 +476,7 @@ void terrain_unpack (const uint8_t p_in[TERRAIN_PACKET_SIZE],
     p_r->flags = (uint8_t)get_bits(p_in, &bit, 5);
     p_r->pitch_deg = signed_value(get_bits(p_in, &bit, 11), 11) / 10.0f;
     p_r->roll_deg = signed_value(get_bits(p_in, &bit, 11), 11) / 10.0f;
-    p_r->turn_dps = (float)signed_value(get_bits(p_in, &bit, 10), 10);
+    p_r->turn_dps = (float32_t)signed_value(get_bits(p_in, &bit, 10), 10);
     p_r->peak_m = get_bits(p_in, &bit, 9) / 1000.0f;
     p_r->hump_completed = get_bits(p_in, &bit, 1) != 0;
     p_r->impact = get_bits(p_in, &bit, 1) != 0;

@@ -1,5 +1,6 @@
 #ifndef SUBSYSTEM4_H
 #define SUBSYSTEM4_H
+#include "../app_types.h"
 #include "../app.h"
 #include "terr_data.h"
 #define S4_PRI_MAIN 18
@@ -16,8 +17,8 @@ bool subsystem4_reset_run (bool recalibrate);
 bool subsystem4_begin_run (uint16_t * p_token);
 bool subsystem4_read (terrain_result_t * p_out, uint16_t * p_token,
                       uint16_t * p_humps);
-bool subsystem4_set_mag_calibration (const float p_offset[3],
-                                     const float p_scale[3]);
+bool subsystem4_set_mag_calibration (const float32_t p_offset[3],
+                                     const float32_t p_scale[3]);
 #if APP_TEST
 void subsystem4_test (void);
 #endif

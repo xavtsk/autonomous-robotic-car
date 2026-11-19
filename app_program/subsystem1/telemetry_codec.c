@@ -1,9 +1,11 @@
 #include "telemetry_codec.h"
+#include "../build_assert.h"
 
 /* Field widths exclude the one-byte protocol version. MQTT topic selects the
  * layout; no redundant field names or message type are sent in the payload. */
-_Static_assert(BUDDY1_FAULT_MASK == (1U << BUDDY1_FAULT_BITS) - 1U,
-               "fault mask and declared width must agree");
+/* Compile-time guarantee: fault mask and declared width must agree. */
+BUILD_ASSERT(BUDDY1_FAULT_MASK == (1U << BUDDY1_FAULT_BITS) - 1U,
+             telemetry_codec_c_check_a_t);
 static const uint8_t g_body_bits[BUDDY1_TOPIC_COUNT] = {
     18,
     8,
@@ -30,7 +32,9 @@ static const char * const g_topics[BUDDY1_TOPIC_COUNT] = {
     "car/telemetry/pose",       "car/telemetry/terrain",
     "car/telemetry/avoidance",  "car/telemetry/scan",
     "car/telemetry/scan_sample"};
-_Static_assert(BUDDY1_TOPIC_COUNT <= 16U, "outbox topic selector is four bits");
+/* Compile-time guarantee: outbox topic selector is four bits. */
+BUILD_ASSERT(BUDDY1_TOPIC_COUNT <= 16U,
+             telemetry_codec_c_check_b_t);
 
 static void put (uint8_t * p_bytes, unsigned * p_bit, uint32_t value,
                  unsigned width)

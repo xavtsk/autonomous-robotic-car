@@ -1,9 +1,15 @@
 #include "codec_motion.h"
+#include "../build_assert.h"
 
-_Static_assert(sizeof(motion_snapshot_t) == 4U, "motion snapshot layout");
-_Static_assert(MOTION_FAULT < 8 && MOTION_FAULT_TIMEOUT < 8,
-               "motion state/fault no longer fits three bits");
-_Static_assert(MANOEUVRE_U_TURN < 4, "manoeuvre no longer fits two bits");
+/* Compile-time guarantee: motion snapshot layout. */
+BUILD_ASSERT(sizeof(motion_snapshot_t) == 4U,
+             codec_motion_c_check_a_t);
+/* Compile-time guarantee: motion state/fault no longer fits three bits. */
+BUILD_ASSERT(MOTION_FAULT < 8 && MOTION_FAULT_TIMEOUT < 8,
+             codec_motion_c_check_b_t);
+/* Compile-time guarantee: manoeuvre no longer fits two bits. */
+BUILD_ASSERT(MANOEUVRE_U_TURN < 4,
+             codec_motion_c_check_c_t);
 
 static uint32_t word (const motion_snapshot_t * p_value)
 {

@@ -1,4 +1,5 @@
 #include "ir_calibration.h"
+#include "../app_types.h"
 
 void s3_calibration_begin (s3_calibration_collector_t * p_collector)
 {
@@ -76,7 +77,7 @@ s3_calibration_summary (const s3_calibration_range_t * p_range)
         summary.count = p_range->count;
         summary.minimum = p_range->minimum;
         summary.maximum = p_range->maximum;
-        summary.average = (float)p_range->sum / (float)p_range->count;
+        summary.average = (float32_t)p_range->sum / (float32_t)p_range->count;
         summary.available = true;
     }
     return summary;

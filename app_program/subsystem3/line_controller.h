@@ -1,16 +1,17 @@
 #ifndef BUDDY3_LINE_CONTROLLER_H
 #define BUDDY3_LINE_CONTROLLER_H
+#include "../app_types.h"
 #include "line_detection.h"
 
 typedef struct
 {
-    float base_mps, kp_mps, maximum_mps;
+    float32_t base_mps, kp_mps, maximum_mps;
 } s3_steering_config_t;
 
 typedef struct
 {
     bool valid;
-    float left_mps, right_mps;
+    float32_t left_mps, right_mps;
 } s3_steering_request_t;
 
 s3_steering_config_t s3_steering_defaults (void);

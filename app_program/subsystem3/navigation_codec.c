@@ -1,16 +1,26 @@
 #include "navigation_codec.h"
+#include "../build_assert.h"
+#include "../app_types.h"
 #include <float.h>
 
-_Static_assert(sizeof(float) == 4 && FLT_RADIX == 2 && FLT_MANT_DIG == 24,
-               "shared steering requires the existing binary32 float format");
-_Static_assert(sizeof(s3_navigation_packet_t) == 60,
-               "navigation packet layout");
-_Static_assert(sizeof(double) == 8 && DBL_MANT_DIG == 53, "odometry binary64");
-_Static_assert(sizeof(s3_barcode_packet_t) == 5, "barcode packet layout");
-_Static_assert(sizeof(s3_raw_frame_packet_t) == 34 && S3_SENSOR_COUNT == 3,
-               "raw-frame packet layout changed");
-_Static_assert(S3_EVENT_SENSOR_FAULT == 16 && S3_ALL_SENSORS == 7,
-               "event/sensor mask widths changed");
+/* Compile-time guarantee: shared steering requires the existing binary32 float format. */
+BUILD_ASSERT(sizeof(float32_t) == 4 && FLT_RADIX == 2 && FLT_MANT_DIG == 24,
+             navigation_codec_c_check_a_t);
+/* Compile-time guarantee: navigation packet layout. */
+BUILD_ASSERT(sizeof(s3_navigation_packet_t) == 60,
+             navigation_codec_c_check_b_t);
+/* Compile-time guarantee: odometry binary64. */
+BUILD_ASSERT(sizeof(float64_t) == 8 && DBL_MANT_DIG == 53,
+             navigation_codec_c_check_c_t);
+/* Compile-time guarantee: barcode packet layout. */
+BUILD_ASSERT(sizeof(s3_barcode_packet_t) == 5,
+             navigation_codec_c_check_d_t);
+/* Compile-time guarantee: raw-frame packet layout changed. */
+BUILD_ASSERT(sizeof(s3_raw_frame_packet_t) == 34 && S3_SENSOR_COUNT == 3,
+             navigation_codec_c_check_e_t);
+/* Compile-time guarantee: event/sensor mask widths changed. */
+BUILD_ASSERT(S3_EVENT_SENSOR_FAULT == 16 && S3_ALL_SENSORS == 7,
+             navigation_codec_c_check_f_t);
 
 static void put (uint8_t * p_bytes, unsigned * p_bit, uint32_t value,
                  unsigned width)
@@ -37,11 +47,11 @@ static uint32_t get (const uint8_t * p_bytes, unsigned * p_bit, unsigned width)
     return value;
 }
 
-static uint32_t float_bits (float value)
+static uint32_t float_bits (float32_t value)
 {
     union
     {
-        float f;
+        float32_t f;
         uint32_t bits;
     } copy;
 
@@ -49,11 +59,11 @@ static uint32_t float_bits (float value)
     return copy.bits;
 }
 
-static float bits_float (uint32_t value)
+static float32_t bits_float (uint32_t value)
 {
     union
     {
-        float f;
+        float32_t f;
         uint32_t bits;
     } copy;
 
@@ -66,11 +76,11 @@ static bool letter_valid (char value_c)
     return value_c == 0 || (value_c >= 'A' && value_c <= 'Z');
 }
 
-static void write_double (uint8_t * p_bytes, unsigned * p_bit, double value)
+static void write_double (uint8_t * p_bytes, unsigned * p_bit, float64_t value)
 {
     union
     {
-        double value;
+        float64_t value;
         uint64_t bits;
     } copy;
 
@@ -79,11 +89,11 @@ static void write_double (uint8_t * p_bytes, unsigned * p_bit, double value)
     put(p_bytes, p_bit, (uint32_t)(copy.bits >> 32), 32);
 }
 
-static double read_double (const uint8_t * p_bytes, unsigned * p_bit)
+static float64_t read_double (const uint8_t * p_bytes, unsigned * p_bit)
 {
     union
     {
-        double value;
+        float64_t value;
         uint64_t bits;
     } copy;
 

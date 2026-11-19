@@ -1,11 +1,12 @@
 #ifndef BUDDY4_IMU_CALIBRATION_H
 #define BUDDY4_IMU_CALIBRATION_H
+#include "../app_types.h"
 #include "imu_sensor.h"
 #define IMU_CAL_SAMPLES 100U
 
 typedef struct
 {
-    float bias_g[3], sum[3], min[3], max[3];
+    float32_t bias_g[3], sum[3], min[3], max[3];
     unsigned count;
     bool ready;
 } imu_calibration_t;

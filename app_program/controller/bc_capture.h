@@ -15,6 +15,7 @@
  * readers must hold the same lock as the writer (s3_integration's mutex). */
 #ifndef BARCODE_CAPTURE_H
 #define BARCODE_CAPTURE_H
+#include "../app_types.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include "run_timing.h"
@@ -74,7 +75,7 @@ typedef struct
     uint8_t status;  /* s3_barcode_status_t */
     char letter;     /* valid when status == decoded */
     bool collecting, rearming;
-    double
+    float64_t
         centre_m; /* odometry; non-finite values yield unavailable distance */
 } bcap_input_t;
 

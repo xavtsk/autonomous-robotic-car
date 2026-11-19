@@ -1,10 +1,14 @@
 #include "integration_codec.h"
+#include "../build_assert.h"
+#include "../app_types.h"
 #include <float.h>
-_Static_assert(sizeof(double) == 8 && DBL_MANT_DIG == 53 && sizeof(float) == 4,
-               "exact odometry and calibration representations");
-_Static_assert(sizeof(s3_status_packet_t) == 146 &&
+/* Compile-time guarantee: exact odometry and calibration representations. */
+BUILD_ASSERT(sizeof(float64_t) == 8 && DBL_MANT_DIG == 53 && sizeof(float32_t) == 4,
+             integration_codec_c_check_a_t);
+/* Compile-time guarantee: copied runtime storage. */
+BUILD_ASSERT(sizeof(s3_status_packet_t) == 146 &&
                    sizeof(s3_control_packet_t) == 11,
-               "copied runtime storage");
+             integration_codec_c_check_b_t);
 
 static void put (uint8_t * p_p, unsigned * p_bit, uint32_t value,
                  unsigned width)
@@ -31,11 +35,11 @@ static uint32_t get (const uint8_t * p_p, unsigned * p_bit, unsigned width)
     return value_v;
 }
 
-static void put_double (uint8_t * p_p, unsigned * p_bit, double value)
+static void put_double (uint8_t * p_p, unsigned * p_bit, float64_t value)
 {
     union
     {
-        double f;
+        float64_t f;
         uint64_t u;
     } value_v;
 
@@ -44,11 +48,11 @@ static void put_double (uint8_t * p_p, unsigned * p_bit, double value)
     put(p_p, p_bit, (uint32_t)(value_v.u >> 32), 32);
 }
 
-static double get_double (const uint8_t * p_p, unsigned * p_bit)
+static float64_t get_double (const uint8_t * p_p, unsigned * p_bit)
 {
     union
     {
-        double f;
+        float64_t f;
         uint64_t u;
     } value_v;
 
@@ -57,11 +61,11 @@ static double get_double (const uint8_t * p_p, unsigned * p_bit)
     return value_v.f;
 }
 
-static void put_float (uint8_t * p_p, unsigned * p_bit, float value)
+static void put_float (uint8_t * p_p, unsigned * p_bit, float32_t value)
 {
     union
     {
-        float f;
+        float32_t f;
         uint32_t u;
     } value_v;
 
@@ -69,11 +73,11 @@ static void put_float (uint8_t * p_p, unsigned * p_bit, float value)
     put(p_p, p_bit, value_v.u, 32);
 }
 
-static float get_float (const uint8_t * p_p, unsigned * p_bit)
+static float32_t get_float (const uint8_t * p_p, unsigned * p_bit)
 {
     union
     {
-        float f;
+        float32_t f;
         uint32_t u;
     } value_v;
 

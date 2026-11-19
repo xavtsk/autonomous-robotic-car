@@ -1,4 +1,5 @@
 #include "terr_link.h"
+#include "../app_types.h"
 #if APP_S4
 #include "run_timing.h"
 #include "../subsystem4/buddy4.h"
@@ -225,9 +226,9 @@ void terrain_control_report (void)
     TERRAIN_LIVE_PERIOD > UINT8_MAX
 #error "200 ms terrain telemetry cadence must fit the eight-bit cycle divider"
 #endif
-static int16_t tilt_x10 (float deg, bool * p_ok)
+static int16_t tilt_x10 (float32_t deg, bool * p_ok)
 {
-    float value_x = deg * 10.0f;
+    float32_t value_x = deg * 10.0f;
     if (!(value_x >= -900.0f && value_x <= 900.0f))
     {
         *p_ok = false;
@@ -236,7 +237,7 @@ static int16_t tilt_x10 (float deg, bool * p_ok)
     return (int16_t)(value_x >= 0.0f ? value_x + 0.5f : value_x - 0.5f);
 }
 
-static bool height_mm (float value_m, uint16_t * p_mm)
+static bool height_mm (float32_t value_m, uint16_t * p_mm)
 {
     if (!(value_m >= 0.0f && value_m <= 0.5f))
     {
@@ -295,8 +296,8 @@ static void terrain_live_report (void)
     /* Compass turn rate: only with a fresh, valid estimate (needs Buddy 4's
      * magnetometer calibration); unavailable is sent as 0 with valid = 0. */
     if (fresh && (p_s->flags & TERRAIN_TURN_VALID) &&
-        p_s->turn_dps >= -(float)BUDDY1_TURN_LIMIT_DPS &&
-        p_s->turn_dps <= (float)BUDDY1_TURN_LIMIT_DPS)
+        p_s->turn_dps >= -(float32_t)BUDDY1_TURN_LIMIT_DPS &&
+        p_s->turn_dps <= (float32_t)BUDDY1_TURN_LIMIT_DPS)
     {
         value_t.turn_valid = 1U;
         value_t.turn_dps =

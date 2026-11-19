@@ -1,4 +1,5 @@
 #include "mqtt_bridge.h"
+#include "../build_assert.h"
 
 #if defined(TM_MQTT) && TM_MQTT
 
@@ -51,10 +52,12 @@ static int remote_take (T_MQTT_UTK_APP_MSG * p_out, int status_allowed)
 }
 #endif
 
-_Static_assert(BUDDY1_WIRE_VERSION == MQTT_UTK_APP_WIRE_VERSION,
-               "fallback heartbeat and application versions must agree");
-_Static_assert(BUDDY1_PAYLOAD_MAX <= MQTT_UTK_APP_PAYLOAD_MAX,
-               "network staging must hold a complete binary snapshot");
+/* Compile-time guarantee: fallback heartbeat and application versions must agree. */
+BUILD_ASSERT(BUDDY1_WIRE_VERSION == MQTT_UTK_APP_WIRE_VERSION,
+             mqtt_bridge_c_check_a_t);
+/* Compile-time guarantee: network staging must hold a complete binary snapshot. */
+BUILD_ASSERT(BUDDY1_PAYLOAD_MAX <= MQTT_UTK_APP_PAYLOAD_MAX,
+             mqtt_bridge_c_check_b_t);
 
 static int has_command_prefix (const char * p_topic)
 {

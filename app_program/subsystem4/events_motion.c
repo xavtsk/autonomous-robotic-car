@@ -1,8 +1,9 @@
 #include "events_motion.h"
+#include "../app_types.h"
 #include <math.h>
 
-terrain_state_t motion_classify (float pitch, float speed, float longitudinal_g,
-                                 float turn, bool turn_valid, bool impact)
+terrain_state_t motion_classify (float32_t pitch, float32_t speed, float32_t longitudinal_g,
+                                 float32_t turn, bool turn_valid, bool impact)
 {
     if (impact)
     {

@@ -1,5 +1,6 @@
 #ifndef BUDDY4_HUMP_DETECTION_H
 #define BUDDY4_HUMP_DETECTION_H
+#include "../app_types.h"
 #include <stdbool.h>
 #include <stdint.h>
 #if APP_IMU_DEBUG
@@ -16,7 +17,7 @@ enum
 
 typedef struct
 {
-    float wheel_delta_m, travel_m;
+    float32_t wheel_delta_m, travel_m;
     bool wheel_delta_valid;
     uint8_t flags, reason;
 } hump_debug_t;
@@ -47,7 +48,7 @@ typedef enum
 
 typedef struct
 {
-    float height_m, peak_m, highest_m, travel_m;
+    float32_t height_m, peak_m, highest_m, travel_m;
     uint32_t started_us;
     unsigned level_samples;
     bool active, descended, highest_valid, completed, armed,
@@ -68,12 +69,12 @@ void hump_reset (hump_detector_t * p_h);
 /* Caller supplies signed distance delta, pitch positive nose-up. Only complete
  * ascent/descent cycles on valid, low-dynamic, forward travel become run peaks.
  */
-void hump_update (hump_detector_t * p_h, float pitch, float distance_m,
+void hump_update (hump_detector_t * p_h, float32_t pitch, float32_t distance_m,
                   bool valid, uint32_t now);
 /* Right wheel above a level left wheel: height = track*sin(roll)*cos(pitch).
  * Positive roll raises the right side. Require forward travel and a complete
  * level -> raised -> level excursion; do not integrate pitch in this mode. */
-void hump_update_right_wheel (hump_detector_t * p_h, float pitch, float roll,
-                              float track_m, float distance_m,
+void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch, float32_t roll,
+                              float32_t track_m, float32_t distance_m,
                               hump_sample_quality_t quality, uint32_t now);
 #endif

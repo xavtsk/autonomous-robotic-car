@@ -1,4 +1,5 @@
 #include "hump_detection.h"
+#include "../app_types.h"
 #include <math.h>
 
 void hump_reset (hump_detector_t * p_h)
@@ -6,7 +7,7 @@ void hump_reset (hump_detector_t * p_h)
     *p_h = (hump_detector_t){0};
 }
 
-void hump_update (hump_detector_t * p_h, float pitch, float value_ds,
+void hump_update (hump_detector_t * p_h, float32_t pitch, float32_t value_ds,
                   bool valid, uint32_t now)
 {
     p_h->completed = false;
@@ -77,12 +78,12 @@ static hump_reason_t right_discard (hump_detector_t * p_h, hump_reason_t reason)
     return reason;
 }
 
-static hump_reason_t right_step (hump_detector_t * p_h, float pitch, float roll,
-                                 float track_m, float value_ds,
+static hump_reason_t right_step (hump_detector_t * p_h, float32_t pitch, float32_t roll,
+                                 float32_t track_m, float32_t value_ds,
                                  hump_sample_quality_t quality, uint32_t now)
 {
-    const float start_m = 0.005f, level_m = 0.003f;
-    float height;
+    const float32_t start_m = 0.005f, level_m = 0.003f;
+    float32_t height;
     p_h->completed = false;
     if (quality == HUMP_SAMPLE_INVALID)
     {
@@ -192,13 +193,13 @@ static hump_reason_t right_step (hump_detector_t * p_h, float pitch, float roll,
     return HUMP_REASON_NONE;
 }
 
-void hump_update_right_wheel (hump_detector_t * p_h, float pitch, float roll,
-                              float track_m, float value_ds,
+void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch, float32_t roll,
+                              float32_t track_m, float32_t value_ds,
                               hump_sample_quality_t quality, uint32_t now)
 {
 #if APP_IMU_DEBUG
     const bool was_active = p_h->active, was_armed = p_h->armed;
-    const float prior_travel = p_h->travel_m;
+    const float32_t prior_travel = p_h->travel_m;
     p_h->debug.reason =
         (uint8_t)right_step(p_h, pitch, roll, track_m, value_ds, quality, now);
     p_h->debug.travel_m =

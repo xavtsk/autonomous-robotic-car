@@ -1,4 +1,6 @@
 #include "buddy4.h"
+#include "../build_assert.h"
+#include "../app_types.h"
 #ifndef APP_S4
 #define APP_S4 0
 #endif
@@ -44,7 +46,7 @@ typedef struct
 
 static subsystem4_queue_state_t g_queue;
 static uint16_t g_run, g_published_run, g_humps;
-static float g_offset[3], g_scale[3];
+static float32_t g_offset[3], g_scale[3];
 
 static uint32_t now_us (void)
 {
@@ -82,24 +84,25 @@ typedef struct
     uint8_t hump_flags, hump_reason;
 } imu_debug_row_t;
 
-_Static_assert(IMU_DEBUG_PACKET_BYTES <= MQTT_UTK_IMU_DEBUG_MAX,
-               "IMU debug packet exceeds MQTT staging capacity");
+/* Compile-time guarantee: IMU debug packet exceeds MQTT staging capacity. */
+BUILD_ASSERT(IMU_DEBUG_PACKET_BYTES <= MQTT_UTK_IMU_DEBUG_MAX,
+             buddy4_c_check_a_t);
 static ID g_imu_debug_mutex;
 static imu_debug_row_t g_imu_debug_rows[IMU_DEBUG_QUEUE_ROWS];
 static unsigned g_imu_debug_head, g_imu_debug_count;
 static uint32_t g_imu_debug_sequence, g_imu_debug_boot_tag;
 
-static int16_t imu_debug_mg (float g)
+static int16_t imu_debug_mg (float32_t g)
 {
     /* The sensor range is Ã‚Â±4 g, and level calibration adds at most 0.15 g.
      */
-    float mg = g * 1000.0f;
+    float32_t mg = g * 1000.0f;
     return (int16_t)(mg + (mg < 0.0f ? -0.5f : 0.5f));
 }
 
-static int32_t imu_debug_um (float metres)
+static int32_t imu_debug_um (float32_t metres)
 {
-    float um = metres * 1000000.0f;
+    float32_t um = metres * 1000000.0f;
     /* Leave INT32_MIN available as a sentinel for an unavailable distance. */
     if (!(um > -2147483648.0f && um < 2147483648.0f))
     {
@@ -657,8 +660,8 @@ bool subsystem4_begin_run (uint16_t * p_token)
     return p_token && request_reset(false, p_token);
 }
 
-bool subsystem4_set_mag_calibration (const float p_offset[3],
-                                     const float p_scale[3])
+bool subsystem4_set_mag_calibration (const float32_t p_offset[3],
+                                     const float32_t p_scale[3])
 {
     terrain_monitor_t check;
     terrain_monitor_init(&check);
@@ -724,7 +727,7 @@ bool subsystem4_read (terrain_result_t * out, uint16_t * token,
     return false;
 }
 
-bool subsystem4_set_mag_calibration (const float o[3], const float s[3])
+bool subsystem4_set_mag_calibration (const float32_t o[3], const float32_t s[3])
 {
     (void)o;
     (void)s;

@@ -1,0 +1,654 @@
+{
+  "schema_version": 1,
+  "pre_alias_commit": "2e44326dabcb862d4028aa52676cbc507bf0924e",
+  "scope": "51 existing application files plus two new compile-time/type headers; root control_debug.c/h unchanged by this batch",
+  "operations": [
+    "builtin float/double tokens to exact typedef aliases",
+    "C11 static assertions to C99 constant-expression declarations",
+    "required include directives"
+  ],
+  "files": [
+    {
+      "path": "app_program/controller/bc_capture.c",
+      "before_sha256": "ea4e8c53cddf8f746dd15dff4aacfaccfc8b141429f13f4527984b19c37b6a04",
+      "after_sha256": "515e0b295c4aac26695c7b10391034b7faa409e4d65ace3d9d8323b5bed17c24",
+      "float_keyword_replacements": 2,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/controller/bc_capture.h",
+      "before_sha256": "d5f21a540845df6a9edbabf783861a79de2327ead08c7a69c87510c012193f95",
+      "after_sha256": "f4652099fb4f0e74faaae02d7d3bdc58f6dd05a6c05dbe1c2282ae0dcdd6d49a",
+      "float_keyword_replacements": 1,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/controller/course_profile.h",
+      "before_sha256": "3b89f5358e05aa7e21e0c46e7f147d70912e51ed306fc4cbc2bc9f4a190bc134",
+      "after_sha256": "a4cff4107b3a768e9bad076eabe4841330161dc36781873f0b504431137579ae",
+      "float_keyword_replacements": 1,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/controller/integration_codec.c",
+      "before_sha256": "c79d1519d0f293d6441d8c46782acb04e729c11b45d126a2a38f795ee8418f8b",
+      "after_sha256": "b0adc9b8c3c3d8224c82397802a0f93afc5434d3bac900a6373c818303dfcbbf",
+      "float_keyword_replacements": 10,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n",
+        "#include \"../build_assert.h\"\n"
+      ],
+      "assertions": [
+        {
+          "identifier": "integration_codec_c_check_a_t",
+          "condition": "sizeof(double) == 8 && DBL_MANT_DIG == 53 && sizeof(float) == 4",
+          "argument": "\"exact odometry and calibration representations\""
+        },
+        {
+          "identifier": "integration_codec_c_check_b_t",
+          "condition": "sizeof(s3_status_packet_t) == 146 &&\n                   sizeof(s3_control_packet_t) == 11",
+          "argument": "\"copied runtime storage\""
+        }
+      ]
+    },
+    {
+      "path": "app_program/controller/op_logic.h",
+      "before_sha256": "ee7c5c956f8e2321e1cd66779df185c25960389b0712bf27d2b35c15733aba9e",
+      "after_sha256": "576f6bb085206826d21831670dde27c417ca16c5068b0291ad37048a27e2cc52",
+      "float_keyword_replacements": 0,
+      "inserted_includes": [
+        "#include \"../build_assert.h\"\n"
+      ],
+      "assertions": [
+        {
+          "identifier": "op_logic_h_check_a_t",
+          "condition": "OP_CAL_STEPS <= 7U",
+          "argument": "\"operator_t.step is 3 bits\""
+        }
+      ]
+    },
+    {
+      "path": "app_program/controller/s3_drive.c",
+      "before_sha256": "ff5d817a1009efde9eadfe96cd8d57f37c42253005e6ae77aa053df72d8837e5",
+      "after_sha256": "d1bcf0eb433dbfec08cae96a97007caf435bacd0ad7894e2bb6d2f9e4f0b080a",
+      "float_keyword_replacements": 17,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/controller/s3_drive.h",
+      "before_sha256": "0bfa4b3dec6f49cdef783d5f76ef19074c91d03f476d20e03fef23a73ea8c69d",
+      "after_sha256": "d4f281cc2fef14d20a9d722404112ebf9e9d11b619fb769c165672659c5759a6",
+      "float_keyword_replacements": 10,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/controller/s3_integration.c",
+      "before_sha256": "f66afe891334e59d55f042ee0ea53cd3e2b6f7fd3923cbe39effb5da9ae2cf47",
+      "after_sha256": "d043968081faa1a63e55752f7818ae9f38d8a376e4aea3f92a21641074d0e0fb",
+      "float_keyword_replacements": 11,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/controller/terr_link.c",
+      "before_sha256": "76733811b637a20147f0f9aa9ca1a5c9f7d10f125552b4cfc3f966d6be3710a4",
+      "after_sha256": "c3828471838f4c9d2dd6f683f1eae14c99aa80784b8bb6cb81e6096da558261e",
+      "float_keyword_replacements": 5,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/controller/vehicle_controller.c",
+      "before_sha256": "a33dba8706c551665f0b6c3cd3e2bf573426893383a3c98236bf5d5451ff9fae",
+      "after_sha256": "b94ad85a4dbaec2d5507d5fae43edfad1defa75d7a0a10bcef6b903113a2da0a",
+      "float_keyword_replacements": 3,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/diagnostics/robot_diagnostics.c",
+      "before_sha256": "8982abb4cfd5f3614a58f28d0ab72e8798d1cfa033ef04d6517c51aa1fa71de9",
+      "after_sha256": "bf65f466c0c5a46c9dbdb674ccdc75622fa4e7be6f28b98571d5d92bc5a06880",
+      "float_keyword_replacements": 2,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem1/mqtt_bridge.c",
+      "before_sha256": "8bde31f71e3e5fc07c07958a414f5325e6537313bd85135f33f582718b30f95b",
+      "after_sha256": "79977464e9a04aa3029ca162d0056fdbeafdfea2e0cc82fca4635ace5b3922fd",
+      "float_keyword_replacements": 0,
+      "inserted_includes": [
+        "#include \"../build_assert.h\"\n"
+      ],
+      "assertions": [
+        {
+          "identifier": "mqtt_bridge_c_check_a_t",
+          "condition": "BUDDY1_WIRE_VERSION == MQTT_UTK_APP_WIRE_VERSION",
+          "argument": "\"fallback heartbeat and application versions must agree\""
+        },
+        {
+          "identifier": "mqtt_bridge_c_check_b_t",
+          "condition": "BUDDY1_PAYLOAD_MAX <= MQTT_UTK_APP_PAYLOAD_MAX",
+          "argument": "\"network staging must hold a complete binary snapshot\""
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem1/telemetry_codec.c",
+      "before_sha256": "016302c1157fc527c7899354759c4a588710eadebe5edc572edd39516c5ce04a",
+      "after_sha256": "1ac9e6c932bed627ba5aba28728009487b7f383f55f687ed5f2de7e39e3034fd",
+      "float_keyword_replacements": 0,
+      "inserted_includes": [
+        "#include \"../build_assert.h\"\n"
+      ],
+      "assertions": [
+        {
+          "identifier": "telemetry_codec_c_check_a_t",
+          "condition": "BUDDY1_FAULT_MASK == (1U << BUDDY1_FAULT_BITS) - 1U",
+          "argument": "\"fault mask and declared width must agree\""
+        },
+        {
+          "identifier": "telemetry_codec_c_check_b_t",
+          "condition": "BUDDY1_TOPIC_COUNT <= 16U",
+          "argument": "\"outbox topic selector is four bits\""
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem2/buddy2_test.c",
+      "before_sha256": "b9669d4a46bf620353f839fb0429a811602c39c067e6ca6f13c42a339721833a",
+      "after_sha256": "3fbfc47b349e2321ac349237bc773f96cc1eb6170f473c49e81dd3232b30ef8c",
+      "float_keyword_replacements": 10,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/codec_motion.c",
+      "before_sha256": "f9bd0b7e13ec738044a436da0d0c113abcbb8ffa96d0c230f4270202073dff2c",
+      "after_sha256": "bc0ded2aed8f9da4970809fa019b28a0ea04adf9298575b0b6b2c43ff1c1c12b",
+      "float_keyword_replacements": 0,
+      "inserted_includes": [
+        "#include \"../build_assert.h\"\n"
+      ],
+      "assertions": [
+        {
+          "identifier": "codec_motion_c_check_a_t",
+          "condition": "sizeof(motion_snapshot_t) == 4U",
+          "argument": "\"motion snapshot layout\""
+        },
+        {
+          "identifier": "codec_motion_c_check_b_t",
+          "condition": "MOTION_FAULT < 8 && MOTION_FAULT_TIMEOUT < 8",
+          "argument": "\"motion state/fault no longer fits three bits\""
+        },
+        {
+          "identifier": "codec_motion_c_check_c_t",
+          "condition": "MANOEUVRE_U_TURN < 4",
+          "argument": "\"manoeuvre no longer fits two bits\""
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem2/ctrl_motion.c",
+      "before_sha256": "02e2e5bc71dc525036b7f48435ebc79355befdf6951ccd65091fa7e4dd5dd96f",
+      "after_sha256": "8f5c0322b917869609759283a41d3a3c99a16c881f152c744f6f58b467e2010d",
+      "float_keyword_replacements": 47,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/ctrl_motion.h",
+      "before_sha256": "a2d8da229c8a4590aea4faf117fc2062524361bc3ebac8902bde7bbbf0029bda",
+      "after_sha256": "53e63abcdab48855f38e1a7e116c781156f9df56389976792513e1b5d5bc7d8d",
+      "float_keyword_replacements": 10,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/estimate_motion.c",
+      "before_sha256": "d2e00d9462c99ed1f7ac5dd914d8de07f75d3929c9d4d0d18650c8dc5522b634",
+      "after_sha256": "62f48ebc1fca79d7351acf761be4df38680e44d2ab9034bda605996ad7f27cba",
+      "float_keyword_replacements": 19,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/estimate_motion.h",
+      "before_sha256": "46bc6e4ff960d83792ea713470867383884c314fd360094e8f387f8b7e526fcf",
+      "after_sha256": "ff9dfa081198d2afca34be0d4ebf051bdaa6ad099e6ad9d20158d51d8f174cfa",
+      "float_keyword_replacements": 11,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/motion.c",
+      "before_sha256": "6f68222fe32c6fa489d047624a330738f69a6cfdc46218c3c3cc2ad26785a63c",
+      "after_sha256": "a3f141a214ba32afd3227bb3e1987a8ee1ebcd12f8bb5a5d7772a4673562d918",
+      "float_keyword_replacements": 46,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/motion.h",
+      "before_sha256": "a4350644c42e039898b7e780da144e458d31150de56eca03172702f78eb58986",
+      "after_sha256": "90d32883ada9c9a26cc59c7bce7e2fb2ea707832ba95f5df5fab6800050ec252",
+      "float_keyword_replacements": 30,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/motion_pack.c",
+      "before_sha256": "8219294a85752ebe3544873ebb8c1430ebe5aeb2b10fb2df8e7eca00e5e61b58",
+      "after_sha256": "7d62101cc4c848e80afe378d06b4ac4f249554d9234f089a2a97658eb709b4d6",
+      "float_keyword_replacements": 27,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/motion_pack.h",
+      "before_sha256": "19eb22d0605320f999a539e26b6d674036a673658d95736f79225a94938355c8",
+      "after_sha256": "b48ee62bfea491c86752f0bae9f6c3946f41c2aaaba502ce7651bec9cb77da9a",
+      "float_keyword_replacements": 11,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/motor_control.c",
+      "before_sha256": "a17bd4bca01b508fe75e54c183adba3550630335917aa0277d5bdcd4fd236dac",
+      "after_sha256": "3f9b5a55937c9a1cd4bdd60b96a45f771d05d3bf76f1b48a8b60a9de0c7fc39b",
+      "float_keyword_replacements": 6,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/motor_control.h",
+      "before_sha256": "e35bd5e23fb6b83ea0566b02c52622324ef146438484afe13738b9c093e94bf6",
+      "after_sha256": "b489d11fd53e1627763acece6055d26b7ec50c386d8aa8f4461cbb326eaa7f03",
+      "float_keyword_replacements": 2,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/snapshot_motion.c",
+      "before_sha256": "7e5b1da1c1d40932ca2a99c619d122732311cd91dc8ea7079d7833be8795ea8a",
+      "after_sha256": "8c143bcbe127a343b42720d9dd39051c6e17ed142ced119c7aee72c5055d8b20",
+      "float_keyword_replacements": 1,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/speed_pid.c",
+      "before_sha256": "f9d831418d7998a8c461653f4e3530185796328bcff27d769fced8505d6537c9",
+      "after_sha256": "996773ff202b17ff9e3fc798af53271a0f1a245c0a204123b62a749d49461e26",
+      "float_keyword_replacements": 17,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem2/speed_pid.h",
+      "before_sha256": "8024f6ecf5b802f0c45cc03bad5b88437d60f3488bbc3f27b4be52fb64a174b2",
+      "after_sha256": "5150025f50543329b1e30409a36149b9a8aa01aa1bfa6e65560e1012a96b9a8e",
+      "float_keyword_replacements": 18,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem3/ir_calibration.c",
+      "before_sha256": "8c1d8089466d0a183ecd9221a73966407c9e47b18e063c398c4761a5a7cf1b9b",
+      "after_sha256": "727c07e3808849702a8db0d34c04542316ef2c081571f57dd95da19f22bd80f5",
+      "float_keyword_replacements": 2,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem3/ir_calibration.h",
+      "before_sha256": "ca3b4b2691da290a6ad677508de16a7c912f8c1a2bb3e3980357b254e241b44e",
+      "after_sha256": "c8435b52b8880495a663ae95d8ea2bc4590fa081525b7cab2220981458fa6ab0",
+      "float_keyword_replacements": 1,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem3/line_controller.c",
+      "before_sha256": "fc8bd7d2d864d0113e789e7564592556528a944f1d2c60781ab1ee6e8477a370",
+      "after_sha256": "ca4dd0e4fe92e884d75ed38c0609bafb3fac2921a02e60acce973dd7881425cc",
+      "float_keyword_replacements": 6,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem3/line_controller.h",
+      "before_sha256": "646912664d60f488b1e089b9539092f48e190220b5ddcd42589410f7fe853c35",
+      "after_sha256": "f089d9ead8df8efc8c9b214b4c7cc3be29757a000adf023a15ae540ac3e60f50",
+      "float_keyword_replacements": 2,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem3/line_navigation.c",
+      "before_sha256": "cad0c0644e23a148bdc49d50d9ee9658aefd7f63247e6c347c82c7d3a5bccff4",
+      "after_sha256": "4a330b8d9e9ab0e004f3a485869013a5f229e865042db8ba5773116fea984faa",
+      "float_keyword_replacements": 1,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem3/line_navigation.h",
+      "before_sha256": "6d4a63604b3f8e20cfba234f12c27212502a8e7eddb88041cb6e94b9d0c4cc41",
+      "after_sha256": "99e229c0f3d8c90f2d700046f060eaecc3cb86f4445f1958250d7a8bad123b54",
+      "float_keyword_replacements": 4,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem3/navigation_codec.c",
+      "before_sha256": "9bcacf70ad1f3153f5e820105b57e15cd4c4ed79f717cdc63db20a491b8ec0f5",
+      "after_sha256": "3b62d909185cd9b1db96784e890c7ee0ea6fdba7062e36e055211ff18c742f91",
+      "float_keyword_replacements": 10,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n",
+        "#include \"../build_assert.h\"\n"
+      ],
+      "assertions": [
+        {
+          "identifier": "navigation_codec_c_check_a_t",
+          "condition": "sizeof(float) == 4 && FLT_RADIX == 2 && FLT_MANT_DIG == 24",
+          "argument": "\"shared steering requires the existing binary32 float format\""
+        },
+        {
+          "identifier": "navigation_codec_c_check_b_t",
+          "condition": "sizeof(s3_navigation_packet_t) == 60",
+          "argument": "\"navigation packet layout\""
+        },
+        {
+          "identifier": "navigation_codec_c_check_c_t",
+          "condition": "sizeof(double) == 8 && DBL_MANT_DIG == 53",
+          "argument": "\"odometry binary64\""
+        },
+        {
+          "identifier": "navigation_codec_c_check_d_t",
+          "condition": "sizeof(s3_barcode_packet_t) == 5",
+          "argument": "\"barcode packet layout\""
+        },
+        {
+          "identifier": "navigation_codec_c_check_e_t",
+          "condition": "sizeof(s3_raw_frame_packet_t) == 34 && S3_SENSOR_COUNT == 3",
+          "argument": "\"raw-frame packet layout changed\""
+        },
+        {
+          "identifier": "navigation_codec_c_check_f_t",
+          "condition": "S3_EVENT_SENSOR_FAULT == 16 && S3_ALL_SENSORS == 7",
+          "argument": "\"event/sensor mask widths changed\""
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem4/buddy4.c",
+      "before_sha256": "8a05ca5f0af710adcfcd74c6c2dbeb6be37c05e7154d16897827df9d436c236c",
+      "after_sha256": "e662b2e1777620954faafabde10c882fbc8c94a25eb563f701bd5427d156e8fa",
+      "float_keyword_replacements": 9,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n",
+        "#include \"../build_assert.h\"\n"
+      ],
+      "assertions": [
+        {
+          "identifier": "buddy4_c_check_a_t",
+          "condition": "IMU_DEBUG_PACKET_BYTES <= MQTT_UTK_IMU_DEBUG_MAX",
+          "argument": "\"IMU debug packet exceeds MQTT staging capacity\""
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem4/buddy4.h",
+      "before_sha256": "c07c7434cc120564f9a30c4ab73ed2f521c6ed4d690d0fdbd99c544e7ace8547",
+      "after_sha256": "c34ea7b48341dbbec4eb7c77bbe303be8c39c93e4daa3db968e2aa9d5e977830",
+      "float_keyword_replacements": 2,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/buddy4_test.c",
+      "before_sha256": "abf0ec6c347c628432fa5e2d412d957e91d3a1fb0ecdbaf2e72ece3f079abdd8",
+      "after_sha256": "39639f120950bc0a1d9d81341af1e890b5cb2099beffbd1ad71988f9ca80dd8e",
+      "float_keyword_replacements": 2,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/events_motion.c",
+      "before_sha256": "dba5a5e2ec80d04d3ce5c2fb28b38b0c9976e2ca6ae8df3a16f4a0ed1a7b9042",
+      "after_sha256": "06f424a981a4403fd8ae9019943b42102988e7e6cd136eeb34d32eee4d8856bc",
+      "float_keyword_replacements": 4,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/events_motion.h",
+      "before_sha256": "7911c2485f414d1c6da22cf02610582aa9d6c6986615c7f0a71666747615d102",
+      "after_sha256": "f726822e54d3cc8403a5de5e81b9981fdaff68ff049903ff191018700cf9d473",
+      "float_keyword_replacements": 4,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/hump_detection.c",
+      "before_sha256": "0b4a00c568748cfb477f6cf1a91cd04fbf2e2edc55e3a237987d4cacc0acbc5c",
+      "after_sha256": "27c145a8dfa2f28d643a5e917ed69e64dc21dd2eca6fd89cb89d6543fcb1164e",
+      "float_keyword_replacements": 13,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/hump_detection.h",
+      "before_sha256": "7b4e41e030a6067812da8807fa20e95587eab38b6f714e01162c65efe474f1f8",
+      "after_sha256": "a4b79e9f07076c70a354e929da26e8cc9d74c3493de66c62b5c89bd9dae326aa",
+      "float_keyword_replacements": 8,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/imu_calibration.c",
+      "before_sha256": "2d9c5c923ceda7321b0ded5173ad22119b80609b82db9f8e0dccd4b1d10180d2",
+      "after_sha256": "4018f191aff40cd48618f3d451a0c597f0fefee726269225d18e9f649fd79b91",
+      "float_keyword_replacements": 1,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/imu_calibration.h",
+      "before_sha256": "d87060d46f25412f7a9ed3b76f9426a43e39fe48854fab95cca03ecda44431af",
+      "after_sha256": "08018c62e2825c528d2a9ac784d1e10171196cc9133f6e9e383b205740bfff97",
+      "float_keyword_replacements": 1,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/imu_sensor.h",
+      "before_sha256": "36cc14a91be43c8ca9c636f59b3dd4e0efeb02c342d5db5c8c2c50875ee2365c",
+      "after_sha256": "7e6654bd42ea5aa3810e46d91886bf4ee8363384b1691668c7d6dec32a041530",
+      "float_keyword_replacements": 1,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/terr_data.c",
+      "before_sha256": "8a0c640629b015282ee2ebf8a7af10ee85a94bde1d3ca8b88c28fd3659ccbf87",
+      "after_sha256": "8b4bb21f3fcd6b08d02ce4b9e5da265e5c9b754f36d2bf8765682c746c05516e",
+      "float_keyword_replacements": 14,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/terr_data.h",
+      "before_sha256": "11cfc760518c889cadba1236729fca2ecfcf118890915b7035f9d16b0293fb09",
+      "after_sha256": "1c167ed6cf6a88432fba841c37ae3c15dbc69a9ae11987e708ba576cb444ee57",
+      "float_keyword_replacements": 9,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/tilt_estimation.c",
+      "before_sha256": "d5b3c3a57277afd39c0e5b1a6a26f82c8e4551c793b69edd53815cbe4f69606b",
+      "after_sha256": "55659ee605d9611e986091f515552dda900551009cfb2a365bab31ba963a6533",
+      "float_keyword_replacements": 14,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem4/tilt_estimation.h",
+      "before_sha256": "1a6bf7f012d2c1b54ff21bb343f492eb85c6c8cd858bb290b9636f234d36d25c",
+      "after_sha256": "1a24d48d7b8912664095800688caf32ee979ebf241ecc67bb54e6e3bda6f9a06",
+      "float_keyword_replacements": 9,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem5/avoid_obstacle.c",
+      "before_sha256": "bed1503f930b6dd5778c1702a7253170e29d815bfe5893ea3672e20509cd371c",
+      "after_sha256": "2f40e34e2f591fa8e5ed7bb62062e9abe86958330bf4fa9c2ed59322dcab40f9",
+      "float_keyword_replacements": 11,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    },
+    {
+      "path": "app_program/subsystem5/avoid_obstacle.h",
+      "before_sha256": "92d7d123a47c0216541a3bfd396e5e9e6b7a1a22b861c0540f585d455da485dc",
+      "after_sha256": "90f395a58df523476d944002a4fffb23e88ba72da389499fca1adbcdf1b8e2cc",
+      "float_keyword_replacements": 2,
+      "inserted_includes": [
+        "#include \"../app_types.h\"\n"
+      ],
+      "assertions": []
+    }
+  ],
+  "new_headers": [
+    {
+      "path": "app_program/app_types.h",
+      "sha256": "981ebc7932b53c65835d7b37eccc65cc999a1c038f19f96c4d8961cb5854d244",
+      "token_sha256": "a22e59d09b15882ce2fba2fed0c4029eb678456ad50d379686d7a17625ee2764"
+    },
+    {
+      "path": "app_program/build_assert.h",
+      "sha256": "2de48fca5a42572cf0722365099b3bb8e5159701536a8cb1604fcf17ed6a308b",
+      "token_sha256": "b87456727e844e632d34602ee470bf59f8c7aaedf2aada51f0df8ab889163188"
+    }
+  ],
+  "compile_only_checks": [
+    {
+      "case": "alias_assert_positive",
+      "exit_code": 0,
+      "expected_result_observed": true,
+      "executed_generated_binary": false
+    },
+    {
+      "case": "assert_false_negative",
+      "exit_code": 1,
+      "expected_result_observed": true,
+      "executed_generated_binary": false
+    },
+    {
+      "case": "assert_nonconstant_negative",
+      "exit_code": 1,
+      "expected_result_observed": true,
+      "executed_generated_binary": false
+    }
+  ],
+  "totals": {
+    "files_changed": 51,
+    "float_keyword_replacements": 447,
+    "assertions_preserved": 17
+  }
+}
