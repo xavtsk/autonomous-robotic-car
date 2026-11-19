@@ -1,5 +1,6 @@
 """Documentation receipts must not turn partial generation into compliance."""
 from pathlib import Path
+import hashlib
 import tempfile
 import unittest
 
@@ -20,16 +21,30 @@ class DocumentationTests(unittest.TestCase):
             docs.configuration(Path('quoted"source'), Path('output'))
 
     def test_compiler_report_requires_exact_current_file_set(self):
-        bindings = {'a.c': {'source_location_sha256': 'same'}}
-        report = {'files': {'a.c': {'source_location_sha256': 'same'}}, 'functions': [{}]}
+        bindings = {'a.c': {'source_location_sha256': 'same', 'source_content_sha256': 'prose'}}
+        report = {'files': {'a.c': {'source_location_sha256': 'same', 'source_content_sha256': 'prose'}}, 'functions': [{}]}
         docs.validate_functions(report, bindings)
         for broken in (
             {'files': {}, 'functions': [{}]},
             {'files': {'a.c': {'source_location_sha256': 'old'}}, 'functions': [{}]},
+            {'files': {'a.c': {'source_location_sha256': 'same'}}, 'functions': [{}]},
             {'files': report['files'], 'functions': []},
         ):
             with self.subTest(broken=broken), self.assertRaises(ValueError):
                 docs.validate_functions(broken, bindings)
+
+    def test_same_line_comment_changes_invalidate_documentation_report(self):
+        before = '/** @brief Valid contract. */\nint function(void);\n'
+        after = '/* Removed contract. */\nint function(void);\n'
+        location = docs.inventory.source_location_digest(before)
+        self.assertEqual(location, docs.inventory.source_location_digest(after))
+        report = {'files': {'a.h': {'source_location_sha256': location,
+                                   'source_content_sha256': hashlib.sha256(before.encode()).hexdigest()}},
+                  'functions': [{}]}
+        binding = {'a.h': {'source_location_sha256': location,
+                           'source_content_sha256': hashlib.sha256(after.encode()).hexdigest()}}
+        with self.assertRaisesRegex(ValueError, 'documentation source content'):
+            docs.validate_functions(report, binding)
 
     def test_comparison_uses_location_not_just_function_name(self):
         rows = [dict(path='a.c', name='same', line=10, end_line=20,
@@ -54,6 +69,11 @@ class DocumentationTests(unittest.TestCase):
             (xml/'a.xml').write_text('<doxygen><memberdef kind="function"><name>fun</name>'
                                     '<location bodyfile="a.c" bodystart="12"/></memberdef></doxygen>')
             self.assertEqual(docs.observed_functions(xml, staged), {('a.c', 12, 'fun')})
+            for body_start in ('', '0', '-1', 'abc'):
+                (xml/'a.xml').write_text('<doxygen><memberdef kind="function"><name>fun</name>'
+                                        '<location bodyfile="a.c" bodystart="'+body_start+'"/></memberdef></doxygen>')
+                with self.subTest(body_start=body_start), self.assertRaisesRegex(ValueError, 'body start'):
+                    docs.observed_functions(xml, staged)
             (xml/'index.xml').write_text('<doxygenindex><compound refid="../escape"/></doxygenindex>')
             with self.assertRaisesRegex(ValueError, 'compound'):
                 docs.observed_functions(xml, staged)

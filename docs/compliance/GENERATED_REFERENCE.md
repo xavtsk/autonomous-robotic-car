@@ -27,7 +27,10 @@ python tools/compliance/build_docs.py \
 
 The compiler report is generated separately by `barr_functions.py` using the
 current target commands and recorded host/profile contexts. Its owned-file set
-and source-location hashes must match the generator's inputs exactly. Functions
+and source-location hashes must match the generator's inputs exactly. Full
+normalized source-text hashes also bind comment prose; a same-line comment edit
+cannot reuse an old documentation result. The compiler collector checks these
+hashes before and after observation. Functions
 from error-free compiler observations are compared against XML definition names,
 files and body locations. Recovery observations, missing definitions and
 undocumented comments remain separate counts. Missing/stale reports fail closed.

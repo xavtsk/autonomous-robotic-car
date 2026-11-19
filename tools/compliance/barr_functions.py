@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import hashlib
 import importlib.metadata
 import json
 from pathlib import Path
@@ -74,12 +75,28 @@ def parse_functions(job, root, owned, lexical_index):
 def collect(root, databases, profiles, jobs):
     # Reuse the inventory's exact compiler-context and profile enumeration,
     # including its explicit diagnostic receipts and source bindings.
+    scope = inventory.read_json(root/'testing/compliance/inventory_scope.json')
+    inputs = inventory.owned_files(root, scope)
+    # Location fingerprints intentionally ignore comment prose; they cannot
+    # bind the documentation flags and contracts collected by this tool.
+    content_before = {path.relative_to(root).as_posix():
+                      hashlib.sha256(path.read_text(encoding='utf-8-sig').encode()).hexdigest()
+                      for path in inputs}
     previous = inventory_ast.parse_one
     inventory_ast.parse_one = parse_functions
     try:
         observed = inventory_ast.collect(root, databases, profiles, jobs)
     finally:
         inventory_ast.parse_one = previous
+    content_after = {path.relative_to(root).as_posix():
+                     hashlib.sha256(path.read_text(encoding='utf-8-sig').encode()).hexdigest()
+                     for path in inputs}
+    if content_before != content_after:
+        raise ValueError('Source text changed during function-documentation observation')
+    if set(observed['files']) != set(content_before):
+        raise ValueError('Function observation file set differs from source text binding')
+    for name, binding in observed['files'].items():
+        binding['source_content_sha256'] = content_before[name]
     functions = observed.pop("declarations")
     observed["functions"] = functions
     observed["definition_count"] = len(functions)

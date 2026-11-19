@@ -21,6 +21,7 @@ def stage_sources(root, destination):
         name = path.relative_to(root).as_posix()
         text = path.read_text(encoding='utf-8-sig')
         bindings[name] = dict(source_location_sha256=inventory.source_location_digest(text),
+                              source_content_sha256=hashlib.sha256(text.encode()).hexdigest(),
                               original_bytes_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
         if name in scope.get('mixed_files', {}):
             text = inventory.mixed_owned_text(text, scope['mixed_files'][name])
@@ -41,6 +42,9 @@ def validate_functions(report, bindings):
     for name, binding in bindings.items():
         if files[name].get('source_location_sha256') != binding['source_location_sha256']:
             raise ValueError('Stale compiler function locations: '+name)
+        content = files[name].get('source_content_sha256')
+        if not content or content != binding['source_content_sha256']:
+            raise ValueError('Stale or missing compiler documentation source content: '+name)
     if not report.get('functions'):
         raise ValueError('No compiler-observed function definitions')
 
@@ -88,6 +92,10 @@ def observed_functions(xml_directory, staged_source):
             location = member.find('location')
             if location is None or not location.get('bodyfile'):
                 continue
+            function_name = member.findtext('name')
+            body_start = location.get('bodystart', '')
+            if not function_name or not body_start.isdecimal() or int(body_start) <= 0:
+                raise ValueError('Missing or invalid Doxygen function name/body start')
             path = Path(location.get('bodyfile'))
             if not path.is_absolute():
                 path = staged_source/path
@@ -95,7 +103,7 @@ def observed_functions(xml_directory, staged_source):
                 name = path.resolve().relative_to(staged_source.resolve()).as_posix()
             except ValueError:
                 raise ValueError('Doxygen body outside owned staged source: '+str(path))
-            found.add((name, int(location.get('bodystart')), member.findtext('name')))
+            found.add((name, int(body_start), function_name))
     return found
 
 
@@ -125,12 +133,13 @@ def main(argv=None):
     args = parser.parse_args(argv)
     root, output = args.root.resolve(), args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
+    bindings = {}
+    staged = output/'source'
     result = dict(status='INCOMPLETE', coverage_complete=False, errors=[],
                   limits=['Generated documentation does not validate contract meaning.',
                           'Preprocessing is disabled to expose alternative source branches; Doxygen is not a C compiler.',
                           'Compiler observations and conditional coverage are separate, potentially incomplete evidence.'])
     try:
-        staged = output/'source'
         bindings = stage_sources(root, staged)
         result['source_bindings'] = bindings
         report = json.loads(args.function_report.read_text(encoding='utf-8'))
@@ -155,18 +164,24 @@ def main(argv=None):
         result['warning_lines'] = len(warnings)
         observed = observed_functions(output/'reference/xml', staged)
         result.update(compare_functions(report, observed))
-        # No source files are touched during generation, including staged copies.
-        for name, binding in bindings.items():
-            if hashlib.sha256((root/name).read_bytes()).hexdigest() != binding['original_bytes_sha256']:
-                raise ValueError('Source changed during documentation measurement: '+name)
-            if hashlib.sha256((staged/name).read_bytes()).hexdigest() != binding['staged_sha256']:
-                raise ValueError('Staged source changed during documentation measurement: '+name)
-        result['source_unchanged'] = True
         if not warnings and not result['missing_observed_definitions'] and not result['compiler_recovery_variants'] and not result['compiler_undocumented_variants'] and report.get('coverage_complete') is True:
             result['status'] = 'PASS'
             result['coverage_complete'] = True
     except (OSError, ValueError, KeyError, ET.ParseError, subprocess.SubprocessError) as error:
         result['errors'].append(str(error))
+    finally:
+        # Retain the preservation result even when generation or XML parsing fails.
+        if bindings:
+            try:
+                for name, binding in bindings.items():
+                    if hashlib.sha256((root/name).read_bytes()).hexdigest() != binding['original_bytes_sha256']:
+                        raise ValueError('Source changed during documentation measurement: '+name)
+                    if hashlib.sha256((staged/name).read_bytes()).hexdigest() != binding['staged_sha256']:
+                        raise ValueError('Staged source changed during documentation measurement: '+name)
+                result['source_unchanged'] = True
+            except (OSError, ValueError) as error:
+                result.update(status='INCOMPLETE', coverage_complete=False, source_unchanged=False)
+                result['errors'].append(str(error))
     (output/'results.json').write_text(json.dumps(result, indent=2)+'\n', encoding='utf-8')
     print(json.dumps({key: value for key, value in result.items() if key not in ('source_bindings', 'missing_observed_definitions')}, indent=2))
     return 0 if result['status'] == 'PASS' else 2
