@@ -160,7 +160,7 @@ class ConditionalCoverageTests(unittest.TestCase):
     def test_compiler_options_preserve_forced_include(self):
         command = COVERAGE.preprocess_arguments(
             ['cc', '-include', 'fixture.c', '-DFOO=1', '-c', 'a.c', 'b.c', '-o', 'a.o', '-MMD',
-             '-MFobject.d', '-MTobject.o', '-MQquoted.o', '-lm'], 'overlay/a.c')
+             '-MFobject.d', '-MTobject.o', '-MQquoted.o', '-ojoined.i', '-lm'], 'overlay/a.c')
         self.assertEqual(command, ['cc', '-include', 'fixture.c', '-DFOO=1', '-E', '-P', 'overlay/a.c'])
 
     def test_end_without_newline_and_digraph(self):

@@ -21,8 +21,10 @@ sys.path.insert(0, str(ROOT))
 from testing.compliance import inventory
 try:
     from .format_owned import TOKEN
+    from .baseline_fixture_coverage import ExternalBaseline, PROFILES as BASELINE_FIXTURE_PROFILES
 except ImportError:
     from format_owned import TOKEN
+    from baseline_fixture_coverage import ExternalBaseline, PROFILES as BASELINE_FIXTURE_PROFILES
 
 MARKER = 'CODEX_CONDITIONAL_'
 
@@ -191,7 +193,7 @@ def preprocess_arguments(arguments, source):
         if arg in {'-o', '-MF', '-MT', '-MQ'}:
             index += 2
             continue
-        if arg.startswith(('-MF', '-MT', '-MQ')):
+        if arg.startswith(('-MF', '-MT', '-MQ', '-o')):
             index += 1
             continue
         if arg in {'-I', '-isystem', '-iquote', '-include', '-imacros', '-isysroot', '-D', '-U'}:
@@ -241,6 +243,9 @@ def main():
     parser.add_argument('--commands', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--profile', required=True)
+    parser.add_argument('--external-baseline', type=Path)
+    parser.add_argument('--fixture-bindings', type=Path)
+    parser.add_argument('--module-bindings', type=Path)
     args = parser.parse_args()
     if sys.platform != 'linux':
         parser.error('Run the full overlay collector in the Linux CI checkout.')
@@ -249,6 +254,18 @@ def main():
         parser.error('Keep the disposable overlay outside the subject source tree.')
     output.mkdir(parents=True, exist_ok=False)
     overlay = output/'source-overlay'
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+    external, setup_errors = None, []
+    if args.external_baseline:
+        try:
+            if args.profile not in BASELINE_FIXTURE_PROFILES or args.fixture_bindings is None:
+                raise ValueError('External baseline requires a distinct fixture profile and same-run binding')
+            external = ExternalBaseline(root, args.external_baseline, args.fixture_bindings,
+                                        args.module_bindings, revision)
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            setup_errors.append(str(error))
+    elif args.profile in BASELINE_FIXTURE_PROFILES or args.fixture_bindings or args.module_bindings:
+        setup_errors.append('Baseline-fixture inputs require an explicit external baseline checkout')
     if (root/'config/wifi_secrets.h').exists():
         parser.error('Refusing a checkout containing private or unclassified network settings.')
     # Preserve build-generated headers and original paths. No links back to
@@ -260,16 +277,18 @@ def main():
         shutil.copyfile(example, overlay/'config/wifi_secrets.h')
     scope = inventory.read_json(ROOT/'testing/compliance/inventory_scope.json')
     owned = inventory.owned_files(root, scope)
-    branches, hashes, errors, sources = [], {}, [], {}
+    branches, hashes, errors, sources = [], {}, list(setup_errors), {}
     for file in owned:
         path = file.relative_to(root).as_posix()
         text = file.read_text(encoding='utf-8-sig')
         hashes[path] = hashlib.sha256(text.encode()).hexdigest()
         sources[path] = text
-    contents = args.commands.read_text(encoding='utf-8')
+    command_bytes = args.commands.read_bytes()
+    command_digest = hashlib.sha256(command_bytes).hexdigest()
+    contents = command_bytes.decode('utf-8')
     commands = json.loads(contents) if contents.lstrip().startswith('[') else [json.loads(row) for row in contents.splitlines() if row]
     work, seen = [], set()
-    for row in commands:
+    for row in commands if not setup_errors else []:
         arguments = row['arguments']
         directory = Path(row['directory'])
         for value in arguments[1:]:
@@ -280,8 +299,15 @@ def main():
                 continue
             mapped = overlay/source.relative_to(root)
             command = preprocess_arguments(arguments, mapped)
-            command = [part.replace(str(root), str(overlay)) for part in command]
-            cwd = overlay/directory.relative_to(root)
+            try:
+                if external:
+                    command, cwd = external.map_context(command, directory, root, overlay)
+                else:
+                    command = [part.replace(str(root), str(overlay)) for part in command]
+                    cwd = overlay/directory.relative_to(root)
+            except (OSError, ValueError) as error:
+                errors.append('Unbound compiler context: '+str(error))
+                continue
             key = (tuple(command), str(cwd))
             if key not in seen:
                 seen.add(key)
@@ -294,6 +320,13 @@ def main():
     definitions = [definition for row in pristine for definition in row.pop('definitions')]
     errors.extend('Pristine preprocessing failed: '+row['log']
                   for row in pristine if row['returncode'])
+    dependencies = []
+    if external and not errors:
+        # Sequential collection also binds a stable first-seen dependency hash.
+        dependencies = [external.observe(command, cwd, output, number, overlay)
+                        for number, (command, cwd) in enumerate(work)]
+        errors.extend('External dependency observation failed: '+row['log']
+                      for row in dependencies if row['returncode'] or row['errors'])
     try:
         safety_errors = line_safety_errors(sources, definitions)
     except ValueError as exc:
@@ -316,7 +349,8 @@ def main():
     derived_inputs = {}
     if not errors:
         for path, changed in changed_sources.items():
-            (overlay/path).write_text(changed, encoding='utf-8')
+            if external is None or path in external.fixtures:
+                (overlay/path).write_text(changed, encoding='utf-8')
         # Both pristine and instrumented passes use the public example alias.
         if example.is_file():
             shutil.copyfile(overlay/'config/wifi_secrets.example.h', overlay/'config/wifi_secrets.h')
@@ -342,11 +376,20 @@ def main():
         current = hashlib.sha256((root/path).read_text(encoding='utf-8-sig').encode()).hexdigest()
         if current != digest:
             errors.append('Measured source changed during preprocessing: '+path)
+    if external:
+        try:
+            external.verify_preservation()
+        except (OSError, ValueError) as error:
+            errors.append(str(error))
+    if hashlib.sha256(args.commands.read_bytes()).hexdigest() != command_digest:
+        errors.append('Compiler command receipt changed during preprocessing')
     failures = [row for row in observations if row['returncode']]
-    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     report = dict(profile=args.profile, revision=revision, source_sha256=hashes, branches=branches,
                   derived_inputs=derived_inputs,
                   pristine_observations=pristine, line_safety_errors=safety_errors,
+                  external_baseline=external.record if external else None,
+                  dependency_observations=dependencies,
+                  compile_commands_sha256=command_digest,
                   observations=observations, errors=errors, missing=[row['id'] for row in branches if not row['observed']],
                   measurement_passed=bool(observations) and not errors and not failures,
                   coverage_complete=bool(observations) and not errors and not failures and all(row['observed'] for row in branches),
@@ -355,6 +398,7 @@ def main():
                                'Host-only files need host compile records; a target profile alone is incomplete.',
                                'Line-safety dependencies conservatively union macro definitions and contexts; harmless redefinitions or unused arguments can be rejected.',
                                'Token-pasting/generated defined macros reaching conditions or include selection require explicit review; no full macro-expansion equivalence is claimed.',
+                               'External fixed-baseline dependencies remain uninstrumented; only hash-bound current fixture arms can contribute.',
                                'Preprocessor visibility is not branch execution or full-course validation.'])
     (output/'results.json').write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')
     if overlay.resolve().parent != output or overlay.name != 'source-overlay':

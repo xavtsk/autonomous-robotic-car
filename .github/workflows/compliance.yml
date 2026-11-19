@@ -71,6 +71,28 @@ jobs:
           name: branches-host-${{ matrix.mode }}-${{ github.sha }}
           path: evidence/conditional-coverage/results.json
           if-no-files-found: error
+      - name: Observe current fixtures against the fixed baseline
+        if: always() && matrix.revision == 'baseline' && matrix.mode != 'sanitize'
+        run: /usr/bin/python3 tooling/tools/compliance/conditional_coverage.py --root tooling --external-baseline subject --fixture-bindings evidence/fixture-bindings.json --module-bindings evidence/tilt-module.json --commands evidence/compile_commands.jsonl --output evidence/baseline-fixture-coverage --profile 'host-baseline-fixtures-${{ matrix.mode }}'
+      - name: Save separately bound baseline-fixture branch receipt
+        if: always() && matrix.revision == 'baseline' && matrix.mode != 'sanitize'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: branches-host-baseline-fixtures-${{ matrix.mode }}-${{ github.sha }}
+          path: evidence/baseline-fixture-coverage/results.json
+          if-no-files-found: error
+      - name: Collect actual host compiler function observations
+        if: always() && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
+        run: |
+          /usr/bin/python3 -m pip install --disable-pip-version-check --target "$RUNNER_TEMP/clang-host-functions" libclang==18.1.1
+          PYTHONPATH="$RUNNER_TEMP/clang-host-functions" /usr/bin/python3 tooling/tools/compliance/barr_functions.py --root subject --equivalent-root tooling --compile-db evidence/compile_commands.jsonl --recorded-only --profile-label 'host-${{ matrix.mode }}' --output evidence/function-inventory.json --jobs 4
+      - name: Save actual host compiler function observations
+        if: always() && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: function-inventory-host-${{ matrix.mode }}-${{ github.sha }}
+          path: evidence/function-inventory.json
+          if-no-files-found: error
       - name: Save execution evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -147,12 +169,14 @@ jobs:
         run: |
           /usr/bin/python3 -m pip install --disable-pip-version-check --target "$RUNNER_TEMP/clang-bindings" libclang==18.1.1
           PYTHONPATH="$RUNNER_TEMP/clang-bindings" /usr/bin/python3 candidate/testing/compliance/inventory_ast.py --root candidate --compile-db evidence/candidate/compile_commands.json --output evidence/inventory-ast.json --jobs 4
-          PYTHONPATH="$RUNNER_TEMP/clang-bindings" /usr/bin/python3 candidate/tools/compliance/barr_functions.py --compile-db evidence/candidate/compile_commands.json --output evidence/function-inventory.json --jobs 4
+      - name: Collect target compiler function observations with derived public configuration
+        if: always() && matrix.profile == 'production'
+        run: PYTHONPATH="$RUNNER_TEMP/clang-bindings" /usr/bin/python3 candidate/tools/compliance/barr_functions.py --root candidate --compile-db evidence/candidate/compile_commands.json --public-config-output evidence/function-config --profile-label target-production --output evidence/function-inventory.json --jobs 4
       - name: Save compiler function observations for documentation comparison
         if: always() && matrix.profile == 'production'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: function-inventory-${{ github.sha }}
+          name: function-inventory-target-production-${{ github.sha }}
           path: evidence/function-inventory.json
           if-no-files-found: error
       - if: always()
@@ -164,7 +188,7 @@ jobs:
 
   documentation:
     runs-on: ubuntu-24.04
-    needs: [target]
+    needs: [host, target]
     if: always()
     timeout-minutes: 15
     steps:
@@ -172,14 +196,27 @@ jobs:
         with:
           persist-credentials: false
       - run: /usr/bin/python3 tools/compliance/install_host.py --documentation
-      - name: Download this revision's compiler function inventory
+      - name: Download this revision's separate compiler function inventories
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: function-inventory-${{ github.sha }}
+          pattern: function-inventory-*-${{ github.sha }}
           path: compiler-evidence
+          merge-multiple: false
+      - name: Union exact current-source host and target observations
+        if: always()
+        run: /usr/bin/python3 tools/compliance/function_union.py --receipts compiler-evidence --output function-inventory.json
       - name: Generate owned source documentation and retain all warnings
         if: always()
-        run: /usr/bin/python3 tools/compliance/build_docs.py --function-report compiler-evidence/function-inventory.json --output evidence
+        run: /usr/bin/python3 tools/compliance/build_docs.py --function-report function-inventory.json --output evidence
+      - name: Retain compiler union inputs and result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: function-union-${{ github.sha }}
+          path: |
+            compiler-evidence/
+            function-inventory.json
+          if-no-files-found: error
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -196,6 +233,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+          fetch-depth: 0 # Verify consumed fixed-baseline blobs independently of collector claims.
       - run: /usr/bin/python3 tools/compliance/install_host.py
       - name: Download this run's separate branch receipts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0

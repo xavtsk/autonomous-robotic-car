@@ -19,8 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from testing.compliance import inventory
 from conditional_coverage import instrument
 from build_targets import PROFILES
+from baseline_fixture_coverage import PROFILES as BASELINE_FIXTURE_PROFILES, validate_receipt as validate_external_receipt
 
-EXPECTED_PROFILES = {'host-gcc', 'host-clang'} | {'target-' + name for name in PROFILES}
+EXPECTED_PROFILES = {'host-gcc', 'host-clang'} | {'target-' + name for name in PROFILES} | BASELINE_FIXTURE_PROFILES
 BRANCH_KEYS = ('id', 'source', 'line', 'kind', 'directive', 'depth')
 
 
@@ -47,7 +48,7 @@ def source_manifest(root):
     return hashes, branches
 
 
-def combine(reports, hashes, expected_branches, revision, expected_profiles):
+def combine(reports, hashes, expected_branches, revision, expected_profiles, root=None):
     """Validate each receipt; never trust its reported coverage/pass Boolean."""
     seen_profiles, observed, errors = set(), {}, []
     for name, report in reports:
@@ -80,13 +81,21 @@ def combine(reports, hashes, expected_branches, revision, expected_profiles):
                 if ([part for part in original['command'] if part != '-dD'] != sample['command'] or
                         original['directory'] != sample['directory']):
                     raise ValueError('Pristine and instrumented compiler contexts differ')
+            if profile in BASELINE_FIXTURE_PROFILES:
+                validate_external_receipt(report, samples, hashes, revision, root)
+            elif report.get('external_baseline') or report.get('dependency_observations'):
+                raise ValueError('External dependencies require their distinct baseline-fixture profile')
             active = {identity for row in samples for identity in row['active']}
+            if profile in BASELINE_FIXTURE_PROFILES and any(
+                    identity not in entries or entries[identity]['source'] not in report['external_baseline']['fixture_sha256']
+                    for identity in active):
+                raise ValueError('Baseline-fixture observation contains a non-fixture marker')
             for identity, row in entries.items():
                 if row['observed'] != (identity in active):
                     raise ValueError('Arm observation contradicts command receipts')
             for identity in entries.keys() & active:
                 observed.setdefault(identity, []).append(profile)
-        except (KeyError, TypeError, ValueError) as error:
+        except (KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError) as error:
             errors.append({'receipt': name, 'error': str(error)})
     missing_profiles = sorted(expected_profiles - seen_profiles)
     branches = [{**row, 'observed_profiles': sorted(observed.get(identity, []))}
@@ -116,7 +125,7 @@ def main():
         revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
         reports = [(str(path.relative_to(args.receipts)), json.loads(path.read_text(encoding='utf-8')))
                    for path in sorted(args.receipts.rglob('results.json'))]
-        report = combine(reports, hashes, branches, revision, EXPECTED_PROFILES)
+        report = combine(reports, hashes, branches, revision, EXPECTED_PROFILES, root)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         report = {'status': 'INCOMPLETE', 'coverage_complete': False, 'error': str(error)}
     (args.output/'results.json').write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')

@@ -3,6 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 import re
 import unittest
+from unittest.mock import patch
 
 from tools.compliance.coverage_union import combine, EXPECTED_PROFILES
 
@@ -101,12 +102,36 @@ class CoverageUnionTests(unittest.TestCase):
         self.assertTrue(result['coverage_complete'])
         self.assertEqual(len(result['branches']), 2)
 
+    def test_external_dependencies_require_their_separate_profile_and_checkout(self):
+        bad = self.receipt('host', ['first', 'second'])
+        bad['external_baseline'] = {'revision': '4ad2cc42595722cedb47102e4343298339040d40'}
+        self.assertTrue(self.union(bad)['errors'])
+        profile = 'host-baseline-fixtures-gcc'
+        receipt = self.receipt(profile, ['first', 'second'])
+        result = combine([(f'branches-{profile}-commit/results.json', receipt)],
+                         self.hashes, self.rows, 'commit', {profile})
+        self.assertFalse(result['coverage_complete'])
+        self.assertIn('source checkout', result['errors'][0]['error'])
+
+    def test_baseline_fixture_profile_cannot_contribute_helper_or_unknown_markers(self):
+        profile = 'host-baseline-fixtures-gcc'
+        self.rows['second']['source'] = 'helper.h'
+        for active in (['first', 'second'], ['first', 'unknown']):
+            receipt = self.receipt(profile, active)
+            receipt['external_baseline'] = {'fixture_sha256': {'source.c': 'abc'}}
+            with patch('tools.compliance.coverage_union.validate_external_receipt'):
+                result = combine([(f'branches-{profile}-commit/results.json', receipt)],
+                                 self.hashes, self.rows, 'commit', {profile}, Path('.'))
+            self.assertFalse(result['coverage_complete'])
+            self.assertIn('non-fixture marker', result['errors'][0]['error'])
+
     def test_required_target_profiles_match_the_explicit_workflow_matrix(self):
         workflow = (Path(__file__).resolve().parents[2]/'.github/workflows/compliance.yml').read_text()
         declarations = re.findall(r'^\s+profile: \[([a-z0-9_, ]+)\]\s*$', workflow, re.MULTILINE)
         self.assertEqual(len(declarations), 1, 'A changed matrix format requires explicit audit review')
         actual = {'target-' + name.strip() for name in declarations[0].split(',')}
-        self.assertEqual(actual | {'host-gcc', 'host-clang'}, EXPECTED_PROFILES)
+        self.assertEqual(actual | {'host-gcc', 'host-clang', 'host-baseline-fixtures-gcc',
+                                   'host-baseline-fixtures-clang'}, EXPECTED_PROFILES)
 
 
 if __name__ == '__main__':
