@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "kind": "navigation_interface",
+  "before_commit": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
+  "header_path": "testing/subsystem3/test_navigation.h",
+  "header_lf_sha256": "cded0fba11d89a2d0b3d541c5e17e5e03504838c6a073308ca5c1f934a521a47",
+  "source_brief": "/** @brief Run the synthetic navigation integration assertions.\n * @see test_navigation.h for the selected cases and failure contract.\n */\n",
+  "prototype": "void test_navigation (void);",
+  "compiler": "GCC15.2.0 and libclang18.1.1; no C execution",
+  "c_tests_executed": false,
+  "limits": [
+    "Added/moved includes shift assertion line metadata; expanded comparison overrides __LINE__ only.",
+    "The one unchanged void(void) interface prototype is removed from each expanded stream before comparing its new location."
+  ],
+  "contexts": [
+    {
+      "path": "testing/subsystem3/test_navigation.c",
+      "profile": "configured",
+      "arguments": [
+        "-I${REPO}\\app_program\\subsystem3",
+        "-I${REPO}\\testing\\subsystem3",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic",
+        "-O2",
+        "-g"
+      ],
+      "before_expanded_tokens_without_interface_prototype": "9adc43d8f3a96e08cb7dd1854e93d1002a7fa71a0dd7eb4a85792e72c5c57cd5",
+      "definitions": {
+        "calibration": {
+          "type": "s3_calibration_collector_t (void)",
+          "body_tokens": "d1ec917e500d74925a51cdf2133c17a839bec8a7c18c0917b706b49f867aea80"
+        },
+        "accept_calibrations": {
+          "type": "void (rig_t *)",
+          "body_tokens": "4a8345c86c31783604aad9c992c600609c6ed9e342a3082cddb5cd8dedfa8521"
+        },
+        "prepare_frame": {
+          "type": "void (rig_t *, unsigned short, unsigned short, unsigned short)",
+          "body_tokens": "e5351a9550aea4c0a774f005ff2ec187a3b35506563ae8e3b1752c0d0cf7bea7"
+        },
+        "process": {
+          "type": "void (rig_t *, _Bool)",
+          "body_tokens": "b6d30499ba64f27576cbee993dbdaf85cbd74b1cc7faf0e0d7efac951c72afe5"
+        },
+        "tick": {
+          "type": "void (rig_t *, unsigned short, unsigned short, unsigned short)",
+          "body_tokens": "d89b3cffbf7dcf01507b1c2f053a6484a8e715701627425888b4390071b241d8"
+        },
+        "hold": {
+          "type": "void (rig_t *, unsigned int, unsigned short, unsigned short, unsigned short)",
+          "body_tokens": "88f79884f0c8dd081b589b6a164b04d5430e792aaa08e404a5e921f1ee60b38f"
+        },
+        "init_rig": {
+          "type": "void (rig_t *, unsigned int, _Bool)",
+          "body_tokens": "2feec2c4eee41b1361d754b6c1f8805b2a06d4d8d7dafc741eaca15802959aef"
+        },
+        "scan": {
+          "type": "void (rig_t *, char, _Bool)",
+          "body_tokens": "790acc4bf7c371cbaefcfb57ba7b792c6e34ab3ed147696f1cf5ba4d04ce1240"
+        },
+        "test_readiness_and_updates": {
+          "type": "void (void)",
+          "body_tokens": "b1d8cee269330fac689ba6aa85e7056eb94279b888a1bf6fd68210cacbb524ad"
+        },
+        "test_faults": {
+          "type": "void (void)",
+          "body_tokens": "8bec32d39ab35cbf6596ba31ac515fc4af0b97916102104494cc53d5456c452c"
+        },
+        "test_rearming_and_timing": {
+          "type": "void (void)",
+          "body_tokens": "152c62d95553cdb1f39a18f3874f8200d517d54e4aa2ce0c3e27d03dfd25bea7"
+        },
+        "test_line_modes_and_diagnostics": {
+          "type": "void (void)",
+          "body_tokens": "334f710eee6d60b8b08e76317b7e6036471f27e0180972fd99a109aca34ba4ad"
+        },
+        "test_clearance_persistence_and_epochs": {
+          "type": "void (void)",
+          "body_tokens": "5108bc711478b17c8004f7f505ee1a216e0061d8f300c7cfc13c1ec1a8f4974b"
+        },
+        "test_faint_barcode": {
+          "type": "void (void)",
+          "body_tokens": "172c57acb115201954cb04742e9822894c2951268dd099977293fc221e2d836d"
+        },
+        "test_navigation": {
+          "type": "void (void)",
+          "body_tokens": "135a28abfde5f5275328c3535c38cd2692cfcb7bc05a01d8e536c3853fe86bf6"
+        }
+      },
+      "syntax_before_after": "PASS",
+      "expanded_tokens_match_after_only_interface_and_line_normalization": true
+    },
+    {
+      "path": "testing/subsystem3/test_navigation.c",
+      "profile": "S3_BASELINE_TRACE",
+      "arguments": [
+        "-I${REPO}\\app_program\\subsystem3",
+        "-I${REPO}\\testing\\subsystem3",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic",
+        "-O2",
+        "-g",
+        "-DS3_BASELINE_TRACE=1"
+      ],
+      "before_expanded_tokens_without_interface_prototype": "fb221eaa99f7a1e902aaa4923ad8150ebef5416de841da8e62d4a7ddcde6a5cb",
+      "definitions": {
+        "calibration": {
+          "type": "s3_calibration_collector_t (void)",
+          "body_tokens": "d1ec917e500d74925a51cdf2133c17a839bec8a7c18c0917b706b49f867aea80"
+        },
+        "accept_calibrations": {
+          "type": "void (rig_t *)",
+          "body_tokens": "4a8345c86c31783604aad9c992c600609c6ed9e342a3082cddb5cd8dedfa8521"
+        },
+        "prepare_frame": {
+          "type": "void (rig_t *, unsigned short, unsigned short, unsigned short)",
+          "body_tokens": "e5351a9550aea4c0a774f005ff2ec187a3b35506563ae8e3b1752c0d0cf7bea7"
+        },
+        "process": {
+          "type": "void (rig_t *, _Bool)",
+          "body_tokens": "b6d30499ba64f27576cbee993dbdaf85cbd74b1cc7faf0e0d7efac951c72afe5"
+        },
+        "tick": {
+          "type": "void (rig_t *, unsigned short, unsigned short, unsigned short)",
+          "body_tokens": "d89b3cffbf7dcf01507b1c2f053a6484a8e715701627425888b4390071b241d8"
+        },
+        "hold": {
+          "type": "void (rig_t *, unsigned int, unsigned short, unsigned short, unsigned short)",
+          "body_tokens": "88f79884f0c8dd081b589b6a164b04d5430e792aaa08e404a5e921f1ee60b38f"
+        },
+        "init_rig": {
+          "type": "void (rig_t *, unsigned int, _Bool)",
+          "body_tokens": "2feec2c4eee41b1361d754b6c1f8805b2a06d4d8d7dafc741eaca15802959aef"
+        },
+        "scan": {
+          "type": "void (rig_t *, char, _Bool)",
+          "body_tokens": "790acc4bf7c371cbaefcfb57ba7b792c6e34ab3ed147696f1cf5ba4d04ce1240"
+        },
+        "test_readiness_and_updates": {
+          "type": "void (void)",
+          "body_tokens": "b1d8cee269330fac689ba6aa85e7056eb94279b888a1bf6fd68210cacbb524ad"
+        },
+        "test_faults": {
+          "type": "void (void)",
+          "body_tokens": "8bec32d39ab35cbf6596ba31ac515fc4af0b97916102104494cc53d5456c452c"
+        },
+        "test_rearming_and_timing": {
+          "type": "void (void)",
+          "body_tokens": "152c62d95553cdb1f39a18f3874f8200d517d54e4aa2ce0c3e27d03dfd25bea7"
+        },
+        "test_line_modes_and_diagnostics": {
+          "type": "void (void)",
+          "body_tokens": "334f710eee6d60b8b08e76317b7e6036471f27e0180972fd99a109aca34ba4ad"
+        },
+        "test_clearance_persistence_and_epochs": {
+          "type": "void (void)",
+          "body_tokens": "5108bc711478b17c8004f7f505ee1a216e0061d8f300c7cfc13c1ec1a8f4974b"
+        },
+        "test_navigation": {
+          "type": "void (void)",
+          "body_tokens": "135a28abfde5f5275328c3535c38cd2692cfcb7bc05a01d8e536c3853fe86bf6"
+        }
+      },
+      "syntax_before_after": "PASS",
+      "expanded_tokens_match_after_only_interface_and_line_normalization": true
+    },
+    {
+      "path": "testing/subsystem3/test_core.c",
+      "profile": "configured",
+      "arguments": [
+        "-I${REPO}\\app_program\\subsystem3",
+        "-I${REPO}\\testing\\subsystem3",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic",
+        "-O2",
+        "-g"
+      ],
+      "before_expanded_tokens_without_interface_prototype": "19020f3c8544bfd0523e9a3f9163e18b3b0eb835a9f225f9976dd72af2925fc6",
+      "definitions": {
+        "mock_read": {
+          "type": "int (void *, unsigned char, unsigned short *)",
+          "body_tokens": "539f109e7989721afa9b0216b23f478c2cd9e9306b422b749626bbc72dde9edc"
+        },
+        "mock_clock": {
+          "type": "unsigned int (void *)",
+          "body_tokens": "68ffe45d33fcd8792bdda8e87d433724d75081de71de2520734456268b58e151"
+        },
+        "test_acquisition": {
+          "type": "void (void)",
+          "body_tokens": "a6a926e729c2a1b53e2bc28c154e77dff9590eeb558bbd324d1d84a22538bb71"
+        },
+        "test_calibration": {
+          "type": "void (void)",
+          "body_tokens": "5346da16977de08294c44ca84c5990256e9cda16eeb4b55df842b45e25faa625"
+        },
+        "test_line": {
+          "type": "void (void)",
+          "body_tokens": "f7761416b4ef124a11d176a4058d33e10afc10fb5f135e966fcc97b9dd0c5f77"
+        },
+        "make_runs": {
+          "type": "void (char, unsigned int *)",
+          "body_tokens": "9b818d34b6dd81ee0117d6ae15001901e21b6020a90f5f9d88c9089009c26ec2"
+        },
+        "feed_duration": {
+          "type": "unsigned int (s3_barcode_decoder_t *, unsigned int *, _Bool, unsigned int, s3_barcode_result_t *)",
+          "body_tokens": "adbbbf373d190895ef1ef353186235e81d6f8faf6ad0b26148568b1fd1174e32"
+        },
+        "test_barcode": {
+          "type": "void (void)",
+          "body_tokens": "6963043584e4e614d3555c32eccbced999370dab586bf025defcfef90bfc9d12"
+        },
+        "main": {
+          "type": "int (void)",
+          "body_tokens": "e32654fdca1a6e712a6909626ed3001295ff85e868df985612262103252f65ad"
+        }
+      },
+      "syntax_before_after": "PASS",
+      "expanded_tokens_match_after_only_interface_and_line_normalization": true
+    },
+    {
+      "path": "testing/subsystem3/test_core.c",
+      "profile": "S3_BASELINE_TRACE",
+      "arguments": [
+        "-I${REPO}\\app_program\\subsystem3",
+        "-I${REPO}\\testing\\subsystem3",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic",
+        "-O2",
+        "-g",
+        "-DS3_BASELINE_TRACE=1"
+      ],
+      "before_expanded_tokens_without_interface_prototype": "19020f3c8544bfd0523e9a3f9163e18b3b0eb835a9f225f9976dd72af2925fc6",
+      "definitions": {
+        "mock_read": {
+          "type": "int (void *, unsigned char, unsigned short *)",
+          "body_tokens": "539f109e7989721afa9b0216b23f478c2cd9e9306b422b749626bbc72dde9edc"
+        },
+        "mock_clock": {
+          "type": "unsigned int (void *)",
+          "body_tokens": "68ffe45d33fcd8792bdda8e87d433724d75081de71de2520734456268b58e151"
+        },
+        "test_acquisition": {
+          "type": "void (void)",
+          "body_tokens": "a6a926e729c2a1b53e2bc28c154e77dff9590eeb558bbd324d1d84a22538bb71"
+        },
+        "test_calibration": {
+          "type": "void (void)",
+          "body_tokens": "5346da16977de08294c44ca84c5990256e9cda16eeb4b55df842b45e25faa625"
+        },
+        "test_line": {
+          "type": "void (void)",
+          "body_tokens": "f7761416b4ef124a11d176a4058d33e10afc10fb5f135e966fcc97b9dd0c5f77"
+        },
+        "make_runs": {
+          "type": "void (char, unsigned int *)",
+          "body_tokens": "9b818d34b6dd81ee0117d6ae15001901e21b6020a90f5f9d88c9089009c26ec2"
+        },
+        "feed_duration": {
+          "type": "unsigned int (s3_barcode_decoder_t *, unsigned int *, _Bool, unsigned int, s3_barcode_result_t *)",
+          "body_tokens": "adbbbf373d190895ef1ef353186235e81d6f8faf6ad0b26148568b1fd1174e32"
+        },
+        "test_barcode": {
+          "type": "void (void)",
+          "body_tokens": "6963043584e4e614d3555c32eccbced999370dab586bf025defcfef90bfc9d12"
+        },
+        "main": {
+          "type": "int (void)",
+          "body_tokens": "e32654fdca1a6e712a6909626ed3001295ff85e868df985612262103252f65ad"
+        }
+      },
+      "syntax_before_after": "PASS",
+      "expanded_tokens_match_after_only_interface_and_line_normalization": true
+    }
+  ],
+  "files": [
+    {
+      "path": "testing/subsystem3/test_navigation.c",
+      "before_lf_sha256": "11a2df1b710b94cc1ec4a9991bd0e1b48a09fa75ea2ae62f290a3990209c157e",
+      "after_lf_sha256": "986d57d9c14dcf50e8c70ba72cd696e7e71af10e97161892cfd24e04a887b177"
+    },
+    {
+      "path": "testing/subsystem3/test_core.c",
+      "before_lf_sha256": "11a3a0d0759417a1420d272b1fef7a661a7c07538cae266ff2bcea4d0ff2b5f1",
+      "after_lf_sha256": "33db6cfe953a1868c1b04549670729d91aeff50abc9a89c1f2cc6b34b93a4685"
+    }
+  ],
+  "documentation_checks": [
+    {
+      "path": "testing/subsystem3/test_navigation.c",
+      "profile": "configured",
+      "documentation_diagnostics": 0
+    },
+    {
+      "path": "testing/subsystem3/test_navigation.c",
+      "profile": "S3_BASELINE_TRACE",
+      "documentation_diagnostics": 0
+    },
+    {
+      "path": "testing/subsystem3/test_core.c",
+      "profile": "configured",
+      "documentation_diagnostics": 0
+    },
+    {
+      "path": "testing/subsystem3/test_core.c",
+      "profile": "S3_BASELINE_TRACE",
+      "documentation_diagnostics": 0
+    }
+  ],
+  "new_header_documentation_diagnostics": 0
+}

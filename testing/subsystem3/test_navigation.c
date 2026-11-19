@@ -4,6 +4,7 @@
  */
 /* Synthetic integration inputs. No hardware results are implied by these tests.
  */
+#include "test_navigation.h"
 #include <assert.h>
 #include <math.h>
 #include <string.h>
@@ -573,6 +574,9 @@ static void test_faint_barcode (void)
 }
 #endif
 
+/** @brief Run the synthetic navigation integration assertions.
+ * @see test_navigation.h for the selected cases and failure contract.
+ */
 void test_navigation (void)
 {
 #ifndef S3_BASELINE_TRACE

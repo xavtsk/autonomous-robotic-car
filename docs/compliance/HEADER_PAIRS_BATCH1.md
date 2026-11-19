@@ -27,13 +27,13 @@ raw preprocessor output. Production files and test assertions are unchanged.
 Linux test execution and sanitizer results remain the required runtime gate.
 
 ```sh
-python tools/compliance/verify_header_pairs.py
+python tools/compliance/verify_header_pairs.py --candidate df346fb6dced5376b9b9b5e32014d296829b2f24
 python -m unittest testing.compliance.test_header_pairs testing.compliance.test_barr_check
 ```
 
-The focused verifier and 27 audit trust-boundary tests pass locally. After this
-batch is published, pin `--candidate <header-batch-commit>` when repeating its
-historical verification. The verifier checks the bound source/header changes;
+The focused verifier and 27 audit trust-boundary tests pass locally. The command
+above pins the published batch for historical verification, including after
+the navigation test gains its separate shared interface. The verifier checks the bound source/header changes;
 it does not rerun the compiler observations recorded in the manifest.
 
 Shared CI fixtures must carry their new paired headers. In particular,

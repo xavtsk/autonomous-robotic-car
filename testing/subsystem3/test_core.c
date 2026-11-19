@@ -3,6 +3,7 @@
  * logic.
  */
 #include "test_core.h"
+#include "test_navigation.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -410,8 +411,6 @@ static void test_barcode (void)
     assert(feed_duration(&d, &t, false, 1100000U, &result) == 0U);
     assert(!d.collecting);
 }
-
-void test_navigation (void);
 
 int main (void)
 {
