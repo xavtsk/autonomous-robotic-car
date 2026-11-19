@@ -56,10 +56,13 @@ class AnchorTests(unittest.TestCase):
 
     def test_manual_make_checks_detection_and_keeps_command_line_flags(self):
         root = Path(__file__).resolve().parents[2]
-        makefile = (root/'testing/integration/controller_test.mk').read_text()
-        self.assertIn('PYTHON ?= python3', makefile)
-        self.assertIn('ifneq ($(.SHELLSTATUS),0)\n$(error Private storage detection failed;', makefile)
-        self.assertIn('override CFLAGS += $(PRIVATE_STORAGE_FLAGS)', makefile)
+        for relative in ['testing/integration/controller_test.mk',
+                         'testing/subsystem4/Makefile']:
+            with self.subTest(makefile=relative):
+                makefile = (root/relative).read_text()
+                self.assertIn('PYTHON ?= python3', makefile)
+                self.assertIn('ifneq ($(.SHELLSTATUS),0)\n$(error Private storage detection failed;', makefile)
+                self.assertIn('override CFLAGS += $(PRIVATE_STORAGE_FLAGS)', makefile)
 
     def test_whitespace_and_interleaved_comments_match_once(self):
         source = 'before();\n call ( value , /* retained condition */ sizeof value ) ;\nafter();'

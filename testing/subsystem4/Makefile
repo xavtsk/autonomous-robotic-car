@@ -2,6 +2,13 @@ CC = cc
 APP = ../../app_program
 BUILD = ../../build/buddy4
 CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g
+# Python 3 selects the reviewed private layout; override with PYTHON=/path/to/python.
+PYTHON ?= python3
+PRIVATE_STORAGE_FLAGS := $(shell $(PYTHON) ../../tools/compliance/instrument_harnesses.py --private-storage-flag ../..)
+ifneq ($(.SHELLSTATUS),0)
+$(error Private storage detection failed; verify PYTHON names a Python 3 interpreter)
+endif
+override CFLAGS += $(PRIVATE_STORAGE_FLAGS)
 CORE = $(addprefix $(APP)/subsystem4/,imu_sensor.c imu_calibration.c tilt_estimation.c hump_detection.c events_motion.c terr_data.c)
 S3 = $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c bc_decoder.c line_navigation.c navigation_codec.c)
 CONTROL = $(addprefix $(APP)/controller/,s3_drive.c terr_link.c bc_capture.c integration_codec.c)

@@ -10,8 +10,9 @@
     "tools/compliance/instrument_harnesses.py": "bb392319b0db7de96221ceb0d60ae613eaec0300a7c1e240fe089b984149eeba",
     "testing/integration/controller_test.mk": "10f475e53e5b83e1f51b5a7ca9a45b369cd888640db526819e0e6564a4eb5bd4",
     "tools/compliance/differential.py": "558fa3284ecc0a4c67c7736c0f5d264ebeb0ed300f2352c22638691d63436df7",
-    "testing/compliance/test_instrument_harnesses.py": "99e65b08e4da1e5604030fd819a24f85d82bf1e580b9aa9d04c850572b9e3eb6",
-    "testing/compliance/inventory_policies.json": "893afaa70d712e673af1bda195010b42b83b83300fe5dc346c2504d66a6b2344"
+    "testing/compliance/test_instrument_harnesses.py": "53ff14584ffcfe74a8eff94f465e5e00ca70ecd2638742648c97ad23205ccb50",
+    "testing/compliance/inventory_policies.json": "893afaa70d712e673af1bda195010b42b83b83300fe5dc346c2504d66a6b2344",
+    "testing/subsystem4/Makefile": "422b4d9e1e700f473b55dca4be3cc23903aaf7a6a179e8fe3e337b6eb8efe8a7"
   },
   "source_hash_normalization": "UTF-8 text with LF newlines",
   "production": {
@@ -407,6 +408,49 @@
       "exit_code": 0,
       "stdout": "",
       "stderr": ""
+    },
+    {
+      "name": "subsystem4-embedded-runtime",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-DTEST_S3_COMPACT_STORAGE=1",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-O2",
+        "-g",
+        "-pthread",
+        "-pedantic-errors",
+        "-DAPP_H",
+        "-DAPP_S4=1",
+        "-DAPP_TEST=0",
+        "-include",
+        "../integration/controller_test_kernel.h",
+        "-I../integration",
+        "-I../integration/fakes",
+        "integration_test.c",
+        "../../app_program/controller/s3_drive.c",
+        "../../app_program/controller/terr_link.c",
+        "../../app_program/controller/bc_capture.c",
+        "../../app_program/controller/integration_codec.c",
+        "../../app_program/subsystem3/ir_acquisition.c",
+        "../../app_program/subsystem3/ir_calibration.c",
+        "../../app_program/subsystem3/ir_reflectance.c",
+        "../../app_program/subsystem3/line_detection.c",
+        "../../app_program/subsystem3/line_controller.c",
+        "../../app_program/subsystem3/bc_decoder.c",
+        "../../app_program/subsystem3/line_navigation.c",
+        "../../app_program/subsystem3/navigation_codec.c",
+        "-lm",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\integration-storage-compile\\subsystem4-integration.exe"
+      ],
+      "directory": "C:/Code/autonomous-robotic-car/testing/subsystem4",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "",
+      "source_sha256_lf": "95f21daeae320659041e832fa47e9eb896fc9e8aad689cea340ae0fda91dbfc7"
     }
   ],
   "manual_make": {
@@ -432,6 +476,20 @@
       "PYTHON": "definitely_missing_python_interpreter",
       "exit_code": 2,
       "message": "Private storage detection failed; verify PYTHON names a Python 3 interpreter"
+    },
+    "embedded_runtime_consumer": {
+      "path": "testing/subsystem4/Makefile",
+      "command": [
+        "C:/msys64/usr/bin/make.exe",
+        "-C",
+        "testing/subsystem4",
+        "-n",
+        "test",
+        "PYTHON=C:/Users/ginli/AppData/Local/Programs/Python/Python313/python.exe",
+        "CFLAGS=-std=c99"
+      ],
+      "exit_code": 0,
+      "compatibility_flag_present": true
     }
   },
   "arm_object_measurements": [
@@ -1652,8 +1710,25 @@
     "environment": {
       "CR1_REQUIRE_LIBCLANG": "1"
     },
-    "tests": 203,
+    "tests": 209,
     "failures": 0,
     "skips": 0
+  },
+  "follow_up_consumer_audit": {
+    "trigger": "Complete AST recollection found the existing subsystem4 fixture directly includes runtime_test.c.",
+    "action": "Apply the same fail-closed test-only flag selection to its unchanged Make recipe. Production and fixture assertions remain untouched.",
+    "compiler_contexts": "Two supplemental contexts pass without diagnostics: the flagged subsystem4 fixture and a dedicated motion fake-header inspection using its existing owner Makefile include paths.",
+    "full_inventory": {
+      "files": 270,
+      "declarations": 9250,
+      "open_fields": 192,
+      "observed_files": 267,
+      "historical_partial_files": [
+        "testing/integration/controller_test.c",
+        "testing/subsystem2/controller_adapter_test.c",
+        "testing/subsystem2/host_regression.c"
+      ],
+      "translation_units": 1438
+    }
   }
 }
