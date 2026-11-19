@@ -1,3 +1,6 @@
+/** @file smoke_motion.c
+ * @brief Run the separately enabled, manually armed hardware motion smoke test.
+ */
 /* Isolated, manually armed hardware test. No changes to Buddy 2 algorithms. */
 #include "smoke_motion.h"
 #if APP_MOTION_SMOKE
@@ -205,3 +208,6 @@ void motion_smoke_run (void)
     finish(result);
 }
 #endif
+
+/* End of file. */
+

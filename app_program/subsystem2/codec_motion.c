@@ -1,15 +1,16 @@
+/** @file codec_motion.c
+ * @brief Pack and unpack the shared motion snapshot.
+ */
 #include "codec_motion.h"
 #include "../build_assert.h"
 
 /* Compile-time guarantee: motion snapshot layout. */
-BUILD_ASSERT(sizeof(motion_snapshot_t) == 4U,
-             codec_motion_c_check_a_t);
+BUILD_ASSERT(sizeof(motion_snapshot_t) == 4U, codec_motion_c_check_a_t);
 /* Compile-time guarantee: motion state/fault no longer fits three bits. */
 BUILD_ASSERT(MOTION_FAULT < 8 && MOTION_FAULT_TIMEOUT < 8,
              codec_motion_c_check_b_t);
 /* Compile-time guarantee: manoeuvre no longer fits two bits. */
-BUILD_ASSERT(MANOEUVRE_U_TURN < 4,
-             codec_motion_c_check_c_t);
+BUILD_ASSERT(MANOEUVRE_U_TURN < 4, codec_motion_c_check_c_t);
 
 static uint32_t word (const motion_snapshot_t * p_value)
 {
@@ -111,3 +112,6 @@ int16_t motion_snapshot_right_mms (const motion_snapshot_t * p_value)
 {
     return speed_value((word(p_value) >> 9) & 511U);
 }
+
+/* End of file. */
+

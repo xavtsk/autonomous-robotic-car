@@ -1,3 +1,6 @@
+/** @file integration_codec.h
+ * @brief Describe copied controller command and status packets.
+ */
 /* Explicit shared copies. Decoded calculation views never cross the mutex. */
 #ifndef TEAM_INTEGRATION_CODEC_H
 #define TEAM_INTEGRATION_CODEC_H
@@ -25,3 +28,6 @@ bool s3_status_pack (const s3_integration_status_t * p_value,
 bool s3_status_unpack (const s3_status_packet_t * p_packet,
                        s3_integration_status_t * p_out);
 #endif
+
+/* End of file. */
+

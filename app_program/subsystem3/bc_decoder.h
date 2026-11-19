@@ -1,3 +1,7 @@
+/** @file bc_decoder.h
+ * @brief Define Code 39 decoding configuration, state, results and bounded-work
+ * interfaces.
+ */
 #ifndef BUDDY3_BARCODE_DECODER_H
 #define BUDDY3_BARCODE_DECODER_H
 #include <stdbool.h>
@@ -114,14 +118,14 @@ s3_barcode_status_t s3_barcode_update (s3_barcode_decoder_t * p_decoder,
 #define S3_REC_WHITE_BAND (75U)  /* within this of the paper = white       */
 #define S3_REC_PROMINENCE (100U) /* maximum/default peak prominence       */
 #define S3_REC_MIN_PROMINENCE                                                  \
-    (15U)                      /* minimum contrast on the 0..1000 scale        \
+    (15U) /* minimum contrast on the 0..1000 scale        \
                                 */
 #define S3_REC_FAINT_BAND (5U) /* recovery noise band above near-zero paper */
 #define S3_REC_FAINT_MAX_NOISE                                                 \
     (15U) /* refuse recovery on noisier recordings                             \
            */
 #define S3_REC_FAINT_DIP_US                                                    \
-    (30000U)                  /* bridge brief low dips inside one bar          \
+    (30000U) /* bridge brief low dips inside one bar          \
                                */
 #define S3_REC_STEP_US (500U) /* time-step unit of a stored reading     */
 #define S3_REC_STEP_MAX (63U) /* 6 bits: 31.5 ms > 30 ms sample-age limit */
@@ -159,8 +163,8 @@ typedef struct
     bool ambiguous : 1;
     bool provisional : 1;
     bool strict_broken : 1;
-    bool early
-        : 1; /* Before max_run_us quiet; distinct from tentative noise. */
+    bool
+        early : 1; /* Before max_run_us quiet; distinct from tentative noise. */
     s3_barcode_stored_result_t candidate;
 } s3_barcode_work_t;
 
@@ -256,3 +260,6 @@ bool s3_barcode_record_fix_varying (uint32_t p_runs[S3_BARCODE_RUNS],
                                     const s3_barcode_config_t * p_config,
                                     int32_t p_bias_us[2]);
 #endif
+
+/* End of file. */
+

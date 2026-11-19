@@ -1,3 +1,7 @@
+/** @file s5_api.h
+ * @brief Expose obstacle snapshots, scan requests and controller status
+ * exchange.
+ */
 #ifndef S5_API_H
 #define S5_API_H
 #include "s5_codec.h"
@@ -37,3 +41,6 @@ bool subsystem5_scan_samples (uint16_t * p_id, bool * p_peek,
                               s5_sample_t p_out[S5_SAMPLES_MAX],
                               unsigned * p_count);
 #endif
+
+/* End of file. */
+

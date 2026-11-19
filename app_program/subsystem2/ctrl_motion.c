@@ -1,3 +1,7 @@
+/** @file ctrl_motion.c
+ * @brief Motion Control statechart, straight-line correction and encoder-based
+ * turning.
+ */
 /*
  * File: ctrl_motion.c
  * Owner: Buddy 2 - Motion Control
@@ -252,9 +256,9 @@ static void clear_checks (void)
 
 static void wheel_drive (wheel_id_t wheel, float32_t target_mps, float32_t dt_s)
 {
-    float32_t duty = speed_pid_update(&g_wheel[wheel].pid, target_mps,
-                                  motion_estimation_wheel_speed(wheel),
-                                  motion_estimation_wheel_accel(wheel), dt_s);
+    float32_t duty = speed_pid_update(
+        &g_wheel[wheel].pid, target_mps, motion_estimation_wheel_speed(wheel),
+        motion_estimation_wheel_accel(wheel), dt_s);
 
     motor_control_set(wheel, duty);
 }
@@ -339,7 +343,7 @@ static float32_t move_wheel_progress (wheel_id_t wheel)
 {
     return mv_sign(wheel) *
            (float32_t)wheel_encoder_delta(wheel_encoder_bits(wheel),
-                                      g_mv_start[wheel].bits) *
+                                          g_mv_start[wheel].bits) *
            motion_estimation_scale();
 }
 
@@ -379,7 +383,8 @@ static bool move_step (float32_t dt_s)
 
 /* ---- Interface ----------------------------------------------------------- */
 
-void motion_controller_init (float32_t max_speed_mps, float32_t stop_lead_drive_m,
+void motion_controller_init (float32_t max_speed_mps,
+                             float32_t stop_lead_drive_m,
                              float32_t stop_lead_turn_m,
                              motion_report_sink_t p_sink)
 {
@@ -492,7 +497,8 @@ void motion_controller_make_safe (void)
     }
 }
 
-motion_result_t motion_controller_set_velocity (float32_t left_mps, float32_t right_mps,
+motion_result_t motion_controller_set_velocity (float32_t left_mps,
+                                                float32_t right_mps,
                                                 uint32_t now_us)
 {
     float32_t cap = motion_controller_speed_cap();
@@ -520,14 +526,14 @@ motion_result_t motion_controller_set_velocity (float32_t left_mps, float32_t ri
     return MOTION_OK;
 }
 
-motion_result_t motion_controller_request_move (motion_state_t kind,
-                                                int32_t sign_left,
-                                                int32_t sign_right,
-                                                float32_t dist_m, float32_t speed_mps,
-                                                uint32_t now_us)
+motion_result_t
+motion_controller_request_move (motion_state_t kind, int32_t sign_left,
+                                int32_t sign_right, float32_t dist_m,
+                                float32_t speed_mps, uint32_t now_us)
 {
     float32_t speed = min_f(speed_mps, motion_controller_speed_cap());
-    float32_t allowed_s = ((dist_m / speed) * TIMEOUT_FACTOR) + TIMEOUT_MARGIN_S;
+    float32_t allowed_s =
+        ((dist_m / speed) * TIMEOUT_FACTOR) + TIMEOUT_MARGIN_S;
 
     if (state() == MOTION_FAULT)
     {
@@ -691,3 +697,6 @@ bool motion_controller_is_busy (void)
 {
     return (g_ctl.b_busy != 0U);
 }
+
+/* End of file. */
+

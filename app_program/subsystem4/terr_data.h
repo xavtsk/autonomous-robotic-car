@@ -1,3 +1,7 @@
+/** @file terr_data.h
+ * @brief Maintain terrain monitoring state and pack copied terrain
+ * observations.
+ */
 #ifndef BUDDY4_TERRAIN_MONITOR_H
 #define BUDDY4_TERRAIN_MONITOR_H
 #include "../app_types.h"
@@ -29,7 +33,8 @@ typedef struct
 {
     uint32_t timestamp_us;
     float32_t pitch_deg, roll_deg, turn_dps, peak_m;
-    float32_t hump_height_m; /* current height on a hump in progress (0..0.5 m) */
+    float32_t
+        hump_height_m; /* current height on a hump in progress (0..0.5 m) */
     terrain_state_t state;
     terrain_safety_t safety;
     uint8_t flags;
@@ -86,3 +91,6 @@ void terrain_pack (const terrain_result_t * p_r,
 void terrain_unpack (const uint8_t p_in[TERRAIN_PACKET_SIZE],
                      terrain_result_t * p_r);
 #endif
+
+/* End of file. */
+

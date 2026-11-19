@@ -1,3 +1,7 @@
+/** @file avoid_obstacle.h
+ * @brief Advance obstacle avoidance and line hand-back through motion
+ * proposals.
+ */
 #ifndef BUDDY5_OBSTACLE_AVOIDANCE_H
 #define BUDDY5_OBSTACLE_AVOIDANCE_H
 #include "../app_types.h"
@@ -84,15 +88,15 @@ typedef struct
     unsigned rel_bits : 8; /* Two's-complement heading; use s5_rel_get/set. */
     unsigned side_turn : 4,
         side_turns : 2; /* leg 3: pending turn away (deg), turns made */
-    unsigned centre_dir : 1, centre_tries
-        : 2; /* finish: last swerve was toward the bypass side, tries */
+    unsigned centre_dir : 1,
+        centre_tries : 2; /* finish: last swerve was toward the bypass side, tries */
     unsigned blocked_reads : 2; /* leg 1: consecutive blocked readings so far */
     unsigned aim_bits : 7;      /* Two's-complement aim; use s5_aim_get/set. */
     uint16_t searched_mm;       /* leg 3 distance stepped beside the obstacle */
     unsigned lat_mm : 9; /* leg 3 sideways travel after turning away, 0..511 mm
                             (saturates) */
-    unsigned peek_lat_mm
-        : 12; /* leg 3: distance from the original line, last side peek, mm */
+    unsigned
+        peek_lat_mm : 12; /* leg 3: distance from the original line, last side peek, mm */
     uint32_t phase_us, started_us;
     float64_t leg_start_m;
 } s5_avoidance_t;
@@ -142,3 +146,6 @@ int s5_aim_deg (const s5_profile_t * p_p);
  */
 int s5_aim_deg_bend (const s5_profile_t * p_p, int turn_pct, bool * p_bend);
 #endif
+
+/* End of file. */
+

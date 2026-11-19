@@ -1,3 +1,7 @@
+/** @file events_motion.h
+ * @brief Classify terrain motion from pitch, speed and longitudinal
+ * acceleration.
+ */
 #ifndef BUDDY4_MOTION_EVENTS_H
 #define BUDDY4_MOTION_EVENTS_H
 #include "../app_types.h"
@@ -16,6 +20,10 @@ typedef enum
     TERRAIN_IMPACT
 } terrain_state_t;
 
-terrain_state_t motion_classify (float32_t pitch, float32_t speed, float32_t longitudinal_g,
-                                 float32_t turn_dps, bool turn_valid, bool impact);
+terrain_state_t motion_classify (float32_t pitch, float32_t speed,
+                                 float32_t longitudinal_g, float32_t turn_dps,
+                                 bool turn_valid, bool impact);
 #endif
+
+/* End of file. */
+

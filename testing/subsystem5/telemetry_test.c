@@ -1,3 +1,7 @@
+/** @file telemetry_test.c
+ * @brief Exercise obstacle observations and scan samples through telemetry
+ * adapters.
+ */
 #include "../../app_program/controller/vehicle_controller.h"
 #include "../../app_program/controller/run_timing.h"
 #define LIVE_CYCLES (200U / S3_SAMPLE_PERIOD_MS)
@@ -9,238 +13,547 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-ID g_mtx_buddy1_state=1;
+ID g_mtx_buddy1_state = 1;
 static motion_status_t status;
 static s3_integration_status_t runtime;
 static s3_control_kind_t queued;
-static bool queue_ok=true, status_ok=true, frozen;
-static unsigned mask=BUDDY1_FAULT_WIFI, updates, invalidations, reports, states, barcodes, obstacle_invalidations;
-static ER mirror_result=E_OK;
+static bool queue_ok = true, status_ok = true, frozen;
+static unsigned mask = BUDDY1_FAULT_WIFI, updates, invalidations, reports,
+                states, barcodes, obstacle_invalidations;
+static ER mirror_result = E_OK;
 static buddy1_robot_state_t last_state;
-static int left_report,right_report;
-bool s3_integration_submit(const s3_control_request_t *r)
-{queued=r->kind;return queue_ok;}
-bool s3_integration_status(s3_integration_status_t *out)
-{*out=runtime;return true;}
-bool motion_get_status(motion_status_t *out)
-{*out=status;return status_ok;}
-ER buddy1_update_faults(UB changed,UB active)
+static int left_report, right_report;
+
+bool s3_integration_submit (const s3_control_request_t * r)
 {
-    assert(!(changed & BUDDY1_FAULT_WIFI));updates++;
-    if(mirror_result==E_OK||mirror_result==E_TMOUT)mask=(mask&~changed)|active;
+    queued = r->kind;
+    return queue_ok;
+}
+
+bool s3_integration_status (s3_integration_status_t * out)
+{
+    *out = runtime;
+    return true;
+}
+
+bool motion_get_status (motion_status_t * out)
+{
+    *out = status;
+    return status_ok;
+}
+
+ER buddy1_update_faults (UB changed, UB active)
+{
+    assert(!(changed & BUDDY1_FAULT_WIFI));
+    updates++;
+    if (mirror_result == E_OK || mirror_result == E_TMOUT)
+        mask = (mask & ~changed) | active;
     return mirror_result;
 }
+
 /* E_TMOUT = Buddy 1 outbox full: the controller must retry the event. */
-static ER event_result=E_OK;
-ER buddy1_report_robot_state(buddy1_robot_state_t state)
-{states++;if(event_result!=E_OK)return event_result;last_state=state;return E_OK;}
-ER buddy1_report_barcode(UB letter)
-{assert(letter=='B');barcodes++;return event_result;}
-ER buddy1_report_pose(UH cm,H deg) { (void)cm;(void)deg;return E_OK; }
-ER buddy1_report_motion(H left,H right)
-{reports++;left_report=left;right_report=right;return E_OK;}
-ER buddy1_invalidate(UB type)
-{if(type==BUDDY1_TOPIC_OBSTACLE){obstacle_invalidations++;return E_OK;}assert(type==BUDDY1_TOPIC_MOTION);invalidations++;return E_OK;}
-ER buddy1_configuration_claim(buddy1_barcode_map_t *map,BOOL *newly)
-{*map=(buddy1_barcode_map_t){'A','B','C','D'};if(newly)*newly=!frozen;frozen=true;return E_OK;}
-static unsigned reopens;
-ER buddy1_configuration_reopen(void)
-{frozen=false;reopens++;return E_OK;}
-ER buddy1_apply_barcode_map(const buddy1_barcode_map_t *map)
+static ER event_result = E_OK;
+
+ER buddy1_report_robot_state (buddy1_robot_state_t state)
 {
-    if(frozen)return E_OBJ;
-    return map->forward=='A'&&map->left=='B'&&map->right=='C'&&map->uturn=='D'?E_OK:E_PAR;
+    states++;
+    if (event_result != E_OK)
+        return event_result;
+    last_state = state;
+    return E_OK;
 }
-bool s3_navigation_set_mapping(s3_navigation_t *nav,const s3_nav_action_t map[26])
-{memcpy(nav->config.map,map,sizeof(nav->config.map));return true;}
+
+ER buddy1_report_barcode (UB letter)
+{
+    assert(letter == 'B');
+    barcodes++;
+    return event_result;
+}
+
+ER buddy1_report_pose (UH cm, H deg)
+{
+    (void)cm;
+    (void)deg;
+    return E_OK;
+}
+
+ER buddy1_report_motion (H left, H right)
+{
+    reports++;
+    left_report = left;
+    right_report = right;
+    return E_OK;
+}
+
+ER buddy1_invalidate (UB type)
+{
+    if (type == BUDDY1_TOPIC_OBSTACLE)
+    {
+        obstacle_invalidations++;
+        return E_OK;
+    }
+    assert(type == BUDDY1_TOPIC_MOTION);
+    invalidations++;
+    return E_OK;
+}
+
+ER buddy1_configuration_claim (buddy1_barcode_map_t * map, BOOL * newly)
+{
+    *map = (buddy1_barcode_map_t){'A', 'B', 'C', 'D'};
+    if (newly)
+        *newly = !frozen;
+    frozen = true;
+    return E_OK;
+}
+
+static unsigned reopens;
+
+ER buddy1_configuration_reopen (void)
+{
+    frozen = false;
+    reopens++;
+    return E_OK;
+}
+
+ER buddy1_apply_barcode_map (const buddy1_barcode_map_t * map)
+{
+    if (frozen)
+        return E_OBJ;
+    return map->forward == 'A' && map->left == 'B' && map->right == 'C' &&
+                   map->uturn == 'D'
+               ? E_OK
+               : E_PAR;
+}
+
+bool s3_navigation_set_mapping (s3_navigation_t * nav,
+                                const s3_nav_action_t map[26])
+{
+    memcpy(nav->config.map, map, sizeof(nav->config.map));
+    return true;
+}
+
 /* One controller observation per configured sample, as on the car: motion
  * telemetry is paced by the sample clock (200 ms moving, 1 s stopped). */
-static void cycles(unsigned count)
-{for(unsigned i=0;i<count;i++){runtime.navigation.timestamp_us+=S3_SAMPLE_PERIOD_US;vehicle_controller_observe(&runtime);}}
-int baseline(void)
+static void cycles (unsigned count)
 {
-    assert(vehicle_controller_init()==E_OK&&vehicle_controller_start()==E_OK);
-    assert(vehicle_controller_begin()==E_OK&&queued==S3_CONTROL_START);
-    assert(vehicle_controller_request_stop()==E_OK&&queued==S3_CONTROL_STOP);
-    queue_ok=false;assert(vehicle_controller_begin()==E_OBJ);queue_ok=true;
-    runtime.state=S3_DRIVE_FOLLOW;status.b_valid=true;
-    status.speed_left_mps=0.12f;status.speed_right_mps=-0.12f;
-    cycles(LIVE_CYCLES);assert(reports==1&&left_report==120&&right_report==-120);
-    assert(last_state==BUDDY1_STATE_LINE_FOLLOWING&&mask==BUDDY1_FAULT_WIFI);
-    status.fault_bits=motion_fault_bit(MOTION_FAULT_STALL)|motion_fault_bit(MOTION_FAULT_ENCODER);
-    runtime.navigation.fault_mask=2;cycles(1);
-    assert(mask==(BUDDY1_FAULT_WIFI|BUDDY1_FAULT_STALL|BUDDY1_FAULT_ENCODER|BUDDY1_FAULT_IR));
-    unsigned before=updates;cycles(1);assert(updates==before);
-    status_ok=false;runtime.navigation.fault_mask=0;cycles(1);
-    assert(mask==(BUDDY1_FAULT_WIFI|BUDDY1_FAULT_STALL|BUDDY1_FAULT_ENCODER));
-    status_ok=true;status.fault_bits=0;cycles(1);assert(mask==BUDDY1_FAULT_WIFI);
-    runtime.navigation.events=S3_EVENT_BARCODE;runtime.navigation.barcode.letter='B';
-    runtime.navigation.action=S3_NAV_LEFT;cycles(1);assert(barcodes==1);
-    runtime.navigation.events=0;cycles(3);assert(barcodes==1);   /* one event, one report */
+    for (unsigned i = 0; i < count; i++)
+    {
+        runtime.navigation.timestamp_us += S3_SAMPLE_PERIOD_US;
+        vehicle_controller_observe(&runtime);
+    }
+}
+
+int baseline (void)
+{
+    assert(vehicle_controller_init() == E_OK &&
+           vehicle_controller_start() == E_OK);
+    assert(vehicle_controller_begin() == E_OK && queued == S3_CONTROL_START);
+    assert(vehicle_controller_request_stop() == E_OK &&
+           queued == S3_CONTROL_STOP);
+    queue_ok = false;
+    assert(vehicle_controller_begin() == E_OBJ);
+    queue_ok = true;
+    runtime.state = S3_DRIVE_FOLLOW;
+    status.b_valid = true;
+    status.speed_left_mps = 0.12f;
+    status.speed_right_mps = -0.12f;
+    cycles(LIVE_CYCLES);
+    assert(reports == 1 && left_report == 120 && right_report == -120);
+    assert(last_state == BUDDY1_STATE_LINE_FOLLOWING &&
+           mask == BUDDY1_FAULT_WIFI);
+    status.fault_bits = motion_fault_bit(MOTION_FAULT_STALL) |
+                        motion_fault_bit(MOTION_FAULT_ENCODER);
+    runtime.navigation.fault_mask = 2;
+    cycles(1);
+    assert(mask == (BUDDY1_FAULT_WIFI | BUDDY1_FAULT_STALL |
+                    BUDDY1_FAULT_ENCODER | BUDDY1_FAULT_IR));
+    unsigned before = updates;
+    cycles(1);
+    assert(updates == before);
+    status_ok = false;
+    runtime.navigation.fault_mask = 0;
+    cycles(1);
+    assert(mask ==
+           (BUDDY1_FAULT_WIFI | BUDDY1_FAULT_STALL | BUDDY1_FAULT_ENCODER));
+    status_ok = true;
+    status.fault_bits = 0;
+    cycles(1);
+    assert(mask == BUDDY1_FAULT_WIFI);
+    runtime.navigation.events = S3_EVENT_BARCODE;
+    runtime.navigation.barcode.letter = 'B';
+    runtime.navigation.action = S3_NAV_LEFT;
+    cycles(1);
+    assert(barcodes == 1);
+    runtime.navigation.events = 0;
+    cycles(3);
+    assert(barcodes == 1); /* one event, one report */
     /* Full outbox: barcode and state are retried every cycle, not dropped. */
-    event_result=E_TMOUT;runtime.navigation.events=S3_EVENT_BARCODE;cycles(1);
-    runtime.navigation.events=0;cycles(2);assert(barcodes==4);
-    runtime.state=S3_DRIVE_MANOEUVRE;{unsigned s0=states;cycles(3);assert(states==s0+3&&barcodes==7&&last_state!=BUDDY1_STATE_TURNING_LEFT);}
-    event_result=E_OK;cycles(1);assert(barcodes==8&&last_state==BUDDY1_STATE_TURNING_LEFT);
-    {unsigned s0=states;cycles(3);assert(barcodes==8&&states==s0);}
-    assert(last_state==BUDDY1_STATE_TURNING_LEFT);
-    runtime.state=S3_DRIVE_FAULT;cycles(1);assert(last_state==BUDDY1_STATE_ERROR);
-    status.speed_left_mps=0.884f;before=invalidations;{unsigned sent=reports;cycles(LIVE_CYCLES);
-    assert(invalidations>before&&reports==sent);} /* Never clip into a valid 510. */
-    status.b_valid=false;before=invalidations;cycles(LIVE_CYCLES);assert(invalidations>before);
-    runtime.navigation.fault_mask=1;mirror_result=E_OBJ;before=updates;cycles(2);assert(updates==before+2);
+    event_result = E_TMOUT;
+    runtime.navigation.events = S3_EVENT_BARCODE;
+    cycles(1);
+    runtime.navigation.events = 0;
+    cycles(2);
+    assert(barcodes == 4);
+    runtime.state = S3_DRIVE_MANOEUVRE;
+    {
+        unsigned s0 = states;
+        cycles(3);
+        assert(states == s0 + 3 && barcodes == 7 &&
+               last_state != BUDDY1_STATE_TURNING_LEFT);
+    }
+    event_result = E_OK;
+    cycles(1);
+    assert(barcodes == 8 && last_state == BUDDY1_STATE_TURNING_LEFT);
+    {
+        unsigned s0 = states;
+        cycles(3);
+        assert(barcodes == 8 && states == s0);
+    }
+    assert(last_state == BUDDY1_STATE_TURNING_LEFT);
+    runtime.state = S3_DRIVE_FAULT;
+    cycles(1);
+    assert(last_state == BUDDY1_STATE_ERROR);
+    status.speed_left_mps = 0.884f;
+    before = invalidations;
+    {
+        unsigned sent = reports;
+        cycles(LIVE_CYCLES);
+        assert(invalidations > before && reports == sent);
+    } /* Never clip into a valid 510. */
+    status.b_valid = false;
+    before = invalidations;
+    cycles(LIVE_CYCLES);
+    assert(invalidations > before);
+    runtime.navigation.fault_mask = 1;
+    mirror_result = E_OBJ;
+    before = updates;
+    cycles(2);
+    assert(updates == before + 2);
     /* Full outbox (E_TMOUT): the fault change is retried until it is queued. */
-    mirror_result=E_TMOUT;before=updates;cycles(2);assert(updates==before+2);
-    mirror_result=E_OK;cycles(1);before=updates;cycles(1);assert(updates==before);
-    s3_nav_action_t map[26]={S3_NAV_STRAIGHT,S3_NAV_LEFT,S3_NAV_RIGHT,S3_NAV_UTURN};
-    assert(vehicle_controller_set_mapping(map));map[4]=S3_NAV_LEFT;assert(!vehicle_controller_set_mapping(map));map[4]=S3_NAV_NONE;
-    s3_navigation_t nav={0};assert(vehicle_controller_prep_start(&nav)&&frozen);
-    assert(nav.config.map[0]==S3_NAV_STRAIGHT&&nav.config.map[1]==S3_NAV_LEFT);
+    mirror_result = E_TMOUT;
+    before = updates;
+    cycles(2);
+    assert(updates == before + 2);
+    mirror_result = E_OK;
+    cycles(1);
+    before = updates;
+    cycles(1);
+    assert(updates == before);
+    s3_nav_action_t map[26] = {S3_NAV_STRAIGHT, S3_NAV_LEFT, S3_NAV_RIGHT,
+                               S3_NAV_UTURN};
+    assert(vehicle_controller_set_mapping(map));
+    map[4] = S3_NAV_LEFT;
     assert(!vehicle_controller_set_mapping(map));
-    vehicle_controller_cancel_start();assert(!frozen&&reopens==1);
+    map[4] = S3_NAV_NONE;
+    s3_navigation_t nav = {0};
+    assert(vehicle_controller_prep_start(&nav) && frozen);
+    assert(nav.config.map[0] == S3_NAV_STRAIGHT &&
+           nav.config.map[1] == S3_NAV_LEFT);
+    assert(!vehicle_controller_set_mapping(map));
+    vehicle_controller_cancel_start();
+    assert(!frozen && reopens == 1);
     assert(vehicle_controller_set_mapping(map));
     /* Accepted START: the freeze belongs to the run; a stray cancel is a no-op. */
-    assert(vehicle_controller_prep_start(&nav)&&frozen);
-    vehicle_controller_commit_start();vehicle_controller_cancel_start();
-    assert(frozen&&reopens==1);
+    assert(vehicle_controller_prep_start(&nav) && frozen);
+    vehicle_controller_commit_start();
+    vehicle_controller_cancel_start();
+    assert(frozen && reopens == 1);
     /* Later refused restart: map was already frozen, so it is NOT reopened. */
-    assert(vehicle_controller_prep_start(&nav)&&frozen);
-    vehicle_controller_cancel_start();assert(frozen&&reopens==1);
+    assert(vehicle_controller_prep_start(&nav) && frozen);
+    vehicle_controller_cancel_start();
+    assert(frozen && reopens == 1);
     assert(!vehicle_controller_set_mapping(map));
-    assert(vehicle_controller_submit_nav(&runtime.navigation)==E_NOSPT);
-    puts("PASS: one-owner facade, explicit queued start/stop, full fault-bit ownership, unknown-status preservation, map freeze, telemetry and out-of-range invalidation");
+    assert(vehicle_controller_submit_nav(&runtime.navigation) == E_NOSPT);
+    puts(
+        "PASS: one-owner facade, explicit queued start/stop, full fault-bit ownership, unknown-status preservation, map freeze, telemetry and out-of-range invalidation");
     return 0;
 }
 
 static s5_observation_t obstacle;
 static bool available;
 static uint16_t control;
-static uint8_t servo=90;
+static uint8_t servo = 90;
 static unsigned obstacle_reports, avoidance_reports, scan_reports;
 static buddy1_avoidance_t last_avoidance;
 static buddy1_scan_t last_scan;
-bool subsystem5_snapshot(s5_observation_t *out) { *out=obstacle;return available; }
-uint16_t subsystem5_controller_status(void) { return control; }
-uint8_t subsystem5_servo_angle(void) { return servo; }
-ER buddy1_report_avoidance(const buddy1_avoidance_t *a)
+
+bool subsystem5_snapshot (s5_observation_t * out)
 {
-    assert(a && a->state<=BUDDY1_S5_STATE_MAX && a->route<=BUDDY1_ROUTE_RIGHT && a->pass<=BUDDY1_S5_PASS_MAX);
-    assert(a->range_valid ? (a->range_mm>=30U && a->range_mm<=4000U && !a->no_echo) : a->range_mm==0U);
-    avoidance_reports++;last_avoidance=*a;return E_OK;
+    *out = obstacle;
+    return available;
 }
-static ER scan_result=E_OK, obstacle_result=E_OK;
-ER buddy1_report_scan(const buddy1_scan_t *q)
-{ assert(q);scan_reports++;last_scan=*q;return scan_result; }
+
+uint16_t subsystem5_controller_status (void)
+{
+    return control;
+}
+
+uint8_t subsystem5_servo_angle (void)
+{
+    return servo;
+}
+
+ER buddy1_report_avoidance (const buddy1_avoidance_t * a)
+{
+    assert(a && a->state <= BUDDY1_S5_STATE_MAX &&
+           a->route <= BUDDY1_ROUTE_RIGHT && a->pass <= BUDDY1_S5_PASS_MAX);
+    assert(a->range_valid
+               ? (a->range_mm >= 30U && a->range_mm <= 4000U && !a->no_echo)
+               : a->range_mm == 0U);
+    avoidance_reports++;
+    last_avoidance = *a;
+    return E_OK;
+}
+
+static ER scan_result = E_OK, obstacle_result = E_OK;
+
+ER buddy1_report_scan (const buddy1_scan_t * q)
+{
+    assert(q);
+    scan_reports++;
+    last_scan = *q;
+    return scan_result;
+}
+
 /* Raw readings kept by Buddy 5 for the last scan (car/telemetry/scan_sample). */
 static s5_sample_t kept[S5_SAMPLES_MAX];
 static unsigned kept_count, sample_reports, busy_reads;
 static uint16_t kept_id;
 static bool kept_peek;
-static ER sample_result=E_OK;
-static BOOL outbox_idle=TRUE;
-BOOL buddy1_outbox_idle(void) { return outbox_idle; }
-static buddy1_scan_sample_t sent[S5_SAMPLES_MAX+4];
-bool subsystem5_scan_samples(uint16_t *id,bool *peek,s5_sample_t out[S5_SAMPLES_MAX],unsigned *count)
+static ER sample_result = E_OK;
+static BOOL outbox_idle = TRUE;
+
+BOOL buddy1_outbox_idle (void)
 {
-    if(busy_reads) { busy_reads--;return false; }
-    *id=kept_id;*peek=kept_peek;*count=kept_count;
-    for(unsigned i=0;i<kept_count;i++) out[i]=kept[i];
+    return outbox_idle;
+}
+
+static buddy1_scan_sample_t sent[S5_SAMPLES_MAX + 4];
+
+bool subsystem5_scan_samples (uint16_t * id, bool * peek,
+                              s5_sample_t out[S5_SAMPLES_MAX], unsigned * count)
+{
+    if (busy_reads)
+    {
+        busy_reads--;
+        return false;
+    }
+    *id = kept_id;
+    *peek = kept_peek;
+    *count = kept_count;
+    for (unsigned i = 0; i < kept_count; i++)
+        out[i] = kept[i];
     return true;
 }
-ER buddy1_report_scan_sample(const buddy1_scan_sample_t *q)
+
+ER buddy1_report_scan_sample (const buddy1_scan_sample_t * q)
 {
-    assert(q && q->index<q->count && q->count<=BUDDY1_SCAN_SAMPLES_MAX);
-    if(sample_result!=E_OK) { ER er=sample_result;sample_result=E_OK;return er; }
-    assert(sample_reports<sizeof sent/sizeof sent[0]);sent[sample_reports++]=*q;return E_OK;
+    assert(q && q->index < q->count && q->count <= BUDDY1_SCAN_SAMPLES_MAX);
+    if (sample_result != E_OK)
+    {
+        ER er = sample_result;
+        sample_result = E_OK;
+        return er;
+    }
+    assert(sample_reports < sizeof sent / sizeof sent[0]);
+    sent[sample_reports++] = *q;
+    return E_OK;
 }
-ER buddy1_report_obstacle(UH distance,UH width,buddy1_obstacle_route_t route)
-{ assert(distance==250 && width==400 && route<=BUDDY1_ROUTE_RIGHT);obstacle_reports++;return obstacle_result; }
-int main(void)
+
+ER buddy1_report_obstacle (UH distance, UH width, buddy1_obstacle_route_t route)
 {
-    baseline();available=true;obstacle.no_echo=true;
-    control=S5_SCANNING|(S5_ROUTE_LEFT<<6);
-    runtime=(s3_integration_status_t){.state=S3_DRIVE_MANOEUVRE};
-    status=(motion_status_t){.fault_bits=motion_fault_bit(MOTION_FAULT_STALL)};
-    mask=BUDDY1_FAULT_WIFI;cycles(1);
-    assert(mask==(BUDDY1_FAULT_WIFI|BUDDY1_FAULT_STALL|BUDDY1_FAULT_NO_ECHO));
-    assert(last_state==BUDDY1_STATE_AVOIDING_OBSTACLE);
-    obstacle.no_echo=false;obstacle.scan_id=1;obstacle.scan_done=true;
-    obstacle.profile=(s5_profile_t){.valid=true,.closest_mm=250,.width_mm=400};
-    cycles(1);assert(mask==(BUDDY1_FAULT_WIFI|BUDDY1_FAULT_STALL) && obstacle_reports==1);
-    cycles(1);assert(obstacle_reports==1);
-    obstacle.profile.valid=false;
-    { unsigned before=obstacle_invalidations;
-      cycles(100);assert(obstacle_invalidations==before+1); }
-    runtime.state=S3_DRIVE_FAULT;cycles(1);assert(last_state==BUDDY1_STATE_ERROR);
+    assert(distance == 250 && width == 400 && route <= BUDDY1_ROUTE_RIGHT);
+    obstacle_reports++;
+    return obstacle_result;
+}
+
+int main (void)
+{
+    baseline();
+    available = true;
+    obstacle.no_echo = true;
+    control = S5_SCANNING | (S5_ROUTE_LEFT << 6);
+    runtime = (s3_integration_status_t){.state = S3_DRIVE_MANOEUVRE};
+    status =
+        (motion_status_t){.fault_bits = motion_fault_bit(MOTION_FAULT_STALL)};
+    mask = BUDDY1_FAULT_WIFI;
+    cycles(1);
+    assert(mask ==
+           (BUDDY1_FAULT_WIFI | BUDDY1_FAULT_STALL | BUDDY1_FAULT_NO_ECHO));
+    assert(last_state == BUDDY1_STATE_AVOIDING_OBSTACLE);
+    obstacle.no_echo = false;
+    obstacle.scan_id = 1;
+    obstacle.scan_done = true;
+    obstacle.profile =
+        (s5_profile_t){.valid = true, .closest_mm = 250, .width_mm = 400};
+    cycles(1);
+    assert(mask == (BUDDY1_FAULT_WIFI | BUDDY1_FAULT_STALL) &&
+           obstacle_reports == 1);
+    cycles(1);
+    assert(obstacle_reports == 1);
+    obstacle.profile.valid = false;
+    {
+        unsigned before = obstacle_invalidations;
+        cycles(100);
+        assert(obstacle_invalidations == before + 1);
+    }
+    runtime.state = S3_DRIVE_FAULT;
+    cycles(1);
+    assert(last_state == BUDDY1_STATE_ERROR);
     /* Live Buddy 5 status: every 200 ms, all controller fields unpacked. */
-    { unsigned before=avoidance_reports;
-      control=(uint16_t)(S5_MOVING|(S5_OK<<3)|(S5_ROUTE_RIGHT<<6)|(3U<<8)|(S5_PASS_STEP<<12)|(1U<<15));
-      obstacle.range_valid=true;obstacle.no_echo=false;obstacle.range_mm=412;servo=150;
-      cycles(2U*LIVE_CYCLES);assert(avoidance_reports==before+2U);
-      assert(last_avoidance.range_valid && last_avoidance.range_mm==412U && last_avoidance.servo_deg==150U);
-      assert(last_avoidance.state==S5_MOVING && last_avoidance.route==BUDDY1_ROUTE_RIGHT &&
-             last_avoidance.leg==3U && last_avoidance.pass==S5_PASS_STEP && last_avoidance.swapped);
-      obstacle.range_valid=false;obstacle.range_mm=0;obstacle.no_echo=true;cycles(LIVE_CYCLES);
-      assert(!last_avoidance.range_valid && last_avoidance.range_mm==0U && last_avoidance.no_echo);
-      available=false;cycles(LIVE_CYCLES);assert(!last_avoidance.range_valid && !last_avoidance.no_echo);
-      available=true;obstacle.no_echo=false; }
+    {
+        unsigned before = avoidance_reports;
+        control = (uint16_t)(S5_MOVING | (S5_OK << 3) | (S5_ROUTE_RIGHT << 6) |
+                             (3U << 8) | (S5_PASS_STEP << 12) | (1U << 15));
+        obstacle.range_valid = true;
+        obstacle.no_echo = false;
+        obstacle.range_mm = 412;
+        servo = 150;
+        cycles(2U * LIVE_CYCLES);
+        assert(avoidance_reports == before + 2U);
+        assert(last_avoidance.range_valid && last_avoidance.range_mm == 412U &&
+               last_avoidance.servo_deg == 150U);
+        assert(last_avoidance.state == S5_MOVING &&
+               last_avoidance.route == BUDDY1_ROUTE_RIGHT &&
+               last_avoidance.leg == 3U &&
+               last_avoidance.pass == S5_PASS_STEP && last_avoidance.swapped);
+        obstacle.range_valid = false;
+        obstacle.range_mm = 0;
+        obstacle.no_echo = true;
+        cycles(LIVE_CYCLES);
+        assert(!last_avoidance.range_valid && last_avoidance.range_mm == 0U &&
+               last_avoidance.no_echo);
+        available = false;
+        cycles(LIVE_CYCLES);
+        assert(!last_avoidance.range_valid && !last_avoidance.no_echo);
+        available = true;
+        obstacle.no_echo = false;
+    }
     /* Full FR6 profile once per finished scan / side peek, incl. a failed one. */
-    { unsigned before=scan_reports;
-      obstacle.scan_id=7;obstacle.scan_done=true;
-      obstacle.profile=(s5_profile_t){.valid=true,.closest_mm=250,.width_mm=400,.left_clear_mm=180,
-                                      .right_clear_mm=320,.left_edge_mm=150,.right_edge_mm=-250,.forward_mm=380};
-      cycles(5);assert(scan_reports==before+1U);
-      assert(last_scan.valid && last_scan.scan_id==7U && last_scan.closest_mm==250U && last_scan.width_mm==400U &&
-             last_scan.left_clear_mm==180U && last_scan.right_clear_mm==320U && last_scan.left_edge_mm==150 &&
-             last_scan.right_edge_mm==-250 && last_scan.forward_mm==380U);
-      obstacle.scan_id=8;obstacle.profile.valid=false;cycles(1);
-      assert(scan_reports==before+2U && !last_scan.valid && last_scan.scan_id==8U && last_scan.closest_mm==0U); }
+    {
+        unsigned before = scan_reports;
+        obstacle.scan_id = 7;
+        obstacle.scan_done = true;
+        obstacle.profile = (s5_profile_t){.valid = true,
+                                          .closest_mm = 250,
+                                          .width_mm = 400,
+                                          .left_clear_mm = 180,
+                                          .right_clear_mm = 320,
+                                          .left_edge_mm = 150,
+                                          .right_edge_mm = -250,
+                                          .forward_mm = 380};
+        cycles(5);
+        assert(scan_reports == before + 1U);
+        assert(last_scan.valid && last_scan.scan_id == 7U &&
+               last_scan.closest_mm == 250U && last_scan.width_mm == 400U &&
+               last_scan.left_clear_mm == 180U &&
+               last_scan.right_clear_mm == 320U &&
+               last_scan.left_edge_mm == 150 &&
+               last_scan.right_edge_mm == -250 && last_scan.forward_mm == 380U);
+        obstacle.scan_id = 8;
+        obstacle.profile.valid = false;
+        cycles(1);
+        assert(scan_reports == before + 2U && !last_scan.valid &&
+               last_scan.scan_id == 8U && last_scan.closest_mm == 0U);
+    }
     /* Raw readings follow the profile one by one, 1 per 4 cycles, only
      * while the outbox is empty; a full outbox retries the same reading; a
      * busy Buddy 5 mutex is retried; another scan id is never reused. */
-    { assert(s5_sample_pack(90,250,true,&kept[0]) && s5_sample_pack(95,262,true,&kept[1]) &&
-             s5_sample_pack(100,0,false,&kept[2]));
-      kept_count=3;kept_id=9;kept_peek=false;busy_reads=2;
-      obstacle.scan_id=9;obstacle.scan_done=true;obstacle.profile.valid=true;
-      cycles(1);assert(last_scan.scan_id==9U && sample_reports==0U);
-      cycles(2U*SC);assert(sample_reports==0U);             /* two busy Buddy 5 reads */
-      outbox_idle=FALSE;cycles(10U*SC);assert(sample_reports==0U); /* events queued: wait */
-      outbox_idle=TRUE;cycles(SC);assert(sample_reports==1U);
-      sample_result=E_TMOUT;cycles(SC);assert(sample_reports==1U); /* outbox full */
-      cycles(2U*SC);assert(sample_reports==3U);
-      cycles(10U*SC);assert(sample_reports==3U);
-      for(unsigned i=0;i<3U;i++) assert(sent[i].scan_id==9U && !sent[i].peek && sent[i].index==i && sent[i].count==3U);
-      assert(sent[0].angle_deg==90U && sent[0].valid && sent[0].distance_mm==250U);
-      assert(sent[1].angle_deg==95U && sent[1].distance_mm==262U);
-      assert(sent[2].angle_deg==100U && !sent[2].valid && sent[2].distance_mm==0U);
-      kept_id=9;obstacle.scan_id=10;cycles(10U*SC);assert(last_scan.scan_id==10U && sample_reports==3U);
-      assert(s5_sample_pack(135,410,true,&kept[0]));kept_count=1;kept_id=11;kept_peek=true;
-      obstacle.scan_id=11;cycles(2U*SC);
-      assert(sample_reports==4U && sent[3].peek && sent[3].count==1U && sent[3].angle_deg==135U && sent[3].distance_mm==410U); }
+    {
+        assert(s5_sample_pack(90, 250, true, &kept[0]) &&
+               s5_sample_pack(95, 262, true, &kept[1]) &&
+               s5_sample_pack(100, 0, false, &kept[2]));
+        kept_count = 3;
+        kept_id = 9;
+        kept_peek = false;
+        busy_reads = 2;
+        obstacle.scan_id = 9;
+        obstacle.scan_done = true;
+        obstacle.profile.valid = true;
+        cycles(1);
+        assert(last_scan.scan_id == 9U && sample_reports == 0U);
+        cycles(2U * SC);
+        assert(sample_reports == 0U); /* two busy Buddy 5 reads */
+        outbox_idle = FALSE;
+        cycles(10U * SC);
+        assert(sample_reports == 0U); /* events queued: wait */
+        outbox_idle = TRUE;
+        cycles(SC);
+        assert(sample_reports == 1U);
+        sample_result = E_TMOUT;
+        cycles(SC);
+        assert(sample_reports == 1U); /* outbox full */
+        cycles(2U * SC);
+        assert(sample_reports == 3U);
+        cycles(10U * SC);
+        assert(sample_reports == 3U);
+        for (unsigned i = 0; i < 3U; i++)
+            assert(sent[i].scan_id == 9U && !sent[i].peek &&
+                   sent[i].index == i && sent[i].count == 3U);
+        assert(sent[0].angle_deg == 90U && sent[0].valid &&
+               sent[0].distance_mm == 250U);
+        assert(sent[1].angle_deg == 95U && sent[1].distance_mm == 262U);
+        assert(sent[2].angle_deg == 100U && !sent[2].valid &&
+               sent[2].distance_mm == 0U);
+        kept_id = 9;
+        obstacle.scan_id = 10;
+        cycles(10U * SC);
+        assert(last_scan.scan_id == 10U && sample_reports == 3U);
+        assert(s5_sample_pack(135, 410, true, &kept[0]));
+        kept_count = 1;
+        kept_id = 11;
+        kept_peek = true;
+        obstacle.scan_id = 11;
+        cycles(2U * SC);
+        assert(sample_reports == 4U && sent[3].peek && sent[3].count == 1U &&
+               sent[3].angle_deg == 135U && sent[3].distance_mm == 410U);
+    }
     /* Full outbox: the scan profile and obstacle summary are retried every
      * cycle until queued (then exactly once more nothing). */
-    { unsigned s0=scan_reports,o0=obstacle_reports;
-      scan_result=obstacle_result=E_TMOUT;
-      obstacle.scan_id=12;obstacle.scan_done=true;
-      obstacle.profile=(s5_profile_t){.valid=true,.closest_mm=250,.width_mm=400};
-      cycles(3);assert(scan_reports==s0+3U && obstacle_reports==o0+3U);
-      scan_result=obstacle_result=E_OK;cycles(1);assert(scan_reports==s0+4U && obstacle_reports==o0+4U);
-      cycles(5);assert(scan_reports==s0+4U && obstacle_reports==o0+4U); }
+    {
+        unsigned s0 = scan_reports, o0 = obstacle_reports;
+        scan_result = obstacle_result = E_TMOUT;
+        obstacle.scan_id = 12;
+        obstacle.scan_done = true;
+        obstacle.profile =
+            (s5_profile_t){.valid = true, .closest_mm = 250, .width_mm = 400};
+        cycles(3);
+        assert(scan_reports == s0 + 3U && obstacle_reports == o0 + 3U);
+        scan_result = obstacle_result = E_OK;
+        cycles(1);
+        assert(scan_reports == s0 + 4U && obstacle_reports == o0 + 4U);
+        cycles(5);
+        assert(scan_reports == s0 + 4U && obstacle_reports == o0 + 4U);
+    }
     /* Quarter-period initial phase, then exactly 200 ms between reports. */
-    assert(vehicle_controller_init()==E_OK);
-    { unsigned before=avoidance_reports;
-      uint32_t started=runtime.navigation.timestamp_us;
-      cycles(LIVE_CYCLES-LIVE_CYCLES/4U-1U);assert(avoidance_reports==before);
-      cycles(1);assert(avoidance_reports==before+1U);
-      assert(runtime.navigation.timestamp_us-started==150000U);
-      started=runtime.navigation.timestamp_us;
-      cycles(LIVE_CYCLES/2U);assert(avoidance_reports==before+1U);
-      assert(runtime.navigation.timestamp_us-started==100000U);
-      cycles(LIVE_CYCLES-LIVE_CYCLES/2U-1U);assert(avoidance_reports==before+1U);
-      cycles(1);assert(avoidance_reports==before+2U);
-      assert(runtime.navigation.timestamp_us-started==200000U); }
-    puts("PASS: production telemetry adapter preserves Wi-Fi/motor faults, owns only no-echo, publishes obstacle profile and avoidance/error state");
-    puts("PASS: barcode, state, fault, scan-profile and obstacle events retried while the Buddy 1 outbox is full, sent once when space frees");
-    puts("PASS: Buddy 5 raw scan readings after each profile, spare outbox capacity only, paced, retried when the outbox is full or Buddy 5 is busy, never under another scan id");
-    puts("PASS: Buddy 5 live avoidance (range, no-echo, servo angle, state/fault/route/leg/pass/swap at 5 Hz) and full FR6 scan profile per scan");
+    assert(vehicle_controller_init() == E_OK);
+    {
+        unsigned before = avoidance_reports;
+        uint32_t started = runtime.navigation.timestamp_us;
+        cycles(LIVE_CYCLES - LIVE_CYCLES / 4U - 1U);
+        assert(avoidance_reports == before);
+        cycles(1);
+        assert(avoidance_reports == before + 1U);
+        assert(runtime.navigation.timestamp_us - started == 150000U);
+        started = runtime.navigation.timestamp_us;
+        cycles(LIVE_CYCLES / 2U);
+        assert(avoidance_reports == before + 1U);
+        assert(runtime.navigation.timestamp_us - started == 100000U);
+        cycles(LIVE_CYCLES - LIVE_CYCLES / 2U - 1U);
+        assert(avoidance_reports == before + 1U);
+        cycles(1);
+        assert(avoidance_reports == before + 2U);
+        assert(runtime.navigation.timestamp_us - started == 200000U);
+    }
+    puts(
+        "PASS: production telemetry adapter preserves Wi-Fi/motor faults, owns only no-echo, publishes obstacle profile and avoidance/error state");
+    puts(
+        "PASS: barcode, state, fault, scan-profile and obstacle events retried while the Buddy 1 outbox is full, sent once when space frees");
+    puts(
+        "PASS: Buddy 5 raw scan readings after each profile, spare outbox capacity only, paced, retried when the outbox is full or Buddy 5 is busy, never under another scan id");
+    puts(
+        "PASS: Buddy 5 live avoidance (range, no-echo, servo angle, state/fault/route/leg/pass/swap at 5 Hz) and full FR6 scan profile per scan");
 }
+
+/* End of file. */
+

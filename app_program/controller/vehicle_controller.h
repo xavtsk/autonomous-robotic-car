@@ -1,3 +1,7 @@
+/** @file vehicle_controller.h
+ * @brief Expose controller request and telemetry adapters around the shared
+ * runtime.
+ */
 /*
  * Team facade over the single s3_integration/s3_drive behaviour owner.
  * This adapter mirrors telemetry and routes UI requests; it owns no task,
@@ -46,3 +50,6 @@ bool vehicle_controller_set_mapping (const s3_nav_action_t p_map[26]);
 void vehicle_controller_observe (const s3_integration_status_t * p_status);
 
 #endif /* VEHICLE_CONTROLLER_H */
+
+/* End of file. */
+

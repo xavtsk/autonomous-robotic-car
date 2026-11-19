@@ -1,3 +1,6 @@
+/** @file mqtt_bridge.c
+ * @brief Adapter between the kernel-owned MQTT port and Buddy 1 queues.
+ */
 #include "mqtt_bridge.h"
 #include "../build_assert.h"
 
@@ -205,3 +208,6 @@ void mqtt_utk_app_receive (const char * p_topic,
 }
 
 #endif
+
+/* End of file. */
+

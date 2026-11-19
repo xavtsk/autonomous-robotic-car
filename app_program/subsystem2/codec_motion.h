@@ -1,3 +1,6 @@
+/** @file codec_motion.h
+ * @brief Define the shared packed motion snapshot and codec interface.
+ */
 /* Tribunal 1 copied motion-result format. Explicit bits, not C struct layout.
  * This is a reporting snapshot, NEVER a quantised input to the PID. */
 #ifndef BUDDY2_MOTION_CODEC_H
@@ -33,3 +36,6 @@ int16_t motion_snapshot_right_mms (const motion_snapshot_t * p_value);
 bool motion_read_snapshot (motion_snapshot_t * p_out);
 
 #endif
+
+/* End of file. */
+

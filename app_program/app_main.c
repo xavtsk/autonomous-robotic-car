@@ -1,3 +1,6 @@
+/** @file app_main.c
+ * @brief Application entry point, adapted from INF2004_ProjectTemplate.
+ */
 /*
  * Application entry point, adapted from INF2004_ProjectTemplate.
  * The kernel starts usermain() in its initial task. Initialize all subsystem
@@ -259,3 +262,6 @@ EXPORT INT usermain (void)
     tk_slp_tsk(TMO_FEVR);
     return 0;
 }
+
+/* End of file. */
+

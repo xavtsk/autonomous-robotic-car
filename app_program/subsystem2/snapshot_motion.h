@@ -10,3 +10,6 @@
 bool motion_read_snapshot (motion_snapshot_t * p_snapshot);
 
 #endif /* MOTION_SNAPSHOT_ADAPTER_H */
+
+/* End of file. */
+

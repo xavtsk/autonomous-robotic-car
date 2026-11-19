@@ -1,3 +1,6 @@
+/** @file estimate_motion.h
+ * @brief Encoder-based speed and distance estimation.
+ */
 /*
  * File: estimate_motion.h
  * Owner: Buddy 2 - Motion Control
@@ -34,3 +37,6 @@ float32_t motion_estimation_robot_dist (void);              /* m     */
 float32_t motion_estimation_heading_deg (void);             /* deg   */
 
 #endif /* BUDDY2_MOTION_ESTIMATION_H */
+
+/* End of file. */
+

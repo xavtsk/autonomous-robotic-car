@@ -1,3 +1,6 @@
+/** @file bc_capture.h
+ * @brief Barcode-sensor capture for diagnosing barcode reading on the course.
+ */
 /* Barcode-sensor capture for diagnosing barcode reading on the course.
  *
  * Observation only: records what the barcode sensor and Buddy 3's decoder saw
@@ -109,3 +112,6 @@ bool bcap_format_next (const bcap_t * p_c, bcap_cursor_t * p_cur, char * p_out,
 unsigned bcap_binary_next (const bcap_t * p_c, bcap_cursor_t * p_cur,
                            unsigned char * p_out, unsigned size);
 #endif
+
+/* End of file. */
+

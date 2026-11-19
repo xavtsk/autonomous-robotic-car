@@ -259,3 +259,6 @@ int main (void)
         cases, sizeof(builder), sizeof(sample));
     return 0;
 }
+
+/* End of file. */
+

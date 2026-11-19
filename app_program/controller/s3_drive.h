@@ -1,3 +1,7 @@
+/** @file s3_drive.h
+ * @brief Declare the drive owner state, motion boundary and course behaviour
+ * interface.
+ */
 #ifndef S3_DRIVE_H
 #define S3_DRIVE_H
 #include "../app_types.h"
@@ -111,7 +115,7 @@ typedef struct
     bool configured, waiting_stop;
     unsigned reset_result : 2;
     s3_drive_options_t options;
-    float64_t junction_m;       /* odometry when the junction was detected */
+    float64_t junction_m;    /* odometry when the junction was detected */
     uint32_t touch_us;       /* last time a front sensor touched the tape */
     s3_nav_action_t turn;    /* manoeuvre in progress */
     bool advancing, touched; /* advance leg running; touch_us is valid */
@@ -158,3 +162,6 @@ s3_reset_result_t s3_drive_reset_result (const s3_drive_t * p_drive);
 bool s3_drive_process (s3_drive_t * p_drive, const s3_sensor_frame_t * p_frame,
                        const motion_feedback_t * p_feedback);
 #endif
+
+/* End of file. */
+

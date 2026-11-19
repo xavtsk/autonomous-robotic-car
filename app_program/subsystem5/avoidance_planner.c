@@ -1,3 +1,6 @@
+/** @file avoidance_planner.c
+ * @brief Select a bounded bypass plan from the measured obstacle profile.
+ */
 #include "avoidance_planner.h"
 
 bool s5_plan (const s5_profile_t * p_p, const s5_config_t * p_c,
@@ -72,3 +75,6 @@ bool s5_plan (const s5_profile_t * p_p, const s5_config_t * p_c,
     p_out->closest_mm = p_p->closest_mm > 4095U ? 4095U : p_p->closest_mm;
     return true;
 }
+
+/* End of file. */
+

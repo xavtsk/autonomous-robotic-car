@@ -1,3 +1,7 @@
+/** @file mqtt_utk.c
+ * @brief Run MQTT connection and callback processing within the network-owning
+ * task.
+ */
 /*
  *	mqtt_utk.c
  *	MQTT client wiring for micro T-Kernel (RP2040, NO_SYS=1)
@@ -25,28 +29,28 @@
 #include "mqtt_utk.h"
 #include <tm/tmonitor.h>
 
-#define MQTT_UTK_HEARTBEAT_MS   5000
-#define MQTT_UTK_KEEPALIVE_S    60
-#define MQTT_UTK_RETRY_MS       3000
-#define MQTT_UTK_PUBLISH_GAP_MS    20U
+#define MQTT_UTK_HEARTBEAT_MS 5000
+#define MQTT_UTK_KEEPALIVE_S 60
+#define MQTT_UTK_RETRY_MS 3000
+#define MQTT_UTK_PUBLISH_GAP_MS 20U
 #define MQTT_UTK_PUBLISH_RETRY_MS 100U
-#define MQTT_UTK_COMMAND_TOPIC  "car/cmd/#"
+#define MQTT_UTK_COMMAND_TOPIC "car/cmd/#"
 
 /* Inbound message staging. A publish arrives as one topic callback followed by
  * one or more data callbacks. Preserve raw bytes, including zero. Reject the
  * entire packet if its topic/length is oversized or fragments do not match. */
-#define MQTT_UTK_RX_TOPIC_MAX   64
-#define MQTT_UTK_RX_DATA_MAX    MQTT_UTK_APP_PAYLOAD_MAX
+#define MQTT_UTK_RX_TOPIC_MAX 64
+#define MQTT_UTK_RX_DATA_MAX MQTT_UTK_APP_PAYLOAD_MAX
 
-static mqtt_client_t	*client;
-static ip_addr_t	broker_addr;
-static u8_t		connecting;
+static mqtt_client_t * client;
+static ip_addr_t broker_addr;
+static u8_t connecting;
 
-static char		rx_topic[MQTT_UTK_RX_TOPIC_MAX];
-static UB		rx_data[MQTT_UTK_RX_DATA_MAX];
-static u16_t		rx_len;
-static u8_t		rx_truncated;
-static u16_t             rx_expected;
+static char rx_topic[MQTT_UTK_RX_TOPIC_MAX];
+static UB rx_data[MQTT_UTK_RX_DATA_MAX];
+static u16_t rx_len;
+static u8_t rx_truncated;
+static u16_t rx_expected;
 
 /* A fixed, single-owner retry slot, not another queue or a larger lwIP pool.
  * Retain the complete packet until its publish callback succeeds. At most one
@@ -57,10 +61,17 @@ static T_MQTT_UTK_APP_MSG pending;
 static u32_t last_publish_ms;
 static u16_t publish_wait_ms;
 static u8_t pending_valid, pending_inflight, pending_warned, publish_paced;
+
 /* One fresh application packet may wait here during a capture turn. Once
  * either source has been attempted, retain that source until completion or a
  * permanent error, even across reconnects. Never interleave retries. */
-enum { PUBLISH_NONE, PUBLISH_APPLICATION, PUBLISH_CAPTURE };
+enum
+{
+    PUBLISH_NONE,
+    PUBLISH_APPLICATION,
+    PUBLISH_CAPTURE
+};
+
 static u8_t retry_source, capture_turn;
 /* Separate capture storage keeps a held application packet intact. */
 static unsigned char debug_line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
@@ -85,462 +96,562 @@ static u8_t control_seen, control_data_since = MQTT_UTK_CONTROL_DATA_GAP;
 static u8_t imu_data_since = MQTT_UTK_IMU_DATA_GAP;
 #endif
 
-static void heartbeat_timeout(void *arg);
+static void heartbeat_timeout (void * arg);
 
-static void pace_publish(u16_t wait_ms)
+static void pace_publish (u16_t wait_ms)
 {
-	last_publish_ms = sys_now();
-	publish_wait_ms = wait_ms;
-	publish_paced = 1;
+    last_publish_ms = sys_now();
+    publish_wait_ms = wait_ms;
+    publish_paced = 1;
 }
 
-static void warn_pending(err_t result)
+static void warn_pending (err_t result)
 {
-	if(!pending_warned) {
-		tm_printf((UB*)"mqtt: application publish delayed, err=%d; retaining packet\n",
-		          (int)result);
-		pending_warned = 1;
-	}
+    if (!pending_warned)
+    {
+        tm_printf(
+            (UB *)"mqtt: application publish delayed, err=%d; retaining packet\n",
+            (int)result);
+        pending_warned = 1;
+    }
 }
 
-static void data_publish_completed(void)
+static void data_publish_completed (void)
 {
 #if APP_IR_DEBUG
-	if(control_data_since < MQTT_UTK_CONTROL_DATA_GAP) ++control_data_since;
+    if (control_data_since < MQTT_UTK_CONTROL_DATA_GAP)
+        ++control_data_since;
 #endif
 #if APP_IMU_DEBUG
-	if(imu_data_since < MQTT_UTK_IMU_DATA_GAP) ++imu_data_since;
+    if (imu_data_since < MQTT_UTK_IMU_DATA_GAP)
+        ++imu_data_since;
 #endif
 }
 
-static void application_publish_done_cb(void *arg, err_t result)
+static void application_publish_done_cb (void * arg, err_t result)
 {
-	(void)arg;
-	pending_inflight = 0;
-	if(result == ERR_OK) {
-		pending_valid = 0;
-		pending_warned = 0;
-		retry_source = PUBLISH_NONE;
-		capture_turn = 1;
-		data_publish_completed();
-	} else {
-		/* A request timeout is not proof that the broker never received it.
+    (void)arg;
+    pending_inflight = 0;
+    if (result == ERR_OK)
+    {
+        pending_valid = 0;
+        pending_warned = 0;
+        retry_source = PUBLISH_NONE;
+        capture_turn = 1;
+        data_publish_completed();
+    }
+    else
+    {
+        /* A request timeout is not proof that the broker never received it.
 		 * Retry is at-least-once best effort; consumers must tolerate repeats. */
-		warn_pending(result);
-		pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
-	}
+        warn_pending(result);
+        pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+    }
 }
 
-static void debug_publish_done_cb(void *arg, err_t result)
+static void debug_publish_done_cb (void * arg, err_t result)
 {
-	(void)arg;
-	pending_inflight = 0;
-	if(result == ERR_OK) {
-		debug_valid = 0;
-		retry_source = PUBLISH_NONE;
-		capture_turn = 0;
-		data_publish_completed();
-	} else {
-		pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
-	}
+    (void)arg;
+    pending_inflight = 0;
+    if (result == ERR_OK)
+    {
+        debug_valid = 0;
+        retry_source = PUBLISH_NONE;
+        capture_turn = 0;
+        data_publish_completed();
+    }
+    else
+    {
+        pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+    }
 }
 
-__attribute__((weak)) unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size)
+__attribute__((weak)) unsigned int mqtt_utk_debug_take (unsigned char * bytes,
+                                                        unsigned int size)
 {
-	(void)bytes;
-	(void)size;
-	return 0;
+    (void)bytes;
+    (void)size;
+    return 0;
 }
 
-__attribute__((weak)) unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size)
+__attribute__((weak)) unsigned int
+mqtt_utk_ir_debug_take (unsigned char * bytes, unsigned int size)
 {
-	(void)bytes;
-	(void)size;
-	return 0U;
-}
-__attribute__((weak)) unsigned int mqtt_utk_control_debug_take(unsigned char *bytes, unsigned int size)
-{
-	(void)bytes; (void)size; return 0U;
+    (void)bytes;
+    (void)size;
+    return 0U;
 }
 
-__attribute__((weak)) unsigned int mqtt_utk_imu_debug_take(unsigned char *bytes, unsigned int size)
+__attribute__((weak)) unsigned int
+mqtt_utk_control_debug_take (unsigned char * bytes, unsigned int size)
 {
-	(void)bytes; (void)size; return 0U;
+    (void)bytes;
+    (void)size;
+    return 0U;
+}
+
+__attribute__((weak)) unsigned int
+mqtt_utk_imu_debug_take (unsigned char * bytes, unsigned int size)
+{
+    (void)bytes;
+    (void)size;
+    return 0U;
 }
 
 #if APP_IR_DEBUG || APP_IMU_DEBUG
-static void preview_publish_done_cb(void *arg, err_t result)
+static void preview_publish_done_cb (void * arg, err_t result)
 {
-	(void)arg;
-	(void)result;
-	pending_inflight = 0; /* best effort: never retry an old preview */
+    (void)arg;
+    (void)result;
+    pending_inflight = 0; /* best effort: never retry an old preview */
 }
 
-static void publish_preview(const char *topic, unsigned int size)
+static void publish_preview (const char * topic, unsigned int size)
 {
-	pending_inflight = 1;
-	pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-	err_t err = mqtt_publish(client, topic, preview_line, (u16_t)size,
-	                         0, 0, preview_publish_done_cb, NULL);
-	if(err != ERR_OK) pending_inflight = 0;
+    pending_inflight = 1;
+    pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+    err_t err = mqtt_publish(client, topic, preview_line, (u16_t)size, 0, 0,
+                             preview_publish_done_cb, NULL);
+    if (err != ERR_OK)
+        pending_inflight = 0;
 }
 #endif
 
-__attribute__((weak)) int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out)
+__attribute__((weak)) int mqtt_utk_app_take (T_MQTT_UTK_APP_MSG * out)
 {
-	(void)out;
-	return 0;
+    (void)out;
+    return 0;
 }
 
-__attribute__((weak)) void mqtt_utk_app_receive(const char *topic,
-					 const unsigned char *payload,
-					 unsigned short payload_len)
+__attribute__((weak)) void mqtt_utk_app_receive (const char * topic,
+                                                 const unsigned char * payload,
+                                                 unsigned short payload_len)
 {
-	(void)topic;
-	(void)payload;
-	(void)payload_len;
+    (void)topic;
+    (void)payload;
+    (void)payload_len;
 }
 
-__attribute__((weak)) unsigned short mqtt_utk_app_status(unsigned char *payload,
-                                                       unsigned short capacity)
+__attribute__((weak)) unsigned short
+mqtt_utk_app_status (unsigned char * payload, unsigned short capacity)
 {
-	if (capacity < 2) return 0;
-	payload[0] = MQTT_UTK_APP_WIRE_VERSION; payload[1] = 1; /* alive, faults unknown */
-	return 2;
+    if (capacity < 2)
+        return 0;
+    payload[0] = MQTT_UTK_APP_WIRE_VERSION;
+    payload[1] = 1; /* alive, faults unknown */
+    return 2;
 }
 
-__attribute__((weak)) int mqtt_utk_app_link(int up)
+__attribute__((weak)) int mqtt_utk_app_link (int up)
 {
-	(void)up;
-	return 1;
+    (void)up;
+    return 1;
 }
 
-__attribute__((weak)) void mqtt_utk_app_connection(int up) { (void)up; }
+__attribute__((weak)) void mqtt_utk_app_connection (int up)
+{
+    (void)up;
+}
 
 /* mqtt.c NUL-terminates the topic before handing it over, but it is only
  * valid for the duration of this call -- copy it out. */
-static void incoming_publish_cb(void *arg, const char *topic, u32_t tot_len)
+static void incoming_publish_cb (void * arg, const char * topic, u32_t tot_len)
 {
-	u32_t	i;
+    u32_t i;
 
-	(void)arg;
+    (void)arg;
 
-	for(i = 0; i < (MQTT_UTK_RX_TOPIC_MAX - 1) && topic[i] != '\0'; i++) {
-		rx_topic[i] = topic[i];
-	}
-	rx_topic[i] = '\0';
+    for (i = 0; i < (MQTT_UTK_RX_TOPIC_MAX - 1) && topic[i] != '\0'; i++)
+    {
+        rx_topic[i] = topic[i];
+    }
+    rx_topic[i] = '\0';
 
-	rx_len = 0;
-	rx_truncated = (topic[i] != '\0' || tot_len > MQTT_UTK_RX_DATA_MAX);
-	rx_expected = (tot_len <= MQTT_UTK_RX_DATA_MAX) ? (u16_t)tot_len : 0;
+    rx_len = 0;
+    rx_truncated = (topic[i] != '\0' || tot_len > MQTT_UTK_RX_DATA_MAX);
+    rx_expected = (tot_len <= MQTT_UTK_RX_DATA_MAX) ? (u16_t)tot_len : 0;
 }
 
-static void incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
+static void incoming_data_cb (void * arg, const u8_t * data, u16_t len,
+                              u8_t flags)
 {
-	u16_t	i;
+    u16_t i;
 
-	(void)arg;
+    (void)arg;
 
-	for(i = 0; i < len; i++) {
-		if(rx_len < MQTT_UTK_RX_DATA_MAX) {
-			rx_data[rx_len++] = data[i];
-		} else {
-			rx_truncated = 1;
-		}
-	}
+    for (i = 0; i < len; i++)
+    {
+        if (rx_len < MQTT_UTK_RX_DATA_MAX)
+        {
+            rx_data[rx_len++] = data[i];
+        }
+        else
+        {
+            rx_truncated = 1;
+        }
+    }
 
-	if((flags & MQTT_DATA_FLAG_LAST) != 0) {
-		if(rx_len != rx_expected) rx_truncated = 1;
-		tm_printf((UB*)"mqtt: RX [%s] %u binary bytes%s\n", rx_topic,
-		          (unsigned)rx_len, rx_truncated? " (rejected)": "");
-		if(!rx_truncated) {
-			mqtt_utk_app_receive(rx_topic, rx_data, rx_len);
-		}
-	}
+    if ((flags & MQTT_DATA_FLAG_LAST) != 0)
+    {
+        if (rx_len != rx_expected)
+            rx_truncated = 1;
+        tm_printf((UB *)"mqtt: RX [%s] %u binary bytes%s\n", rx_topic,
+                  (unsigned)rx_len, rx_truncated ? " (rejected)" : "");
+        if (!rx_truncated)
+        {
+            mqtt_utk_app_receive(rx_topic, rx_data, rx_len);
+        }
+    }
 }
 
-static void subscribe_done_cb(void *arg, err_t result)
+static void subscribe_done_cb (void * arg, err_t result)
 {
-	(void)arg;
-	if(result == ERR_OK) {
-		tm_printf((UB*)"mqtt: subscribed to " MQTT_TOPIC "\n");
-	} else {
-		tm_printf((UB*)"mqtt: subscribe failed, err=%d\n", (int)result);
-	}
+    (void)arg;
+    if (result == ERR_OK)
+    {
+        tm_printf((UB *)"mqtt: subscribed to " MQTT_TOPIC "\n");
+    }
+    else
+    {
+        tm_printf((UB *)"mqtt: subscribe failed, err=%d\n", (int)result);
+    }
 }
 
-static void command_subscribe_done_cb(void *arg, err_t result)
+static void command_subscribe_done_cb (void * arg, err_t result)
 {
-	(void)arg;
-	if(result == ERR_OK) {
-		tm_printf((UB*)"mqtt: subscribed to " MQTT_UTK_COMMAND_TOPIC "\n");
-	} else {
-		tm_printf((UB*)"mqtt: command subscribe failed, err=%d\n",
-			  (int)result);
-	}
+    (void)arg;
+    if (result == ERR_OK)
+    {
+        tm_printf((UB *)"mqtt: subscribed to " MQTT_UTK_COMMAND_TOPIC "\n");
+    }
+    else
+    {
+        tm_printf((UB *)"mqtt: command subscribe failed, err=%d\n",
+                  (int)result);
+    }
 }
 
-static void publish_done_cb(void *arg, err_t result)
+static void publish_done_cb (void * arg, err_t result)
 {
-	(void)arg;
-	if(result != ERR_OK) {
-		tm_printf((UB*)"mqtt: publish failed, err=%d\n", (int)result);
-	}
+    (void)arg;
+    if (result != ERR_OK)
+    {
+        tm_printf((UB *)"mqtt: publish failed, err=%d\n", (int)result);
+    }
 }
 
-static void heartbeat_timeout(void *arg)
+static void heartbeat_timeout (void * arg)
 {
-	UB payload[MQTT_UTK_APP_PAYLOAD_MAX];
-	unsigned short len;
+    UB payload[MQTT_UTK_APP_PAYLOAD_MAX];
+    unsigned short len;
 
-	(void)arg;
+    (void)arg;
 
-	if(mqtt_client_is_connected(client)) {
-		len = mqtt_utk_app_status(payload, sizeof(payload));
-		if (len > 0 && len <= sizeof(payload))
-		(void)mqtt_publish(client, MQTT_TOPIC, payload, (u16_t)len,
-				   0 /* qos */, 0 /* retain */,
-				   publish_done_cb, NULL);
-	}
+    if (mqtt_client_is_connected(client))
+    {
+        len = mqtt_utk_app_status(payload, sizeof(payload));
+        if (len > 0 && len <= sizeof(payload))
+            (void)mqtt_publish(client, MQTT_TOPIC, payload, (u16_t)len,
+                               0 /* qos */, 0 /* retain */, publish_done_cb,
+                               NULL);
+    }
 
-	/* Re-arms itself every call -- mqtt.c's connection callback (below)
+    /* Re-arms itself every call -- mqtt.c's connection callback (below)
 	 * only starts this chain once, on the transition into MQTT_CONNECT_
 	 * ACCEPTED, so there is exactly one heartbeat chain alive at a time. */
-	sys_timeout(MQTT_UTK_HEARTBEAT_MS, heartbeat_timeout, NULL);
+    sys_timeout(MQTT_UTK_HEARTBEAT_MS, heartbeat_timeout, NULL);
 }
 
-static void retry_timeout(void *arg)
+static void retry_timeout (void * arg)
 {
-	(void)arg;
-	connecting = 0;
-	mqtt_utk_start();
+    (void)arg;
+    connecting = 0;
+    mqtt_utk_start();
 }
 
-static void connection_cb(mqtt_client_t *c, void *arg, mqtt_connection_status_t status)
+static void connection_cb (mqtt_client_t * c, void * arg,
+                           mqtt_connection_status_t status)
 {
-	(void)c;
-	(void)arg;
+    (void)c;
+    (void)arg;
 
-	if(status == MQTT_CONNECT_ACCEPTED) {
-		err_t	err;
-		mqtt_utk_app_connection(1);
+    if (status == MQTT_CONNECT_ACCEPTED)
+    {
+        err_t err;
+        mqtt_utk_app_connection(1);
 
-		/* No longer *connecting* -- clear the guard so that if this
+        /* No longer *connecting* -- clear the guard so that if this
 		 * connection later drops, the poll loop's mqtt_utk_start() call
 		 * is allowed to reconnect. Leaving it set would wedge the client
 		 * permanently after the first disconnect. */
-		connecting = 0;
-		pending_inflight = 0;
+        connecting = 0;
+        pending_inflight = 0;
 
-		tm_printf((UB*)"mqtt: connected to " MQTT_BROKER_IP "\n");
+        tm_printf((UB *)"mqtt: connected to " MQTT_BROKER_IP "\n");
 
-		/* Subscribe to the same topic this client publishes to, so every
+        /* Subscribe to the same topic this client publishes to, so every
 		 * heartbeat comes back from the broker and is printed by
 		 * incoming_data_cb(). A matching RX for each TX is end-to-end
 		 * proof of the round trip without needing mosquitto_sub on the
 		 * broker host. Callbacks must be registered before subscribing,
 		 * or the first delivery has nowhere to go. */
-		mqtt_set_inpub_callback(client, incoming_publish_cb,
-					incoming_data_cb, NULL);
+        mqtt_set_inpub_callback(client, incoming_publish_cb, incoming_data_cb,
+                                NULL);
 
-		err = mqtt_subscribe(client, MQTT_TOPIC, 0 /* qos */,
-				     subscribe_done_cb, NULL);
-		if(err != ERR_OK) {
-			tm_printf((UB*)"mqtt: mqtt_subscribe() failed, err=%d\n",
-				  (int)err);
-		}
+        err = mqtt_subscribe(client, MQTT_TOPIC, 0 /* qos */, subscribe_done_cb,
+                             NULL);
+        if (err != ERR_OK)
+        {
+            tm_printf((UB *)"mqtt: mqtt_subscribe() failed, err=%d\n",
+                      (int)err);
+        }
 
-		err = mqtt_subscribe(client, MQTT_UTK_COMMAND_TOPIC, 1 /* qos */,
-				     command_subscribe_done_cb, NULL);
-		if(err != ERR_OK) {
-			tm_printf((UB*)"mqtt: command mqtt_subscribe() failed, err=%d\n",
-				  (int)err);
-		}
+        err = mqtt_subscribe(client, MQTT_UTK_COMMAND_TOPIC, 1 /* qos */,
+                             command_subscribe_done_cb, NULL);
+        if (err != ERR_OK)
+        {
+            tm_printf((UB *)"mqtt: command mqtt_subscribe() failed, err=%d\n",
+                      (int)err);
+        }
 
-		/* Drop any chain left over from a previous connection before
+        /* Drop any chain left over from a previous connection before
 		 * arming a new one. Each reconnect would otherwise add another
 		 * self-perpetuating heartbeat, and every one of them holds a
 		 * MEMP_SYS_TIMEOUT slot until the pool is exhausted. */
-		sys_untimeout(heartbeat_timeout, NULL);
-		sys_timeout(MQTT_UTK_HEARTBEAT_MS, heartbeat_timeout, NULL);
-	} else {
-		mqtt_utk_app_connection(0);
-		/* lwIP clears requests without completion callbacks on close.
+        sys_untimeout(heartbeat_timeout, NULL);
+        sys_timeout(MQTT_UTK_HEARTBEAT_MS, heartbeat_timeout, NULL);
+    }
+    else
+    {
+        mqtt_utk_app_connection(0);
+        /* lwIP clears requests without completion callbacks on close.
 		 * Keep our application packet for the next connection and schedule
 		 * the existing connection retry without adding a publish timer. */
-		tm_printf((UB*)"mqtt: connection status %d, retrying in %ds\n",
-			  (int)status, MQTT_UTK_RETRY_MS / 1000);
-		pending_inflight = 0;
-		sys_timeout(MQTT_UTK_RETRY_MS, retry_timeout, NULL);
-	}
+        tm_printf((UB *)"mqtt: connection status %d, retrying in %ds\n",
+                  (int)status, MQTT_UTK_RETRY_MS / 1000);
+        pending_inflight = 0;
+        sys_timeout(MQTT_UTK_RETRY_MS, retry_timeout, NULL);
+    }
 }
 
-void mqtt_utk_start(void)
+void mqtt_utk_start (void)
 {
-	struct mqtt_connect_client_info_t	client_info = {0};
-	err_t					err;
+    struct mqtt_connect_client_info_t client_info = {0};
+    err_t err;
 
-	if(connecting || (client != NULL && mqtt_client_is_connected(client))) {
-		return;
-	}
+    if (connecting || (client != NULL && mqtt_client_is_connected(client)))
+    {
+        return;
+    }
 
-	if(client == NULL) {
-		client = mqtt_client_new();
-		if(client == NULL) {
-			tm_printf((UB*)"mqtt: mqtt_client_new() failed\n");
-			return;
-		}
-	}
+    if (client == NULL)
+    {
+        client = mqtt_client_new();
+        if (client == NULL)
+        {
+            tm_printf((UB *)"mqtt: mqtt_client_new() failed\n");
+            return;
+        }
+    }
 
-	if(!ip4addr_aton(MQTT_BROKER_IP, ip_2_ip4(&broker_addr))) {
-		tm_printf((UB*)"mqtt: bad MQTT_BROKER_IP\n");
-		return;
-	}
-	IP_SET_TYPE(&broker_addr, IPADDR_TYPE_V4);
+    if (!ip4addr_aton(MQTT_BROKER_IP, ip_2_ip4(&broker_addr)))
+    {
+        tm_printf((UB *)"mqtt: bad MQTT_BROKER_IP\n");
+        return;
+    }
+    IP_SET_TYPE(&broker_addr, IPADDR_TYPE_V4);
 
-	client_info.client_id = MQTT_CLIENT_ID;
-	client_info.keep_alive = MQTT_UTK_KEEPALIVE_S;
+    client_info.client_id = MQTT_CLIENT_ID;
+    client_info.keep_alive = MQTT_UTK_KEEPALIVE_S;
 
-	connecting = 1;
-	err = mqtt_client_connect(client, &broker_addr, MQTT_BROKER_PORT,
-				  connection_cb, NULL, &client_info);
-	if(err != ERR_OK) {
-		tm_printf((UB*)"mqtt: mqtt_client_connect() failed, err=%d\n", (int)err);
-		connecting = 0;
-	}
+    connecting = 1;
+    err = mqtt_client_connect(client, &broker_addr, MQTT_BROKER_PORT,
+                              connection_cb, NULL, &client_info);
+    if (err != ERR_OK)
+    {
+        tm_printf((UB *)"mqtt: mqtt_client_connect() failed, err=%d\n",
+                  (int)err);
+        connecting = 0;
+    }
 }
 
-void mqtt_utk_poll(void)
+void mqtt_utk_poll (void)
 {
-	err_t err;
-	unsigned int n, capture_checked = 0;
+    err_t err;
+    unsigned int n, capture_checked = 0;
 
-	if(client == NULL || !mqtt_client_is_connected(client)) {
-		pending_inflight = 0;
-		return;
-	}
-	if(pending_inflight ||
-	   (publish_paced && (u32_t)(sys_now() - last_publish_ms) < publish_wait_ms)) {
-		return;
-	}
+    if (client == NULL || !mqtt_client_is_connected(client))
+    {
+        pending_inflight = 0;
+        return;
+    }
+    if (pending_inflight ||
+        (publish_paced &&
+         (u32_t)(sys_now() - last_publish_ms) < publish_wait_ms))
+    {
+        return;
+    }
 
-	/* A timeout/disconnect can leave delivery ambiguous. Finish the exact
+    /* A timeout/disconnect can leave delivery ambiguous. Finish the exact
 	 * attempted packet before taking another packet from either source. */
-	if(retry_source == PUBLISH_APPLICATION) goto publish_application;
-	if(retry_source == PUBLISH_CAPTURE) goto publish_capture;
+    if (retry_source == PUBLISH_APPLICATION)
+        goto publish_application;
+    if (retry_source == PUBLISH_CAPTURE)
+        goto publish_capture;
 
-	if(!pending_valid) {
-		pending.routine = 0; /* default for application hooks without metadata */
-		if(mqtt_utk_app_take(&pending)) {
-			pending.topic[MQTT_UTK_APP_TOPIC_MAX - 1] = '\0';
-			if(pending.payload_len > MQTT_UTK_APP_PAYLOAD_MAX ||
-			   pending.topic[0] == '\0' || pending.qos > 2 || pending.retain > 1) {
-				tm_printf((UB*)"mqtt: invalid application packet discarded\n");
-				pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-				return;
-			}
-			pending_valid = 1;
-			pending_warned = 0;
-		}
-	}
+    if (!pending_valid)
+    {
+        pending.routine =
+            0; /* default for application hooks without metadata */
+        if (mqtt_utk_app_take(&pending))
+        {
+            pending.topic[MQTT_UTK_APP_TOPIC_MAX - 1] = '\0';
+            if (pending.payload_len > MQTT_UTK_APP_PAYLOAD_MAX ||
+                pending.topic[0] == '\0' || pending.qos > 2 ||
+                pending.retain > 1)
+            {
+                tm_printf((UB *)"mqtt: invalid application packet discarded\n");
+                pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+                return;
+            }
+            pending_valid = 1;
+            pending_warned = 0;
+        }
+    }
 
-	/* Do not reorder the application FIFO. Its head event/reply takes
+    /* Do not reorder the application FIFO. Its head event/reply takes
 	 * priority, while recurring samples share slots one-for-one with BCAP.
 	 * Urgent events behind a held sample still wait for the existing FIFO. */
-	if(pending_valid && !pending.routine) goto publish_application;
+    if (pending_valid && !pending.routine)
+        goto publish_application;
 #if APP_IR_DEBUG || APP_IMU_DEBUG
-	/* With no queued application packet, check for BCAP before treating the
+    /* With no queued application packet, check for BCAP before treating the
 	 * link as idle. Diagnostics use separate storage from the staged capture. */
-	if(!pending_valid && !debug_valid) {
-		n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
-		capture_checked = 1;
-		if(n > sizeof debug_line) return;
-		if(n != 0U) { debug_len = (u16_t)n; debug_valid = 1; }
-	}
+    if (!pending_valid && !debug_valid)
+    {
+        n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
+        capture_checked = 1;
+        if (n > sizeof debug_line)
+            return;
+        if (n != 0U)
+        {
+            debug_len = (u16_t)n;
+            debug_valid = 1;
+        }
+    }
 #endif
 #if APP_IR_DEBUG
-	if((!control_seen || (u32_t)(sys_now() - last_control_ms) >= MQTT_UTK_CONTROL_PERIOD_MS) &&
-	   ((!pending_valid && !debug_valid) || control_data_since >= MQTT_UTK_CONTROL_DATA_GAP)) {
-		n = mqtt_utk_control_debug_take(preview_line, MQTT_UTK_CONTROL_DEBUG_MAX);
-		if(n > MQTT_UTK_CONTROL_DEBUG_MAX) return;
-		if(n != 0U) {
-			last_control_ms = sys_now();
-			control_seen = 1;
-			control_data_since = 0;
-			publish_preview(MQTT_UTK_CONTROL_DEBUG_TOPIC, n);
-			return;
-		}
-	}
+    if ((!control_seen ||
+         (u32_t)(sys_now() - last_control_ms) >= MQTT_UTK_CONTROL_PERIOD_MS) &&
+        ((!pending_valid && !debug_valid) ||
+         control_data_since >= MQTT_UTK_CONTROL_DATA_GAP))
+    {
+        n = mqtt_utk_control_debug_take(preview_line,
+                                        MQTT_UTK_CONTROL_DEBUG_MAX);
+        if (n > MQTT_UTK_CONTROL_DEBUG_MAX)
+            return;
+        if (n != 0U)
+        {
+            last_control_ms = sys_now();
+            control_seen = 1;
+            control_data_since = 0;
+            publish_preview(MQTT_UTK_CONTROL_DEBUG_TOPIC, n);
+            return;
+        }
+    }
 #endif
 #if APP_IMU_DEBUG
-	if((!pending_valid && !debug_valid) || imu_data_since >= MQTT_UTK_IMU_DATA_GAP) {
-		n = mqtt_utk_imu_debug_take(preview_line, MQTT_UTK_IMU_DEBUG_MAX);
-		if(n > MQTT_UTK_IMU_DEBUG_MAX) return;
-		if(n != 0U) {
-			imu_data_since = 0;
-			publish_preview(MQTT_UTK_IMU_DEBUG_TOPIC, n);
-			return;
-		}
-	}
+    if ((!pending_valid && !debug_valid) ||
+        imu_data_since >= MQTT_UTK_IMU_DATA_GAP)
+    {
+        n = mqtt_utk_imu_debug_take(preview_line, MQTT_UTK_IMU_DEBUG_MAX);
+        if (n > MQTT_UTK_IMU_DEBUG_MAX)
+            return;
+        if (n != 0U)
+        {
+            imu_data_since = 0;
+            publish_preview(MQTT_UTK_IMU_DEBUG_TOPIC, n);
+            return;
+        }
+    }
 #endif
-	if(pending_valid && !capture_turn) goto publish_application;
-	if(!debug_valid && !capture_checked) {
-		n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
-		if(n > sizeof debug_line) return;
-		if(n != 0U) {
-			debug_len = (u16_t)n;
-			debug_valid = 1;
-		}
-	}
-	if(debug_valid) goto publish_capture;
-	if(pending_valid) goto publish_application;
+    if (pending_valid && !capture_turn)
+        goto publish_application;
+    if (!debug_valid && !capture_checked)
+    {
+        n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
+        if (n > sizeof debug_line)
+            return;
+        if (n != 0U)
+        {
+            debug_len = (u16_t)n;
+            debug_valid = 1;
+        }
+    }
+    if (debug_valid)
+        goto publish_capture;
+    if (pending_valid)
+        goto publish_application;
 
 #if APP_IR_DEBUG
-	/* IR remains spare-capacity only. */
-	n = mqtt_utk_ir_debug_take(preview_line, MQTT_UTK_IR_DEBUG_MAX);
-	if(n != 0U && n <= MQTT_UTK_IR_DEBUG_MAX) publish_preview(MQTT_UTK_IR_DEBUG_TOPIC, n);
+    /* IR remains spare-capacity only. */
+    n = mqtt_utk_ir_debug_take(preview_line, MQTT_UTK_IR_DEBUG_MAX);
+    if (n != 0U && n <= MQTT_UTK_IR_DEBUG_MAX)
+        publish_preview(MQTT_UTK_IR_DEBUG_TOPIC, n);
 #endif
-	return;
+    return;
 
 publish_capture:
-	retry_source = PUBLISH_CAPTURE;
-	pending_inflight = 1;
-	pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-	err = mqtt_publish(client, MQTT_UTK_DEBUG_TOPIC, debug_line,
-	                   debug_len, 0, 0, debug_publish_done_cb, NULL);
-	if(err != ERR_OK) {
-		pending_inflight = 0;
-		if(err == ERR_MEM || err == ERR_CONN) {
-			pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
-		} else {
-			debug_valid = 0; /* cannot improve with a retry */
-			retry_source = PUBLISH_NONE;
-			capture_turn = 0;
-		}
-	}
-	return;
+    retry_source = PUBLISH_CAPTURE;
+    pending_inflight = 1;
+    pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+    err = mqtt_publish(client, MQTT_UTK_DEBUG_TOPIC, debug_line, debug_len, 0,
+                       0, debug_publish_done_cb, NULL);
+    if (err != ERR_OK)
+    {
+        pending_inflight = 0;
+        if (err == ERR_MEM || err == ERR_CONN)
+        {
+            pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+        }
+        else
+        {
+            debug_valid = 0; /* cannot improve with a retry */
+            retry_source = PUBLISH_NONE;
+            capture_turn = 0;
+        }
+    }
+    return;
 
 publish_application:
-	/* Set state before calling lwIP; test ports may complete synchronously.
+    /* Set state before calling lwIP; test ports may complete synchronously.
 	 * The next packet cannot overtake this one or consume another request slot. */
-	retry_source = PUBLISH_APPLICATION;
-	pending_inflight = 1;
-	pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
-	err = mqtt_publish(client, pending.topic, pending.payload,
-	                   (u16_t)pending.payload_len, pending.qos, pending.retain,
-	                   application_publish_done_cb, NULL);
-	if(err != ERR_OK) {
-		pending_inflight = 0;
-		if(err == ERR_MEM || err == ERR_CONN) {
-			warn_pending(err);
-			pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
-		} else {
-			/* Bad arguments cannot improve with a retry. Drop this one packet
+    retry_source = PUBLISH_APPLICATION;
+    pending_inflight = 1;
+    pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+    err = mqtt_publish(client, pending.topic, pending.payload,
+                       (u16_t)pending.payload_len, pending.qos, pending.retain,
+                       application_publish_done_cb, NULL);
+    if (err != ERR_OK)
+    {
+        pending_inflight = 0;
+        if (err == ERR_MEM || err == ERR_CONN)
+        {
+            warn_pending(err);
+            pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+        }
+        else
+        {
+            /* Bad arguments cannot improve with a retry. Drop this one packet
 			 * explicitly, then allow the next FIFO item on a later poll. */
-			tm_printf((UB*)"mqtt: application packet discarded, err=%d\n", (int)err);
-			pending_valid = 0;
-			pending_warned = 0;
-			retry_source = PUBLISH_NONE;
-		}
-	}
+            tm_printf((UB *)"mqtt: application packet discarded, err=%d\n",
+                      (int)err);
+            pending_valid = 0;
+            pending_warned = 0;
+            retry_source = PUBLISH_NONE;
+        }
+    }
 }
+
+/* End of file. */
+

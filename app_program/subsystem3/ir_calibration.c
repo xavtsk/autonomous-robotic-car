@@ -1,3 +1,7 @@
+/** @file ir_calibration.c
+ * @brief Collect labelled reflectance samples and derive validated sensor
+ * calibration.
+ */
 #include "ir_calibration.h"
 #include "../app_types.h"
 
@@ -82,3 +86,6 @@ s3_calibration_summary (const s3_calibration_range_t * p_range)
     }
     return summary;
 }
+
+/* End of file. */
+

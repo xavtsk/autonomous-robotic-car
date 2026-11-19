@@ -1,3 +1,6 @@
+/** @file buddy4_test.c
+ * @brief On-device self-check entry point for Buddy 4.
+ */
 #include "buddy4_test.h"
 #include "../app_types.h"
 #include "tilt_estimation.h"
@@ -30,3 +33,6 @@ void subsystem4_test (void)
     TEST_SUMMARY("subsystem4");
 }
 #endif
+
+/* End of file. */
+

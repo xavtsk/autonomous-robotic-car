@@ -1,3 +1,7 @@
+/** @file buddy4.c
+ * @brief Own IMU acquisition, terrain processing and protected snapshots and
+ * events.
+ */
 #include "buddy4.h"
 #include "../build_assert.h"
 #include "../app_types.h"
@@ -734,3 +738,6 @@ bool subsystem4_set_mag_calibration (const float32_t o[3], const float32_t s[3])
     return false;
 }
 #endif
+
+/* End of file. */
+

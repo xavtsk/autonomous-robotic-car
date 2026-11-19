@@ -1,3 +1,6 @@
+/** @file s5_config.h
+ * @brief Define obstacle sensing, scan geometry and avoidance configuration.
+ */
 #ifndef S5_CONFIG_H
 #define S5_CONFIG_H
 #include <stdbool.h>
@@ -201,3 +204,6 @@ static inline s5_config_t s5_defaults (void)
                          500U, 100U, 700U, 0U,  80U};
 }
 #endif
+
+/* End of file. */
+

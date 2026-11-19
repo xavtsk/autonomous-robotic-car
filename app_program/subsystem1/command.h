@@ -10,3 +10,6 @@
 #include "buddy1.h"
 
 #endif /* BUDDY1_COMMAND_H */
+
+/* End of file. */
+

@@ -1,3 +1,7 @@
+/** @file imu_sensor.c
+ * @brief Configure and read the LSM303DLHC accelerometer and magnetometer
+ * through the bus interface.
+ */
 /* LSM303DLHC, ST DocID018771 Rev 2. 7-bit I2C addresses. */
 #include "imu_sensor.h"
 #include <math.h>
@@ -107,3 +111,6 @@ bool imu_sensor_read (const imu_bus_t * p_b, uint32_t now, imu_sample_t * p_out)
     }
     return true;
 }
+
+/* End of file. */
+

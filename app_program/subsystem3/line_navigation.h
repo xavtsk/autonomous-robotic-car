@@ -1,3 +1,7 @@
+/** @file line_navigation.h
+ * @brief Define single-owner navigation state and copied sensor, odometry and
+ * result interfaces.
+ */
 /* Buddy 3 integration boundary. Pure C; no motor, MQTT or RTOS dependencies.
  * Context is single-owner: the future controller must pass mode/config changes
  * through the sampling owner, never modify this object concurrently. */
@@ -141,8 +145,8 @@ typedef struct
     uint8_t rearming : 1;
     uint8_t rearm_anchor_valid : 1;
     uint8_t rearm_stable : 1;
-    uint8_t barcode_held
-        : 3; /* live failure held while the recorder finishes */
+    uint8_t
+        barcode_held : 3; /* live failure held while the recorder finishes */
     float64_t rearm_anchor_m;
     uint32_t rearm_epoch, rearm_since_us;
     s3_capture_distance_t capture_distance;
@@ -179,3 +183,6 @@ bool s3_navigation_process (s3_navigation_t * p_context,
 const char * s3_surface_name (ir_surface_t surface);
 const char * s3_action_name (s3_nav_action_t action);
 #endif
+
+/* End of file. */
+

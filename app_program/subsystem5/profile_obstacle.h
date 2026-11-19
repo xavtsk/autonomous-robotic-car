@@ -1,3 +1,6 @@
+/** @file profile_obstacle.h
+ * @brief Pack scan samples and derive obstacle profiles and side-peek updates.
+ */
 #ifndef BUDDY5_OBSTACLE_PROFILE_H
 #define BUDDY5_OBSTACLE_PROFILE_H
 #include "s5_config.h"
@@ -27,3 +30,6 @@ bool s5_profile_build (const s5_sample_t * p_samples, unsigned count,
  * for telemetry); with no previous profile, a minimal valid one is made. */
 bool s5_peek_merge (s5_profile_t * p_profile, const s5_sample_t * p_sample);
 #endif
+
+/* End of file. */
+

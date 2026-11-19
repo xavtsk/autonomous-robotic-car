@@ -1,3 +1,7 @@
+/** @file snapshot_motion.c
+ * @brief Legacy Buddy 1/USB reporting view over the teammate's coherent status
+ * API.
+ */
 /* Legacy Buddy 1/USB reporting view over the teammate's coherent status API.
  * No request, report consumption, PID input or control precision change. */
 #include "snapshot_motion.h"
@@ -22,3 +26,6 @@ bool motion_read_snapshot (motion_snapshot_t * p_out)
                                 status.b_busy, valid, valid ? (int32_t)left : 0,
                                 valid ? (int32_t)right : 0);
 }
+
+/* End of file. */
+

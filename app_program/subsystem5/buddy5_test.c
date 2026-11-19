@@ -1,3 +1,6 @@
+/** @file buddy5_test.c
+ * @brief On-device self-check entry point for Buddy 5.
+ */
 #include "buddy5_test.h"
 #include "ultrasonic_sensor.h"
 #if APP_TEST
@@ -15,3 +18,6 @@ void subsystem5_test (void)
         ok ? "PASS" : "FAIL");
 }
 #endif
+
+/* End of file. */
+

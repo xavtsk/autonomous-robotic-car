@@ -1,3 +1,6 @@
+/** @file buddy1_test.c
+ * @brief On-device self-check entry point for Buddy 1.
+ */
 #include "buddy1_test.h"
 #include "../test_report.h"
 
@@ -257,3 +260,6 @@ EXPORT void subsystem1_test (void)
     TEST_SUMMARY("subsystem1-binary");
 }
 #endif
+
+/* End of file. */
+

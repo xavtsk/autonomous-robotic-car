@@ -1,3 +1,6 @@
+/** @file op_panel.h
+ * @brief GP20/GP21 operator buttons for the S3_MOTION profile (see op_logic.h).
+ */
 /* GP20/GP21 operator buttons for the S3_MOTION profile (see op_logic.h).
  * GP20 = next calibration step / START (hold 2 s = recalibrate),
  * GP21 = STOP at any time. Software stop only: the power switch remains the
@@ -10,3 +13,6 @@
           */
 ER operator_panel_start (void);
 #endif
+
+/* End of file. */
+

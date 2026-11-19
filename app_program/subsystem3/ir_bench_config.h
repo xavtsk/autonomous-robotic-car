@@ -1,3 +1,7 @@
+/** @file ir_bench_config.h
+ * @brief Configure bench IR channel routing, measured reflectance references
+ * and timing.
+ */
 /* Measured 2026-10-27; remeasure after height/material/lighting changes. */
 #ifndef BUDDY3_IR_BENCH_CONFIG_H
 #define BUDDY3_IR_BENCH_CONFIG_H
@@ -30,3 +34,6 @@
 #define IR_BENCH_SAMPLE_MS (10U)
 #define IR_BENCH_REPORT_MS (200U)
 #endif
+
+/* End of file. */
+

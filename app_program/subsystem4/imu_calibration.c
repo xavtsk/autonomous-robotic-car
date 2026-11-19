@@ -1,3 +1,6 @@
+/** @file imu_calibration.c
+ * @brief Collect stationary IMU samples for initial sensor calibration.
+ */
 #include "imu_calibration.h"
 #include "../app_types.h"
 #include <math.h>
@@ -57,3 +60,6 @@ bool imu_calibration_feed (imu_calibration_t * p_c, const imu_sample_t * p_s,
     }
     return p_c->ready;
 }
+
+/* End of file. */
+

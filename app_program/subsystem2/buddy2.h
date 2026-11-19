@@ -1,3 +1,6 @@
+/** @file buddy2.h
+ * @brief RTOS lifecycle interface.
+ */
 /*
  * File: buddy2.h
  * Owner: Buddy 2 - Motion control using motors and wheel encoders.
@@ -26,3 +29,6 @@ void subsystem2_test (void);
 #endif
 
 #endif /* SUBSYSTEM2_H */
+
+/* End of file. */
+

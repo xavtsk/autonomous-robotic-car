@@ -1,3 +1,6 @@
+/** @file wheel_encoder.h
+ * @brief Wheel encoder acquisition (quadrature, decoded in PIO0).
+ */
 /*
  * File: wheel_encoder.h
  * Owner: Buddy 2 - Motion Control
@@ -67,3 +70,6 @@ void wheel_encoder_set_inverted (wheel_id_t wheel, bool b_inverted);
 bool wheel_encoder_is_inverted (wheel_id_t wheel);
 
 #endif /* BUDDY2_WHEEL_ENCODER_H */
+
+/* End of file. */
+

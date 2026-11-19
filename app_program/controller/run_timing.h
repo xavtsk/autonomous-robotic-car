@@ -1,3 +1,7 @@
+/** @file run_timing.h
+ * @brief Observation only: one sampling owner updates this; packed status
+ * carries a copied view.
+ */
 /* Observation only: one sampling owner updates this; packed status carries a
  * copied view. No scheduling, control, threshold or motion-policy changes. */
 #ifndef S3_RUN_TIMING_H
@@ -52,3 +56,6 @@ static inline void s3_run_timing_record (s3_run_timing_t * p_timing,
     }
 }
 #endif
+
+/* End of file. */
+

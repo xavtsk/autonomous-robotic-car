@@ -1,3 +1,6 @@
+/** @file line_recovery.h
+ * @brief Track line observations while recovering after an obstacle detour.
+ */
 #ifndef BUDDY5_LINE_RECOVERY_H
 #define BUDDY5_LINE_RECOVERY_H
 #include "s5_config.h"
@@ -14,3 +17,6 @@ void s5_recovery_reset (s5_recovery_t * p_r);
 bool s5_recovery_observe (s5_recovery_t * p_r, uint32_t now, bool healthy,
                           bool tape, bool junction, bool in_corridor);
 #endif
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file host_kernel.h
+ * @brief Host-only model of the small RTOS surface used by Buddy 1.
+ */
 /* Host-only model of the small RTOS surface used by Buddy 1. Build with
  * -DAPP_H -include host_kernel.h; production builds use the real kernel. */
 #ifndef BUDDY1_HOST_KERNEL_H
@@ -25,20 +28,42 @@ typedef int ID, ER, PRI, TMO;
 #define TMO_FEVR (-1)
 #define TA_TFIFO 0
 #define TA_INHERIT 1
-typedef struct { unsigned mbfatr; int bufsz, maxmsz; } T_CMBF;
-typedef struct { unsigned mtxatr; } T_CMTX;
-typedef struct { void *exinf; ID wtsk, stsk; INT msgsz; int frbufsz; INT maxmsz; } T_RMBF;
-ID tk_cre_mbf(const T_CMBF *p);
-ER tk_del_mbf(ID id);
-ID tk_cre_mtx(const T_CMTX *p);
-ER tk_snd_mbf(ID id, const void *data, INT length, TMO timeout);
-INT tk_rcv_mbf(ID id, void *data, TMO timeout);
-ER tk_ref_mbf(ID id, T_RMBF *ref);
-ER tk_dly_tsk(TMO time);
-ER tk_loc_mtx(ID id, TMO timeout);
-ER tk_unl_mtx(ID id);
-ID app_start_task(void (*entry)(INT, void *), PRI priority, UW core, const char *name);
-int tm_printf(const UB *format, ...);
-ER subsystem1_init(void);
-void subsystem1_test(void);
+
+typedef struct
+{
+    unsigned mbfatr;
+    int bufsz, maxmsz;
+} T_CMBF;
+
+typedef struct
+{
+    unsigned mtxatr;
+} T_CMTX;
+
+typedef struct
+{
+    void * exinf;
+    ID wtsk, stsk;
+    INT msgsz;
+    int frbufsz;
+    INT maxmsz;
+} T_RMBF;
+
+ID tk_cre_mbf (const T_CMBF * p);
+ER tk_del_mbf (ID id);
+ID tk_cre_mtx (const T_CMTX * p);
+ER tk_snd_mbf (ID id, const void * data, INT length, TMO timeout);
+INT tk_rcv_mbf (ID id, void * data, TMO timeout);
+ER tk_ref_mbf (ID id, T_RMBF * ref);
+ER tk_dly_tsk (TMO time);
+ER tk_loc_mtx (ID id, TMO timeout);
+ER tk_unl_mtx (ID id);
+ID app_start_task (void (*entry)(INT, void *), PRI priority, UW core,
+                   const char * name);
+int tm_printf (const UB * format, ...);
+ER subsystem1_init (void);
+void subsystem1_test (void);
 #endif
+
+/* End of file. */
+

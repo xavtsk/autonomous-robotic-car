@@ -1,3 +1,7 @@
+/** @file buddy2_test.c
+ * @brief On-target unit tests (make TEST=1). IDs match
+ * testing/subsystem2/TEST_LOG.md.
+ */
 /*
  * File: buddy2_test.c
  * Owner: Buddy 2 - Motion control using motors and wheel encoders.
@@ -483,3 +487,6 @@ void subsystem2_test (void)
 }
 
 #endif /* APP_TEST */
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file ir_acquisition.c
+ * @brief Buddy 3: portable acquisition boundary; one peripheral owner.
+ */
 #include "ir_acquisition.h"
 
 bool s3_acquisition_config_valid (const s3_acquisition_config_t * p_config)
@@ -68,3 +71,6 @@ bool s3_acquisition_capture (const s3_acquisition_config_t * p_config,
     p_frame->timestamp_us = p_clock_us(p_context);
     return true; /* Individual failures are represented in the frame. */
 }
+
+/* End of file. */
+

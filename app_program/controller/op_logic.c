@@ -1,3 +1,6 @@
+/** @file op_logic.c
+ * @brief Operator controls: calibration walkthrough, START/STOP/RESET.
+ */
 /* Operator controls: calibration walkthrough, START/STOP/RESET. See header.
  * Every request goes through port.submit(); results are read back from the
  * published status (command_sequence/command_ok), never assumed. */
@@ -630,3 +633,6 @@ void operator_step (operator_t * p_op, uint32_t now_ms, op_press_t value_go,
         break;
     }
 }
+
+/* End of file. */
+

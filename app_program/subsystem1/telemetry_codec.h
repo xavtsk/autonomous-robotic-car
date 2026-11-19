@@ -1,3 +1,6 @@
+/** @file telemetry_codec.h
+ * @brief Define bounded telemetry values, packets and codec interfaces.
+ */
 /* Tribunal 1 application wire format. No RTOS, pointers or C struct layouts
  * cross the wire. See MQTT_PROTOCOL.md for bit order and field ranges. */
 #ifndef TELEMETRY_CODEC_H
@@ -221,3 +224,6 @@ int buddy1_map_unpack (const uint8_t * p_packet, unsigned length,
                        buddy1_barcode_map_t * p_out);
 
 #endif
+
+/* End of file. */
+

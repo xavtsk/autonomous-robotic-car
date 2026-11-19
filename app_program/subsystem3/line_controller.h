@@ -1,3 +1,6 @@
+/** @file line_controller.h
+ * @brief Compute bounded differential wheel-speed proposals from line error.
+ */
 #ifndef BUDDY3_LINE_CONTROLLER_H
 #define BUDDY3_LINE_CONTROLLER_H
 #include "../app_types.h"
@@ -21,3 +24,6 @@ s3_steering_request_t
 s3_steering_compute (const s3_steering_config_t * p_config,
                      const s3_line_observation_t * p_line);
 #endif
+
+/* End of file. */
+

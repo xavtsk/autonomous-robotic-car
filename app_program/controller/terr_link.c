@@ -1,3 +1,7 @@
+/** @file terr_link.c
+ * @brief Integrate terrain readiness, reset and observations with the
+ * controller owner.
+ */
 #include "terr_link.h"
 #include "../app_types.h"
 #if APP_S4
@@ -328,3 +332,6 @@ static void terrain_live_report (void)
     }
 }
 #endif
+
+/* End of file. */
+

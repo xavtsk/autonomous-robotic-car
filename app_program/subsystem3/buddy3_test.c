@@ -1,3 +1,6 @@
+/** @file buddy3_test.c
+ * @brief Target hook; portable algorithm tests run separately on the host.
+ */
 /*
  * File: buddy3_test.c
  * Purpose: Target hook; portable algorithm tests run separately on the host.
@@ -12,3 +15,6 @@ void subsystem3_test (void)
                     "tools/test-buddy3.ps1; hardware validation pending.\n");
 }
 #endif /* APP_TEST */
+
+/* End of file. */
+

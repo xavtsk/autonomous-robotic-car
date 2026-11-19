@@ -1,3 +1,6 @@
+/** @file op_panel.c
+ * @brief Thin RTOS/GPIO shell around operator_logic.
+ */
 /* Thin RTOS/GPIO shell around operator_logic. Polls the two Robo Pico user
  * buttons every 10 ms and only talks to the controller through
  * s3_integration_submit()/s3_integration_status(). No motion calls. */
@@ -96,3 +99,6 @@ ER operator_panel_start (void)
     return E_NOSPT;
 }
 #endif
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file hump_detection.h
+ * @brief Track hump progress and height for the configured wheel geometry.
+ */
 #ifndef BUDDY4_HUMP_DETECTION_H
 #define BUDDY4_HUMP_DETECTION_H
 #include "../app_types.h"
@@ -74,7 +77,11 @@ void hump_update (hump_detector_t * p_h, float32_t pitch, float32_t distance_m,
 /* Right wheel above a level left wheel: height = track*sin(roll)*cos(pitch).
  * Positive roll raises the right side. Require forward travel and a complete
  * level -> raised -> level excursion; do not integrate pitch in this mode. */
-void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch, float32_t roll,
-                              float32_t track_m, float32_t distance_m,
+void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch,
+                              float32_t roll, float32_t track_m,
+                              float32_t distance_m,
                               hump_sample_quality_t quality, uint32_t now);
 #endif
+
+/* End of file. */
+

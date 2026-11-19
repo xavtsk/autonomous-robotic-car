@@ -1,13 +1,17 @@
+/** @file integration_codec.c
+ * @brief Pack and unpack copied controller command and status data.
+ */
 #include "integration_codec.h"
 #include "../build_assert.h"
 #include "../app_types.h"
 #include <float.h>
 /* Compile-time guarantee: exact odometry and calibration representations. */
-BUILD_ASSERT(sizeof(float64_t) == 8 && DBL_MANT_DIG == 53 && sizeof(float32_t) == 4,
+BUILD_ASSERT(sizeof(float64_t) == 8 && DBL_MANT_DIG == 53 &&
+                 sizeof(float32_t) == 4,
              integration_codec_c_check_a_t);
 /* Compile-time guarantee: copied runtime storage. */
 BUILD_ASSERT(sizeof(s3_status_packet_t) == 146 &&
-                   sizeof(s3_control_packet_t) == 11,
+                 sizeof(s3_control_packet_t) == 11,
              integration_codec_c_check_b_t);
 
 static void put (uint8_t * p_p, unsigned * p_bit, uint32_t value,
@@ -280,3 +284,6 @@ bool s3_status_unpack (const s3_status_packet_t * p_p,
     *p_out = value_v;
     return true;
 }
+
+/* End of file. */
+

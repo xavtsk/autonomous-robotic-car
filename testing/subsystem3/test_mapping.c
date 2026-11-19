@@ -1,3 +1,7 @@
+/** @file test_mapping.c
+ * @brief Physical GPIO routing regression; independent of historical algorithm
+ * traces.
+ */
 /* Physical GPIO routing regression; independent of historical algorithm traces. */
 #include <assert.h>
 #include <stdio.h>
@@ -5,21 +9,27 @@
 #include "ir_bench_config.h"
 #include "line_navigation.h"
 
-typedef struct { uint16_t adc[3]; uint32_t now; } physical_adc_t;
-static int32_t physical_read(void *context, uint8_t channel, uint16_t *raw)
+typedef struct
 {
-    physical_adc_t *input = context;
+    uint16_t adc[3];
+    uint32_t now;
+} physical_adc_t;
+
+static int32_t physical_read (void * context, uint8_t channel, uint16_t * raw)
+{
+    physical_adc_t * input = context;
     assert(channel < 3U);
     *raw = input->adc[channel];
     return 0;
 }
-static uint32_t physical_clock(void *context)
+
+static uint32_t physical_clock (void * context)
 {
     return ((physical_adc_t *)context)->now;
 }
-static s3_navigation_output_t physical_observation(uint16_t gp26,
-                                                  uint16_t gp27,
-                                                  uint16_t gp28)
+
+static s3_navigation_output_t
+physical_observation (uint16_t gp26, uint16_t gp27, uint16_t gp28)
 {
     s3_navigation_config_t cfg = s3_navigation_defaults();
     s3_navigation_t nav;
@@ -28,14 +38,16 @@ static s3_navigation_output_t physical_observation(uint16_t gp26,
     physical_adc_t input = {{gp26, gp27, gp28}, 10000U};
     cfg.acquisition.enabled_mask = S3_ALL_SENSORS;
     assert(s3_navigation_init(&nav, &cfg));
-    for (unsigned i = 0U; i < 5U; i++, input.now += 10000U) {
+    for (unsigned i = 0U; i < 5U; i++, input.now += 10000U)
+    {
         assert(s3_acquisition_capture(&cfg.acquisition, physical_read,
-                                     physical_clock, &input, &frame));
+                                      physical_clock, &input, &frame));
         assert(s3_navigation_process(&nav, &frame, NULL, &out));
     }
     return out;
 }
-static void test_physical_mapping(void)
+
+static void test_physical_mapping (void)
 {
     s3_navigation_config_t cfg = s3_navigation_defaults();
     s3_sensor_frame_t frame;
@@ -50,7 +62,7 @@ static void test_physical_mapping(void)
            IR_BENCH_BARCODE_CHANNEL == 2U);
     cfg.acquisition.enabled_mask = S3_ALL_SENSORS;
     assert(s3_acquisition_capture(&cfg.acquisition, physical_read,
-                                 physical_clock, &input, &frame));
+                                  physical_clock, &input, &frame));
     assert(frame.sensor[S3_SENSOR_LEFT].raw == 2020U);
     assert(frame.sensor[S3_SENSOR_RIGHT].raw == 1010U);
     assert(frame.sensor[S3_SENSOR_BARCODE].raw == 3030U);
@@ -71,9 +83,13 @@ static void test_physical_mapping(void)
     assert(left.line.touching == barcode.line.touching);
 }
 
-int main(void)
+int main (void)
 {
     test_physical_mapping();
-    puts("PASS: physical GP27 left, GP26 right, GP28 barcode routing and barcode-independent line observations");
+    puts(
+        "PASS: physical GP27 left, GP26 right, GP28 barcode routing and barcode-independent line observations");
     return 0;
 }
+
+/* End of file. */
+

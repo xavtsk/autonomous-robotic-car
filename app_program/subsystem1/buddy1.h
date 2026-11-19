@@ -1,3 +1,6 @@
+/** @file buddy1.h
+ * @brief Buddy 1: task-context reporting API.
+ */
 /* Buddy 1: task-context reporting API. The RTOS copies complete binary
  * messages; only the kernel-owned network task calls lwIP/MQTT. */
 #ifndef SUBSYSTEM1_H
@@ -95,3 +98,6 @@ IMPORT ER buddy1_configuration_claim (buddy1_barcode_map_t * p_map,
 IMPORT ER buddy1_configuration_reopen (void);
 IMPORT void buddy1_command_task (INT stacd, void * p_exinf);
 #endif
+
+/* End of file. */
+

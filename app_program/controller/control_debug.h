@@ -1,3 +1,6 @@
+/** @file control_debug.h
+ * @brief Observation-only controller snapshot.
+ */
 /* Observation-only controller snapshot. Separate topic/version from IR/v2.
  * Explicit bit widths; no C struct layout is transmitted. Signed quantities
  * use two's complement. No callbacks to motion/control exist in the codec. */
@@ -165,3 +168,6 @@ bool control_debug_pack (const control_debug_sample_t * p_sample,
 bool control_debug_unpack (const control_debug_packet_t * p_packet,
                            control_debug_sample_t * p_sample);
 #endif
+
+/* End of file. */
+

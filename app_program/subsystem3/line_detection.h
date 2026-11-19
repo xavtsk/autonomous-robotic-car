@@ -1,3 +1,6 @@
+/** @file line_detection.h
+ * @brief Track line error, loss, reacquisition and junction persistence.
+ */
 #ifndef BUDDY3_LINE_DETECTION_H
 #define BUDDY3_LINE_DETECTION_H
 #include <stdbool.h>
@@ -60,3 +63,6 @@ s3_line_observation_t s3_line_update (s3_line_detector_t * p_detector,
                                       uint32_t timestamp_us, bool inputs_valid,
                                       uint16_t left_dark, uint16_t right_dark);
 #endif
+
+/* End of file. */
+

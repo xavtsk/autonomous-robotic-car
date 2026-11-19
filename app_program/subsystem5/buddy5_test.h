@@ -12,3 +12,6 @@ void subsystem5_test (void);
 #endif
 
 #endif /* BUDDY5_TEST_H */
+
+/* End of file. */
+

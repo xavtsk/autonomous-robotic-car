@@ -1,3 +1,7 @@
+/** @file s3_integration.h
+ * @brief Expose bounded controller command submission and copied runtime
+ * status.
+ */
 #ifndef S3_INTEGRATION_H
 #define S3_INTEGRATION_H
 /* Sole controller runtime for the explicit Buddies 1-3 integration profile.
@@ -46,3 +50,6 @@ bool s3_integration_status (s3_integration_status_t * p_status);
 int32_t s3_integration_init (void);
 int32_t s3_integration_start (void);
 #endif
+
+/* End of file. */
+

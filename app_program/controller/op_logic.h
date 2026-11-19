@@ -1,3 +1,8 @@
+/** @file op_logic.h
+ * @brief Operator controls for the S3_MOTION profile: a calibration
+ * walkthrough, START with a countdown, STOP and fault RESET, driven by
+ * two buttons.
+ */
 /*
  * Operator controls for the S3_MOTION profile: a calibration walkthrough,
  * START with a countdown, STOP and fault RESET, driven by two buttons.
@@ -24,8 +29,7 @@
 #define OP_PROMPT_REPEAT_MS (5000U)
 #define OP_CAL_STEPS (2U * (unsigned)S3_SENSOR_COUNT)
 /* Compile-time guarantee: operator_t.step is 3 bits. */
-BUILD_ASSERT(OP_CAL_STEPS <= 7U,
-             op_logic_h_check_a_t);
+BUILD_ASSERT(OP_CAL_STEPS <= 7U, op_logic_h_check_a_t);
 
 typedef enum
 {
@@ -102,3 +106,6 @@ void operator_step (operator_t * p_op, uint32_t now_ms, op_press_t value_go,
 const char * op_drive_state_name (s3_drive_state_t state);
 const char * op_drive_reason_name (s3_drive_reason_t reason);
 #endif
+
+/* End of file. */
+

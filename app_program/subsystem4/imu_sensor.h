@@ -1,3 +1,7 @@
+/** @file imu_sensor.h
+ * @brief Declare the IMU bus boundary and vehicle-axis acceleration and
+ * magnetic samples.
+ */
 #ifndef BUDDY4_IMU_SENSOR_H
 #define BUDDY4_IMU_SENSOR_H
 #include "../app_types.h"
@@ -33,3 +37,6 @@ bool imu_sensor_init (const imu_bus_t * p_bus);
 bool imu_sensor_read (const imu_bus_t * p_bus, uint32_t now_us,
                       imu_sample_t * p_out);
 #endif
+
+/* End of file. */
+

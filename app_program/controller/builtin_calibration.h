@@ -1,3 +1,7 @@
+/** @file builtin_calibration.h
+ * @brief Built-in IR calibration for the S3_MOTION profile, so the car is ready
+ * to START right after power-up.
+ */
 /*
  * Built-in IR calibration for the S3_MOTION profile, so the car is ready to
  * START right after power-up. Holding GP20 for 2 s at READY still recalibrates
@@ -33,8 +37,20 @@
 #endif
 
 /* {white_min, white_max, black_min, black_max}, indexed by s3_sensor_id_t. */
-#define S3_BUILTIN_CAL_BARCODE {170U, 260U, 3250U, 3850U}
-#define S3_BUILTIN_CAL_LEFT {115U, 174U, 1242U, 1761U}
-#define S3_BUILTIN_CAL_RIGHT {146U, 218U, 2960U, 3176U}
+#define S3_BUILTIN_CAL_BARCODE                                                 \
+    {                                                                          \
+        170U, 260U, 3250U, 3850U                                               \
+    }
+#define S3_BUILTIN_CAL_LEFT                                                    \
+    {                                                                          \
+        115U, 174U, 1242U, 1761U                                               \
+    }
+#define S3_BUILTIN_CAL_RIGHT                                                   \
+    {                                                                          \
+        146U, 218U, 2960U, 3176U                                               \
+    }
 
 #endif
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file motion.h
+ * @brief Public motion subsystem interface.
+ */
 /*
  * File: motion.h
  * Owner: Buddy 2 - Motion Control
@@ -90,16 +93,16 @@ typedef struct
 typedef struct
 {
     motion_state_t state;
-    motion_fault_t fault; /* lowest latched fault bit, as a code */
-    uint8_t command_id;   /* running / last accepted command     */
+    motion_fault_t fault;     /* lowest latched fault bit, as a code */
+    uint8_t command_id;       /* running / last accepted command     */
     float32_t speed_left_mps; /* + = forward                         */
     float32_t speed_right_mps;
-    float32_t distance_m;   /* robot centre, since start           */
-    float32_t heading_deg;  /* 0 ... 359, + = anticlockwise        */
-    bool b_stopped;     /* motion_is_stopped()                 */
-    bool b_busy;        /* calibration running                 */
-    bool b_valid;       /* false: encoder PIO not running      */
-    uint8_t fault_bits; /* every latched fault, one bit each   */
+    float32_t distance_m;  /* robot centre, since start           */
+    float32_t heading_deg; /* 0 ... 359, + = anticlockwise        */
+    bool b_stopped;        /* motion_is_stopped()                 */
+    bool b_busy;           /* calibration running                 */
+    bool b_valid;          /* false: encoder PIO not running      */
+    uint8_t fault_bits;    /* every latched fault, one bit each   */
 } motion_status_t;
 
 typedef enum
@@ -114,13 +117,13 @@ typedef enum
  * same name (without b_) in the CALIBRATE block of motion.c */
 typedef struct
 {
-    bool b_valid;           /* all checks below passed                   */
+    bool b_valid;               /* all checks below passed                   */
     float32_t counts_per_rev;   /* ENCODER_COUNTS_PER_REV                    */
     float32_t max_speed_mps;    /* MOTOR_MAX_SPEED_MPS (the slower motor)    */
-    bool b_m1_inverted;     /* M1_INVERTED                               */
-    bool b_m2_inverted;     /* M2_INVERTED                               */
-    bool b_enc_l_inverted;  /* ENC_L_INVERTED                            */
-    bool b_enc_r_inverted;  /* ENC_R_INVERTED                            */
+    bool b_m1_inverted;         /* M1_INVERTED                               */
+    bool b_m2_inverted;         /* M2_INVERTED                               */
+    bool b_enc_l_inverted;      /* ENC_L_INVERTED                            */
+    bool b_enc_r_inverted;      /* ENC_R_INVERTED                            */
     float32_t counts_per_rev_l; /* per wheel, for checking                   */
     float32_t counts_per_rev_r;
     float32_t top_speed_l_mps; /* per wheel, wheels off the ground          */
@@ -162,7 +165,8 @@ void stop (void);
 /* VELOCITY CONTROL. Accepted in IDLE or VELOCITY; each call replaces the
  * targets. Re-send at least every 250 ms or the robot goes to MOTION_FAULT
  * (stale command). Negative = backward. Speeds above the limit are capped. */
-motion_result_t motion_request_velocity (float32_t left_mps, float32_t right_mps);
+motion_result_t motion_request_velocity (float32_t left_mps,
+                                         float32_t right_mps);
 
 /* DRIVE straight. Negative distance = backward. IDLE only. Drives and turns
  * whose allowed time (distance / speed x 3 + 2 s) exceeds 600 s are
@@ -236,8 +240,8 @@ const char * motion_fault_name (motion_fault_t value_f);
 const char * manoeuvre_name (manoeuvre_t value_m);
 
 /* ---- Estimates from encoder feedback (safe from any task) -------------- */
-int32_t enc_l_count (void);         /* left wheel encoder (ENC_L) count  */
-int32_t enc_r_count (void);         /* right wheel encoder (ENC_R) count */
+int32_t enc_l_count (void);             /* left wheel encoder (ENC_L) count  */
+int32_t enc_r_count (void);             /* right wheel encoder (ENC_R) count */
 float32_t wheel_distance_left_m (void); /* since start, + = forward          */
 float32_t wheel_distance_right_m (void);
 float32_t wheel_speed_left_mps (void); /* + = forward                       */
@@ -303,3 +307,6 @@ bool motion_is_calibrating (void);
 bool motion_get_calibration (motion_calibration_t * p_out);
 
 #endif /* BUDDY2_MOTION_H */
+
+/* End of file. */
+

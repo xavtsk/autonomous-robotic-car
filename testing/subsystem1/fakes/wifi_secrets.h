@@ -1,3 +1,7 @@
+/** @file wifi_secrets.h
+ * @brief Deliberately public compile/test placeholders; never a real
+ * connection.
+ */
 /* Deliberately public compile/test placeholders; never a real connection. */
 #define WIFI_SSID "host-test"
 #define WIFI_PASSWORD "unused"
@@ -5,3 +9,6 @@
 #define MQTT_BROKER_PORT 1883
 #define MQTT_CLIENT_ID "host-test"
 #define MQTT_TOPIC "car/status"
+
+/* End of file. */
+

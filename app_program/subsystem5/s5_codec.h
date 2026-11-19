@@ -1,3 +1,6 @@
+/** @file s5_codec.h
+ * @brief Encode and decode copied obstacle-observation packets.
+ */
 #ifndef S5_CODEC_H
 #define S5_CODEC_H
 #include "profile_obstacle.h"
@@ -17,3 +20,6 @@ bool s5_observation_pack (const s5_observation_t * p_v,
 bool s5_observation_unpack (const uint8_t p_in[S5_PACKET_BYTES],
                             s5_observation_t * p_v);
 #endif
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file scan_servo.c
+ * @brief Configure and position the ultrasonic scan servo through PWM.
+ */
 #include "scan_servo.h"
 #if APP_S5
 #include "../app.h"
@@ -73,3 +76,6 @@ void scan_servo_disable (void)
 {
 }
 #endif
+
+/* End of file. */
+

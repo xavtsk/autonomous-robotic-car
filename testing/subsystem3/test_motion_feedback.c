@@ -1,3 +1,6 @@
+/** @file test_motion_feedback.c
+ * @brief Exercise motion feedback, report handling and counter wrap with fakes.
+ */
 #include "motion.h"
 #ifdef S2_LEGACY_MODULE_NAMES
 #include "motion_controller.h"
@@ -16,33 +19,42 @@ static bool locked;
 static bool debug_lock_busy;
 static unsigned int wakes;
 static bool abort_on_delay;
-ID tk_cre_mtx(const T_CMTX *c)
+
+ID tk_cre_mtx (const T_CMTX * c)
 {
     (void)c;
     return 1;
 }
-ER tk_loc_mtx(ID id, int timeout)
+
+ER tk_loc_mtx (ID id, int timeout)
 {
     (void)id;
-    if(debug_lock_busy){assert(timeout==TMO_POL);return -1;}
+    if (debug_lock_busy)
+    {
+        assert(timeout == TMO_POL);
+        return -1;
+    }
     assert(!locked);
     locked = true;
     return E_OK;
 }
-ER tk_unl_mtx(ID id)
+
+ER tk_unl_mtx (ID id)
 {
     (void)id;
     assert(locked);
     locked = false;
     return E_OK;
 }
-ER tk_wup_tsk(ID id)
+
+ER tk_wup_tsk (ID id)
 {
     (void)id;
     wakes++;
     return E_OK;
 }
-ER tk_dly_tsk(uint32_t ms)
+
+ER tk_dly_tsk (uint32_t ms)
 {
     clock_us += ms * 1000U;
     if (abort_on_delay)
@@ -52,14 +64,17 @@ ER tk_dly_tsk(uint32_t ms)
     }
     return E_OK;
 }
-ER tk_can_wup(ID id)
+
+ER tk_can_wup (ID id)
 {
     (void)id;
     return E_OK;
 }
+
 static uint32_t watchdog_tick, reset_bits = RESETS_RESET_TIMER;
 static unsigned int clock_starts;
-uint32_t in_w(uint32_t address)
+
+uint32_t in_w (uint32_t address)
 {
     if (address == TIMER_TIMERAWL)
     {
@@ -75,26 +90,31 @@ uint32_t in_w(uint32_t address)
     }
     return watchdog_tick;
 }
-void out_w(uint32_t address, uint32_t value)
+
+void out_w (uint32_t address, uint32_t value)
 {
     (void)address;
     watchdog_tick = value | (1U << 10);
     clock_starts++;
 }
-void clr_w(uint32_t address, uint32_t value)
+
+void clr_w (uint32_t address, uint32_t value)
 {
     assert(address == RESETS_RESET);
     reset_bits &= ~value;
 }
+
 static uint16_t queue[MOTION_REPORT_QUEUE_LEN];
 static unsigned int queued;
-ID tk_cre_mbf(const T_CMBF *config)
+
+ID tk_cre_mbf (const T_CMBF * config)
 {
     assert(config->maxmsz == 2);
     queued = 0U;
     return 2;
 }
-ER tk_snd_mbf(ID id, const void *data, INT size, TMO timeout)
+
+ER tk_snd_mbf (ID id, const void * data, INT size, TMO timeout)
 {
     (void)id;
     (void)timeout;
@@ -106,7 +126,8 @@ ER tk_snd_mbf(ID id, const void *data, INT size, TMO timeout)
     memcpy(&queue[queued++], data, 2);
     return E_OK;
 }
-INT tk_rcv_mbf(ID id, void *data, TMO timeout)
+
+INT tk_rcv_mbf (ID id, void * data, TMO timeout)
 {
     (void)id;
     (void)timeout;
@@ -123,53 +144,85 @@ INT tk_rcv_mbf(ID id, void *data, TMO timeout)
     queued--;
     return 2;
 }
+
 static bool encoder_running = true;
-void wheel_encoder_sample(void) {}
-bool wheel_encoder_is_running(void) { return encoder_running; }
-int32_t wheel_encoder_init(bool left, bool right)
+
+void wheel_encoder_sample (void)
+{
+}
+
+bool wheel_encoder_is_running (void)
+{
+    return encoder_running;
+}
+
+int32_t wheel_encoder_init (bool left, bool right)
 {
     (void)left;
     (void)right;
     count[0] = count[1] = 0;
     return 0;
 }
-int32_t wheel_encoder_count(wheel_id_t wheel) { return count[wheel]; }
-uint32_t wheel_encoder_bits(wheel_id_t w)
+
+int32_t wheel_encoder_count (wheel_id_t wheel)
+{
+    return count[wheel];
+}
+
+uint32_t wheel_encoder_bits (wheel_id_t w)
 {
     return (uint32_t)count[w] & WHEEL_COUNT_MASK;
 }
-int32_t wheel_encoder_delta(uint32_t now_bits, uint32_t then_bits)
+
+int32_t wheel_encoder_delta (uint32_t now_bits, uint32_t then_bits)
 {
     uint32_t delta = (now_bits - then_bits) & WHEEL_COUNT_MASK;
     return (delta & (1UL << (WHEEL_COUNT_BITS - 1U)))
                ? (int32_t)delta - (int32_t)(WHEEL_COUNT_MASK + 1U)
                : (int32_t)delta;
 }
-uint32_t wheel_encoder_glitches(wheel_id_t wheel)
+
+uint32_t wheel_encoder_glitches (wheel_id_t wheel)
 {
     (void)wheel;
     return 0U;
 }
-void wheel_encoder_set_inverted(wheel_id_t wheel, bool inverted)
+
+void wheel_encoder_set_inverted (wheel_id_t wheel, bool inverted)
 {
     (void)wheel;
     (void)inverted;
 }
-void motor_control_init(bool left, bool right)
+
+void motor_control_init (bool left, bool right)
 {
     (void)left;
     (void)right;
     duty[0] = duty[1] = 0.0f;
 }
-void motor_control_set(wheel_id_t wheel, float value) { duty[wheel] = value; }
-float motor_control_duty(wheel_id_t wheel) { return duty[wheel]; }
-void motor_control_brake_all(void) { duty[0] = duty[1] = 0.0f; }
-static void step(void)
+
+void motor_control_set (wheel_id_t wheel, float value)
+{
+    duty[wheel] = value;
+}
+
+float motor_control_duty (wheel_id_t wheel)
+{
+    return duty[wheel];
+}
+
+void motor_control_brake_all (void)
+{
+    duty[0] = duty[1] = 0.0f;
+}
+
+static void step (void)
 {
     clock_us += 10000U;
     motion_process();
 }
-static void test_reports_and_wrap(void)
+
+static void test_reports_and_wrap (void)
 {
     motion_feedback_t before, after;
     motion_report_t report;
@@ -190,7 +243,8 @@ static void test_reports_and_wrap(void)
         assert(motion_request_drive(0.0f, 0.1f) == MOTION_OK);
         expected_id = expected_id == 255U ? 1U : (uint8_t)(expected_id + 1U);
         assert(motion_command_id() == expected_id);
-        assert(motion_get_report(&report) && report.command_id == motion_command_id());
+        assert(motion_get_report(&report) &&
+               report.command_id == motion_command_id());
         assert(report.outcome == MOTION_OUTCOME_DONE);
         assert(!motion_get_report(&report));
     }
@@ -249,7 +303,8 @@ static void test_reports_and_wrap(void)
     step();
     assert(motion_get_feedback(&after) && after.valid && after.centre_m == 0.0);
 }
-int main(void)
+
+int main (void)
 {
     motion_debug_snapshot_t debug;
     assert(!motion_try_debug_snapshot(NULL));
@@ -273,11 +328,15 @@ int main(void)
     clock_us += 5000U;
     assert(motion_get_feedback(&second));
     {
-        const float before_l=duty[0],before_r=duty[1];
-        for(unsigned i=0;i<100;++i)assert(motion_try_debug_snapshot(&debug));
-        assert(debug.timestamp_us==second.timestamp_us && debug.valid==second.valid);
-        assert(duty[0]==before_l && duty[1]==before_r && !locked);
-        debug_lock_busy=true;assert(!motion_try_debug_snapshot(&debug));debug_lock_busy=false;
+        const float before_l = duty[0], before_r = duty[1];
+        for (unsigned i = 0; i < 100; ++i)
+            assert(motion_try_debug_snapshot(&debug));
+        assert(debug.timestamp_us == second.timestamp_us &&
+               debug.valid == second.valid);
+        assert(duty[0] == before_l && duty[1] == before_r && !locked);
+        debug_lock_busy = true;
+        assert(!motion_try_debug_snapshot(&debug));
+        debug_lock_busy = false;
     }
     assert(second.timestamp_us == first.timestamp_us &&
            second.centre_m == first.centre_m);
@@ -292,12 +351,16 @@ int main(void)
     motion_process();
     assert(motion_get_feedback(&first) && first.state == MOTION_TURN);
     {
-        const float before_l=duty[0],before_r=duty[1];
-        for(unsigned j=0;j<100;++j)assert(motion_try_debug_snapshot(&debug));
-        assert(debug.state==MOTION_TURN && debug.valid && debug.timestamp_us==first.timestamp_us);
-        assert(debug.setpoint_mps[0]<=0.0f && debug.setpoint_mps[1]>=0.0f);
-        assert(duty[0]==before_l && duty[1]==before_r && !locked);
-        assert(motion_get_feedback(&second) && second.timestamp_us==first.timestamp_us && second.state==first.state);
+        const float before_l = duty[0], before_r = duty[1];
+        for (unsigned j = 0; j < 100; ++j)
+            assert(motion_try_debug_snapshot(&debug));
+        assert(debug.state == MOTION_TURN && debug.valid &&
+               debug.timestamp_us == first.timestamp_us);
+        assert(debug.setpoint_mps[0] <= 0.0f && debug.setpoint_mps[1] >= 0.0f);
+        assert(duty[0] == before_l && duty[1] == before_r && !locked);
+        assert(motion_get_feedback(&second) &&
+               second.timestamp_us == first.timestamp_us &&
+               second.state == first.state);
     }
     clock_us += 40000U;
     motion_process();
@@ -327,3 +390,6 @@ int main(void)
          "exclusion and manoeuvre watchdog");
     return 0;
 }
+
+/* End of file. */
+

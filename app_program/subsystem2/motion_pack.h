@@ -1,3 +1,7 @@
+/** @file motion_pack.h
+ * @brief Minimum-bit representation of the data Buddy 2 shares (status /
+ * telemetry, reports, commands).
+ */
 /*
  * File: motion_pack.h
  * Owner: Buddy 2 - Motion Control
@@ -68,11 +72,11 @@ typedef enum
 typedef struct
 {
     motion_cmd_type_t type;
-    float32_t left_mps;        /* VELOCITY                          */
-    float32_t right_mps;       /* VELOCITY                          */
-    float32_t meters;          /* DRIVE, negative = backward        */
-    float32_t degrees;         /* TURN, positive = left             */
-    float32_t speed_mps;       /* DRIVE, TURN                       */
+    float32_t left_mps;    /* VELOCITY                          */
+    float32_t right_mps;   /* VELOCITY                          */
+    float32_t meters;      /* DRIVE, negative = backward        */
+    float32_t degrees;     /* TURN, positive = left             */
+    float32_t speed_mps;   /* DRIVE, TURN                       */
     manoeuvre_t manoeuvre; /* MANOEUVRE                         */
     uint8_t command_id;    /* CANCEL                            */
 } motion_cmd_t;
@@ -111,3 +115,6 @@ uint32_t motion_cmd_reset (void);
 bool motion_unpack_cmd (uint32_t word, motion_cmd_t * p_cmd);
 
 #endif /* BUDDY2_MOTION_PACK_H */
+
+/* End of file. */
+

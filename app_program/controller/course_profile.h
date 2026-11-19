@@ -1,3 +1,7 @@
+/** @file course_profile.h
+ * @brief Line-following profile for the Buddies 1-3 course car (integration
+ * build).
+ */
 /* Line-following profile for the Buddies 1-3 course car (integration build).
  *
  * Agreed 27 Oct 2026 (hardware session follow-up):
@@ -126,3 +130,6 @@ static inline s3_drive_options_t s3_course_options (void)
     return value_o;
 }
 #endif
+
+/* End of file. */
+

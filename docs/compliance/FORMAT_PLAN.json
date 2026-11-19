@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "prepared_after_commit": "a03615e20de749548653f9e2e342cce0897dc324",
+  "prepared_after_commit": "e7d1366fdde697a50e578f95a97290765a72c969",
   "scope_manifest": "testing/compliance/inventory_scope.json",
-  "authorization": "Source application is currently held while root investigates alias target-image differences; --apply has not been run.",
+  "authorization": "Root resumed source application after publishing pristine repaired e7d1366; preserve all tokens and existing comments, including pending BARR-P12. Concurrent motion files and imported boundaries remain excluded.",
   "formatter_policy": {
     "InsertBraces": false,
     "BreakStringLiterals": false,
@@ -1042,7 +1042,7 @@
     },
     {
       "path": "app_program/subsystem4/terr_data.c",
-      "before_sha256": "8b4bb21f3fcd6b08d02ce4b9e5da265e5c9b754f36d2bf8765682c746c05516e",
+      "before_sha256": "ad4043663192b2d6eaeb48e8a2d9790f86cd4fa14f06b6c5203bc2f859515f28",
       "format_allowed": true,
       "boundary": "",
       "module_already_documented": false,

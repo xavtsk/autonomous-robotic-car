@@ -1,3 +1,6 @@
+/** @file ir_debug.h
+ * @brief Optional observation-only IR preview.
+ */
 /* Optional observation-only IR preview. No ADC, navigation or motor calls.
  * Explicit 16-byte packet: version + 118 body bits, two zero padding bits.
  * Channel order is LEFT, RIGHT, BARCODE (not s3_sensor_id_t enum order).
@@ -32,3 +35,6 @@ bool ir_debug_unpack (const ir_debug_packet_t * p_packet,
                       ir_debug_sample_t * p_sample);
 bool ir_debug_due (uint32_t now, uint32_t * p_last, bool * p_seen);
 #endif
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file ir_acquisition.h
+ * @brief Buddy 3: portable acquisition boundary; one peripheral owner.
+ */
 /* Buddy 3: portable acquisition boundary; one peripheral owner. */
 #ifndef BUDDY3_IR_ACQUISITION_H
 #define BUDDY3_IR_ACQUISITION_H
@@ -20,7 +23,7 @@ typedef enum
  * the integrated controller, the bench and the operator prompts follow it. */
 #define S3_ADC_CHANNEL_LEFT (1U) /* GP27 */
 #define S3_ADC_CHANNEL_BARCODE                                                 \
-    (2U)                          /* GP28: check the Robo Pico VBAT jumper     \
+    (2U) /* GP28: check the Robo Pico VBAT jumper     \
                                    */
 #define S3_ADC_CHANNEL_RIGHT (0U) /* GP26 */
 #define S3_GPIO_FOR_CHANNEL(channel) (26U + (unsigned)(channel))
@@ -72,3 +75,6 @@ bool s3_acquisition_capture (const s3_acquisition_config_t * p_config,
                              s3_adc_read_fn p_read_adc, s3_clock_fn p_clock_us,
                              void * p_context, s3_sensor_frame_t * p_frame);
 #endif
+
+/* End of file. */
+

@@ -1,3 +1,7 @@
+/** @file ir_calibration.h
+ * @brief Collect labelled reflectance samples and derive validated sensor
+ * calibration.
+ */
 #ifndef BUDDY3_IR_CALIBRATION_H
 #define BUDDY3_IR_CALIBRATION_H
 #include "../app_types.h"
@@ -37,3 +41,6 @@ bool s3_calibration_add (s3_calibration_collector_t * p_collector,
 bool s3_calibration_finish (const s3_calibration_collector_t * p_collector,
                             ir_calibration_t * p_active);
 #endif
+
+/* End of file. */
+

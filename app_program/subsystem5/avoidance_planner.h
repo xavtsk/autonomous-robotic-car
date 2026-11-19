@@ -1,3 +1,6 @@
+/** @file avoidance_planner.h
+ * @brief Select a bounded bypass plan from the measured obstacle profile.
+ */
 #ifndef BUDDY5_AVOIDANCE_PLANNER_H
 #define BUDDY5_AVOIDANCE_PLANNER_H
 #include "profile_obstacle.h"
@@ -25,3 +28,6 @@ typedef struct
 bool s5_plan (const s5_profile_t * p_profile, const s5_config_t * p_cfg,
               s5_plan_t * p_out);
 #endif
+
+/* End of file. */
+

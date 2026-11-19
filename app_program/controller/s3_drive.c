@@ -1,3 +1,7 @@
+/** @file s3_drive.c
+ * @brief Own line following, manoeuvres, fault handling and optional avoidance
+ * arbitration.
+ */
 /* Temporary controller for Buddy 2 + Buddy 3; replace with the team controller.
  * This is orchestration, not Buddy 3 sensing. No GPIO/RTOS in this file. */
 #include "s3_drive.h"
@@ -299,7 +303,8 @@ static bool request_turn (s3_drive_t * p_d)
 static bool start_manoeuvre (s3_drive_t * p_d)
 {
     const float64_t travelled = p_d->feedback.centre_m - p_d->junction_m;
-    const float32_t advance = p_d->options.turn_advance_m - (float32_t)travelled;
+    const float32_t advance =
+        p_d->options.turn_advance_m - (float32_t)travelled;
     p_d->touched = false;
     if (((p_d->turn == S3_NAV_LEFT) || (p_d->turn == S3_NAV_RIGHT)) &&
         (p_d->options.turn_advance_m > 0.0f) && (advance > S3_MIN_ADVANCE_M))
@@ -462,7 +467,8 @@ static void search_step (s3_drive_t * p_d, uint32_t now)
 #if APP_S5
 /* How hard the line follower is turning (+ = left), time-averaged, tau 0.5 s.
  */
-static void turn_track (s3_drive_t * p_d, float32_t left, float32_t right, uint32_t now)
+static void turn_track (s3_drive_t * p_d, float32_t left, float32_t right,
+                        uint32_t now)
 {
     const float32_t sum = left + right;
     const uint32_t value_dt =
@@ -965,3 +971,6 @@ bool s3_drive_process (s3_drive_t * p_d, const s3_sensor_frame_t * p_frame,
     }
     return true;
 }
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file estimate_motion.c
+ * @brief Encoder-based speed and distance estimation.
+ */
 /*
  * File: estimate_motion.c
  * Owner: Buddy 2 - Motion Control
@@ -55,7 +58,7 @@ void motion_estimation_update (float32_t dt_s)
         wheel_estimate_t * p_w = &g_wheel[value_i];
         uint32_t count = wheel_encoder_bits((wheel_id_t)value_i);
         float32_t raw = (float32_t)wheel_encoder_delta(count, p_w->last_count) *
-                    g_m_per_count / dt_s;
+                        g_m_per_count / dt_s;
         float32_t prev = p_w->speed_mps;
 
         p_w->last_count = count;
@@ -102,3 +105,6 @@ float32_t motion_estimation_heading_deg (void)
             motion_estimation_wheel_dist(WHEEL_LEFT)) /
            g_track_width_m * RAD_TO_DEG;
 }
+
+/* End of file. */
+

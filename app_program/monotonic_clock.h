@@ -1,3 +1,6 @@
+/** @file monotonic_clock.h
+ * @brief Start the RP2040 timer clock used by timed application tasks.
+ */
 /* Call on core 0 before starting timed application tasks. Does not reset an
  * already-running counter or change the kernel tick. Registers from sysdef.h.
  */
@@ -31,3 +34,6 @@ static inline void app_clock_start (void)
 }
 
 #endif
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file profile_obstacle.c
+ * @brief Pack scan samples and derive obstacle profiles and side-peek updates.
+ */
 #include "profile_obstacle.h"
 /* sin/cos of angles -60..60 in 5-degree steps, scaled by 1000.
  * x positive LEFT, y forward, servo 90 straight, 150 left. */
@@ -178,3 +181,6 @@ bool s5_peek_merge (s5_profile_t * p_p, const s5_sample_t * p_s)
     }
     return true;
 }
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file line_detection.c
+ * @brief Track line error, loss, reacquisition and junction persistence.
+ */
 #include "line_detection.h"
 
 s3_line_config_t s3_line_defaults (void)
@@ -133,3 +136,6 @@ s3_line_observation_t s3_line_update (s3_line_detector_t * p_detector,
     out.junction_candidate = both_black || p_detector->junction_latched;
     return out;
 }
+
+/* End of file. */
+

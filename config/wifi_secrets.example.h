@@ -1,3 +1,7 @@
+/** @file wifi_secrets.example.h
+ * @brief Provide placeholder Wi-Fi and MQTT settings for a local credentials
+ * header.
+ */
 /*
  *  wifi_secrets.example.h
  *
@@ -22,3 +26,6 @@
 #define MQTT_TOPIC "mtk3smp-pico/heartbeat"
 
 #endif /* WIFI_SECRETS_H */
+
+/* End of file. */
+

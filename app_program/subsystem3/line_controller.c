@@ -1,3 +1,6 @@
+/** @file line_controller.c
+ * @brief Compute bounded differential wheel-speed proposals from line error.
+ */
 #include "line_controller.h"
 #include "../app_types.h"
 
@@ -50,3 +53,6 @@ s3_steering_compute (const s3_steering_config_t * p_config,
     out.valid = true;
     return out;
 }
+
+/* End of file. */
+

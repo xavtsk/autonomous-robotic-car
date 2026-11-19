@@ -1,3 +1,6 @@
+/** @file bc_capture.c
+ * @brief Barcode-sensor capture for diagnosing barcode reading on the course.
+ */
 #include "bc_capture.h"
 #include "../app_types.h"
 #include <math.h>
@@ -447,3 +450,6 @@ unsigned bcap_binary_next (const bcap_t * p_c, bcap_cursor_t * p_cur,
     *p_cur = next;
     return length;
 }
+
+/* End of file. */
+

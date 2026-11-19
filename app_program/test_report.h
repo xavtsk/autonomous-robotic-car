@@ -1,3 +1,6 @@
+/** @file test_report.h
+ * @brief Report named on-device test results and summaries.
+ */
 /*
  *  test_report.h
  *  Minimal on-target test helpers.
@@ -45,3 +48,6 @@
               test_pass_, test_fail_)
 
 #endif /* TEST_REPORT_H */
+
+/* End of file. */
+

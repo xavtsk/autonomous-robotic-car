@@ -1,3 +1,7 @@
+/** @file buddy5.c
+ * @brief Own ultrasonic and servo scanning and publish protected obstacle
+ * snapshots.
+ */
 #include "buddy5.h"
 #include "scan_obstacle.h"
 #include "scan_servo.h"
@@ -577,3 +581,6 @@ bool subsystem5_scan_samples (uint16_t * id, bool * peek,
     return false;
 }
 #endif
+
+/* End of file. */
+

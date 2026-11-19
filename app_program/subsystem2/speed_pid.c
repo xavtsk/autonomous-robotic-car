@@ -1,3 +1,6 @@
+/** @file speed_pid.c
+ * @brief Motor speed PID control (one controller per wheel).
+ */
 /*
  * File: speed_pid.c
  * Owner: Buddy 2 - Motion Control
@@ -9,8 +12,9 @@
 
 #define DUTY_MAX (1.0f)
 
-void speed_pid_init (speed_pid_t * p_pid, float32_t value_kp, float32_t value_ki,
-                     float32_t value_kd, float32_t kff, float32_t accel_mps2)
+void speed_pid_init (speed_pid_t * p_pid, float32_t value_kp,
+                     float32_t value_ki, float32_t value_kd, float32_t kff,
+                     float32_t accel_mps2)
 {
     p_pid->kp = value_kp;
     p_pid->ki = value_ki;
@@ -26,8 +30,9 @@ void speed_pid_reset (speed_pid_t * p_pid)
     p_pid->integral = 0.0f;
 }
 
-float32_t speed_pid_update (speed_pid_t * p_pid, float32_t target_mps, float32_t speed_mps,
-                        float32_t accel_mps2, float32_t dt_s)
+float32_t speed_pid_update (speed_pid_t * p_pid, float32_t target_mps,
+                            float32_t speed_mps, float32_t accel_mps2,
+                            float32_t dt_s)
 {
     float32_t step = p_pid->accel_mps2 * dt_s;
     float32_t error;
@@ -90,3 +95,6 @@ float32_t speed_pid_setpoint (const speed_pid_t * p_pid)
 {
     return p_pid->setpoint_mps;
 }
+
+/* End of file. */
+

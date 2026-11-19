@@ -1,3 +1,6 @@
+/** @file controller_test.c
+ * @brief Real Buddy 2 controller/PID/estimator + real Buddy 3 core/bridge.
+ */
 /* Real Buddy 2 controller/PID/estimator + real Buddy 3 core/bridge.
  * Hardware edges and PWM are mocked; this cannot prove physical behaviour. */
 #include "ctrl_motion.h"
@@ -17,27 +20,73 @@ static uint32_t now, lease_stamp, epoch = 1U;
 #if APP_S4
 static uint16_t imu_run;
 static terrain_result_t imu_event;
-bool subsystem4_read(terrain_result_t *out,uint16_t *run,uint16_t *humps)
+
+bool subsystem4_read (terrain_result_t * out, uint16_t * run, uint16_t * humps)
 {
-    *out=(terrain_result_t){.timestamp_us=now,.flags=TERRAIN_CALIBRATED|TERRAIN_TILT_VALID,
-        .state=TERRAIN_MOVING}; *run=imu_run; *humps=0; return true;
-}
-bool subsystem4_begin_run(uint16_t *run) { *run=++imu_run; return true; }
-bool subsystem4_event(terrain_result_t *out,bool *lost)
-{
-    if(!imu_event.impact && imu_event.safety==TERRAIN_SAFETY_NONE) { return false; }
-    *out=imu_event;
-    out->timestamp_us=now;
-    *lost=false;
-    imu_event=(terrain_result_t){0};
+    *out = (terrain_result_t){.timestamp_us = now,
+                              .flags = TERRAIN_CALIBRATED | TERRAIN_TILT_VALID,
+                              .state = TERRAIN_MOVING};
+    *run = imu_run;
+    *humps = 0;
     return true;
 }
-ER buddy1_update_faults(UB changed,UB active) { (void)changed;(void)active;return E_OK; }
-ER buddy1_report_hump(UH count,UH height) { (void)count;(void)height;return E_OK; }
-ER buddy1_report_terrain(const buddy1_terrain_t *t) { (void)t;return E_OK; }
-ER buddy1_report_avoidance(const buddy1_avoidance_t *a) { (void)a;return E_OK; }
-ER buddy1_report_scan(const buddy1_scan_t *q) { (void)q;return E_OK; }
-ER buddy1_invalidate(UB topic) { (void)topic;return E_OK; }
+
+bool subsystem4_begin_run (uint16_t * run)
+{
+    *run = ++imu_run;
+    return true;
+}
+
+bool subsystem4_event (terrain_result_t * out, bool * lost)
+{
+    if (!imu_event.impact && imu_event.safety == TERRAIN_SAFETY_NONE)
+    {
+        return false;
+    }
+    *out = imu_event;
+    out->timestamp_us = now;
+    *lost = false;
+    imu_event = (terrain_result_t){0};
+    return true;
+}
+
+ER buddy1_update_faults (UB changed, UB active)
+{
+    (void)changed;
+    (void)active;
+    return E_OK;
+}
+
+ER buddy1_report_hump (UH count, UH height)
+{
+    (void)count;
+    (void)height;
+    return E_OK;
+}
+
+ER buddy1_report_terrain (const buddy1_terrain_t * t)
+{
+    (void)t;
+    return E_OK;
+}
+
+ER buddy1_report_avoidance (const buddy1_avoidance_t * a)
+{
+    (void)a;
+    return E_OK;
+}
+
+ER buddy1_report_scan (const buddy1_scan_t * q)
+{
+    (void)q;
+    return E_OK;
+}
+
+ER buddy1_invalidate (UB topic)
+{
+    (void)topic;
+    return E_OK;
+}
 #endif
 
 static bool lease, reject_velocity, reject_turn, reject_reset;
@@ -46,36 +95,50 @@ static uint32_t report_losses;
 static manoeuvre_t last_turn;
 static int32_t counts[2];
 static float duty[2];
-int32_t wheel_encoder_count(wheel_id_t w) { return counts[w]; }
-uint32_t wheel_encoder_bits(wheel_id_t w)
+
+int32_t wheel_encoder_count (wheel_id_t w)
+{
+    return counts[w];
+}
+
+uint32_t wheel_encoder_bits (wheel_id_t w)
 {
     return (uint32_t)counts[w] & WHEEL_COUNT_MASK;
 }
-int32_t wheel_encoder_delta(uint32_t now_bits, uint32_t then_bits)
+
+int32_t wheel_encoder_delta (uint32_t now_bits, uint32_t then_bits)
 {
     uint32_t delta = (now_bits - then_bits) & WHEEL_COUNT_MASK;
     return (delta & (1UL << (WHEEL_COUNT_BITS - 1U)))
                ? (int32_t)delta - (int32_t)(WHEEL_COUNT_MASK + 1U)
                : (int32_t)delta;
 }
-uint32_t wheel_encoder_glitches(wheel_id_t w)
+
+uint32_t wheel_encoder_glitches (wheel_id_t w)
 {
     (void)w;
     return 0U;
 }
-void motor_control_set(wheel_id_t w, float value) { duty[w] = value; }
-void motor_control_brake_all(void)
+
+void motor_control_set (wheel_id_t w, float value)
+{
+    duty[w] = value;
+}
+
+void motor_control_brake_all (void)
 {
     duty[0] = 0.0f;
     duty[1] = 0.0f;
 }
-static motion_result_t velocity(float l, float r)
+
+static motion_result_t velocity (float l, float r)
 {
     velocities++;
     return reject_velocity ? MOTION_ERR_BUSY
                            : motion_controller_set_velocity(l, r, now);
 }
-static motion_result_t manoeuvre(manoeuvre_t m)
+
+static motion_result_t manoeuvre (manoeuvre_t m)
 {
     int32_t left = 1, right = 1;
     turns++;
@@ -96,19 +159,23 @@ static motion_result_t manoeuvre(manoeuvre_t m)
                                                                   : MOTION_TURN,
                                           left, right, 0.02f, 0.10f, now);
 }
-static void brake(void)
+
+static void brake (void)
 {
     stops++;
     motion_controller_stop();
 }
+
 static motion_report_t reports[MOTION_REPORT_QUEUE_LEN];
 static unsigned int report_count;
-static void post(const motion_report_t *report)
+
+static void post (const motion_report_t * report)
 {
     assert(report_count < MOTION_REPORT_QUEUE_LEN);
     reports[report_count++] = *report;
 }
-static bool receive(motion_report_t *report)
+
+static bool receive (motion_report_t * report)
 {
     if (report_count == 0U)
     {
@@ -127,11 +194,13 @@ static bool receive(motion_report_t *report)
     }
     return true;
 }
-static bool reset(void)
+
+static bool reset (void)
 {
     return !reject_reset && motion_controller_reset();
 }
-static void heartbeat(bool enabled)
+
+static void heartbeat (bool enabled)
 {
     lease = enabled;
     if (enabled)
@@ -139,60 +208,132 @@ static void heartbeat(bool enabled)
         lease_stamp = now;
     }
 }
+
 static s3_drive_t drive;
 static s5_observation_t obstacle;
-static bool scanning_requested, range_bad, recovery_tape=true;
-static unsigned scan_calls, peek_calls, peek_beside; /* peeks that still see the obstacle */
+static bool scanning_requested, range_bad, recovery_tape = true;
+static unsigned scan_calls, peek_calls,
+    peek_beside; /* peeks that still see the obstacle */
 static unsigned peek_angle;
-static int turn_sign=1;
+static int turn_sign = 1;
 static s5_snapshot_result_t snapshot_result;
 static uint32_t sample_age_us;
-s5_snapshot_result_t subsystem5_read_snapshot(s5_observation_t *out)
+
+s5_snapshot_result_t subsystem5_read_snapshot (s5_observation_t * out)
 {
-    if(snapshot_result==S5_SNAPSHOT_OK) { *out=obstacle;out->range_us-=sample_age_us; }
+    if (snapshot_result == S5_SNAPSHOT_OK)
+    {
+        *out = obstacle;
+        out->range_us -= sample_age_us;
+    }
     return snapshot_result;
 }
-bool subsystem5_snapshot(s5_observation_t *out)
-{ return subsystem5_read_snapshot(out)==S5_SNAPSHOT_OK; }
-bool subsystem5_request_scan(uint16_t id) {
-    assert(motion_controller_is_stopped());scan_calls++;scanning_requested=true;
-    obstacle.scan_id=id;return true;
-}
-bool subsystem5_request_peek(uint16_t id,unsigned angle) {
-    assert(motion_controller_is_stopped());peek_calls++;peek_angle=angle;
-    obstacle.scan_id=id;return true;
-}
-void subsystem5_cancel_scan(void) { scanning_requested=false;peek_angle=0; }
-void subsystem5_set_control_status(unsigned s,unsigned f,unsigned r,unsigned l,unsigned p,unsigned w) { (void)s;(void)f;(void)r;(void)l;(void)p;(void)w; }
-uint16_t subsystem5_controller_status(void) { return 0; }
-uint8_t subsystem5_servo_angle(void) { return 0; }
-motion_result_t motion_request_drive(float metres,float speed) {
-    return motion_controller_request_move(MOTION_DRIVE,1,1,metres,speed,now);
-}
-motion_result_t motion_request_turn(float degrees,float speed) {
-    turn_sign=degrees>0?1:-1;
-    float distance=(degrees>0?degrees:-degrees)*0.13f*3.14159265f/360.0f;
-    return motion_controller_request_move(MOTION_TURN,-turn_sign,turn_sign,distance,speed,now);
+
+bool subsystem5_snapshot (s5_observation_t * out)
+{
+    return subsystem5_read_snapshot(out) == S5_SNAPSHOT_OK;
 }
 
-static void tick(uint16_t barcode, uint16_t left, uint16_t right, bool valid)
+bool subsystem5_request_scan (uint16_t id)
+{
+    assert(motion_controller_is_stopped());
+    scan_calls++;
+    scanning_requested = true;
+    obstacle.scan_id = id;
+    return true;
+}
+
+bool subsystem5_request_peek (uint16_t id, unsigned angle)
+{
+    assert(motion_controller_is_stopped());
+    peek_calls++;
+    peek_angle = angle;
+    obstacle.scan_id = id;
+    return true;
+}
+
+void subsystem5_cancel_scan (void)
+{
+    scanning_requested = false;
+    peek_angle = 0;
+}
+
+void subsystem5_set_control_status (unsigned s, unsigned f, unsigned r,
+                                    unsigned l, unsigned p, unsigned w)
+{
+    (void)s;
+    (void)f;
+    (void)r;
+    (void)l;
+    (void)p;
+    (void)w;
+}
+
+uint16_t subsystem5_controller_status (void)
+{
+    return 0;
+}
+
+uint8_t subsystem5_servo_angle (void)
+{
+    return 0;
+}
+
+motion_result_t motion_request_drive (float metres, float speed)
+{
+    return motion_controller_request_move(MOTION_DRIVE, 1, 1, metres, speed,
+                                          now);
+}
+
+motion_result_t motion_request_turn (float degrees, float speed)
+{
+    turn_sign = degrees > 0 ? 1 : -1;
+    float distance =
+        (degrees > 0 ? degrees : -degrees) * 0.13f * 3.14159265f / 360.0f;
+    return motion_controller_request_move(MOTION_TURN, -turn_sign, turn_sign,
+                                          distance, speed, now);
+}
+
+static void tick (uint16_t barcode, uint16_t left, uint16_t right, bool valid)
 {
     unsigned int i;
     motion_feedback_t feedback;
     s3_sensor_frame_t frame = {0};
     now += 10000U;
-    obstacle.range_us=now;obstacle.range_valid=!range_bad;
-    if(range_bad) { obstacle.range_mm=0;obstacle.no_echo=true; }
-    if(peek_angle) { /* one side reading: obstacle still beside (200 mm) or clear */
-        unsigned side=peek_beside?200U:2000U; if(peek_beside) { peek_beside--; }
-        obstacle.scan_done=true;obstacle.scan_us=now;
-        if(peek_angle<90U) { obstacle.profile.right_clear_mm=(uint16_t)side; } else { obstacle.profile.left_clear_mm=(uint16_t)side; }
-        peek_angle=0;
+    obstacle.range_us = now;
+    obstacle.range_valid = !range_bad;
+    if (range_bad)
+    {
+        obstacle.range_mm = 0;
+        obstacle.no_echo = true;
     }
-    if(scanning_requested) {
-        obstacle.scan_done=true;obstacle.scan_us=now;
-        obstacle.profile=(s5_profile_t){250,100,2000,2000,50,-50,250,true};
-        obstacle.range_mm=2000;scanning_requested=false;
+    if (peek_angle)
+    { /* one side reading: obstacle still beside (200 mm) or clear */
+        unsigned side = peek_beside ? 200U : 2000U;
+        if (peek_beside)
+        {
+            peek_beside--;
+        }
+        obstacle.scan_done = true;
+        obstacle.scan_us = now;
+        if (peek_angle < 90U)
+        {
+            obstacle.profile.right_clear_mm = (uint16_t)side;
+        }
+        else
+        {
+            obstacle.profile.left_clear_mm = (uint16_t)side;
+        }
+        peek_angle = 0;
+    }
+    if (scanning_requested)
+    {
+        obstacle.scan_done = true;
+        obstacle.scan_us = now;
+        obstacle.profile =
+            (s5_profile_t){250, 100, 2000, 2000, 50, -50, 250, true};
+        obstacle.range_mm = 2000;
+        scanning_requested = false;
     }
     motion_estimation_update(0.01f);
     if (motion_lease_expired(lease, now, lease_stamp))
@@ -219,12 +360,13 @@ static void tick(uint16_t barcode, uint16_t left, uint16_t right, bool valid)
     frame.sensor[1].raw = left;
     frame.sensor[2].raw = right;
 #if APP_S4
-    terrain_control_poll(&drive,now);
+    terrain_control_poll(&drive, now);
 #endif
     assert(s3_drive_process(&drive, &frame, &feedback));
 }
-static void hold(unsigned int ticks, uint16_t barcode, uint16_t left,
-                 uint16_t right)
+
+static void hold (unsigned int ticks, uint16_t barcode, uint16_t left,
+                  uint16_t right)
 {
     unsigned int i;
     for (i = 0; i < ticks; i++)
@@ -232,7 +374,8 @@ static void hold(unsigned int ticks, uint16_t barcode, uint16_t left,
         tick(barcode, left, right, true);
     }
 }
-static void init(bool calibrated)
+
+static void init (bool calibrated)
 {
     s3_navigation_config_t cfg = s3_navigation_defaults();
     const s3_drive_port_t port = {
@@ -240,12 +383,18 @@ static void init(bool calibrated)
         reset,    heartbeat};
     s3_calibration_collector_t collector;
     unsigned int i;
-    now = 0U; snapshot_result=S5_SNAPSHOT_OK; sample_age_us=0U;
+    now = 0U;
+    snapshot_result = S5_SNAPSHOT_OK;
+    sample_age_us = 0U;
 #if APP_S4
-    imu_run=0; imu_event=(terrain_result_t){0}; terrain_control_init();
+    imu_run = 0;
+    imu_event = (terrain_result_t){0};
+    terrain_control_init();
 #endif
-    obstacle=(s5_observation_t){.range_mm=2000,.range_valid=true};
-    scan_calls=peek_calls=peek_beside=peek_angle=0;scanning_requested=range_bad=false;recovery_tape=true;
+    obstacle = (s5_observation_t){.range_mm = 2000, .range_valid = true};
+    scan_calls = peek_calls = peek_beside = peek_angle = 0;
+    scanning_requested = range_bad = false;
+    recovery_tape = true;
     lease = false;
     epoch = 1U;
     reject_velocity = false;
@@ -276,7 +425,8 @@ static void init(bool calibrated)
     }
     hold(12U, 150U, 202U, 202U);
 }
-static void start(void)
+
+static void start (void)
 {
     assert(s3_drive_start(&drive, now));
 #if APP_S4
@@ -287,122 +437,267 @@ static void start(void)
            motion_controller_state() == MOTION_VELOCITY);
 }
 
-static void simulate(void)
+static void simulate (void)
 {
-    motion_state_t state=motion_controller_state();
-    if(state==MOTION_DRIVE) { counts[0]++;counts[1]++; }
-    if(state==MOTION_TURN) { counts[0]-=turn_sign;counts[1]+=turn_sign; }
+    motion_state_t state = motion_controller_state();
+    if (state == MOTION_DRIVE)
+    {
+        counts[0]++;
+        counts[1]++;
+    }
+    if (state == MOTION_TURN)
+    {
+        counts[0] -= turn_sign;
+        counts[1] += turn_sign;
+    }
     /* Off the line (white) while going round; the tape is crossed on the
      * return diagonal and under the IR again during the swerve and hand-back. */
-    bool tape=false, off=drive.obstacle_active && drive.obstacle.state==S5_MOVING && drive.obstacle.leg>=1;
-    if(drive.obstacle_active && drive.obstacle.leg==5 && drive.obstacle.issued && !drive.obstacle.tail) {
-        double travelled=motion_estimation_robot_dist()-drive.obstacle.leg_start_m;
-        double goal=(double)drive.obstacle.plan.offset_mm/1000.0;
-        tape=recovery_tape && travelled>goal-0.07 && travelled<goal+0.07;
+    bool tape = false, off = drive.obstacle_active &&
+                             drive.obstacle.state == S5_MOVING &&
+                             drive.obstacle.leg >= 1;
+    if (drive.obstacle_active && drive.obstacle.leg == 5 &&
+        drive.obstacle.issued && !drive.obstacle.tail)
+    {
+        double travelled =
+            motion_estimation_robot_dist() - drive.obstacle.leg_start_m;
+        double goal = (double)drive.obstacle.plan.offset_mm / 1000.0;
+        tape =
+            recovery_tape && travelled > goal - 0.07 && travelled < goal + 0.07;
     }
-    if(drive.obstacle_active && drive.obstacle.leg>=6) { tape=recovery_tape; }
-    if(drive.obstacle_active && drive.obstacle.state==S5_FINISH) { tape=recovery_tape;off=false; }
-    tick(150,tape?280:(off?150:202),tape?150:(off?150:202),true);
+    if (drive.obstacle_active && drive.obstacle.leg >= 6)
+    {
+        tape = recovery_tape;
+    }
+    if (drive.obstacle_active && drive.obstacle.state == S5_FINISH)
+    {
+        tape = recovery_tape;
+        off = false;
+    }
+    tick(150, tape ? 280 : (off ? 150 : 202), tape ? 150 : (off ? 150 : 202),
+         true);
 }
-static void snapshot_contention(void)
+
+static void snapshot_contention (void)
 {
     s5_observation_t cached;
-    init(true);start();
-    uint32_t stamp=now;
-    snapshot_result=S5_SNAPSHOT_BUSY;
+    init(true);
+    start();
+    uint32_t stamp = now;
+    snapshot_result = S5_SNAPSHOT_BUSY;
     simulate();
-    assert(drive.state==S3_DRIVE_FOLLOW && drive.obstacle_snapshot_us==stamp);
-    assert(s5_observation_unpack(drive.obstacle_snapshot,&cached) && cached.range_us==stamp);
-    snapshot_result=S5_SNAPSHOT_OK;simulate();assert(drive.state==S3_DRIVE_FOLLOW);
+    assert(drive.state == S3_DRIVE_FOLLOW &&
+           drive.obstacle_snapshot_us == stamp);
+    assert(s5_observation_unpack(drive.obstacle_snapshot, &cached) &&
+           cached.range_us == stamp);
+    snapshot_result = S5_SNAPSHOT_OK;
+    simulate();
+    assert(drive.state == S3_DRIVE_FOLLOW);
     /* A new valid START sample covers contention on the very first cycle. */
-    init(true);assert(s3_drive_start(&drive,now));
+    init(true);
+    assert(s3_drive_start(&drive, now));
 #if APP_S4
     assert(terrain_control_begin(now));
 #endif
-    snapshot_result=S5_SNAPSHOT_BUSY;simulate();assert(drive.state==S3_DRIVE_FOLLOW);
+    snapshot_result = S5_SNAPSHOT_BUSY;
+    simulate();
+    assert(drive.state == S3_DRIVE_FOLLOW);
     /* Reusing a cache must never extend the source reading's lifetime. */
-    init(true);start();snapshot_result=S5_SNAPSHOT_BUSY;
-    for(unsigned i=0;i<25;i++) { simulate();assert(drive.state==S3_DRIVE_FOLLOW); }
-    simulate();assert(drive.state==S3_DRIVE_FAULT && drive.obstacle.fault==S5_BAD_RANGE);
-    init(true);start();sample_age_us=240000U;simulate();
-    snapshot_result=S5_SNAPSHOT_BUSY;simulate();assert(drive.state==S3_DRIVE_FOLLOW);
-    simulate();assert(drive.state==S3_DRIVE_FAULT);
+    init(true);
+    start();
+    snapshot_result = S5_SNAPSHOT_BUSY;
+    for (unsigned i = 0; i < 25; i++)
+    {
+        simulate();
+        assert(drive.state == S3_DRIVE_FOLLOW);
+    }
+    simulate();
+    assert(drive.state == S3_DRIVE_FAULT &&
+           drive.obstacle.fault == S5_BAD_RANGE);
+    init(true);
+    start();
+    sample_age_us = 240000U;
+    simulate();
+    snapshot_result = S5_SNAPSHOT_BUSY;
+    simulate();
+    assert(drive.state == S3_DRIVE_FOLLOW);
+    simulate();
+    assert(drive.state == S3_DRIVE_FAULT);
     /* Explicit negative observations and read/codec failures never use old good data. */
-    init(true);start();snapshot_result=S5_SNAPSHOT_BUSY;simulate();
-    snapshot_result=S5_SNAPSHOT_OK;range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT);
-    init(true);start();snapshot_result=S5_SNAPSHOT_INVALID;simulate();assert(drive.state==S3_DRIVE_FAULT);
-    init(true);start();snapshot_result=S5_SNAPSHOT_UNAVAILABLE;simulate();assert(drive.state==S3_DRIVE_FAULT);
-    init(true);start();drive.obstacle_snapshot_valid=false;snapshot_result=S5_SNAPSHOT_BUSY;
-    simulate();assert(drive.state==S3_DRIVE_FAULT);
+    init(true);
+    start();
+    snapshot_result = S5_SNAPSHOT_BUSY;
+    simulate();
+    snapshot_result = S5_SNAPSHOT_OK;
+    range_bad = true;
+    simulate();
+    assert(drive.state == S3_DRIVE_FAULT);
+    init(true);
+    start();
+    snapshot_result = S5_SNAPSHOT_INVALID;
+    simulate();
+    assert(drive.state == S3_DRIVE_FAULT);
+    init(true);
+    start();
+    snapshot_result = S5_SNAPSHOT_UNAVAILABLE;
+    simulate();
+    assert(drive.state == S3_DRIVE_FAULT);
+    init(true);
+    start();
+    drive.obstacle_snapshot_valid = false;
+    snapshot_result = S5_SNAPSHOT_BUSY;
+    simulate();
+    assert(drive.state == S3_DRIVE_FAULT);
     /* Active avoidance gets the same grace, without dropping a DONE event. */
-    init(true);start();obstacle.range_mm=120;simulate();
-    for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
-    assert(drive.obstacle.issued);snapshot_result=S5_SNAPSHOT_BUSY;simulate();
-    assert(drive.obstacle_active && drive.state==S3_DRIVE_MANOEUVRE);
-    s3_drive_stop(&drive);assert(!drive.obstacle_active && !drive.obstacle_snapshot_valid && !lease);
-    init(true);start();obstacle.range_mm=120;simulate();
-    for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
-    snapshot_result=S5_SNAPSHOT_BUSY;
-    for(unsigned i=0;i<30 && drive.state!=S3_DRIVE_FAULT;i++) { simulate(); }
-    assert(drive.state==S3_DRIVE_FAULT && !drive.obstacle_active);
-    puts("PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered");
+    init(true);
+    start();
+    obstacle.range_mm = 120;
+    simulate();
+    for (unsigned i = 0;
+         i < 500 && !(drive.obstacle.issued && drive.obstacle.leg == 0); i++)
+    {
+        simulate();
+    }
+    assert(drive.obstacle.issued);
+    snapshot_result = S5_SNAPSHOT_BUSY;
+    simulate();
+    assert(drive.obstacle_active && drive.state == S3_DRIVE_MANOEUVRE);
+    s3_drive_stop(&drive);
+    assert(!drive.obstacle_active && !drive.obstacle_snapshot_valid && !lease);
+    init(true);
+    start();
+    obstacle.range_mm = 120;
+    simulate();
+    for (unsigned i = 0;
+         i < 500 && !(drive.obstacle.issued && drive.obstacle.leg == 0); i++)
+    {
+        simulate();
+    }
+    snapshot_result = S5_SNAPSHOT_BUSY;
+    for (unsigned i = 0; i < 30 && drive.state != S3_DRIVE_FAULT; i++)
+    {
+        simulate();
+    }
+    assert(drive.state == S3_DRIVE_FAULT && !drive.obstacle_active);
+    puts(
+        "PASS: transient BUSY read preserves fresh data; stale, missing, invalid and unavailable data still fault; active avoidance and STOP covered");
 }
 #if APP_S4
-static void stop_active_bypass(terrain_result_t event)
+static void stop_active_bypass (terrain_result_t event)
 {
-    init(true);start();obstacle.range_mm=120;simulate();
-    for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
-    assert(drive.obstacle_active && drive.obstacle.issued);
-    for(unsigned i=0;i<10 && duty[0]==0.0f && duty[1]==0.0f;i++) { simulate(); }
-    assert(duty[0]!=0.0f || duty[1]!=0.0f);
-
-    unsigned previous_stops=stops, previous_velocities=velocities, previous_turns=turns;
-    imu_event=event;simulate();
-    assert(stops>previous_stops && drive.state==S3_DRIVE_FAULT && drive.reason==S3_DRIVE_TERRAIN_FAULT);
-    assert(!drive.obstacle_active && drive.obstacle.fault==S5_INTERRUPTED && !lease);
+    init(true);
+    start();
+    obstacle.range_mm = 120;
     simulate();
-    assert(duty[0]==0.0f && duty[1]==0.0f);
-    for(unsigned i=0;i<100 && !motion_controller_is_stopped();i++) {
+    for (unsigned i = 0;
+         i < 500 && !(drive.obstacle.issued && drive.obstacle.leg == 0); i++)
+    {
         simulate();
-        assert(duty[0]==0.0f && duty[1]==0.0f);
     }
-    assert(motion_controller_is_stopped() && velocities==previous_velocities && turns==previous_turns);
+    assert(drive.obstacle_active && drive.obstacle.issued);
+    for (unsigned i = 0; i < 10 && duty[0] == 0.0f && duty[1] == 0.0f; i++)
+    {
+        simulate();
+    }
+    assert(duty[0] != 0.0f || duty[1] != 0.0f);
+
+    unsigned previous_stops = stops, previous_velocities = velocities,
+             previous_turns = turns;
+    imu_event = event;
+    simulate();
+    assert(stops > previous_stops && drive.state == S3_DRIVE_FAULT &&
+           drive.reason == S3_DRIVE_TERRAIN_FAULT);
+    assert(!drive.obstacle_active && drive.obstacle.fault == S5_INTERRUPTED &&
+           !lease);
+    simulate();
+    assert(duty[0] == 0.0f && duty[1] == 0.0f);
+    for (unsigned i = 0; i < 100 && !motion_controller_is_stopped(); i++)
+    {
+        simulate();
+        assert(duty[0] == 0.0f && duty[1] == 0.0f);
+    }
+    assert(motion_controller_is_stopped() &&
+           velocities == previous_velocities && turns == previous_turns);
 }
 #endif
-int main(void)
+int main (void)
 {
     snapshot_contention();
-    init(true);start();obstacle.range_mm=120;peek_beside=2;
-    tick(150,202,202,true);
-    assert(drive.obstacle_active && drive.obstacle.state==S5_WAIT_STOP && scan_calls==0);
+    init(true);
+    start();
+    obstacle.range_mm = 120;
+    peek_beside = 2;
+    tick(150, 202, 202, true);
+    assert(drive.obstacle_active && drive.obstacle.state == S5_WAIT_STOP &&
+           scan_calls == 0);
     /* Actual controller applies STOP and produces its matching cancellation. */
-    for(unsigned i=0;i<5000 && drive.state!=S3_DRIVE_FAULT;i++) {
+    for (unsigned i = 0; i < 5000 && drive.state != S3_DRIVE_FAULT; i++)
+    {
         /* Exercise scan and all seven movement handoffs under intermittent contention. */
-        snapshot_result=(i%11U==0U)?S5_SNAPSHOT_BUSY:S5_SNAPSHOT_OK;
-        simulate();if(!drive.obstacle_active) { break; }
+        snapshot_result = (i % 11U == 0U) ? S5_SNAPSHOT_BUSY : S5_SNAPSHOT_OK;
+        simulate();
+        if (!drive.obstacle_active)
+        {
+            break;
+        }
     }
-    snapshot_result=S5_SNAPSHOT_OK;
-    assert(drive.state==S3_DRIVE_FOLLOW && !drive.obstacle_active && scan_calls==1);
-    assert(drive.obstacle.recovery.confirmed && drive.navigation.mode==S3_MODE_TRACK);
+    snapshot_result = S5_SNAPSHOT_OK;
+    assert(drive.state == S3_DRIVE_FOLLOW && !drive.obstacle_active &&
+           scan_calls == 1);
+    assert(drive.obstacle.recovery.confirmed &&
+           drive.navigation.mode == S3_MODE_TRACK);
     /* Leg 3 measured the depth: 3 side peeks (2 still beside, 1 clear), 2 steps. */
-    assert(peek_calls==3 && drive.obstacle.searched_mm==2U*S5_PEEK_STEP_MM);
+    assert(peek_calls == 3 &&
+           drive.obstacle.searched_mm == 2U * S5_PEEK_STEP_MM);
     /* Completed moves: out turn, out diagonal, turn parallel, approach, 2 steps,
      * clearance, turn in, 135 mm onto the line = 9. The return diagonal and the
      * swerve turn are stopped at the tape (not completed). No barcode manoeuvre. */
-    assert(polls==9 && turns==0);
-    s3_drive_stop(&drive);assert(!drive.obstacle_active && !lease);
-    init(true);start();range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT && !lease);
-    init(true);start();obstacle.range_mm=120;simulate();s3_drive_stop(&drive);simulate();
-    assert(drive.state==S3_DRIVE_OFF && !drive.obstacle_active && scan_calls==0);
-    init(true);start();obstacle.range_mm=120;simulate();report_losses++;simulate();assert(drive.state==S3_DRIVE_FAULT && drive.obstacle.state==S5_FAULT && drive.obstacle.fault==S5_INTERRUPTED);
-    init(true);start();obstacle.range_mm=120;simulate();
-    for(unsigned i=0;i<500 && !(drive.obstacle.issued && drive.obstacle.leg==0);i++) { simulate(); }
-    assert(drive.obstacle.issued);range_bad=true;simulate();assert(drive.state==S3_DRIVE_FAULT);
+    assert(polls == 9 && turns == 0);
+    s3_drive_stop(&drive);
+    assert(!drive.obstacle_active && !lease);
+    init(true);
+    start();
+    range_bad = true;
+    simulate();
+    assert(drive.state == S3_DRIVE_FAULT && !lease);
+    init(true);
+    start();
+    obstacle.range_mm = 120;
+    simulate();
+    s3_drive_stop(&drive);
+    simulate();
+    assert(drive.state == S3_DRIVE_OFF && !drive.obstacle_active &&
+           scan_calls == 0);
+    init(true);
+    start();
+    obstacle.range_mm = 120;
+    simulate();
+    report_losses++;
+    simulate();
+    assert(drive.state == S3_DRIVE_FAULT && drive.obstacle.state == S5_FAULT &&
+           drive.obstacle.fault == S5_INTERRUPTED);
+    init(true);
+    start();
+    obstacle.range_mm = 120;
+    simulate();
+    for (unsigned i = 0;
+         i < 500 && !(drive.obstacle.issued && drive.obstacle.leg == 0); i++)
+    {
+        simulate();
+    }
+    assert(drive.obstacle.issued);
+    range_bad = true;
+    simulate();
+    assert(drive.state == S3_DRIVE_FAULT);
 #if APP_S4
-    stop_active_bypass((terrain_result_t){.impact=true});
-    stop_active_bypass((terrain_result_t){.safety=TERRAIN_SAFETY_LIFTED});
-    stop_active_bypass((terrain_result_t){.safety=TERRAIN_SAFETY_OVERTURNED});
-    puts("PASS: impact, pickup and overturn cancel an active S5 bypass and brake both Buddy 2 motors");
+    stop_active_bypass((terrain_result_t){.impact = true});
+    stop_active_bypass((terrain_result_t){.safety = TERRAIN_SAFETY_LIFTED});
+    stop_active_bypass((terrain_result_t){.safety = TERRAIN_SAFETY_OVERTURNED});
+    puts(
+        "PASS: impact, pickup and overturn cancel an active S5 bypass and brake both Buddy 2 motors");
 #endif
-    puts("PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, bypass with side-peek depth search, real tape gate, STOP, stale range and report loss");
+    puts(
+        "PASS: real motion controller/PID + S5 + S3; brake acknowledgement, one report owner, bypass with side-peek depth search, real tape gate, STOP, stale range and report loss");
 }
+
+/* End of file. */
+

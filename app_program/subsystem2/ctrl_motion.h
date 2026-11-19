@@ -1,3 +1,7 @@
+/** @file ctrl_motion.h
+ * @brief Motion Control statechart, straight-line correction and encoder-based
+ * turning.
+ */
 /*
  * File: ctrl_motion.h
  * Owner: Buddy 2 - Motion Control
@@ -22,7 +26,8 @@
  * held. It must not block. */
 typedef void (*motion_report_sink_t)(const motion_report_t * p_report);
 
-void motion_controller_init (float32_t max_speed_mps, float32_t stop_lead_drive_m,
+void motion_controller_init (float32_t max_speed_mps,
+                             float32_t stop_lead_drive_m,
                              float32_t stop_lead_turn_m,
                              motion_report_sink_t p_sink);
 
@@ -34,13 +39,13 @@ void motion_controller_make_safe (void);
 
 /* Requests (see motion.h). sign_left / sign_right: +1 forward, -1 backward;
  * dist_m is the distance each wheel travels. */
-motion_result_t motion_controller_set_velocity (float32_t left_mps, float32_t right_mps,
+motion_result_t motion_controller_set_velocity (float32_t left_mps,
+                                                float32_t right_mps,
                                                 uint32_t now_us);
-motion_result_t motion_controller_request_move (motion_state_t kind,
-                                                int32_t sign_left,
-                                                int32_t sign_right,
-                                                float32_t dist_m, float32_t speed_mps,
-                                                uint32_t now_us);
+motion_result_t
+motion_controller_request_move (motion_state_t kind, int32_t sign_left,
+                                int32_t sign_right, float32_t dist_m,
+                                float32_t speed_mps, uint32_t now_us);
 void motion_controller_stop (void);
 /* Motion task only, under its mutex: stale navigation owner. */
 void motion_controller_nav_timeout (void);
@@ -62,3 +67,6 @@ void motion_controller_set_busy (bool b_busy);
 bool motion_controller_is_busy (void);
 
 #endif /* BUDDY2_MOTION_CONTROLLER_H */
+
+/* End of file. */
+

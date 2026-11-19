@@ -1,3 +1,7 @@
+/** @file buddy4.h
+ * @brief Own IMU acquisition, terrain processing and protected snapshots and
+ * events.
+ */
 #ifndef SUBSYSTEM4_H
 #define SUBSYSTEM4_H
 #include "../app_types.h"
@@ -23,3 +27,6 @@ bool subsystem4_set_mag_calibration (const float32_t p_offset[3],
 void subsystem4_test (void);
 #endif
 #endif
+
+/* End of file. */
+

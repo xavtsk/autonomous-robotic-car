@@ -1,3 +1,6 @@
+/** @file ir_reflectance.h
+ * @brief Buddy 3: hardware-independent, per-sensor reflectance classification.
+ */
 /* Buddy 3: hardware-independent, per-sensor reflectance classification. */
 #ifndef BUDDY3_IR_REFLECTANCE_H
 #define BUDDY3_IR_REFLECTANCE_H
@@ -53,3 +56,6 @@ bool ir_reflectance_update (ir_reflectance_t * p_sensor, uint16_t raw,
                             uint16_t * p_darkness);
 
 #endif /* BUDDY3_IR_REFLECTANCE_H */
+
+/* End of file. */
+

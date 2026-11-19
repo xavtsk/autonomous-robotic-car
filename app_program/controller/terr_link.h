@@ -1,3 +1,7 @@
+/** @file terr_link.h
+ * @brief Integrate terrain readiness, reset and observations with the
+ * controller owner.
+ */
 #ifndef TERRAIN_INTEGRATION_H
 #define TERRAIN_INTEGRATION_H
 #include "s3_drive.h"
@@ -51,3 +55,6 @@ static inline void terrain_control_report (void)
 }
 #endif
 #endif
+
+/* End of file. */
+

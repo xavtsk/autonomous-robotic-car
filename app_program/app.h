@@ -1,3 +1,6 @@
+/** @file app.h
+ * @brief Expose shared RTOS definitions and subsystem lifecycle contracts.
+ */
 /*
  *  app.h
  *  Definitions shared by the whole team.  Changed only by team agreement.
@@ -75,3 +78,6 @@ IMPORT void subsystem5_test (void);
     } while (0)
 
 #endif /* APP_H */
+
+/* End of file. */
+

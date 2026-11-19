@@ -15,11 +15,12 @@
  * compile-time declaration. The macro evaluates neither argument at runtime.
  */
 #define BUILD_ASSERT(condition, assertion_type)                                \
-    typedef struct                                                            \
-    {                                                                         \
+    typedef struct                                                             \
+    {                                                                          \
         bool b_is_valid : ((condition) ? 1 : -1);                              \
     } assertion_type
 
 #endif
 
 /* End of file. */
+

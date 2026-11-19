@@ -1,3 +1,7 @@
+/** @file cc.h
+ * @brief Adapt lwIP packing, diagnostics and random-number hooks to the RP2040
+ * kernel port.
+ */
 /*
  *	cc.h
  *	lwIP compiler/platform abstraction for micro T-Kernel (RP2040, NO_SYS=1)
@@ -27,15 +31,16 @@
  */
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #if NO_SYS
-/* NO_SYS builds don't use SYS_ARCH_PROTECT (see lwipopts.h:
+    /* NO_SYS builds don't use SYS_ARCH_PROTECT (see lwipopts.h:
  * SYS_LIGHTWEIGHT_PROT=0 -- everything that touches lwIP runs on the single
  * radio-owning task, so there is nothing to protect against), but lwip/sys.h
  * still requires the type to exist. */
-typedef int sys_prot_t;
+    typedef int sys_prot_t;
 #endif
 
 /* GCC struct packing */
@@ -49,14 +54,14 @@ typedef int sys_prot_t;
  * CYW43_PRINTF(...) ((void)0) a few directories over. */
 #define LWIP_PLATFORM_DIAG(x) ((void)0)
 
-/* An lwIP invariant violation is not safe to run past. lwip_utk_assert()
+    /* An lwIP invariant violation is not safe to run past. lwip_utk_assert()
  * (sys_arch.c) reports it on the T-Monitor console and halts. */
-void lwip_utk_assert(const char *msg);
+    void lwip_utk_assert (const char * msg);
 #define LWIP_PLATFORM_ASSERT(x) lwip_utk_assert(x)
 
-/* TCP initial sequence numbers etc. Not cryptographic-quality entropy --
+    /* TCP initial sequence numbers etc. Not cryptographic-quality entropy --
  * fine for transport-layer randomization, not a TLS substitute. */
-unsigned int lwip_utk_rand(void);
+    unsigned int lwip_utk_rand (void);
 #define LWIP_RAND() ((u32_t)lwip_utk_rand())
 
 #ifdef __cplusplus
@@ -64,3 +69,6 @@ unsigned int lwip_utk_rand(void);
 #endif
 
 #endif /* LWIP_ARCH_CC_H */
+
+/* End of file. */
+

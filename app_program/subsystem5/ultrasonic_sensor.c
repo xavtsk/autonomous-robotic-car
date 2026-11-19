@@ -1,3 +1,7 @@
+/** @file ultrasonic_sensor.c
+ * @brief Trigger and poll PIO ultrasonic echo capture and convert pulses to
+ * range.
+ */
 #include "ultrasonic_sensor.h"
 
 bool ultrasonic_pulse_mm (uint32_t value_us, uint16_t * p_mm)
@@ -163,3 +167,6 @@ void ultrasonic_sensor_cancel (void)
 {
 }
 #endif
+
+/* End of file. */
+

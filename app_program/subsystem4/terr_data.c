@@ -1,3 +1,7 @@
+/** @file terr_data.c
+ * @brief Maintain terrain monitoring state and pack copied terrain
+ * observations.
+ */
 #include "terr_data.h"
 #include "../app_types.h"
 #include "tilt_estimation.h"
@@ -132,8 +136,8 @@ bool terrain_monitor_set_mag_cal (terrain_monitor_t * p_t,
 void terrain_monitor_process (terrain_monitor_t * p_t, const imu_sample_t * p_s,
                               const terrain_odometry_t * p_odo)
 {
-    float32_t value_a[3], value_m[3], pitch = 0, roll = 0, heading, value_ds = 0,
-                                  speed = 0, value_dt = 0;
+    float32_t value_a[3], value_m[3], pitch = 0, roll = 0, heading,
+                                      value_ds = 0, speed = 0, value_dt = 0;
     /* BARR-P12, pending approval: this single primitive spelling preserves
      * Arm 14.3.1 executable bytes; see the recorded alias investigation. */
     float value_n;
@@ -487,3 +491,6 @@ void terrain_unpack (const uint8_t p_in[TERRAIN_PACKET_SIZE],
     p_r->hump_height_m = get_bits(p_in, &bit, 9) / 1000.0f;
     p_r->safety = (terrain_safety_t)get_bits(p_in, &bit, 2);
 }
+
+/* End of file. */
+

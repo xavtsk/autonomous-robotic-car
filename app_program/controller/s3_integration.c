@@ -1,3 +1,7 @@
+/** @file s3_integration.c
+ * @brief Run sensor sampling and serialized controller commands for the
+ * integration profile.
+ */
 /* Opt-in runtime. One sampling owner serialises all navigation/control calls.
  */
 #include "s3_integration.h"
@@ -991,7 +995,7 @@ static void sensor_sample_task (INT code, void * p_unused)
                 g_remote.physical_stop)
             {
                 g_remote.flags &=
-                    (uint8_t)~(REMOTE_CAN_START | REMOTE_CAN_RESET);
+                    (uint8_t) ~(REMOTE_CAN_START | REMOTE_CAN_RESET);
             }
             if (packed)
             {
@@ -1332,7 +1336,8 @@ static float32_t floor_wheel (float32_t mps)
     return ((mps > 0.0f) && (mps < S3_MIN_WHEEL_MPS)) ? S3_MIN_WHEEL_MPS : mps;
 }
 
-static motion_result_t velocity_with_floor (float32_t left_mps, float32_t right_mps)
+static motion_result_t velocity_with_floor (float32_t left_mps,
+                                            float32_t right_mps)
 {
     return motion_request_velocity(floor_wheel(left_mps),
                                    floor_wheel(right_mps));
@@ -1502,3 +1507,6 @@ int32_t s3_integration_start (void)
     return E_NOSPT;
 }
 #endif
+
+/* End of file. */
+

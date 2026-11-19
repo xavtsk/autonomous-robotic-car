@@ -1,3 +1,6 @@
+/** @file hump_detection.c
+ * @brief Track hump progress and height for the configured wheel geometry.
+ */
 #include "hump_detection.h"
 #include "../app_types.h"
 #include <math.h>
@@ -78,8 +81,9 @@ static hump_reason_t right_discard (hump_detector_t * p_h, hump_reason_t reason)
     return reason;
 }
 
-static hump_reason_t right_step (hump_detector_t * p_h, float32_t pitch, float32_t roll,
-                                 float32_t track_m, float32_t value_ds,
+static hump_reason_t right_step (hump_detector_t * p_h, float32_t pitch,
+                                 float32_t roll, float32_t track_m,
+                                 float32_t value_ds,
                                  hump_sample_quality_t quality, uint32_t now)
 {
     const float32_t start_m = 0.005f, level_m = 0.003f;
@@ -193,9 +197,10 @@ static hump_reason_t right_step (hump_detector_t * p_h, float32_t pitch, float32
     return HUMP_REASON_NONE;
 }
 
-void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch, float32_t roll,
-                              float32_t track_m, float32_t value_ds,
-                              hump_sample_quality_t quality, uint32_t now)
+void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch,
+                              float32_t roll, float32_t track_m,
+                              float32_t value_ds, hump_sample_quality_t quality,
+                              uint32_t now)
 {
 #if APP_IMU_DEBUG
     const bool was_active = p_h->active, was_armed = p_h->armed;
@@ -218,3 +223,6 @@ void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch, float32_t 
     (void)right_step(p_h, pitch, roll, track_m, value_ds, quality, now);
 #endif
 }
+
+/* End of file. */
+

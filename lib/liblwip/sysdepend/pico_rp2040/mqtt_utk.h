@@ -1,3 +1,7 @@
+/** @file mqtt_utk.h
+ * @brief Declare the kernel MQTT lifecycle, publishing and application callback
+ * interface.
+ */
 /*
  *	mqtt_utk.h
  *	MQTT client wiring for micro T-Kernel (RP2040, NO_SYS=1)
@@ -7,18 +11,19 @@
 #define MQTT_UTK_H
 
 #define MQTT_UTK_APP_WIRE_VERSION 3U /* binary fallback heartbeat contract */
-#define MQTT_UTK_APP_TOPIC_MAX    64
+#define MQTT_UTK_APP_TOPIC_MAX 64
 #define MQTT_UTK_APP_PAYLOAD_MAX 17 /* Buddy 1 snapshot: version + 124 bits */
 
-typedef struct {
-	char		topic[MQTT_UTK_APP_TOPIC_MAX];
-	unsigned char	payload[MQTT_UTK_APP_PAYLOAD_MAX];
-	unsigned short	payload_len;
-	unsigned char	qos;
-	unsigned char	retain;
-	/* Local scheduling metadata, never transmitted. Zero preserves priority
+typedef struct
+{
+    char topic[MQTT_UTK_APP_TOPIC_MAX];
+    unsigned char payload[MQTT_UTK_APP_PAYLOAD_MAX];
+    unsigned short payload_len;
+    unsigned char qos;
+    unsigned char retain;
+    /* Local scheduling metadata, never transmitted. Zero preserves priority
 	 * for events/replies; recurring samples may share slots with captures. */
-	unsigned char	routine;
+    unsigned char routine;
 } T_MQTT_UTK_APP_MSG;
 
 /*
@@ -28,7 +33,7 @@ typedef struct {
  * connected, a periodic heartbeat publish on MQTT_TOPIC. Safe to call more
  * than once -- a second call while already connecting/connected is a no-op.
  */
-void mqtt_utk_start(void);
+void mqtt_utk_start (void);
 
 /* Network-owner task only. Attempts at most one application publish per call,
  * spaced by at least 20 ms (100 ms after transient rejection). One fixed retry
@@ -39,20 +44,20 @@ void mqtt_utk_start(void);
  * first. No blocking wait.
  * A disconnect/timeout may make delivery ambiguous: retries can duplicate a
  * packet, and QoS 0 still does not provide broker acknowledgement. */
-void mqtt_utk_poll(void);
+void mqtt_utk_poll (void);
 
 /* Application hook. The weak default returns no message; Buddy 1 overrides
  * it in app_program/subsystem1/mqtt_bridge.c. */
-int mqtt_utk_app_take(T_MQTT_UTK_APP_MSG *out);
+int mqtt_utk_app_take (T_MQTT_UTK_APP_MSG * out);
 
 /* Optional binary barcode capture packets on MQTT_UTK_DEBUG_TOPIC. Alternate
  * with routine application samples while both are waiting; other FIFO-head
  * events/replies take priority. Same single in-flight slot and pacing. Return
  * the packet length, or 0 when there is nothing to send. The weak default
  * sends nothing. Called from the network task. */
-#define MQTT_UTK_DEBUG_TOPIC       "car/debug/barcode"
+#define MQTT_UTK_DEBUG_TOPIC "car/debug/barcode"
 #define MQTT_UTK_DEBUG_PAYLOAD_MAX 164 /* 24-sample capture */
-unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size);
+unsigned int mqtt_utk_debug_take (unsigned char * bytes, unsigned int size);
 
 /* Best-effort diagnostics. IR uses spare capacity. Controller observations
  * get at most 5 Hz, then raw IMU batches get a turn. On a busy link each
@@ -61,26 +66,30 @@ unsigned int mqtt_utk_debug_take(unsigned char *bytes, unsigned int size);
  * diagnostic is dropped; the receiver uses the IMU sequence to find gaps. */
 #define MQTT_UTK_IR_DEBUG_TOPIC "car/debug/ir"
 #define MQTT_UTK_IR_DEBUG_MAX 16U
-unsigned int mqtt_utk_ir_debug_take(unsigned char *bytes, unsigned int size);
+unsigned int mqtt_utk_ir_debug_take (unsigned char * bytes, unsigned int size);
 #define MQTT_UTK_CONTROL_DEBUG_TOPIC "car/debug/controller"
 #define MQTT_UTK_CONTROL_DEBUG_MAX 70U
-unsigned int mqtt_utk_control_debug_take(unsigned char *bytes, unsigned int size);
+unsigned int mqtt_utk_control_debug_take (unsigned char * bytes,
+                                          unsigned int size);
 #define MQTT_UTK_IMU_DEBUG_TOPIC "car/debug/imu"
 #define MQTT_UTK_IMU_DEBUG_MAX 156U
-unsigned int mqtt_utk_imu_debug_take(unsigned char *bytes, unsigned int size);
+unsigned int mqtt_utk_imu_debug_take (unsigned char * bytes, unsigned int size);
 
 /* Called after a complete inbound MQTT payload has arrived. The weak default
  * ignores it; Buddy 1 overrides it and copies permitted commands into its
  * RTOS message buffer. */
-void mqtt_utk_app_receive(const char *topic,
-			  const unsigned char *payload,
-			  unsigned short payload_len);
+void mqtt_utk_app_receive (const char * topic, const unsigned char * payload,
+                           unsigned short payload_len);
 
 /* Application binary heartbeat and link observation hooks, network task only.
  * Link returns zero while application objects are not ready; caller retries. */
-unsigned short mqtt_utk_app_status(unsigned char *payload, unsigned short capacity);
-int mqtt_utk_app_link(int up);
+unsigned short mqtt_utk_app_status (unsigned char * payload,
+                                    unsigned short capacity);
+int mqtt_utk_app_link (int up);
 /* Actual broker connection changes (distinct from the Wi-Fi link above). */
-void mqtt_utk_app_connection(int up);
+void mqtt_utk_app_connection (int up);
 
 #endif /* MQTT_UTK_H */
+
+/* End of file. */
+

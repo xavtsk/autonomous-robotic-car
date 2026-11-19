@@ -1,3 +1,7 @@
+/** @file line_navigation.c
+ * @brief Combine reflectance, line, barcode and odometry observations into
+ * navigation results.
+ */
 #include "line_navigation.h"
 #include "../app_types.h"
 #include <math.h>
@@ -639,3 +643,6 @@ const char * s3_action_name (s3_nav_action_t action)
         return "NONE";
     }
 }
+
+/* End of file. */
+

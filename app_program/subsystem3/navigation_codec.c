@@ -1,3 +1,6 @@
+/** @file navigation_codec.c
+ * @brief Pack and unpack navigation, barcode and raw-frame snapshots.
+ */
 #include "navigation_codec.h"
 #include "../build_assert.h"
 #include "../app_types.h"
@@ -13,8 +16,7 @@ BUILD_ASSERT(sizeof(s3_navigation_packet_t) == 60,
 BUILD_ASSERT(sizeof(float64_t) == 8 && DBL_MANT_DIG == 53,
              navigation_codec_c_check_c_t);
 /* Compile-time guarantee: barcode packet layout. */
-BUILD_ASSERT(sizeof(s3_barcode_packet_t) == 5,
-             navigation_codec_c_check_d_t);
+BUILD_ASSERT(sizeof(s3_barcode_packet_t) == 5, navigation_codec_c_check_d_t);
 /* Compile-time guarantee: raw-frame packet layout changed. */
 BUILD_ASSERT(sizeof(s3_raw_frame_packet_t) == 34 && S3_SENSOR_COUNT == 3,
              navigation_codec_c_check_e_t);
@@ -355,3 +357,6 @@ bool s3_navigation_unpack (const s3_navigation_packet_t * p_packet,
     *p_out = value;
     return true;
 }
+
+/* End of file. */
+

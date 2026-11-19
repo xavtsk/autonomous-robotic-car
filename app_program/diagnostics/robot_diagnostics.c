@@ -1,3 +1,7 @@
+/** @file robot_diagnostics.c
+ * @brief Collect and report optional motion and IR timing observations over
+ * USB.
+ */
 #include "robot_diagnostics.h"
 #include "../app_types.h"
 
@@ -203,3 +207,6 @@ void robot_diagnostics_report (void)
     report_motion_observation();
 }
 #endif
+
+/* End of file. */
+

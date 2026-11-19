@@ -1,3 +1,6 @@
+/** @file line_recovery.c
+ * @brief Track line observations while recovering after an obstacle detour.
+ */
 #include "line_recovery.h"
 
 void s5_recovery_reset (s5_recovery_t * p_r)
@@ -24,3 +27,6 @@ bool s5_recovery_observe (s5_recovery_t * p_r, uint32_t now, bool healthy,
     }
     return p_r->confirmed;
 }
+
+/* End of file. */
+

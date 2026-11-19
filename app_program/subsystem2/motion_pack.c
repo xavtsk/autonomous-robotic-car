@@ -1,3 +1,6 @@
+/** @file motion_pack.c
+ * @brief Minimum-bit representation of the data Buddy 2 shares.
+ */
 /*
  * File: motion_pack.c
  * Owner: Buddy 2 - Motion Control
@@ -265,8 +268,8 @@ static uint32_t cmd_type (motion_cmd_type_t type)
 /* Finite and within the field after rounding (no silent saturation) */
 static bool fits (float32_t value, float32_t step, uint32_t mag_bits)
 {
-    return is_finite(value) &&
-           (((abs_f(value) / step) + 0.5f) < (float32_t)(mask_of(mag_bits) + 1U));
+    return is_finite(value) && (((abs_f(value) / step) + 0.5f) <
+                                (float32_t)(mask_of(mag_bits) + 1U));
 }
 
 /* A drive / turn speed: finite, at least one step, within the field */
@@ -437,18 +440,18 @@ bool motion_unpack_cmd (uint32_t word, motion_cmd_t * p_cmd)
         p_cmd->meters =
             sm_unpack(field_get(word, CMD_ARG_LSB, DRIVE_BITS),
                       MOTION_PACK_DIST_STEP_M, MOTION_PACK_DRIVE_MAG_BITS);
-        p_cmd->speed_mps =
-            (float32_t)field_get(word, CMD_ARG_LSB + DRIVE_BITS, MOVE_SPEED_BITS) *
-            MOTION_PACK_SPEED_STEP_MPS;
+        p_cmd->speed_mps = (float32_t)field_get(word, CMD_ARG_LSB + DRIVE_BITS,
+                                                MOVE_SPEED_BITS) *
+                           MOTION_PACK_SPEED_STEP_MPS;
         break;
 
     case MOTION_CMD_TURN:
         p_cmd->degrees =
             sm_unpack(field_get(word, CMD_ARG_LSB, ANGLE_BITS),
                       MOTION_PACK_ANGLE_STEP_DEG, MOTION_PACK_ANGLE_MAG_BITS);
-        p_cmd->speed_mps =
-            (float32_t)field_get(word, CMD_ARG_LSB + ANGLE_BITS, MOVE_SPEED_BITS) *
-            MOTION_PACK_SPEED_STEP_MPS;
+        p_cmd->speed_mps = (float32_t)field_get(word, CMD_ARG_LSB + ANGLE_BITS,
+                                                MOVE_SPEED_BITS) *
+                           MOTION_PACK_SPEED_STEP_MPS;
         break;
 
     case MOTION_CMD_MANOEUVRE:
@@ -466,3 +469,6 @@ bool motion_unpack_cmd (uint32_t word, motion_cmd_t * p_cmd)
 
     return true;
 }
+
+/* End of file. */
+

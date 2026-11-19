@@ -1,3 +1,6 @@
+/** @file remote_control.h
+ * @brief Define dashboard command, status and reply byte layouts and accessors.
+ */
 #ifndef REMOTE_CONTROL_H
 #define REMOTE_CONTROL_H
 /* Fixed byte layouts shared with the dashboard; see
@@ -94,3 +97,6 @@ unsigned s3_remote_status_take (uint8_t * p_packet, unsigned capacity);
 uint32_t s3_remote_stop_sequence (void);
 void s3_remote_physical_stop (bool held);
 #endif
+
+/* End of file. */
+

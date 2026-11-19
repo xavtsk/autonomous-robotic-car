@@ -1,3 +1,6 @@
+/** @file scan_obstacle.h
+ * @brief Track scan angles, sample acceptance and scan completion.
+ */
 #ifndef BUDDY5_OBSTACLE_SCAN_H
 #define BUDDY5_OBSTACLE_SCAN_H
 #include "profile_obstacle.h"
@@ -19,3 +22,6 @@ bool s5_peek_angle_valid (unsigned angle);
 void s5_scan_accept (s5_scan_t * p_scan, uint32_t now, bool valid,
                      unsigned value_mm);
 #endif
+
+/* End of file. */
+

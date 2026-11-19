@@ -1,3 +1,6 @@
+/** @file wheel_encoder.c
+ * @brief Wheel encoder acquisition (quadrature, decoded in PIO0).
+ */
 /*
  * File: wheel_encoder.c
  * Owner: Buddy 2 - Motion Control
@@ -300,3 +303,6 @@ bool wheel_encoder_is_inverted (wheel_id_t wheel)
 {
     return (g_encoder[wheel].b_inverted != 0U);
 }
+
+/* End of file. */
+

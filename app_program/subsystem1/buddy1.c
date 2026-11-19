@@ -1,3 +1,6 @@
+/** @file buddy1.c
+ * @brief Buddy 1: task-context reporting API.
+ */
 #include "buddy1.h"
 
 #define ALIGN_TO_INT(value) (((value) + sizeof(INT) - 1) & ~(sizeof(INT) - 1))
@@ -371,3 +374,6 @@ EXPORT BOOL buddy1_outbox_take (buddy1_telemetry_msg_t * p_out)
     return p_out && tk_rcv_mbf(g_mbf_buddy1_outbox, p_out, TMO_POL) ==
                         (INT)sizeof(*p_out);
 }
+
+/* End of file. */
+

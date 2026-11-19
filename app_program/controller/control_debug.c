@@ -1,3 +1,6 @@
+/** @file control_debug.c
+ * @brief Observation-only controller snapshot.
+ */
 #include "control_debug.h"
 #include <string.h>
 
@@ -295,3 +298,6 @@ bool control_debug_builder_end (const control_debug_builder_t * p_builder,
     *p_packet = p_builder->packet;
     return true;
 }
+
+/* End of file. */
+

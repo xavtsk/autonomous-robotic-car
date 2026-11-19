@@ -21,15 +21,13 @@ typedef struct
     bool b_signed;
 } debug_trace_field_t;
 
-#define DEBUG_TRACE_U(name, bits) \
+#define DEBUG_TRACE_U(name, bits)                                              \
     {#name, offsetof(control_debug_sample_t, name), (bits), false},
-#define DEBUG_TRACE_S(name, bits) \
+#define DEBUG_TRACE_S(name, bits)                                              \
     {#name, offsetof(control_debug_sample_t, name), (bits), true},
 
-static const debug_trace_field_t g_fields[] =
-{
-    CONTROL_DEBUG_FIELDS(DEBUG_TRACE_U, DEBUG_TRACE_S)
-};
+static const debug_trace_field_t g_fields[] = {
+    CONTROL_DEBUG_FIELDS(DEBUG_TRACE_U, DEBUG_TRACE_S)};
 
 #undef DEBUG_TRACE_U
 #undef DEBUG_TRACE_S
@@ -72,8 +70,7 @@ static void debug_trace_case (const char * p_name, int64_t value,
     b_packed = control_debug_pack(p_sample, &packet);
     b_unpacked = control_debug_unpack(&packet, &decoded);
     (void)printf("case=%s value=%" PRId64 " pack=%u unpack=%u wire=", p_name,
-                 value, (unsigned int)b_packed,
-                 (unsigned int)b_unpacked);
+                 value, (unsigned int)b_packed, (unsigned int)b_unpacked);
     debug_trace_packet(&packet);
     debug_trace_sample(&decoded);
     (void)putchar('\n');
@@ -88,13 +85,11 @@ static void debug_trace_boundaries (void)
         const debug_trace_field_t * p_field = &g_fields[index];
         const int64_t limit = INT64_C(1) << p_field->width;
         const int64_t minimum = p_field->b_signed ? -(limit / 2) : 0;
-        const int64_t maximum = p_field->b_signed ? ((limit / 2) - 1) :
-                                                   (limit - 1);
-        const int64_t probes[] =
-        {
-            minimum - 1, minimum, minimum + 1, -1, 0, 1,
-            maximum - 1, maximum, maximum + 1, INT32_MIN, UINT32_MAX
-        };
+        const int64_t maximum =
+            p_field->b_signed ? ((limit / 2) - 1) : (limit - 1);
+        const int64_t probes[] = {minimum - 1, minimum,   minimum + 1, -1,
+                                  0,           1,         maximum - 1, maximum,
+                                  maximum + 1, INT32_MIN, UINT32_MAX};
         size_t probe = 0U;
         for (probe = 0U; probe < (sizeof(probes) / sizeof(probes[0])); ++probe)
         {
@@ -153,11 +148,14 @@ int main (void)
         packet.bytes[index] = 0xFFU;
         (void)memset(&decoded, 0x5A, sizeof(decoded));
         b_result = control_debug_unpack(&packet, &decoded);
-        (void)printf("corrupt-byte=%zu unpack=%u wire=",
-                     index, (unsigned int)b_result);
+        (void)printf("corrupt-byte=%zu unpack=%u wire=", index,
+                     (unsigned int)b_result);
         debug_trace_packet(&packet);
         debug_trace_sample(&decoded);
         (void)putchar('\n');
     }
     return 0;
 }
+
+/* End of file. */
+

@@ -1,3 +1,6 @@
+/** @file ir_sensor.c
+ * @brief Buddy 3: only this adapter touches the kernel ADC and physical pads.
+ */
 /* Buddy 3: only this adapter touches the kernel ADC and physical pads. */
 #include "ir_sensor.h"
 #include <tk/tkernel.h>
@@ -91,3 +94,6 @@ void ir_sensor_close (void)
         g_h_adc = 0;
     }
 }
+
+/* End of file. */
+

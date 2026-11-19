@@ -1,3 +1,6 @@
+/** @file buddy2.c
+ * @brief RTOS lifecycle: the motion task and its 10 ms tick.
+ */
 /*
  * File: buddy2.c
  * Owner: Buddy 2 - Motion control using motors and wheel encoders.
@@ -76,3 +79,6 @@ ER subsystem2_start (void)
 
     return tk_sta_cyc(g_cycle_id);
 }
+
+/* End of file. */
+

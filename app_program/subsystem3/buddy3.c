@@ -1,3 +1,6 @@
+/** @file buddy3.c
+ * @brief Stationary, opt-in diagnostics.
+ */
 /* Stationary, opt-in diagnostics. No motion/controller dependency. */
 #include "buddy3.h"
 #include "ir_sensor.h"
@@ -364,3 +367,6 @@ ER subsystem3_start (void)
 #endif
     return E_OK;
 }
+
+/* End of file. */
+

@@ -1,3 +1,7 @@
+/** @file ultrasonic_sensor.h
+ * @brief Trigger and poll PIO ultrasonic echo capture and convert pulses to
+ * range.
+ */
 #ifndef BUDDY5_ULTRASONIC_SENSOR_H
 #define BUDDY5_ULTRASONIC_SENSOR_H
 #include "s5_config.h"
@@ -17,3 +21,6 @@ bool ultrasonic_pulse_mm (uint32_t pulse_us, uint16_t * p_mm);
  */
 bool ultrasonic_echo_mm (uint32_t pulse_us, uint16_t * p_mm);
 #endif
+
+/* End of file. */
+

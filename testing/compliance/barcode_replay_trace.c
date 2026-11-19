@@ -26,8 +26,8 @@ static void barcode_trace_feed (uint32_t elapsed_us, uint16_t darkness)
     s3_barcode_result_t result;
     s3_barcode_status_t status;
     g_now += elapsed_us;
-    status = s3_barcode_record_update(&g_record, &config, g_now, true,
-                                      darkness, &result);
+    status = s3_barcode_record_update(&g_record, &config, g_now, true, darkness,
+                                      &result);
     if (S3_BARCODE_DECODED == status)
     {
         ++g_decoded;
@@ -50,23 +50,22 @@ static void barcode_trace_feed (uint32_t elapsed_us, uint16_t darkness)
     {
         /* NONE retains pending recording/processing; no synthetic drain. */
     }
-    (void)fprintf(stderr,
-                  "t=%" PRIu32 " dt=%" PRIu32 " dark=%u status=%u "
-                  "state=%u count=%u phase=%u cursor=%u frozen=%u "
-                  "work=%u fit=%u frame=%" PRIu32 " required=%" PRIu32
-                  " strict=%" PRIu32 " tolerant=%" PRIu32
-                  " quiet_required=%" PRIu32 " letter_code=%u reverse=%u\n",
-                  g_now, elapsed_us, (unsigned int)darkness,
-                  (unsigned int)status, (unsigned int)g_record.state,
-                  (unsigned int)g_record.count, (unsigned int)g_record.work.phase,
-                  (unsigned int)g_record.work.cursor,
-                  (unsigned int)g_record.work.frozen_count,
-                  (unsigned int)g_record.work_units,
-                  (unsigned int)g_record.fit_ticks, g_record.frame_us,
-                  g_record.required_us, g_record.quiet.strict_us,
-                  g_record.quiet.tolerant_us, g_record.quiet_required_us,
-                  (unsigned int)g_record.candidate.letter_code,
-                  (unsigned int)g_record.candidate.reversed);
+    (void)fprintf(
+        stderr,
+        "t=%" PRIu32 " dt=%" PRIu32 " dark=%u status=%u "
+        "state=%u count=%u phase=%u cursor=%u frozen=%u "
+        "work=%u fit=%u frame=%" PRIu32 " required=%" PRIu32 " strict=%" PRIu32
+        " tolerant=%" PRIu32 " quiet_required=%" PRIu32
+        " letter_code=%u reverse=%u\n",
+        g_now, elapsed_us, (unsigned int)darkness, (unsigned int)status,
+        (unsigned int)g_record.state, (unsigned int)g_record.count,
+        (unsigned int)g_record.work.phase, (unsigned int)g_record.work.cursor,
+        (unsigned int)g_record.work.frozen_count,
+        (unsigned int)g_record.work_units, (unsigned int)g_record.fit_ticks,
+        g_record.frame_us, g_record.required_us, g_record.quiet.strict_us,
+        g_record.quiet.tolerant_us, g_record.quiet_required_us,
+        (unsigned int)g_record.candidate.letter_code,
+        (unsigned int)g_record.candidate.reversed);
 }
 
 /** Parse bounded padding and samples; invalid inputs return 2 without replay. */
@@ -75,8 +74,10 @@ int main (int argc, char ** pp_argv)
     uint32_t elapsed_us = 0U;
     uint32_t darkness = 0U;
     uint32_t index = 0U;
-    const uintmax_t leading_ms = (argc > 1) ? strtoumax(pp_argv[1], NULL, 10) : 0U;
-    const uintmax_t trailing_ms = (argc > 2) ? strtoumax(pp_argv[2], NULL, 10) : 0U;
+    const uintmax_t leading_ms =
+        (argc > 1) ? strtoumax(pp_argv[1], NULL, 10) : 0U;
+    const uintmax_t trailing_ms =
+        (argc > 2) ? strtoumax(pp_argv[2], NULL, 10) : 0U;
     if ((leading_ms > 10000U) || (trailing_ms > 10000U))
     {
         return 2;
@@ -101,10 +102,12 @@ int main (int argc, char ** pp_argv)
     {
         barcode_trace_feed(10000U, 0U);
     }
-    (void)printf("decoded=%" PRIu32 " rejected=%" PRIu32
-                 " timing=%" PRIu32 " overflow=%" PRIu32
-                 " state=%u count=%u\n",
+    (void)printf("decoded=%" PRIu32 " rejected=%" PRIu32 " timing=%" PRIu32
+                 " overflow=%" PRIu32 " state=%u count=%u\n",
                  g_decoded, g_rejected, g_timing, g_overflow,
                  (unsigned int)g_record.state, (unsigned int)g_record.count);
     return 0;
 }
+
+/* End of file. */
+

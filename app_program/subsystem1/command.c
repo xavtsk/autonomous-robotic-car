@@ -1,3 +1,6 @@
+/** @file command.c
+ * @brief Barcode configuration and queued command processing.
+ */
 #include "command.h"
 
 /* Packed default map A/B/C/D, produced by buddy1_map_pack(). */
@@ -307,3 +310,6 @@ EXPORT void buddy1_command_task (INT stacd, void * p_exinf)
         }
     }
 }
+
+/* End of file. */
+

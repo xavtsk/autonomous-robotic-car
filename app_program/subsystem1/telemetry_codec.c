@@ -1,3 +1,6 @@
+/** @file telemetry_codec.c
+ * @brief Encode and decode bounded binary telemetry payloads.
+ */
 #include "telemetry_codec.h"
 #include "../build_assert.h"
 
@@ -33,8 +36,7 @@ static const char * const g_topics[BUDDY1_TOPIC_COUNT] = {
     "car/telemetry/avoidance",  "car/telemetry/scan",
     "car/telemetry/scan_sample"};
 /* Compile-time guarantee: outbox topic selector is four bits. */
-BUILD_ASSERT(BUDDY1_TOPIC_COUNT <= 16U,
-             telemetry_codec_c_check_b_t);
+BUILD_ASSERT(BUDDY1_TOPIC_COUNT <= 16U, telemetry_codec_c_check_b_t);
 
 static void put (uint8_t * p_bytes, unsigned * p_bit, uint32_t value,
                  unsigned width)
@@ -721,3 +723,6 @@ int buddy1_map_unpack (const uint8_t * p_packet, unsigned length,
     *p_out = map;
     return 1;
 }
+
+/* End of file. */
+

@@ -1,3 +1,7 @@
+/** @file robot_diagnostics.h
+ * @brief Declare optional motion and IR timing observation and USB reporting
+ * interfaces.
+ */
 /* Optional USB observations. These functions never request or reset motion. */
 #ifndef ROBOT_DIAGNOSTICS_H
 #define ROBOT_DIAGNOSTICS_H
@@ -31,3 +35,6 @@ void robot_diagnostics_report (void);
 #endif
 
 #endif
+
+/* End of file. */
+

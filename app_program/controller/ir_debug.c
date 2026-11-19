@@ -1,3 +1,6 @@
+/** @file ir_debug.c
+ * @brief Optional observation-only IR preview.
+ */
 #include "ir_debug.h"
 #include <string.h>
 
@@ -103,3 +106,6 @@ bool ir_debug_due (uint32_t now, uint32_t * p_last, bool * p_seen)
     *p_last = now;
     return true;
 }
+
+/* End of file. */
+

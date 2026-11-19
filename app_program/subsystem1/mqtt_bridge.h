@@ -12,3 +12,6 @@
 #endif
 
 #endif /* BUDDY1_MQTT_BRIDGE_H */
+
+/* End of file. */
+

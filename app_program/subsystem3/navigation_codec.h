@@ -1,3 +1,6 @@
+/** @file navigation_codec.h
+ * @brief Define copied navigation, barcode and raw-frame packet layouts.
+ */
 /* Tribunal 1 copied inter-task results. Bit order is explicit; C structure
  * layout is never sent. The decoded API stays wide for validation/calculation.
  */
@@ -47,3 +50,6 @@ bool s3_raw_frame_unpack (const s3_raw_frame_packet_t * p_packet,
                           s3_sensor_frame_t * p_out);
 
 #endif
+
+/* End of file. */
+

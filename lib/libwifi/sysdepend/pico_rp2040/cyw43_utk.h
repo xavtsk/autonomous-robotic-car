@@ -1,9 +1,13 @@
+/** @file cyw43_utk.h
+ * @brief Core-0-owned CYW43439 polling service for micro T-Kernel.
+ */
 #ifndef CYW43_UTK_H
 #define CYW43_UTK_H
 
 #include <stdint.h>
 
-typedef struct {
+typedef struct
+{
     volatile int32_t init_result;
     volatile uint32_t init_complete;
     volatile uint32_t ready;
@@ -21,8 +25,11 @@ typedef struct {
     volatile uint32_t ip_addr;
 } T_CYW43_UTK_STATUS;
 
-int32_t cyw43_utk_start(void);
-void cyw43_utk_get_status(T_CYW43_UTK_STATUS *status);
-void cyw43_utk_task(int32_t stacd, void *exinf);
+int32_t cyw43_utk_start (void);
+void cyw43_utk_get_status (T_CYW43_UTK_STATUS * status);
+void cyw43_utk_task (int32_t stacd, void * exinf);
 
 #endif
+
+/* End of file. */
+

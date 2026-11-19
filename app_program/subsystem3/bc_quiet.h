@@ -1,3 +1,7 @@
+/** @file bc_quiet.h
+ * @brief Classify trailing quiet intervals after strongly contrasted barcode
+ * frames.
+ */
 #ifndef BUDDY3_BARCODE_QUIET_H
 #define BUDDY3_BARCODE_QUIET_H
 #include <stdbool.h>
@@ -70,3 +74,6 @@ s3_barcode_quiet_update (s3_barcode_quiet_t * p_q, uint32_t step_us,
     return S3_QUIET_PENDING | (p_q->pulse_bad ? S3_QUIET_BREAK : 0U);
 }
 #endif
+
+/* End of file. */
+

@@ -1,8 +1,11 @@
+/** @file timing_test.c
+ * @brief Exercise run timing accumulation and diagnostic counters.
+ */
 #include "../../app_program/controller/run_timing.h"
 #include <assert.h>
 #include <stdio.h>
 
-int main(void)
+int main (void)
 {
     s3_run_timing_t run;
     uint32_t now = UINT32_MAX - S3_SAMPLE_PERIOD_US / 2U;
@@ -10,7 +13,8 @@ int main(void)
     assert(run.started_us == now && run.samples == 0U);
     now += S3_SAMPLE_PERIOD_US; /* wrap while retaining the exact target gap */
     s3_run_timing_record(&run, S3_SAMPLE_PERIOD_US, now, 30000U);
-    assert(run.samples == 1U && run.above_target == 0U && run.above_safety == 0U);
+    assert(run.samples == 1U && run.above_target == 0U &&
+           run.above_safety == 0U);
     now += S3_SAMPLE_PERIOD_US + 1U;
     s3_run_timing_record(&run, S3_SAMPLE_PERIOD_US + 1U, now, 30000U);
     now += 30000U;
@@ -28,8 +32,12 @@ int main(void)
            run.above_safety == UINT32_MAX && run.max_gap_us == 130000U);
     now += S3_SAMPLE_PERIOD_US;
     s3_run_timing_begin(&run, now);
-    assert(run.started_us == now && run.samples == 0U &&
-           run.max_gap_us == 0U && run.last_safety_us == 0U);
-    puts("PASS: run timing target/safety boundaries, timestamp wrap, saturation and per-run reset");
+    assert(run.started_us == now && run.samples == 0U && run.max_gap_us == 0U &&
+           run.last_safety_us == 0U);
+    puts(
+        "PASS: run timing target/safety boundaries, timestamp wrap, saturation and per-run reset");
     return 0;
 }
+
+/* End of file. */
+

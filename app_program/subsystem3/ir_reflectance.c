@@ -1,3 +1,6 @@
+/** @file ir_reflectance.c
+ * @brief Buddy 3: hardware-independent, per-sensor reflectance classification.
+ */
 #include "ir_reflectance.h"
 
 #define IR_ADC_MAX_COUNT (4095U)
@@ -76,3 +79,6 @@ bool ir_reflectance_update (ir_reflectance_t * p_sensor, uint16_t raw,
     }
     return true;
 }
+
+/* End of file. */
+

@@ -1,3 +1,7 @@
+/** @file buddy5.h
+ * @brief Own ultrasonic and servo scanning and publish protected obstacle
+ * snapshots.
+ */
 #ifndef SUBSYSTEM5_H
 #define SUBSYSTEM5_H
 #include "../app.h"
@@ -9,3 +13,6 @@ ER subsystem5_start (void);
 void subsystem5_test (void);
 #endif
 #endif
+
+/* End of file. */
+

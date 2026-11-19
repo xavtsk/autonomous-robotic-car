@@ -1,3 +1,7 @@
+/** @file avoid_obstacle.c
+ * @brief Advance obstacle avoidance and line hand-back through motion
+ * proposals.
+ */
 #include "avoid_obstacle.h"
 #include "../app_types.h"
 
@@ -127,8 +131,8 @@ static float64_t bearing_deg (const s5_profile_t * p_p)
     float64_t value_x, value_y, value_t, value_t2 = 0.0;
     value_x = ((float64_t)p_p->left_edge_mm + (float64_t)p_p->right_edge_mm) /
               2.0; /* + = left */
-    value_y =
-        (float64_t)p_p->closest_mm + (float64_t)S5_SONAR_AXLE_MM; /* axle to face */
+    value_y = (float64_t)p_p->closest_mm +
+              (float64_t)S5_SONAR_AXLE_MM; /* axle to face */
     if (value_y <= 0.0)
     {
         return 0.0;
@@ -756,3 +760,6 @@ s5_action_t s5_avoidance_step (s5_avoidance_t * p_a, const s5_input_t * p_in)
     }
     return action(S5_ACT_NONE, 0, 0);
 }
+
+/* End of file. */
+

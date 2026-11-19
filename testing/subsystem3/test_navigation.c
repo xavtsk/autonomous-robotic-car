@@ -1,3 +1,7 @@
+/** @file test_navigation.c
+ * @brief Exercise navigation, barcode and odometry integration using synthetic
+ * sensor frames.
+ */
 /* Synthetic integration inputs. No hardware results are implied by these tests.
  */
 #include <assert.h>
@@ -19,7 +23,8 @@ typedef struct
     s3_nav_action_t action;
     bool jitter, omit_odometry, last_reversed;
 } rig_t;
-static s3_calibration_collector_t calibration(void)
+
+static s3_calibration_collector_t calibration (void)
 {
     s3_calibration_collector_t c;
     unsigned int i;
@@ -31,7 +36,8 @@ static s3_calibration_collector_t calibration(void)
     }
     return c;
 }
-static void accept_calibrations(rig_t *rig)
+
+static void accept_calibrations (rig_t * rig)
 {
     s3_calibration_collector_t c = calibration();
     unsigned int i;
@@ -41,8 +47,9 @@ static void accept_calibrations(rig_t *rig)
             s3_navigation_apply_calibration(&rig->nav, (s3_sensor_id_t)i, &c));
     }
 }
-static void prepare_frame(rig_t *rig, uint16_t barcode, uint16_t left,
-                          uint16_t right)
+
+static void prepare_frame (rig_t * rig, uint16_t barcode, uint16_t left,
+                           uint16_t right)
 {
     unsigned int i;
     rig->frame = (s3_sensor_frame_t){0};
@@ -57,7 +64,8 @@ static void prepare_frame(rig_t *rig, uint16_t barcode, uint16_t left,
     rig->odometry.timestamp_us = rig->now;
     rig->odometry.valid = true;
 }
-static void process(rig_t *rig, bool with_odometry)
+
+static void process (rig_t * rig, bool with_odometry)
 {
     uint32_t step = rig->step;
     assert(s3_navigation_process(
@@ -108,13 +116,15 @@ static void process(rig_t *rig, bool with_odometry)
     rig->now += step;
     rig->odometry.centre_m += rig->velocity * (double)step / 1000000.0;
 }
-static void tick(rig_t *rig, uint16_t barcode, uint16_t left, uint16_t right)
+
+static void tick (rig_t * rig, uint16_t barcode, uint16_t left, uint16_t right)
 {
     prepare_frame(rig, barcode, left, right);
     process(rig, !rig->omit_odometry);
 }
-static void hold(rig_t *rig, uint32_t duration, uint16_t barcode, uint16_t left,
-                 uint16_t right)
+
+static void hold (rig_t * rig, uint32_t duration, uint16_t barcode,
+                  uint16_t left, uint16_t right)
 {
     uint32_t start = rig->now;
     do
@@ -122,7 +132,8 @@ static void hold(rig_t *rig, uint32_t duration, uint16_t barcode, uint16_t left,
         tick(rig, barcode, left, right);
     } while ((uint32_t)(rig->now - start) < duration);
 }
-static void init_rig(rig_t *rig, uint32_t step, bool active)
+
+static void init_rig (rig_t * rig, uint32_t step, bool active)
 {
     s3_navigation_config_t cfg = s3_navigation_defaults();
     *rig = (rig_t){0};
@@ -136,7 +147,8 @@ static void init_rig(rig_t *rig, uint32_t step, bool active)
         assert(s3_navigation_start(&rig->nav, rig->now));
     }
 }
-static void scan(rig_t *rig, char letter, bool reverse)
+
+static void scan (rig_t * rig, char letter, bool reverse)
 {
     static const uint16_t patterns[26] = {
         0x109, 0x049, 0x148, 0x019, 0x118, 0x058, 0x00D, 0x10C, 0x04C,
@@ -166,7 +178,8 @@ static void scan(rig_t *rig, char letter, bool reverse)
     }
     hold(rig, 600000U, 150U, 202U, 202U);
 }
-static void test_readiness_and_updates(void)
+
+static void test_readiness_and_updates (void)
 {
     rig_t rig;
     s3_navigation_config_t cfg = s3_navigation_defaults();
@@ -243,7 +256,8 @@ static void test_readiness_and_updates(void)
     cfg.map[0] = S3_NAV_ACTION_COUNT;
     assert(!s3_navigation_init(&rig.nav, &cfg));
 }
-static void test_faults(void)
+
+static void test_faults (void)
 {
     unsigned int kind;
     for (kind = 0U; kind < 8U; kind++)
@@ -260,36 +274,36 @@ static void test_faults(void)
         prepare_frame(&rig, 150U, 202U, 202U);
         switch (kind)
         {
-            case 0U:
-                rig.frame.sensor[1].valid = false;
-                reason = S3_FAULT_SENSOR;
-                break;
-            case 1U:
-                reason = S3_FAULT_TIMING;
-                break;
-            case 2U:
-                rig.odometry.timestamp_us -= 40000U;
-                reason = S3_FAULT_ODOMETRY;
-                break;
-            case 3U:
-                rig.odometry.epoch++;
-                reason = S3_FAULT_ODOMETRY_EPOCH;
-                break;
-            case 4U:
-                rig.odometry.centre_m = NAN;
-                reason = S3_FAULT_ODOMETRY;
-                break;
-            case 5U:
-                reason = S3_FAULT_ODOMETRY;
-                break;
-            case 6U:
-                rig.frame.sensor[2].timestamp_us -= 40000U;
-                reason = S3_FAULT_SENSOR;
-                break;
-            default:
-                rig.odometry.valid = false;
-                reason = S3_FAULT_ODOMETRY;
-                break;
+        case 0U:
+            rig.frame.sensor[1].valid = false;
+            reason = S3_FAULT_SENSOR;
+            break;
+        case 1U:
+            reason = S3_FAULT_TIMING;
+            break;
+        case 2U:
+            rig.odometry.timestamp_us -= 40000U;
+            reason = S3_FAULT_ODOMETRY;
+            break;
+        case 3U:
+            rig.odometry.epoch++;
+            reason = S3_FAULT_ODOMETRY_EPOCH;
+            break;
+        case 4U:
+            rig.odometry.centre_m = NAN;
+            reason = S3_FAULT_ODOMETRY;
+            break;
+        case 5U:
+            reason = S3_FAULT_ODOMETRY;
+            break;
+        case 6U:
+            rig.frame.sensor[2].timestamp_us -= 40000U;
+            reason = S3_FAULT_SENSOR;
+            break;
+        default:
+            rig.odometry.valid = false;
+            reason = S3_FAULT_ODOMETRY;
+            break;
         }
         process(&rig, kind != 5U);
         assert(rig.out.stop_requested &&
@@ -336,7 +350,8 @@ static void test_faults(void)
         assert(!s3_navigation_reset_fault(&rig.nav, rig.now));
     }
 }
-static void test_rearming_and_timing(void)
+
+static void test_rearming_and_timing (void)
 {
     unsigned int cadence, direction;
     for (cadence = 0U; cadence < 2U; cadence++)
@@ -414,7 +429,8 @@ static void test_rearming_and_timing(void)
         assert(rig.barcodes == 1U && rig.action == S3_NAV_RIGHT);
     }
 }
-static void test_line_modes_and_diagnostics(void)
+
+static void test_line_modes_and_diagnostics (void)
 {
     rig_t rig;
     s3_nav_action_t map[26] = {0};
@@ -468,7 +484,8 @@ static void test_line_modes_and_diagnostics(void)
     hold(&rig, 150000U, 150U, 202U, 202U);
     assert(rig.out.steering.valid && !rig.out.stop_requested);
 }
-static void test_clearance_persistence_and_epochs(void)
+
+static void test_clearance_persistence_and_epochs (void)
 {
     rig_t rig;
     s3_navigation_config_t cfg = s3_navigation_defaults();
@@ -519,7 +536,7 @@ static void test_clearance_persistence_and_epochs(void)
 /* A small barcode whose thin bars blur to grey: bars read darkness ~550 and
  * gaps ~300, so the fixed WHITE/BLACK limits never see a black bar. The
  * record-then-decide reader still reads it - once, as one barcode event. */
-static void test_faint_barcode(void)
+static void test_faint_barcode (void)
 {
     static const uint16_t y = 0x190U;
     uint16_t symbols[3] = {0x094U, y, 0x094U};
@@ -544,7 +561,7 @@ static void test_faint_barcode(void)
         }
         hold(&rig, 1500000U, 150U, 202U, 202U);
         for (i = 0U; i < 29U; i++)
-        {   /* raw 222 = darkness 553, raw 189 = darkness 300 */
+        { /* raw 222 = darkness 553, raw 189 = darkness 300 */
             hold(&rig, runs[direction ? 28U - i : i], (i % 2U) ? 189U : 222U,
                  202U, 202U);
         }
@@ -556,7 +573,7 @@ static void test_faint_barcode(void)
 }
 #endif
 
-void test_navigation(void)
+void test_navigation (void)
 {
 #ifndef S3_BASELINE_TRACE
     test_faint_barcode();
@@ -567,3 +584,6 @@ void test_navigation(void)
     test_line_modes_and_diagnostics();
     test_clearance_persistence_and_epochs();
 }
+
+/* End of file. */
+

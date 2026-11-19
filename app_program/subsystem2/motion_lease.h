@@ -1,3 +1,6 @@
+/** @file motion_lease.h
+ * @brief Portable lease check shared by the motion owner and host tests.
+ */
 /* Portable lease check shared by the motion owner and host tests. */
 #ifndef MOTION_LEASE_H
 #define MOTION_LEASE_H
@@ -12,3 +15,6 @@ static inline bool motion_lease_expired (bool enabled, uint32_t now,
            ((uint32_t)(now - refreshed) > MOTION_NAVIGATION_LEASE_US);
 }
 #endif
+
+/* End of file. */
+

@@ -1,3 +1,7 @@
+/** @file bc_decoder.c
+ * @brief Decode Code 39 letters from bounded streaming and recorded reflectance
+ * samples.
+ */
 /* Code 39 symbol facts cross-checked against ZXing Code39Reader encodings:
  * Repository: https://github.com/zxing/zxing
  * Source: core/src/main/java/com/google/zxing/oned/Code39Reader.java
@@ -2246,3 +2250,6 @@ s3_barcode_record_update (s3_barcode_record_t * p_r,
     p_result->timestamp_us = timestamp_us;
     return rec_finish(p_r, S3_BARCODE_DECODED);
 }
+
+/* End of file. */
+

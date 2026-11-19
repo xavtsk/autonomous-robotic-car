@@ -1,3 +1,6 @@
+/** @file s5_codec.c
+ * @brief Encode and decode copied obstacle-observation packets.
+ */
 #include "s5_codec.h"
 
 static void put (uint8_t * p_p, unsigned * p_at, uint32_t value, unsigned bits)
@@ -105,3 +108,6 @@ bool s5_observation_unpack (const uint8_t p_in[S5_PACKET_BYTES],
     *p_v = value_t;
     return true;
 }
+
+/* End of file. */
+

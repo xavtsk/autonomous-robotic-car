@@ -1,3 +1,6 @@
+/** @file scan_obstacle.c
+ * @brief Track scan angles, sample acceptance and scan completion.
+ */
 #include "scan_obstacle.h"
 
 void s5_scan_begin (s5_scan_t * p_s, uint32_t now)
@@ -88,3 +91,6 @@ void s5_scan_accept (s5_scan_t * p_s, uint32_t now, bool valid,
         p_s->done = true;
     }
 }
+
+/* End of file. */
+

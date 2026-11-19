@@ -1,11 +1,15 @@
+/** @file test_ir_reflectance.c
+ * @brief Host tests: synthetic inputs verify software, not physical sensor
+ * accuracy.
+ */
 /* Host tests: synthetic inputs verify software, not physical sensor accuracy. */
 #include <assert.h>
 #include <stdio.h>
 #include "ir_reflectance.h"
 #include "ir_bench_config.h"
 
-static void expect_sample(ir_reflectance_t *p_sensor, uint16_t raw,
-                          uint16_t expected_darkness, ir_surface_t expected)
+static void expect_sample (ir_reflectance_t * p_sensor, uint16_t raw,
+                           uint16_t expected_darkness, ir_surface_t expected)
 {
     uint16_t darkness = 65535U;
     assert(ir_reflectance_update(p_sensor, raw, &darkness));
@@ -13,13 +17,12 @@ static void expect_sample(ir_reflectance_t *p_sensor, uint16_t raw,
     assert(p_sensor->surface == expected);
 }
 
-int main(void)
+int main (void)
 {
     ir_reflectance_t sensor = {0};
     const ir_calibration_t bench_calibration = {
-        IR_BENCH_WHITE_RAW, IR_BENCH_BLACK_RAW,
-        IR_BENCH_WHITE_LIMIT, IR_BENCH_BLACK_LIMIT
-    };
+        IR_BENCH_WHITE_RAW, IR_BENCH_BLACK_RAW, IR_BENCH_WHITE_LIMIT,
+        IR_BENCH_BLACK_LIMIT};
     ir_calibration_t calibration = {150U, 280U, 400U, 600U};
     uint16_t darkness = 123U;
 
@@ -79,6 +82,10 @@ int main(void)
     assert(!ir_reflectance_update(&sensor, 150U, 0));
     ir_reflectance_reset(0);
 
-    puts("PASS: provisional thresholds, hysteresis, polarity, clamping, invalid inputs and recovery");
+    puts(
+        "PASS: provisional thresholds, hysteresis, polarity, clamping, invalid inputs and recovery");
     return 0;
 }
+
+/* End of file. */
+

@@ -1,3 +1,7 @@
+/** @file vehicle_controller.c
+ * @brief Route operator requests and adapt observations for the shared
+ * controller owner.
+ */
 /* Team facade/telemetry adapter. The upstream s3 integration task is the ONE
  * navigation, motion-request and report-consumer owner. No second task here. */
 #include "vehicle_controller.h"
@@ -682,3 +686,6 @@ void vehicle_controller_observe (const s3_integration_status_t * p_status)
         g_last_action = BUDDY1_ACTION_UNKNOWN;
     }
 }
+
+/* End of file. */
+

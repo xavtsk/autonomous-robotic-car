@@ -1,3 +1,6 @@
+/** @file imu_calibration.h
+ * @brief Collect stationary IMU samples for initial sensor calibration.
+ */
 #ifndef BUDDY4_IMU_CALIBRATION_H
 #define BUDDY4_IMU_CALIBRATION_H
 #include "../app_types.h"
@@ -18,3 +21,6 @@ void imu_calibration_reset (imu_calibration_t * p_c);
 bool imu_calibration_feed (imu_calibration_t * p_c, const imu_sample_t * p_s,
                            bool stationary);
 #endif
+
+/* End of file. */
+

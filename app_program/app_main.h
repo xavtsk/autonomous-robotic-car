@@ -7,3 +7,6 @@
 #include "app.h"
 
 #endif /* APP_MAIN_H */
+
+/* End of file. */
+

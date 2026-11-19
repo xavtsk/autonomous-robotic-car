@@ -1,3 +1,6 @@
+/** @file motor_control.h
+ * @brief Motor actuation through the Robo Pico motor driver (PWM).
+ */
 /*
  * File: motor_control.h
  * Owner: Buddy 2 - Motion Control
@@ -28,3 +31,6 @@ void motor_control_brake_all (void);
 float32_t motor_control_duty (wheel_id_t wheel);
 
 #endif /* BUDDY2_MOTOR_CONTROL_H */
+
+/* End of file. */
+
