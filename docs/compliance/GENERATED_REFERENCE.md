@@ -12,7 +12,10 @@ This package version is listed by [Ubuntu's package archive](https://packages.ub
 Private and static functions are included. `EXTRACT_ALL` remains off, since
 enabling it disables missing-documentation warnings, as explained in
 [Doxygen's configuration reference](https://www.doxygen.nl/manual/config.html).
-All warnings are retained and keep this evidence gate incomplete.
+All warnings are retained and keep this evidence gate incomplete. Diagnostics
+written to `generation.log` also block completion: configuration warnings can
+appear before Doxygen opens its configured warning file. With `QUIET = YES`,
+any nonblank generator output requires review.
 
 Mixed imported files are masked using the same ownership selectors as the
 compiler inventory; their original line positions are retained. Imported files
@@ -47,5 +50,18 @@ remains. It does not certify the meaning of a comment, infer that a documented
 signature has a complete contract, or approve an exception. The HTML is reference
 material; the rule ledger and reviewed contracts remain the compliance evidence.
 
-Initial status: tooling and focused Python checks are implemented. First Linux
-generation and artifact review are pending; no local Doxygen execution is claimed.
+The first Linux generation completed at revision `55af85c`, in
+[run 44604115125](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44604115125).
+Its source hashes were unchanged. The result remains **INCOMPLETE**: the warning
+file contains 4,101 lines, and the supplied compiler report contains 1,708
+definition variants, including 980 recovery observations and 1,512 undocumented
+variants. These are observations, not counts of distinct missing contracts.
+The target-only compiler context used for that report is being corrected; its
+recovery counts must not be compared with the broader local field inventory as
+if they had identical inputs. The historical artifact is retained.
+
+That run also reported an obsolete `HTML_TIMESTAMP` setting in `generation.log`.
+The setting has been removed and both diagnostic streams now gate completion.
+Nine focused Python tests cover binding, invalid XML, configuration diagnostics,
+quiet successful generation and source preservation after failed generation.
+These checks use mocked generation; no local Doxygen execution is claimed.

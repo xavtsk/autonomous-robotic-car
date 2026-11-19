@@ -1,8 +1,11 @@
 """Documentation receipts must not turn partial generation into compliance."""
 from pathlib import Path
 import hashlib
+import json
 import tempfile
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from tools.compliance import build_docs as docs
 
@@ -15,6 +18,7 @@ class DocumentationTests(unittest.TestCase):
                      'GENERATE_XML = YES', 'ENABLE_PREPROCESSING = NO'):
             self.assertIn(line, config.splitlines())
         self.assertNotIn('INPUT_FILTER', config)
+        self.assertNotIn('HTML_TIMESTAMP', config)
 
     def test_configuration_rejects_ambiguous_path(self):
         with self.assertRaises(ValueError):
@@ -82,6 +86,66 @@ class DocumentationTests(unittest.TestCase):
                                     '<location bodyfile="../outside.c" bodystart="12"/></memberdef></doxygen>')
             with self.assertRaisesRegex(ValueError, 'outside'):
                 docs.observed_functions(xml, staged)
+
+    def run_generation(self, root, output_text='', returncode=0, mutate=False):
+        source = root/'a.c'
+        source.write_text('int fun(void) { return 0; }\n')
+        report_path = root/'functions.json'
+        report_path.write_text(json.dumps({'coverage_complete': True}))
+        output = root/'output'
+
+        def stage(_root, destination):
+            destination.mkdir()
+            staged = destination/'a.c'
+            staged.write_bytes(source.read_bytes())
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            return {'a.c': {'original_bytes_sha256': digest, 'staged_sha256': digest}}
+
+        def generate(_command, **kwargs):
+            kwargs['stdout'].write(output_text)
+            (output/'reference/warnings.log').write_text('')
+            if mutate:
+                source.write_text('int fun(void) { return 1; }\n')
+            return SimpleNamespace(returncode=returncode)
+
+        comparison = dict(missing_observed_definitions=[], compiler_recovery_variants=0,
+                          compiler_undocumented_variants=0)
+        with patch.object(docs, 'stage_sources', side_effect=stage), \
+                patch.object(docs, 'validate_functions'), \
+                patch.object(docs.subprocess, 'check_output', return_value='1.9.8\n'), \
+                patch.object(docs.subprocess, 'run', side_effect=generate), \
+                patch.object(docs, 'observed_functions', return_value=set()), \
+                patch.object(docs, 'compare_functions', return_value=comparison), \
+                patch('builtins.print'):
+            code = docs.main(['--root', str(root), '--output', str(output),
+                              '--function-report', str(report_path)])
+        return code, json.loads((output/'results.json').read_text())
+
+    def test_configuration_diagnostics_outside_warning_log_block_completion(self):
+        for diagnostic in ('warning: obsolete configuration tag\n',
+                           'error: ignored option\n', 'unexpected diagnostic\n'):
+            with self.subTest(diagnostic=diagnostic), tempfile.TemporaryDirectory() as directory:
+                code, result = self.run_generation(Path(directory), diagnostic)
+                self.assertEqual(code, 2)
+                self.assertEqual(result['status'], 'INCOMPLETE')
+                self.assertEqual(result['warning_lines'], 0)
+                self.assertEqual(result['generation_diagnostic_lines'], 1)
+                self.assertTrue(result['source_unchanged'])
+
+    def test_only_quiet_complete_generation_can_pass(self):
+        with tempfile.TemporaryDirectory() as directory:
+            code, result = self.run_generation(Path(directory), '\n  \n')
+            self.assertEqual(code, 0)
+            self.assertTrue(result['coverage_complete'])
+            self.assertTrue(result['source_unchanged'])
+
+    def test_failed_generation_still_reports_source_mutation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            code, result = self.run_generation(Path(directory), 'failed\n', 1, True)
+            self.assertEqual(code, 2)
+            self.assertFalse(result['source_unchanged'])
+            self.assertEqual(result['generation_returncode'], 1)
+            self.assertEqual(len(result['errors']), 2)
 
 
 if __name__ == '__main__':

@@ -48,6 +48,8 @@ def main():
                                    '--candidate', '07ad498a49428b7362c0e5bcc010f66f1bb650d8']),
         ('module_rename_batch', [sys.executable, 'tools/compliance/verify_module_rename.py',
                                  '--candidate', 'b8328bda4d2d59113fe647b96c5956412520bf4a']),
+        ('tilt_module_rename_batch', [sys.executable, 'tools/compliance/verify_tilt_rename.py',
+                                      '--candidate', '99b07b777559c0dd5d536f147fae15ea08f0d642']),
         ('header_pairs_batch', [sys.executable, 'tools/compliance/verify_header_pairs.py',
                                 '--candidate', 'df346fb6dced5376b9b9b5e32014d296829b2f24']),
         ('barcode_phase_batch', [sys.executable, 'tools/compliance/verify_barcode_phase_batch.py',

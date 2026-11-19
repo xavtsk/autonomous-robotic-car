@@ -70,7 +70,7 @@ def configuration(source, output):
         'WARN_AS_ERROR = NO', 'WARN_LOGFILE = '+quoted(output/'warnings.log'),
         'WARN_FORMAT = "$file:$line: $text"',
         'ENABLE_PREPROCESSING = NO', 'SEARCH_INCLUDES = NO',
-        'GENERATE_HTML = YES', 'HTML_TIMESTAMP = NO',
+        'GENERATE_HTML = YES',
         'GENERATE_LATEX = NO', 'GENERATE_XML = YES',
         'XML_PROGRAMLISTING = NO', 'HAVE_DOT = NO', 'QUIET = YES',
         'FULL_PATH_NAMES = YES', 'SOURCE_BROWSER = NO',
@@ -157,6 +157,11 @@ def main(argv=None):
         with (output/'generation.log').open('w', encoding='utf-8') as stream:
             code = subprocess.run(command, cwd=root, stdout=stream, stderr=subprocess.STDOUT, timeout=240).returncode
         result['generation_returncode'] = code
+        # QUIET suppresses progress output. Diagnostics emitted while parsing the
+        # Doxyfile can precede WARN_LOGFILE setup, so retain and gate both streams.
+        generation_lines = [line for line in (output/'generation.log').read_text(
+            encoding='utf-8').splitlines() if line.strip()]
+        result['generation_diagnostic_lines'] = len(generation_lines)
         if code:
             raise ValueError('Doxygen generation failed; see retained generation.log')
         warning_path = output/'reference/warnings.log'
@@ -164,7 +169,7 @@ def main(argv=None):
         result['warning_lines'] = len(warnings)
         observed = observed_functions(output/'reference/xml', staged)
         result.update(compare_functions(report, observed))
-        if not warnings and not result['missing_observed_definitions'] and not result['compiler_recovery_variants'] and not result['compiler_undocumented_variants'] and report.get('coverage_complete') is True:
+        if not warnings and not generation_lines and not result['missing_observed_definitions'] and not result['compiler_recovery_variants'] and not result['compiler_undocumented_variants'] and report.get('coverage_complete') is True:
             result['status'] = 'PASS'
             result['coverage_complete'] = True
     except (OSError, ValueError, KeyError, ET.ParseError, subprocess.SubprocessError) as error:
