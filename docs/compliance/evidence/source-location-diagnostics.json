@@ -1,0 +1,507 @@
+{
+  "schema_version": 1,
+  "status": "OBSERVABILITY_LIMITATION_REQUIRES_DISPOSITION",
+  "captured_at_utc": "2026-11-19T19:50:53.632209+00:00",
+  "head_revision": "030456038138438f324e561fe99286f15a7152ad",
+  "comparison_baseline": "4ad2cc42595722cedb47102e4343298339040d40",
+  "measurement": "Read-only source and ownership inspection; no target/test executable or device was run.",
+  "source_bindings": {
+    "app_program/subsystem1/buddy1_test.c": {
+      "bytes_sha256": "512cee1568d9bb52f2882da7e4cb2079938f0c45376715affbfecb70457a2f80",
+      "normalized_text_sha256": "512cee1568d9bb52f2882da7e4cb2079938f0c45376715affbfecb70457a2f80",
+      "classification": "owned"
+    },
+    "app_program/subsystem2/buddy2_test.c": {
+      "bytes_sha256": "638a9444c4192d7d5588ce989708e53dc860e11f26300073aae4463b285a4701",
+      "normalized_text_sha256": "638a9444c4192d7d5588ce989708e53dc860e11f26300073aae4463b285a4701",
+      "classification": "owned"
+    },
+    "app_program/subsystem4/buddy4_test.c": {
+      "bytes_sha256": "7a7cc6e7740600183710688c29932f850cb47457d54b5effa987471cc833e8f9",
+      "normalized_text_sha256": "7a7cc6e7740600183710688c29932f850cb47457d54b5effa987471cc833e8f9",
+      "classification": "owned"
+    },
+    "app_program/test_report.h": {
+      "bytes_sha256": "cfcb7079cc8611b42e5d8246388e93ddbe33d8e30a4c088929d6e7e5e7eec3dc",
+      "normalized_text_sha256": "cfcb7079cc8611b42e5d8246388e93ddbe33d8e30a4c088929d6e7e5e7eec3dc",
+      "classification": "imported-preserved"
+    },
+    "app_program/app_main.c": {
+      "bytes_sha256": "47ba5ef6757eba06969886bb724dc9ab552481597bf3e33cbb119f1ea94db24a",
+      "normalized_text_sha256": "47ba5ef6757eba06969886bb724dc9ab552481597bf3e33cbb119f1ea94db24a",
+      "classification": "owned"
+    },
+    "include/tm/tmonitor.h": {
+      "bytes_sha256": "7f9f741d1e7f05227435b946bf40dae98d257c73fbadfa043871a97683e40b7d",
+      "normalized_text_sha256": "e5347cfafd454c0f9d0a8a55a50ac2f3abaefe1eb4c6c189ffd8807163b21894",
+      "classification": "imported-preserved"
+    },
+    "lib/libtm/libtm_printf.c": {
+      "bytes_sha256": "2b2d8ddc50da1ea1e26c3a7e698c7f60183abcf27b56f39b7ef5363d74160906",
+      "normalized_text_sha256": "f5b050f405772a7b6b36ac32cf870e14a06e6299bed8d3e86f49c7a053c6d175",
+      "classification": "imported-preserved"
+    },
+    "lib/libtm/libtm.c": {
+      "bytes_sha256": "f029a5f10ce7a044eb281522ec7b88f2fd94b454a7caf856fa8b612fc7c18fc6",
+      "normalized_text_sha256": "4a13199a78a7c1bfe5de857d035e1643f7085dc08cb660166b81fce1d0fbfa42",
+      "classification": "imported-preserved"
+    },
+    "lib/libtm/sysdepend/pico_rp2040/tm_com.c": {
+      "bytes_sha256": "79561431a7c15475388e2271fd1ae55793308e9fb515d419037306f0d842c739",
+      "normalized_text_sha256": "98cfb0718e3c87d07133a901396f694e2767ffc577f1451268b1a8285d8e937f",
+      "classification": "imported-preserved"
+    },
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c": {
+      "bytes_sha256": "58681e20dba24b81d4feeb047028a0abded53463503f18605567fe3fd99ee250",
+      "normalized_text_sha256": "58681e20dba24b81d4feeb047028a0abded53463503f18605567fe3fd99ee250",
+      "classification": "imported-preserved"
+    },
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_tinyusb_glue.c": {
+      "bytes_sha256": "ea77a8e59d29129637f8ef96897da03b9738d99ff4604ed223d3501abaa6de25",
+      "normalized_text_sha256": "ea77a8e59d29129637f8ef96897da03b9738d99ff4604ed223d3501abaa6de25",
+      "classification": "imported-preserved"
+    },
+    "config/config_tm.h": {
+      "bytes_sha256": "05f555826cae20c8cdcb866bdfbb4923fda778d43e974e7cb4a2825522913799",
+      "normalized_text_sha256": "2506993aafbd367a9fb260c4666db1b1be94533c72c13633c8a9faabeb3f383e",
+      "classification": "imported-preserved"
+    },
+    "tools/compliance/build_targets.py": {
+      "bytes_sha256": "3e20e35786d80671b89c1f6063873f48dc257e2a820882f8b907ef9607e7108b",
+      "normalized_text_sha256": "3e20e35786d80671b89c1f6063873f48dc257e2a820882f8b907ef9607e7108b",
+      "classification": "build-or-scope-input"
+    },
+    "build_make/pico_rp2040.mk": {
+      "bytes_sha256": "ca416800df791e964189a1c895cc8a85ad85169b4e1008f2d2bb3f2086fc3306",
+      "normalized_text_sha256": "b78bcb72bc23f492ee7e52bf364c6e3deaf32c3f88741be48102fd812dfcdbe3",
+      "classification": "build-or-scope-input"
+    },
+    "testing/compliance/inventory_scope.json": {
+      "bytes_sha256": "0cfa10cffe8c8d93a76d4d8c91380f54a96ab4066560aa31087fc4e599f9ad1e",
+      "normalized_text_sha256": "e04cfefac949db488e72c781eb53614d6882c6001540c529342d2672db8941a9",
+      "classification": "build-or-scope-input"
+    },
+    "testing/compliance/inventory_imports.json": {
+      "bytes_sha256": "924140170ade904f5bc3a68bfb0d014b2be136360a75a78152b996cfb6479f65",
+      "normalized_text_sha256": "9b9d4ed218e514e32c1006188a647aebfcb3c720df97cc872aea1184a54e6441",
+      "classification": "build-or-scope-input"
+    }
+  },
+  "owned_scan": {
+    "file_count": 270,
+    "manifest_sha256": "71af1c78f8b685b6713c169d70bc2d043db83bcf80364072420a47b60267e4b7",
+    "manifest_hash_encoding": "SHA256 of canonical JSON sorted relative-path -> raw-byte-SHA256 map, compact separators; mixed file regions masked only for token scan.",
+    "literal_source_metadata_uses": []
+  },
+  "indirect_owned_test_checks": [
+    {
+      "path": "app_program/subsystem1/buddy1_test.c",
+      "guard": "APP_TEST",
+      "count": 38,
+      "calls": [
+        {
+          "id": "S1-B01",
+          "lexical_invocation_line": 29,
+          "baseline_lexical_invocation_line": 26
+        },
+        {
+          "id": "S1-B02",
+          "lexical_invocation_line": 31,
+          "baseline_lexical_invocation_line": 28
+        },
+        {
+          "id": "S1-B03",
+          "lexical_invocation_line": 35,
+          "baseline_lexical_invocation_line": 32
+        },
+        {
+          "id": "S1-B04",
+          "lexical_invocation_line": 40,
+          "baseline_lexical_invocation_line": 37
+        },
+        {
+          "id": "S1-B05",
+          "lexical_invocation_line": 44,
+          "baseline_lexical_invocation_line": 41
+        },
+        {
+          "id": "S1-B06",
+          "lexical_invocation_line": 51,
+          "baseline_lexical_invocation_line": 48
+        },
+        {
+          "id": "S1-B07",
+          "lexical_invocation_line": 59,
+          "baseline_lexical_invocation_line": 56
+        },
+        {
+          "id": "S1-B08",
+          "lexical_invocation_line": 65,
+          "baseline_lexical_invocation_line": 62
+        },
+        {
+          "id": "S1-B09",
+          "lexical_invocation_line": 70,
+          "baseline_lexical_invocation_line": 67
+        },
+        {
+          "id": "S1-B10",
+          "lexical_invocation_line": 74,
+          "baseline_lexical_invocation_line": 71
+        },
+        {
+          "id": "S1-B11",
+          "lexical_invocation_line": 76,
+          "baseline_lexical_invocation_line": 73
+        },
+        {
+          "id": "S1-B12",
+          "lexical_invocation_line": 83,
+          "baseline_lexical_invocation_line": 80
+        },
+        {
+          "id": "S1-B13",
+          "lexical_invocation_line": 89,
+          "baseline_lexical_invocation_line": 86
+        },
+        {
+          "id": "S1-B14",
+          "lexical_invocation_line": 91,
+          "baseline_lexical_invocation_line": 88
+        },
+        {
+          "id": "S1-B15",
+          "lexical_invocation_line": 96,
+          "baseline_lexical_invocation_line": 93
+        },
+        {
+          "id": "S1-B16",
+          "lexical_invocation_line": 98,
+          "baseline_lexical_invocation_line": 95
+        },
+        {
+          "id": "S1-B17",
+          "lexical_invocation_line": 103,
+          "baseline_lexical_invocation_line": 100
+        },
+        {
+          "id": "S1-B18",
+          "lexical_invocation_line": 111,
+          "baseline_lexical_invocation_line": 108
+        },
+        {
+          "id": "S1-B19",
+          "lexical_invocation_line": 118,
+          "baseline_lexical_invocation_line": 115
+        },
+        {
+          "id": "S1-B20",
+          "lexical_invocation_line": 129,
+          "baseline_lexical_invocation_line": 126
+        },
+        {
+          "id": "S1-B21",
+          "lexical_invocation_line": 133,
+          "baseline_lexical_invocation_line": 130
+        },
+        {
+          "id": "S1-B22",
+          "lexical_invocation_line": 138,
+          "baseline_lexical_invocation_line": 135
+        },
+        {
+          "id": "S1-B23",
+          "lexical_invocation_line": 147,
+          "baseline_lexical_invocation_line": 144
+        },
+        {
+          "id": "S1-B24",
+          "lexical_invocation_line": 152,
+          "baseline_lexical_invocation_line": 149
+        },
+        {
+          "id": "S1-B35",
+          "lexical_invocation_line": 156,
+          "baseline_lexical_invocation_line": 153
+        },
+        {
+          "id": "S1-B36",
+          "lexical_invocation_line": 163,
+          "baseline_lexical_invocation_line": 160
+        },
+        {
+          "id": "S1-B37",
+          "lexical_invocation_line": 168,
+          "baseline_lexical_invocation_line": 165
+        },
+        {
+          "id": "S1-B25",
+          "lexical_invocation_line": 170,
+          "baseline_lexical_invocation_line": 167
+        },
+        {
+          "id": "S1-B26",
+          "lexical_invocation_line": 179,
+          "baseline_lexical_invocation_line": 176
+        },
+        {
+          "id": "S1-B27",
+          "lexical_invocation_line": 191,
+          "baseline_lexical_invocation_line": 188
+        },
+        {
+          "id": "S1-B28",
+          "lexical_invocation_line": 199,
+          "baseline_lexical_invocation_line": 196
+        },
+        {
+          "id": "S1-B29",
+          "lexical_invocation_line": 205,
+          "baseline_lexical_invocation_line": 202
+        },
+        {
+          "id": "S1-B30",
+          "lexical_invocation_line": 208,
+          "baseline_lexical_invocation_line": 205
+        },
+        {
+          "id": "S1-B31",
+          "lexical_invocation_line": 216,
+          "baseline_lexical_invocation_line": 213
+        },
+        {
+          "id": "S1-B32",
+          "lexical_invocation_line": 224,
+          "baseline_lexical_invocation_line": 221
+        },
+        {
+          "id": "S1-B33",
+          "lexical_invocation_line": 234,
+          "baseline_lexical_invocation_line": 231
+        },
+        {
+          "id": "S1-B34",
+          "lexical_invocation_line": 240,
+          "baseline_lexical_invocation_line": 237
+        },
+        {
+          "id": "S1-B38",
+          "lexical_invocation_line": 248,
+          "baseline_lexical_invocation_line": 245
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem2/buddy2_test.c",
+      "guard": "APP_TEST",
+      "count": 22,
+      "calls": [
+        {
+          "id": "S2-U01",
+          "lexical_invocation_line": 190,
+          "baseline_lexical_invocation_line": 185
+        },
+        {
+          "id": "S2-U02",
+          "lexical_invocation_line": 198,
+          "baseline_lexical_invocation_line": 193
+        },
+        {
+          "id": "S2-U03",
+          "lexical_invocation_line": 202,
+          "baseline_lexical_invocation_line": 197
+        },
+        {
+          "id": "S2-U04",
+          "lexical_invocation_line": 207,
+          "baseline_lexical_invocation_line": 202
+        },
+        {
+          "id": "S2-U05",
+          "lexical_invocation_line": 214,
+          "baseline_lexical_invocation_line": 209
+        },
+        {
+          "id": "S2-U06",
+          "lexical_invocation_line": 230,
+          "baseline_lexical_invocation_line": 225
+        },
+        {
+          "id": "S2-U07",
+          "lexical_invocation_line": 232,
+          "baseline_lexical_invocation_line": 227
+        },
+        {
+          "id": "S2-U08",
+          "lexical_invocation_line": 243,
+          "baseline_lexical_invocation_line": 238
+        },
+        {
+          "id": "S2-U09",
+          "lexical_invocation_line": 252,
+          "baseline_lexical_invocation_line": 247
+        },
+        {
+          "id": "S2-U10",
+          "lexical_invocation_line": 259,
+          "baseline_lexical_invocation_line": 254
+        },
+        {
+          "id": "S2-U13",
+          "lexical_invocation_line": 272,
+          "baseline_lexical_invocation_line": 267
+        },
+        {
+          "id": "S2-U14",
+          "lexical_invocation_line": 285,
+          "baseline_lexical_invocation_line": 280
+        },
+        {
+          "id": "S2-U15",
+          "lexical_invocation_line": 296,
+          "baseline_lexical_invocation_line": 291
+        },
+        {
+          "id": "S2-U16",
+          "lexical_invocation_line": 300,
+          "baseline_lexical_invocation_line": 295
+        },
+        {
+          "id": "S2-U17",
+          "lexical_invocation_line": 315,
+          "baseline_lexical_invocation_line": 310
+        },
+        {
+          "id": "S2-U18",
+          "lexical_invocation_line": 332,
+          "baseline_lexical_invocation_line": 327
+        },
+        {
+          "id": "S2-U19",
+          "lexical_invocation_line": 406,
+          "baseline_lexical_invocation_line": 401
+        },
+        {
+          "id": "S2-U20",
+          "lexical_invocation_line": 420,
+          "baseline_lexical_invocation_line": 415
+        },
+        {
+          "id": "S2-U11",
+          "lexical_invocation_line": 432,
+          "baseline_lexical_invocation_line": 427
+        },
+        {
+          "id": "S2-U12",
+          "lexical_invocation_line": 440,
+          "baseline_lexical_invocation_line": 435
+        },
+        {
+          "id": "S2-U21",
+          "lexical_invocation_line": 449,
+          "baseline_lexical_invocation_line": 444
+        },
+        {
+          "id": "S2-U22",
+          "lexical_invocation_line": 458,
+          "baseline_lexical_invocation_line": 453
+        }
+      ]
+    },
+    {
+      "path": "app_program/subsystem4/buddy4_test.c",
+      "guard": "APP_TEST",
+      "count": 3,
+      "calls": [
+        {
+          "id": "S4-U01",
+          "lexical_invocation_line": 16,
+          "baseline_lexical_invocation_line": 12
+        },
+        {
+          "id": "S4-U02",
+          "lexical_invocation_line": 24,
+          "baseline_lexical_invocation_line": 20
+        },
+        {
+          "id": "S4-U03",
+          "lexical_invocation_line": 31,
+          "baseline_lexical_invocation_line": 27
+        }
+      ]
+    }
+  ],
+  "total_test_checks": 63,
+  "imported_macro": {
+    "path": "app_program/test_report.h",
+    "definition_line": 27,
+    "metadata_line": 39,
+    "identical_normalized_text_to_fixed_baseline": true,
+    "pass_has_location": false,
+    "summary_has_location": false,
+    "failure_has_location": true
+  },
+  "console_route": [
+    {
+      "path": "app_program/test_report.h",
+      "symbol": "TEST_CHECK",
+      "edge": "tm_printf((UB *)\"[TEST] %s FAIL  %s   (%s:%d)\\n\", (id), (desc), __FILE__, __LINE__)"
+    },
+    {
+      "path": "lib/libtm/libtm_printf.c",
+      "symbol": "tm_printf",
+      "edge": "tm_vsprintf(out_cons, ...)"
+    },
+    {
+      "path": "lib/libtm/libtm_printf.c",
+      "symbol": "out_cons",
+      "edge": "tm_putchar or tm_putstring according to TM_OUTBUF_SZ"
+    },
+    {
+      "path": "lib/libtm/libtm.c",
+      "symbol": "tm_putstring / tm_putchar",
+      "edge": "tm_snd_dat"
+    },
+    {
+      "path": "lib/libtm/sysdepend/pico_rp2040/tm_com.c",
+      "symbol": "tm_snd_dat",
+      "edge": "tm_usb_console_put when TM_CONSOLE_USB_CDC; uart_snd_dat when TM_CONSOLE_UART"
+    },
+    {
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c",
+      "symbol": "tm_usb_console_put / usb_service_task",
+      "edge": "USB ring followed by tm_tusb_write_char / tm_tusb_write_flush"
+    },
+    {
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_tinyusb_glue.c",
+      "symbol": "tm_tusb_write_char / tm_tusb_write_flush",
+      "edge": "TinyUSB CDC write / flush"
+    }
+  ],
+  "profile_boundary": {
+    "production": "tools/compliance/build_targets.py COMMON TEST=0; production LIVE does not override TEST.",
+    "self_tests": "self_tests profile explicitly sets TEST=1; each listed check is inside APP_TEST.",
+    "make_flag_binding": "build_make/pico_rp2040.mk:334 maps TEST to -DAPP_TEST=$(TEST)."
+  },
+  "conclusion": "Cleanup can change file/line metadata in failed APP_TEST console diagnostics. The inspected route ends at USB CDC and/or UART, not MQTT. This audit does not establish a normal production MQTT-byte change from source metadata.",
+  "limits": [
+    "Lexical invocation line records locate the call; they are not a claim about compiler-expanded multi-line __LINE__ values.",
+    "__FILE__ output also depends on compiler source path spelling.",
+    "This source audit is not a runtime failure-console capture, complete imported macro expansion audit, whole-program output-equivalence proof, or physical timing result.",
+    "Imported assert/debug implementations were not modified or granted a new exception. No preservation exception or compliance approval is granted by this record."
+  ],
+  "snapshot_kind": "Hash-bound working tree; HEAD identifies ancestry, not a claim that every inspected input is committed.",
+  "tracked_changes_present_at_capture": [
+    "app_program/controller/s3_integration.c",
+    "testing/compliance/inventory_policies.json",
+    "testing/compliance/test_instrument_harnesses.py",
+    "testing/integration/controller_test.mk",
+    "testing/integration/runtime_test.c",
+    "tools/compliance/differential.py",
+    "tools/compliance/instrument_harnesses.py",
+    "tools/compliance/traces/runtime_observer.h"
+  ],
+  "new_source_inputs_present_at_capture": [
+    "testing/integration/integration_storage_compat.h"
+  ]
+}
