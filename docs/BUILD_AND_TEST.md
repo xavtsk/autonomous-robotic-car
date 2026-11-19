@@ -30,6 +30,32 @@ syntax; the backslashes above are POSIX shell continuations. Supply profile
 options on every build. Compare the same options, compiler/SDK and source
 revision when measuring RAM, flash or loadable bytes.
 
+On this Windows laptop, the pinned local compiler and SDK are under
+`C:\Code\autonomous-robotic-car\build\tooling`. The corresponding explicit build
+command is below; run it from the repository root. It does not flash anything.
+Keep the resulting candidate separate from the saved baseline directory.
+
+```powershell
+$env:Path = "$PWD\build\tooling\arm\bin;C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:Path"
+make -C build_make PICO_SDK_PATH="$PWD/build/tooling/pico-sdk" SMP=1 CONSOLE=usb_cdc CRASH_REPORT=0 WIFI=cyw43 NET=lwip MQTT=1 S3_MOTION=1 S3_STRAIGHT_TEST=0 S4=1 S4_BENCH=0 S5=1 S5_HARDWARE_CONFIRMED=1 IR_DEBUG=1 IMU_DEBUG=0 TEST=0 IR_BENCH=0 IR_CHANNELS=1 DIAGNOSTICS=0 MOTION_SMOKE=0 -j4
+```
+
+Verify `arm-none-eabi-gcc -dumpfullversion` is `14.3.1` and
+`git -C build/tooling/pico-sdk rev-parse HEAD` is
+`98a542c1a62fb549ffb5d66a3e5892b06276b670` before comparing images. A newly
+installed toolchain or changed private hotspot configuration requires a new
+manifest; do not compare its hash with a public-example CI image as though the
+inputs were identical. Windows Application Control may also prevent local build
+helpers from launching; retain the failure instead of treating it as a C result.
+
+The operating periods are distinct and unchanged:
+
+| Path | Period |
+| --- | --- |
+| Integrated IR acquisition/navigation | 5 ms (200 Hz) |
+| Motion control | 10 ms (100 Hz) |
+| Stationary IR bench | 10 ms (100 Hz) |
+
 Bench, self-test, diagnostics and movement-smoke profiles are separate:
 consult [IR bench](../testing/subsystem3/README.md),
 [motion smoke](../testing/diagnostics/MOTION_SMOKE.md), and the
@@ -58,6 +84,19 @@ stdout/stderr and exit codes. Consult its artifacts for the exact tested scope.
 Compiling a target without running it is not an executed test. If local Windows
 Application Control blocks a program, preserve that result and use the authorized
 Linux runner; do not infer success or keep trying alternate native launch paths.
+
+Each target artifact contains full ELF/UF2/map files, loadable flash bytes,
+compiler stack reports, real compile commands, build logs and hashes. Newer
+target runs additionally contain all symbol allocations and all stack changes,
+including increases, removed functions and duplicate local symbol names.
+Information-bit counts in CR1 tables are separate from these padded target
+allocations. Compiler stack reports are not physical task high-water values.
+
+The conditional-coverage collector preprocesses a disposable copy using the
+recorded compiler definitions and public example network settings. Original
+sources are hashed before and after observation. Missing arms, preprocessing
+failures and host-only paths remain explicit; a successful collector invocation
+does not mean every supported conditional branch has been covered.
 
 ## Compliance tooling
 

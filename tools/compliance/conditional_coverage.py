@@ -79,6 +79,9 @@ def preprocess_arguments(arguments, source):
         if arg in {'-o', '-MF', '-MT', '-MQ'}:
             index += 2
             continue
+        if arg.startswith(('-MF', '-MT', '-MQ')):
+            index += 1
+            continue
         if arg in {'-I', '-isystem', '-iquote', '-include', '-imacros', '-isysroot', '-D', '-U'}:
             if index+1 >= len(arguments):
                 raise ValueError('Missing compiler option argument: '+arg)
@@ -130,10 +133,9 @@ def main():
             # Mixed ownership: observe only the explicitly owned conditional.
             if path in scope.get('mixed_files', {}):
                 region = scope['mixed_files'][path]
-                start = text.index(region['project_region_start'])
-                end = text.index(region['project_region_end'], start)+len(region['project_region_end'])
-                first, last = text.count('\n', 0, start)+1, text.count('\n', 0, end)+1
-                rows = [row for row in rows if first <= row['line'] <= last]
+                ranges = [(text.count('\n', 0, start)+1, text.count('\n', 0, end-1)+1)
+                          for start, end in inventory.mixed_region_spans(text, region)]
+                rows = [row for row in rows if any(first <= row['line'] <= last for first, last in ranges)]
             branches.extend(rows)
             (overlay/path).write_text(changed, encoding='utf-8')
         except ValueError as exc:

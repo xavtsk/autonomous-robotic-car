@@ -44,8 +44,37 @@ complete replay gate. Later candidates require their own exact run and artifacts
 Local Windows compile/link checks must remain distinct because Application
 Control has blocked generated native test programs in this workspace.
 
-The [alias/assertion batch record](compliance/ALIAS_ASSERT_BATCH.md) describes
-the first C99 type/assertion cleanup and its limited source/compile-only evidence.
+The most recently examined complete production image is cleanup revision
+`133115478bb204df3e8e346810959a691eb245e2`, built with public example network
+settings in [Linux run 44582064172](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44582064172).
+It has not been flashed. The physical baseline above remains the rollback image.
+
+| Work or evidence | Current result |
+| --- | --- |
+| Linux regression infrastructure | Implemented: pinned actions/tools, separate baseline/candidate trees, GCC/Clang and ASan/UBSan, retained failure logs. |
+| Compact debug packet builder | Executed boundary tests and exact packet traces match; matched production static RAM decreases by 128 bytes. |
+| C99 aliases and assertions | Original assertion conditions retained; exercised C99 checks pass. One primitive `float` spelling is retained under pending BARR-P12. |
+| Repaired production executable | Entire flash payload is byte-identical to the pre-alias debug-builder image; [matched evidence](compliance/evidence/alias-repaired-target.json). |
+| Semantic comparison at `1331154` | Motion, both terrain layouts, obstacle, controller/MQTT, debug packets, navigation and all 1008 barcode replay comparisons match. |
+| Complete regression gate | **Failed:** two original barcode fixture expectations also fail on the fixed baseline. [Investigation](compliance/evidence/BASELINE_FAILURES.md) preserves those expectations. |
+| BARR formatting/module comments | Token-preserving batch `6326fcb` covers 239 files. Production bytes match exactly and the repaired differential rerun matches; [record](compliance/evidence/FORMAT_CI_44579973340.md) retains the earlier harness failure. |
+| Motion private storage | Implemented in `ea830e7`; local compile evidence saves 26 retained-symbol bytes. Candidate Linux execution, full target padding and timing remain pending. |
+| Conditional-compilation collector | First run rejected joined dependency-output flags. The parser repair is regression-tested; fresh coverage evidence is still required. |
+| Complete BARR / CR1 closure | **Incomplete:** remaining field gaps, function contracts, statement/naming rules, profile coverage and pending exceptions remain in their ledgers. |
+| New candidate physical behavior | **Not verified:** no cleanup image has been flashed or driven in this implementation session. |
+
+The [alias/assertion batch record](compliance/ALIAS_ASSERT_BATCH.md) and
+[compiler investigation](compliance/evidence/ALIAS_TARGET_INVESTIGATION.md)
+distinguish source equivalence, executed traces and target-byte evidence.
+The later branch commits and working tree are implementation work in progress;
+they do not inherit the exact-image or execution result of `1331154`.
+
+Remaining rollout evidence includes matched final-profile artifacts, complete
+software gates, supervised course/barcode/hump/avoidance/control checks, and the
+three-minute timing/reconnection session with a ten-second hotspot interruption.
+Task timing must be judged against each task's own period. No measured high-water
+stack or full-course result is inferred from compiler `.su` estimates. Flashing,
+motor operation and merging to `main` remain separate user-directed actions.
 
 Use [BUILD_AND_TEST.md](BUILD_AND_TEST.md) for commands and the
 [documentation index](README.md) for current interfaces. Dated reports and logs

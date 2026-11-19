@@ -42,7 +42,8 @@ class ConditionalCoverageTests(unittest.TestCase):
 
     def test_compiler_options_preserve_forced_include(self):
         command = COVERAGE.preprocess_arguments(
-            ['cc', '-include', 'fixture.c', '-DFOO=1', '-c', 'a.c', 'b.c', '-o', 'a.o', '-MMD', '-lm'], 'overlay/a.c')
+            ['cc', '-include', 'fixture.c', '-DFOO=1', '-c', 'a.c', 'b.c', '-o', 'a.o', '-MMD',
+             '-MFobject.d', '-MTobject.o', '-MQquoted.o', '-lm'], 'overlay/a.c')
         self.assertEqual(command, ['cc', '-include', 'fixture.c', '-DFOO=1', '-E', '-P', 'overlay/a.c'])
 
     def test_end_without_newline_and_digraph(self):
@@ -60,10 +61,14 @@ class ConditionalCoverageTests(unittest.TestCase):
             source = Path(directory)/'fixture.c'
             source.write_text(text)
             for choice, expected in ((1, rows[0]['id']), (0, rows[1]['id'])):
-                result = subprocess.run([compiler, '-E', '-P', f'-DCHOICE={choice}', str(source)],
+                command = COVERAGE.preprocess_arguments(
+                    [compiler, '-MMD', '-MF'+str(Path(directory)/'unused.d'), '-MTunused.o',
+                     f'-DCHOICE={choice}', '-c', str(source), '-o', str(Path(directory)/'unused.o')], source)
+                result = subprocess.run(command,
                                         capture_output=True, text=True, check=True)
                 observed = re.findall(COVERAGE.MARKER+r'([0-9a-f]{24})', result.stdout)
                 self.assertEqual(observed, [expected])
+                self.assertFalse((Path(directory)/'unused.d').exists())
 
 
 if __name__ == '__main__':
