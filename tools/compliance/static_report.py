@@ -76,6 +76,9 @@ def main():
         ('standalone_header_batch', [sys.executable, 'tools/compliance/verify_header_pairs.py',
                                      '--manifest', 'docs/compliance/HEADER_PAIRS_BATCH2.json',
                                      '--candidate', '31719bc44e413b97c3f5c3e947695502d6fac77d']),
+        ('codec_contracts_batch', [sys.executable, 'tools/compliance/verify_comment_batch.py',
+                                   '--manifest', 'docs/compliance/CODEC_FUNCTION_CONTRACTS.json',
+                                   '--candidate', '0ba528b193872e2b515d44cb2d33dbdbb8585f1e']),
         ('audit_tests', [sys.executable, '-m', 'unittest', 'discover', '-v', '-s', 'testing/compliance', '-p', 'test_*.py']),
     ]
     for label, path in (('cr1_runner_syntax', 'testing/change_requirement_1/run_all.sh'),

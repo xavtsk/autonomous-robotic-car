@@ -49,6 +49,12 @@ surface hysteresis. Each batch has exact preprocessing fingerprints, preserved
 old comments and zero Clang documentation diagnostics in its recorded contexts.
 Their immutable commits are checked separately by the audit workflow.
 
+The [navigation and telemetry codec contracts](CODEC_FUNCTION_CONTRACTS.md)
+add 28 definitions and 14 prototypes at `0ba528b`. They distinguish telemetry
+encoding that may leave partial output on rejection from decoders that commit
+only validated outputs. The current version-3 snapshot's pose fields and exact
+rounding/encoding ranges are documented without changing packet bytes.
+
 ## Earlier observed workload snapshot
 
 `tools/compliance/barr_functions.py` reuses the compiler contexts and six profile

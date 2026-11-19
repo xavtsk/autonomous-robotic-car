@@ -331,7 +331,9 @@
       "evidence": [
         "docs/compliance/CONTROL_DEBUG_CONTRACTS.json; 13 definitions and 6 prototypes; comment-only source proof and clean compiler documentation check at 07ad498",
         "docs/compliance/MOTION_FUNCTION_CONTRACTS.json; 31 definitions and 17 prototypes; reviewed units and invalid-output semantics at 0c5c53b",
-        "docs/compliance/IR_FUNCTION_CONTRACTS.json; 10 definitions and 9 prototypes; reviewed scan, calibration and hysteresis contracts at 2a10215"
+        "docs/compliance/IR_FUNCTION_CONTRACTS.json; 10 definitions and 9 prototypes; reviewed scan, calibration and hysteresis contracts at 2a10215",
+        "docs/compliance/CODEC_FUNCTION_CONTRACTS.json; 28 definitions and 14 prototypes at 0ba528b, exact rejection/output-mutation contracts and clean compiler documentation observations",
+        "docs/compliance/GENERATED_REFERENCE.md; pinned generation and source-bound compiler/XML comparison, first Linux generation pending"
       ]
     },
     {
@@ -589,7 +591,7 @@
       "requirement": "Make module basenames unique in their first eight characters and use .c/.h suffixes.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/evidence/SYS_ARCH_HEADER_PAIR.json; actual target source command resolves a split source/include module pair; first-eight-character uniqueness across other modules remains open",
+        "docs/compliance/evidence/SYS_ARCH_HEADER_PAIR.json; actual target source command resolves a split source/include module pair; first-eight-character uniqueness across other modules remains open; historical resolution evidence only: this unchanged imported file was restored/excluded by b3ffacb; see TEMPLATE_BOUNDARY_CORRECTION.md",
         "docs/compliance/HEADER_CLOSURE_PLAN.md; identifies remaining test-name collisions and fixed external include-name boundaries without approving exceptions"
       ]
     },
@@ -619,8 +621,9 @@
       "status": "unreviewed",
       "evidence": [
         "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 exact same-root source/header pairs bound to d26a980; not source-wide closure",
-        "docs/compliance/evidence/SYS_ARCH_HEADER_PAIR.json; sys_arch.c already has compiler-resolved include/arch/sys_arch.h",
-        "docs/compliance/HEADER_CLOSURE_PLAN.md; 55 remaining non-colocated candidates require module/interface resolution"
+        "docs/compliance/evidence/SYS_ARCH_HEADER_PAIR.json; sys_arch.c already has compiler-resolved include/arch/sys_arch.h; historical resolution evidence only: this unchanged imported file was restored/excluded by b3ffacb; see TEMPLATE_BOUNDARY_CORRECTION.md",
+        "docs/compliance/HEADER_CLOSURE_PLAN.md; 55 remaining non-colocated candidates require module/interface resolution",
+        "docs/compliance/HEADER_PAIRS_BATCH2.json; 13 further same-root guarded pairs at 31719bc, 22 compiler contexts; other interfaces and naming remain open"
       ]
     },
     {
@@ -630,7 +633,9 @@
       "requirement": "Protect every header from repeated inclusion.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 added headers contain unique conventional ifndef/define guards; 13 previously existing guard candidates remain open"
+        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 added headers contain unique conventional ifndef/define guards; 13 previously existing guard candidates remain open",
+        "docs/compliance/FAKE_HEADER_GUARDS.json; 11 existing fake headers guarded at 31c63a3, exact preprocessing/signature proof",
+        "docs/compliance/HEADER_PAIRS_BATCH2.json; 13 unique conventional guards at 31719bc"
       ]
     },
     {
@@ -640,7 +645,9 @@
       "requirement": "Expose only the interface necessary to other modules.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 standalone host sources have only main externally defined and no external file-scope variables in recorded contexts; paired headers expose no invented API"
+        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 standalone host sources have only main externally defined and no external file-scope variables in recorded contexts; paired headers expose no invented API",
+        "docs/compliance/HEADER_PAIRS_BATCH2.json; 13 observed standalone main-only test interfaces expose no invented declarations at 31719bc",
+        "docs/compliance/NAVIGATION_TEST_INTERFACE.json; actual shared test declarations checked at ed34334"
       ]
     },
     {
@@ -658,7 +665,8 @@
       "requirement": "Allocate no object storage in headers.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 added headers contain no C declarations or storage; existing observer headers and other headers remain unreviewed"
+        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 added headers contain no C declarations or storage; existing observer headers and other headers remain unreviewed",
+        "docs/compliance/HEADER_PAIRS_BATCH2.json; 13 headers contain no object storage at 31719bc"
       ]
     },
     {
@@ -692,7 +700,8 @@
       "requirement": "Include the corresponding same-basename header in each C source.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 source files directly include their exact same-root header; include inversion restores original sources; other files remain open"
+        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 source files directly include their exact same-root header; include inversion restores original sources; other files remain open",
+        "docs/compliance/HEADER_PAIRS_BATCH2.json; 13 source includes added at 31719bc; bounded inversion preserves existing bodies and assertions"
       ]
     },
     {
@@ -967,7 +976,11 @@
       "enforcement": "ast-review",
       "requirement": "Make reasonable efforts to limit functions to one printed page or 100 lines.",
       "status": "unreviewed",
-      "evidence": []
+      "evidence": [
+        "docs/compliance/evidence/barcode-phase-extraction.json; 4 phase helpers, identical 854-row complete-scratch traces and unchanged stack",
+        "docs/compliance/evidence/barcode-prune-extraction.json; 3 pruning helpers, Linux trace/stack preservation; no physical timing claim",
+        "docs/compliance/evidence/barcode-edge-extraction.json; 3 edge helpers at 0289025 inverse-verified; Linux gate pending"
+      ]
     },
     {
       "id": "6.2.b",
@@ -1271,7 +1284,9 @@
       "enforcement": "ast-review",
       "requirement": "Limit nested if/else statements to two levels.",
       "status": "unreviewed",
-      "evidence": []
+      "evidence": [
+        "docs/compliance/evidence/barcode-edge-extraction.json; extracted exits return only to original dispatcher; work-unit/tick charging and remaining phase order preserved"
+      ]
     },
     {
       "id": "8.2.c",
