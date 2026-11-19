@@ -6,41 +6,31 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $compilerDir = Join-Path $MsysRoot 'ucrt64\bin'
 $compiler = Join-Path $compilerDir 'gcc.exe'
-$testDir = Join-Path $repoRoot 'build\host-tests\buddy4'
+. (Join-Path $PSScriptRoot 'host-test-evidence.ps1')
+$HostTestEvidence = New-HostTestEvidence -RepoRoot $repoRoot -Suite 'buddy4' -CompileOnly ([bool]$CompileOnly)
+$testDir = $HostTestEvidence.Directory
 $testExe = Join-Path $testDir 'test_buddy4.exe'
-$logPath = Join-Path $testDir 'latest.log'
-if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
-    throw "GCC was not found at $compiler. Supply -MsysRoot with your MSYS2 installation folder."
-}
-New-Item -ItemType Directory -Force -Path $testDir | Out-Null
+$hostTestFailure = $null
 $originalPath = $env:PATH
 try {
+    if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
+        throw "GCC was not found at $compiler. Supply -MsysRoot with your MSYS2 installation folder."
+    }
     $env:PATH = "$compilerDir;$originalPath"
-    "Buddy 4 host tests: $(Get-Date -Format o)" | Set-Content -LiteralPath $logPath
     $sources = @('imu_sensor', 'imu_calibration', 'tilt',
                  'hump_detection', 'events_motion', 'terr_data') |
         ForEach-Object { Join-Path $repoRoot "app_program\subsystem4\$_.c" }
     # Never define NDEBUG: the test's assertions must execute.
-    & $compiler -std=c11 -O2 -Wall -Wextra -Werror -pedantic `
+    Invoke-RecordedHostCompiler -std=c11 -O2 -Wall -Wextra -Werror -pedantic `
         "-I$repoRoot\app_program\subsystem4" `
-        "$repoRoot\testing\subsystem4\host_test.c" @sources -lm -o $testExe 2>&1 |
-        Tee-Object -FilePath $logPath -Append
-    if ($LASTEXITCODE -ne 0) { throw 'Buddy 4 test compilation failed.' }
-    'Compilation PASS' | Tee-Object -FilePath $logPath -Append
-    if ($CompileOnly) {
-        'Execution NOT RUN (-CompileOnly). No runtime pass claimed.' |
-            Tee-Object -FilePath $logPath -Append
-    } else {
-        & $testExe 2>&1 | Tee-Object -FilePath $logPath -Append
-        if ($LASTEXITCODE -ne 0) {
-            throw "Buddy 4 tests failed (exit $LASTEXITCODE). Read the assertion/error in $logPath."
-        }
-        'Execution PASS: all assertions completed.' | Tee-Object -FilePath $logPath -Append
-    }
+        "$repoRoot\testing\subsystem4\host_test.c" @sources -lm -o $testExe
+    if ($HostTestExitCode -ne 0) { throw 'Buddy 4 test compilation failed.' }
+    Invoke-RecordedHostExecutable $testExe
+    if ($HostTestExitCode -ne 0) { throw "Buddy 4 tests failed (exit $HostTestExitCode)." }
 } catch {
-    "ERROR: $($_.Exception.Message)" | Add-Content -LiteralPath $logPath
+    $hostTestFailure = $_.Exception.Message
     throw
 } finally {
     $env:PATH = $originalPath
-    Write-Host "Log: $logPath"
+    Complete-HostTestEvidence -Evidence $HostTestEvidence -Failure $hostTestFailure
 }

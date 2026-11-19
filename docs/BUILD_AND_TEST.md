@@ -126,6 +126,33 @@ On Windows use `py -3` if `python` resolves to an unavailable Store alias.
 Some dashboard Python tests compile and execute C helpers; run those in the
 Linux suite, not under the local native-execution restriction.
 
+The Windows host scripts accept `-CompileOnly` and create a unique directory for
+every invocation under `build/host-tests/<suite>/<UTC-time>-<unique-suffix>`:
+
+```powershell
+./tools/test-ir-reflectance.ps1 -CompileOnly
+./tools/test-buddy3.ps1 -CompileOnly
+./tools/test-buddy4.ps1 -CompileOnly
+```
+
+Each native command has an argument-list receipt, stdout/stderr log, exit status
+and result receipt. Successful compiler outputs include a hash. The summary
+records `COMPILE_PASS_EXECUTION_NOT_RUN`, with a separate `SKIP_COMPILE_ONLY`
+entry for every planned test execution. These are compile/link results only.
+Buddy 3 also records its reflectance child-script invocation; that child prints
+its own evidence directory. Prior directories and logs are retained. A compiler
+or script failure remains a failure, including failures before any test runs.
+Input preservation hashes cover explicit source arguments; complete transitive
+source/configuration binding comes from the Linux compliance pipeline.
+
+`testing/compliance/test_host_evidence.ps1` checks the logging helper with an
+existing Python interpreter. It exercises argument quoting, stderr, nonzero
+exit codes, compile-only skips, unique directories and a deliberately modified
+disposable input. It does not execute a generated C binary. The retained
+[Windows logging receipt](compliance/evidence/windows-host-logging.json) records
+the interpreter used and the execution-policy limitation of the separate
+Windows PowerShell 5 launch.
+
 ## Evidence to retain
 
 Record the exact source commit or working-tree digest, profile flags, toolchain

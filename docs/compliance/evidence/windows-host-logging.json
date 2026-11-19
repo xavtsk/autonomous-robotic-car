@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "baseline_for_script_arguments": "99b07b777559c0dd5d536f147fae15ea08f0d642",
+  "recorded_head": "c78662c13047ac46160d473b16e152860f163fc6",
+  "source_bytes_sha256": {
+    "tools/host-test-evidence.ps1": "c269147194b775931f1b975a93189c251dea4ca91ce7865305b0dbddbb10f56e",
+    "tools/test-buddy3.ps1": "b8486c43e8f71f8afad180e7aa79016894d8648fd6ef832b7d360a17c4ed4a5e",
+    "tools/test-buddy4.ps1": "8106e972a7a6bc3027c616a201650e0cfbbfcf13db4aef2542b8f17727a90596",
+    "tools/test-ir-reflectance.ps1": "4b6303777ba330ed511bb6a44e3cc532cd40de51a050d289987dab13ee89ad94",
+    "testing/compliance/test_host_evidence.ps1": "2fbc5ec019cf9607fdbf7a7b81c9df49beccc833ebf34278fcb5487cac9ea27d"
+  },
+  "compiler_argument_ast_comparison": [
+    {
+      "path": "tools/test-buddy3.ps1",
+      "commands": 14,
+      "identical": true
+    },
+    {
+      "path": "tools/test-buddy4.ps1",
+      "commands": 1,
+      "identical": true
+    },
+    {
+      "path": "tools/test-ir-reflectance.ps1",
+      "commands": 1,
+      "identical": true
+    }
+  ],
+  "compile_only_runs": [
+    {
+      "path": "build/host-tests/buddy3/20261119-201930-1478906-44c2a7cb/results.json",
+      "sha256": "6678afa29511c64373dbfa3b359415ee7181ff5598302be247b88a2d6e6f523f",
+      "powershell_version": "7.6.9",
+      "status": "COMPILE_PASS_EXECUTION_NOT_RUN",
+      "builds": 14,
+      "test_skips": 13,
+      "child_scripts": 1
+    },
+    {
+      "path": "build/host-tests/buddy4/20261119-201930-1247716-0f3792ca/results.json",
+      "sha256": "43c8a9fce44694938a8503dee60c5f26be8e907ec8b01379de3214fbc9ce88b7",
+      "powershell_version": "7.6.9",
+      "status": "COMPILE_PASS_EXECUTION_NOT_RUN",
+      "builds": 1,
+      "test_skips": 1,
+      "child_scripts": 0
+    },
+    {
+      "path": "build/host-tests/ir-reflectance/20261119-201930-7850431-99568c09/results.json",
+      "sha256": "4ae2a7ce8a5a7b4e316eeb727b38e4350757f88543276ae3b14d09ec2d82bd38",
+      "powershell_version": "5.1.26100.9818",
+      "status": "COMPILE_PASS_EXECUTION_NOT_RUN",
+      "builds": 1,
+      "test_skips": 1,
+      "child_scripts": 0
+    }
+  ],
+  "helper_checks": {
+    "powershell": "7.6.9",
+    "python": "build/dashboard-venv/Scripts/python.exe",
+    "python_sha256": "200d001707ed494066ef00e31e38330e32490c2a74a450ca5d66d2179396fd0e",
+    "status": "PASS",
+    "checks": [
+      "unique output directory and preserved earlier receipt",
+      "literal arguments with spaces, apostrophe, dollar and backtick",
+      "stdout and stderr retained",
+      "exit 7 retained as FAIL",
+      "nonexistent test program skipped without launch in compile-only mode",
+      "startup failure with no command still FAIL",
+      "disposable source modification detected and recorded as FAIL"
+    ]
+  },
+  "limitations": [
+    "No generated C binary was executed locally.",
+    "Direct powershell.exe -NoProfile -File test_host_evidence.ps1 was blocked by Windows script execution policy; no direct PowerShell 5 helper-test pass is claimed.",
+    "The unchanged Buddy 3 child-script launcher uses its pre-existing ExecutionPolicy Bypass option; its compile-only reflectance child completed on PowerShell 5.1.",
+    "The earlier experimental helper failure on native exit-code capture is retained under build/host-tests/evidence-tool-check/20261119-201837-9001962-f623fa84.",
+    "Explicit input hashes are not a transitive header/configuration inventory."
+  ]
+}
