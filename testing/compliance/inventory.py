@@ -242,6 +242,7 @@ def classify(row, policies):
     for rule in policies.get("rules", []):
         selectors = ("path", "owner", "name", "kind", "type_category", "storage", "type",
                      "storage_duration", "function_linkage", "linkage", "method")
+        selectors += ("stored_bits", "canonical_type")
         if all(re.fullmatch(rule.get(key, ".*"), str(row.get(key, "")))
                for key in selectors):
             result = {key: value for key, value in rule.items()
@@ -415,6 +416,8 @@ def table_row(row):
         "source": row["path"], "line": row["line"], "kind": row["kind"],
         "owner": row.get("owner", "") or "translation unit", "name": row["name"],
         "type": row.get("type", "unresolved"), "range_or_domain": range_text,
+        "producer_valid_range": (f"{domain['valid_min']}..{domain['valid_max']}"
+                                  if "valid_min" in domain and "valid_max" in domain else "not separately established"),
         "units": domain.get("units", "unresolved"), "resolution": resolution,
         "required_bits": row.get("required_bits") if row.get("required_bits") is not None else "unresolved / preservation boundary",
         "stored_bits_per_scalar_or_bitfield": row.get("stored_bits") if row.get("stored_bits") is not None else "unresolved",

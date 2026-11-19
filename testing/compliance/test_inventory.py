@@ -5,6 +5,7 @@ import io
 import importlib.util
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -31,6 +32,8 @@ class DiscoveryTests(unittest.TestCase):
             from clang import cindex
             cindex.Index.create()
         except (ImportError, OSError):
+            if os.environ.get("CR1_REQUIRE_LIBCLANG") == "1":
+                self.fail("CR1_REQUIRE_LIBCLANG=1 requires pinned libclang==18.1.1; compiler audit cannot be skipped")
             self.skipTest("Optional pinned libclang is not installed")
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -67,6 +70,32 @@ class DiscoveryTests(unittest.TestCase):
         row = {"path": "app_program/example.c", "owner": "state_t", "name": "active",
                "kind": "FIELD_DECL", "type": "BOOL", "type_category": "UINT",
                "stored_bits": 32, "storage_duration": "enclosing-object", "method": "libclang-ast"}
+        self.assertEqual(inventory.classify(row, policies)["status"], "unresolved")
+
+    def test_capture_valid_range_does_not_erase_invalid_metadata(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        row = {"path": "app_program/controller/bc_capture.h", "owner": "bcap_episode_t",
+               "name": "start_ms", "kind": "FIELD_DECL", "stored_bits": 32, "method": "libclang-ast"}
+        result = inventory.classify(row, policies)
+        self.assertEqual(result["status"], "boundary")
+        self.assertEqual(result["domain"]["max"], 4294967295)
+        self.assertEqual(result["domain"]["valid_max"], 4294967)
+        self.assertEqual(result["required_bits"], 32)
+
+    def test_capture_quiet_includes_collecting_pool_exhaustion(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        row = {"path": "app_program/controller/bc_capture.h", "owner": "bcap_t", "name": "quiet",
+               "kind": "FIELD_DECL", "stored_bits": 16, "method": "libclang-ast"}
+        result = inventory.classify(row, policies)
+        self.assertEqual(result["domain"]["max"], 4000)
+        self.assertEqual(result["required_bits"], 12)
+        self.assertEqual(result["status"], "gap")
+
+    def test_retained_public_view_needs_instance_review(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        row = {"path": "app_program/subsystem2/motion.c", "owner": "", "name": "g_cal_result",
+               "kind": "VAR_DECL", "type_category": "RECORD", "storage_duration": "static",
+               "method": "libclang-ast"}
         self.assertEqual(inventory.classify(row, policies)["status"], "unresolved")
 
     def test_inactive_branches_are_discovered(self):

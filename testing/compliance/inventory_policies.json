@@ -7,6 +7,2116 @@
   ],
   "rules": [
     {
+      "id": "test-fixture-storage",
+      "status": "test",
+      "domain": {
+        "description": "Host/fake/on-device test data must represent rejected and adversarial inputs; this disposition is test-scope only, not firmware compliance."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Host/fake/on-device test data must represent rejected and adversarial inputs; this disposition is test-scope only, not firmware compliance."
+      ],
+      "evidence": [
+        "testing/README.md"
+      ],
+      "reason": "Host/fake/on-device test data must represent rejected and adversarial inputs; this disposition is test-scope only, not firmware compliance.",
+      "path": "testing/.*|tools/compliance/.*|app_program/.*/buddy[1-5]_test\\.[ch]",
+      "type_category": ".*"
+    },
+    {
+      "id": "usb-rtos-error-and-id",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/(usb_console|usb_sdk_compat).c",
+      "owner": ".*",
+      "name": "tm_usb_def_int_ercd|tm_usb_service_tskid",
+      "status": "boundary",
+      "domain": {
+        "min": -2147483648,
+        "max": 2147483647,
+        "units": "integer code"
+      },
+      "ownership": "Service task publishes ID before USB initialization; USB ISR reads it. Registration records full tk_def_int result.",
+      "synchronization": "Existing aligned volatile word handoff and IRQ registration ordering.",
+      "constraints": [
+        "Shared exported symbol has signed32 RTOS error/task-ID ABI; def_int result also reserves initial1 for not-called. Do not replace independent word accesses with packed read/modify/write."
+      ],
+      "reason": "Shared exported symbol has signed32 RTOS error/task-ID ABI; def_int result also reserves initial1 for not-called. Do not replace independent word accesses with packed read/modify/write.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "usb-observer-word-flags",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/(usb_console|usb_sdk_compat).c",
+      "owner": ".*",
+      "name": "tm_usb_init_ok|tm_usb_nvic_enabled",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "integer code"
+      },
+      "ownership": "USB service/registration owner writes; diagnostics reads.",
+      "synchronization": "Preserve independent aligned volatile word accesses.",
+      "constraints": [
+        "Exported observer words are read independently across namespaces/contexts. Preserve full declared volatile-word ABI and isolated access width; packing with IRQ/task-owned flags would change the handoff."
+      ],
+      "reason": "Exported observer words are read independently across namespaces/contexts. Preserve full declared volatile-word ABI and isolated access width; packing with IRQ/task-owned flags would change the handoff.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "usb-link-observer-word",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c|app_program/controller/s3_integration.c",
+      "owner": ".*",
+      "name": "tm_usb_link_state",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 3,
+        "units": "integer code"
+      },
+      "ownership": "USB service task writes; sampling/report consumers observe without sharing a bitfield allocation.",
+      "synchronization": "Preserve independent aligned volatile word access.",
+      "constraints": [
+        "Exported volatile UW observer has matching external declaration in app integration; preserve word-sized cross-task read/write ABI.0=not started,1=unmounted,2=mounted,3=DTR."
+      ],
+      "reason": "Exported volatile UW observer has matching external declaration in app integration; preserve word-sized cross-task read/write ABI.0=not started,1=unmounted,2=mounted,3=DTR.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "usb-full-event-counters",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/(usb_console|usb_sdk_compat).c",
+      "owner": ".*",
+      "name": "tm_usb_dropped|tm_usb_irq_count",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "integer code"
+      },
+      "ownership": "Dropped counter under TX lock; IRQ counter incremented by USB ISR.",
+      "synchronization": "Keep existing counter-specific lock/ISR ownership.",
+      "constraints": [
+        "USB loss and IRQ counters increment with uint32 wrap for unbounded runtime; all32 bits remain significant."
+      ],
+      "reason": "USB loss and IRQ counters increment with uint32 wrap for unbounded runtime; all32 bits remain significant.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "usb-ring-indices",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c",
+      "owner": "",
+      "name": "tx_head|tx_tail",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4095,
+        "units": "integer code"
+      },
+      "ownership": "Any-context producer owns head; USB service task owns tail, under shared TX lock.",
+      "synchronization": "Interrupt-preserving SMP spinlock, or local interrupt mask on UP.",
+      "constraints": [
+        "Both ring updates mask with USB_TX_MASK=4095. Initial0 and wrap states are valid; every producer/consumer index access is within tx_lock_enter/leave."
+      ],
+      "reason": "Both ring updates mask with USB_TX_MASK=4095. Initial0 and wrap states are valid; every producer/consumer index access is within tx_lock_enter/leave.",
+      "evidence": [
+        "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c"
+      ]
+    },
+    {
+      "id": "usb-start-latch",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c",
+      "owner": "",
+      "name": "usb_started",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "integer code"
+      },
+      "ownership": "Initial kernel task startup path; independent of TX ring writers.",
+      "synchronization": "Do not group with asynchronously written ring state.",
+      "constraints": [
+        "Initial0; set1 only after successful task creation/start. Repeated initial-task calls return early when set."
+      ],
+      "reason": "Initial0; set1 only after successful task creation/start. Repeated initial-task calls return early when set.",
+      "evidence": [
+        "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c"
+      ]
+    },
+    {
+      "id": "usb-interrupt-attribute-abi",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c",
+      "owner": "mtk_dint_t",
+      "name": "intatr",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "integer code"
+      },
+      "ownership": "Automatic registration descriptor passed to RTOS.",
+      "synchronization": "Imported RTOS call ABI.",
+      "constraints": [
+        "Mirrored tk_def_int descriptor must retain exact imported layout and uint32 attribute representation, even though this call supplies MTK_TA_HLNG=1."
+      ],
+      "reason": "Mirrored tk_def_int descriptor must retain exact imported layout and uint32 attribute representation, even though this call supplies MTK_TA_HLNG=1.",
+      "evidence": [
+        "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c"
+      ]
+    },
+    {
+      "id": "usb-descriptor-buffer-abi",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c",
+      "owner": "",
+      "name": "string_descriptor",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "integer code"
+      },
+      "ownership": "USB service callback owns reusable descriptor scratch.",
+      "synchronization": "Existing single USB owner callback contract.",
+      "constraints": [
+        "TinyUSB callback returns a uint16_t pointer to UTF-16/language/header code units. Header metadata and memcpy language ID require the original byte layout and element stride."
+      ],
+      "reason": "TinyUSB callback returns a uint16_t pointer to UTF-16/language/header code units. Header metadata and memcpy language ID require the original byte layout and element stride.",
+      "evidence": [
+        "lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c"
+      ]
+    },
+    {
+      "id": "usb-configuration-octets",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c",
+      "owner": "",
+      "name": "configuration_descriptor",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code"
+      },
+      "ownership": "Immutable USB configuration descriptor.",
+      "synchronization": "Read-only.",
+      "constraints": [
+        "Exact USB descriptor byte array returned to TinyUSB; descriptor wire bytes and byte-addressability must remain unchanged."
+      ],
+      "reason": "Exact USB descriptor byte array returned to TinyUSB; descriptor wire bytes and byte-addressability must remain unchanged.",
+      "evidence": [
+        "lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c"
+      ]
+    },
+    {
+      "id": "wifi-observer-flags",
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h",
+      "owner": "T_CYW43_UTK_STATUS",
+      "name": "init_complete|ready|scan_active|scan_complete",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "integer code"
+      },
+      "ownership": "Network task/CYW43 callbacks write; external diagnostics copy the observer.",
+      "synchronization": "Preserve existing independent word publication; this does not claim a new atomic multi-field snapshot.",
+      "constraints": [
+        "Public volatile uint32 observer members are copied/read across the network-owner boundary. Preserve independent aligned word accesses and snapshot ABI; no shared bitfield read/modify/write."
+      ],
+      "reason": "Public volatile uint32 observer members are copied/read across the network-owner boundary. Preserve independent aligned word accesses and snapshot ABI; no shared bitfield read/modify/write.",
+      "evidence": [
+        "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h"
+      ]
+    },
+    {
+      "id": "wifi-observer-counters",
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h",
+      "owner": "T_CYW43_UTK_STATUS",
+      "name": "scan_count|poll_count|ip_addr",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "integer code"
+      },
+      "ownership": "Network task owns updates; status readers copy.",
+      "synchronization": "Preserve existing observer word accesses.",
+      "constraints": [
+        "Scan/poll counters wrap; IPv4 stores all32 raw network address bits. Public observer layout and volatile reads are retained."
+      ],
+      "reason": "Scan/poll counters wrap; IPv4 stores all32 raw network address bits. Public observer layout and volatile reads are retained.",
+      "evidence": [
+        "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h"
+      ]
+    },
+    {
+      "id": "wifi-observer-sdk-results",
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h",
+      "owner": "T_CYW43_UTK_STATUS",
+      "name": "init_result|link_status|strongest_rssi",
+      "status": "boundary",
+      "domain": {
+        "min": -2147483648,
+        "max": 2147483647,
+        "units": "integer code"
+      },
+      "ownership": "CYW43 owner writes SDK results; external status readers observe.",
+      "synchronization": "Preserve signed word copy/access ABI.",
+      "constraints": [
+        "Public observer preserves SDK signed results. strongest_rssi initializes to-32768 and normally receives signed16 scan RSSI, but the shared public member remains int32; other results retain full SDK return representation."
+      ],
+      "reason": "Public observer preserves SDK signed results. strongest_rssi initializes to-32768 and normally receives signed16 scan RSSI, but the shared public member remains int32; other results retain full SDK return representation.",
+      "evidence": [
+        "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h"
+      ]
+    },
+    {
+      "id": "wifi-observer-owner",
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h",
+      "owner": "T_CYW43_UTK_STATUS",
+      "name": "owner_prc",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "integer code"
+      },
+      "ownership": "Network startup task writes once; diagnostic readers observe.",
+      "synchronization": "Initialization-before-observation word publication.",
+      "constraints": [
+        "Stores tk_get_prc cast to uint32 in the public observer; preserve RTOS result representation and observer ABI rather than assuming a one-bit core index."
+      ],
+      "reason": "Stores tk_get_prc cast to uint32 in the public observer; preserve RTOS result representation and observer ABI rather than assuming a one-bit core index.",
+      "evidence": [
+        "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h"
+      ]
+    },
+    {
+      "id": "wifi-observer-mac",
+      "path": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h",
+      "owner": "T_CYW43_UTK_STATUS",
+      "name": "mac",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code"
+      },
+      "ownership": "Network initialization receives SDK MAC bytes.",
+      "synchronization": "Initialization lifecycle.",
+      "constraints": [
+        "SDK fills six MAC octets through a byte pointer; preserve all48 bits and output-buffer stride."
+      ],
+      "reason": "SDK fills six MAC octets through a byte pointer; preserve all48 bits and output-buffer stride.",
+      "evidence": [
+        "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h"
+      ]
+    },
+    {
+      "id": "wifi-poll-word-handoff",
+      "path": "lib/libwifi/sysdepend/pico_rp2040/(cyw43_utk|cyw43_utk_compat).c",
+      "owner": "",
+      "name": "cyw43_utk_poll_requested",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "integer code"
+      },
+      "ownership": "SDK hook writes request; CYW43 owner clears after poll.",
+      "synchronization": "Existing independent aligned volatile-word handoff.",
+      "constraints": [
+        "Exported volatile32 flag is set by SDK schedule hook and cleared by network owner. Preserve isolated word accesses and matching cross-namespace declaration; do not combine with another writer allocation."
+      ],
+      "reason": "Exported volatile32 flag is set by SDK schedule hook and cleared by network owner. Preserve isolated word accesses and matching cross-namespace declaration; do not combine with another writer allocation.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "wifi-retry-phase",
+      "path": "lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h",
+      "owner": "wifi_retry_policy_t",
+      "name": "phase",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2,
+        "units": "integer code"
+      },
+      "ownership": "Single CYW43 owner.",
+      "synchronization": "Single-owner retry state.",
+      "constraints": [
+        "Only ATTEMPT/BACKOFF/UP values0..2 are assigned, including zero initialization; existing2-bit state is sufficient."
+      ],
+      "reason": "Only ATTEMPT/BACKOFF/UP values0..2 are assigned, including zero initialization; existing2-bit state is sufficient.",
+      "evidence": [
+        "lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h"
+      ]
+    },
+    {
+      "id": "wifi-retry-clock",
+      "path": "lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h",
+      "owner": "wifi_retry_policy_t",
+      "name": "since_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 18446744073709551615,
+        "units": "microseconds"
+      },
+      "ownership": "Single CYW43 owner.",
+      "synchronization": "Single-owner retry state.",
+      "constraints": [
+        "Copies caller monotonic uint64 timestamps and subtracts modulo64; no session-duration narrowing."
+      ],
+      "reason": "Copies caller monotonic uint64 timestamps and subtracts modulo64; no session-duration narrowing.",
+      "evidence": [
+        "lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h"
+      ]
+    },
+    {
+      "id": "wifi-configurable-delays",
+      "path": "lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h",
+      "owner": "wifi_retry_policy_t",
+      "name": "delay_us|next_delay_us",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds"
+      },
+      "ownership": "Single CYW43 retry owner; compile-time configuration defines numeric domain.",
+      "synchronization": "Single-owner retry state.",
+      "constraints": [
+        "Compile-time delay overrides are explicitly valid through UINT32_MAX; doubling uses uint64 then caps. A width based only on default30 seconds would reject existing supported configurations."
+      ],
+      "reason": "Compile-time delay overrides are explicitly valid through UINT32_MAX; doubling uses uint64 then caps. A width based only on default30 seconds would reject existing supported configurations.",
+      "evidence": [
+        "lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h"
+      ]
+    },
+    {
+      "id": "barcode-retained-config-times",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_stored_config_t",
+      "name": "max_gap_us|min_narrow_us|max_run_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 214748364,
+        "units": "integer code"
+      },
+      "ownership": "Barcode owner stores only after config_valid.",
+      "synchronization": "Owner-local decoder.",
+      "constraints": [
+        "Validated quiet_modules>=10 and max_run*quiet_modules<2^31 bound max_run to214748364; gap/narrow<=max_run. Include zero-initialized unconfigured object. Existing28-bit members retain all accepted values."
+      ],
+      "reason": "Validated quiet_modules>=10 and max_run*quiet_modules<2^31 bound max_run to214748364; gap/narrow<=max_run. Include zero-initialized unconfigured object. Existing28-bit members retain all accepted values.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-retained-config-frame",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_stored_config_t",
+      "name": "max_frame_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2147483647,
+        "units": "integer code"
+      },
+      "ownership": "Barcode owner stores only after config_valid.",
+      "synchronization": "Owner-local decoder.",
+      "constraints": [
+        "Validator requires max_frame_us<2^31; include zero initialization. Existing31-bit member covers the supported configuration domain."
+      ],
+      "reason": "Validator requires max_frame_us<2^31; include zero initialization. Existing31-bit member covers the supported configuration domain.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-retained-config-quiet",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_stored_config_t",
+      "name": "quiet_modules",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 50,
+        "units": "modules"
+      },
+      "ownership": "Barcode owner stores only after config_valid.",
+      "synchronization": "Owner-local decoder.",
+      "constraints": [
+        "Zero initialization or validated10..50; six stored bits cover every permitted quiet-zone configuration."
+      ],
+      "reason": "Zero initialization or validated10..50; six stored bits cover every permitted quiet-zone configuration.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-record-packed-samples",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "sample|pre",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "packed sample bits"
+      },
+      "ownership": "Barcode-record owner; pre-history and frozen work borrow the same packed format.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Each uint16 element already encodes darkness10 bits plus time-step6 bits. Preserve raw packed word representation and existing bit extraction; producer-valid darkness<=1000, step<=63."
+      ],
+      "reason": "Each uint16 element already encodes darkness10 bits plus time-step6 bits. Preserve raw packed word representation and existing bit extraction; producer-valid darkness<=1000, step<=63.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-record-residual",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "residual_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 499,
+        "units": "microseconds"
+      },
+      "ownership": "Barcode-record owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "rec_step computes remainder total-units*500 after checking units<=63. Initial0 and remainder499 are valid; keep the transient uint32 total arithmetic unchanged."
+      ],
+      "reason": "rec_step computes remainder total-units*500 after checking units<=63. Initial0 and remainder499 are valid; keep the transient uint32 total arithmetic unchanged.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-record-prominence",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "prominence",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 100,
+        "units": "darkness units"
+      },
+      "ownership": "Frozen per recording by barcode owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Initialized0 then rec_paper_prominence clamps15..100 before storage. Diagnostic/faint tests still distinguish zero from minimum15."
+      ],
+      "reason": "Initialized0 then rec_paper_prominence clamps15..100 before storage. Diagnostic/faint tests still distinguish zero from minimum15.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-pre-time",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "pre_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1531500,
+        "units": "microseconds"
+      },
+      "ownership": "Barcode pre-history owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Post-call history<=1500000us; rec_pre_push first adds one maximum31500us step before dropping old entries. Include transient1531500, requiring21 bits."
+      ],
+      "reason": "Post-call history<=1500000us; rec_pre_push first adds one maximum31500us step before dropping old entries. Include transient1531500, requiring21 bits.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-prefix-time",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "prefix_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1500000,
+        "units": "microseconds"
+      },
+      "ownership": "Barcode-record owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Copies pre_us only after rec_pre_push has trimmed it to the1.5s history limit; retains zero initialization."
+      ],
+      "reason": "Copies pre_us only after rec_pre_push has trimmed it to the1.5s history limit; retains zero initialization.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-record-clamped-white",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "leading_us|white_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2147483647,
+        "units": "microseconds"
+      },
+      "ownership": "Barcode-record owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Waiting intervals use sat_add capped at0x7fffffff; leading subtraction cannot increase the cap. Recording quiet interval is bounded by the4096-sample frame."
+      ],
+      "reason": "Waiting intervals use sat_add capped at0x7fffffff; leading subtraction cannot increase the cap. Recording quiet interval is bounded by the4096-sample frame.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-work-record-count",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "frozen_count|cursor|edge_cursor",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4096,
+        "units": "sample position/count"
+      },
+      "ownership": "Per-record incremental work owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Frozen count copies record count<=4096; cursor/edge_cursor increment to the terminal end count before phase transition.12 bits would truncate4096."
+      ],
+      "reason": "Frozen count copies record count<=4096; cursor/edge_cursor increment to the terminal end count before phase transition.12 bits would truncate4096.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-work-sample-index",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "best|peak|dip|ext",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4095,
+        "units": "sample index"
+      },
+      "ownership": "Per-record incremental work owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Assignments copy a cursor only while cursor<frozen_count<=4096; extrema are actual sample indices, not terminal counts."
+      ],
+      "reason": "Assignments copy a cursor only while cursor<frozen_count<=4096; extrema are actual sample indices, not terminal counts.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-work-extrema-count",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "n",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 127,
+        "units": "extrema count"
+      },
+      "ownership": "Per-record incremental work owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Extrema workspace has127 entries; last append may retain n==127 before pruning. Initial0 and terminal127 included."
+      ],
+      "reason": "Extrema workspace has127 entries; last append may retain n==127 before pruning. Initial0 and terminal127 included.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-work-pruning-indices",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "scan|cut|copy",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 125,
+        "units": "extrema index"
+      },
+      "ownership": "Per-record incremental work owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Prune scan/copy terminate when index+2>=n with n<=127. Incremented terminal125 is retained; selected cut never exceeds that safe bound."
+      ],
+      "reason": "Prune scan/copy terminate when index+2>=n with n<=127. Incremented terminal125 is retained; selected cut never exceeds that safe bound.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-work-edges",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "segment|edges",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 30,
+        "units": "segment/edge count"
+      },
+      "ownership": "Per-record incremental work owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "Edge extraction begins only with n==31 and visits n-1==30 segments; stores the terminal30 count before changing phase."
+      ],
+      "reason": "Edge extraction begins only with n==31 and visits n-1==30 segments; stores the terminal30 count before changing phase.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-work-largest-step",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "max_step_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 31500,
+        "units": "microseconds"
+      },
+      "ownership": "Per-record incremental work owner.",
+      "synchronization": "Owner-local record.",
+      "constraints": [
+        "REC_STEP_US extracts six-bit step and multiplies by500; maximum63*500=31500. Comparator stores only such step values or initial0."
+      ],
+      "reason": "REC_STEP_US extracts six-bit step and multiplies by500; maximum63*500=31500. Comparator stores only such step values or initial0.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "edge-decoder-observed-gap",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_decoder_t",
+      "name": "observed_gap_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 214748364,
+        "units": "microseconds"
+      },
+      "ownership": "Edge-based barcode decoder owner.",
+      "synchronization": "Owner-local decoder.",
+      "constraints": [
+        "Gap is rejected before assignment if above validated max_gap_us<=214748364; include zero seed/reset."
+      ],
+      "reason": "Gap is rejected before assignment if above validated max_gap_us<=214748364; include zero seed/reset.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "edge-decoder-leading-time",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_decoder_t",
+      "name": "leading_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds"
+      },
+      "ownership": "Edge-based barcode decoder owner.",
+      "synchronization": "Owner-local decoder.",
+      "constraints": [
+        "Transition to first black stores raw uint32 elapsed white interval. No frame limit applies while waiting; retain wrapping elapsed value."
+      ],
+      "reason": "Transition to first black stores raw uint32 elapsed white interval. No frame limit applies while waiting; retain wrapping elapsed value.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "edge-decoder-trailing-time",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_decoder_t",
+      "name": "trailing_required_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2147483647,
+        "units": "microseconds"
+      },
+      "ownership": "Edge-based barcode decoder owner.",
+      "synchronization": "Owner-local decoder.",
+      "constraints": [
+        "Assigned only after character validation: narrow<=max_run and validated max_run*quiet_modules<2^31; include zero seed."
+      ],
+      "reason": "Assigned only after character validation: narrow<=max_run and validated max_run*quiet_modules<2^31; include zero seed.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "motion-feedback-retained-counts",
+      "path": "app_program/subsystem2/motion.c",
+      "owner": "",
+      "name": "g_feedback_count",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1048575,
+        "units": "integer code"
+      },
+      "ownership": "Motion mutex owner reads/updates feedback baseline.",
+      "synchronization": "Existing motion_lock/motion_unlock.",
+      "constraints": [
+        "All assignments use wheel_encoder_bits, whose mask is WHEEL_COUNT_BITS=20. Preserve signed-delta conversion in wide arithmetic; this retained array is a20-bit-per-wheel packing gap."
+      ],
+      "reason": "All assignments use wheel_encoder_bits, whose mask is WHEEL_COUNT_BITS=20. Preserve signed-delta conversion in wide arithmetic; this retained array is a20-bit-per-wheel packing gap.",
+      "evidence": [
+        "app_program/subsystem2/motion.c"
+      ]
+    },
+    {
+      "id": "motion-controller-command-id",
+      "path": "app_program/subsystem2/ctrl_motion.c",
+      "owner": "ctrl_t",
+      "name": "cmd_id",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code"
+      },
+      "ownership": "Motion controller owner.",
+      "synchronization": "Existing motion serialization.",
+      "constraints": [
+        "Existing CMD_ID_BITS=8 stores full uint8 ID, including0=no-command and wrapping IDs."
+      ],
+      "reason": "Existing CMD_ID_BITS=8 stores full uint8 ID, including0=no-command and wrapping IDs.",
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c"
+      ]
+    },
+    {
+      "id": "motion-controller-fault-mask",
+      "path": "app_program/subsystem2/ctrl_motion.c",
+      "owner": "ctrl_t",
+      "name": "fault_bits",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 31,
+        "units": "integer code"
+      },
+      "ownership": "Motion controller owner.",
+      "synchronization": "Existing motion serialization.",
+      "constraints": [
+        "Five independently latched motion fault bits; existing field uses MOTION_FAULT_BITS_WIDTH=5."
+      ],
+      "reason": "Five independently latched motion fault bits; existing field uses MOTION_FAULT_BITS_WIDTH=5.",
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c"
+      ]
+    },
+    {
+      "id": "motion-controller-wheel-direction",
+      "path": "app_program/subsystem2/ctrl_motion.c",
+      "owner": "ctrl_t",
+      "name": "mv_back",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3,
+        "units": "integer code"
+      },
+      "ownership": "Motion controller owner.",
+      "synchronization": "Existing motion serialization.",
+      "constraints": [
+        "One backward bit per two wheels, all four masks possible; existing two-bit member."
+      ],
+      "reason": "One backward bit per two wheels, all four masks possible; existing two-bit member.",
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c"
+      ]
+    },
+    {
+      "id": "motion-still-time-full-input",
+      "path": "app_program/subsystem2/ctrl_motion.c",
+      "owner": "",
+      "name": "g_still_ms",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "milliseconds"
+      },
+      "ownership": "Motion controller owner.",
+      "synchronization": "Existing motion serialization.",
+      "constraints": [
+        "Guard checks old count<60000 before adding public dt_s-derived uint32 dt_ms and casting to uint16. Overshoot/wrap can reach any uint16 code;60000 is not a clamp."
+      ],
+      "reason": "Guard checks old count<60000 before adding public dt_s-derived uint32 dt_ms and casting to uint16. Overshoot/wrap can reach any uint16 code;60000 is not a clamp.",
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c"
+      ]
+    },
+    {
+      "id": "mqtt-status-alternation",
+      "path": "app_program/subsystem1/mqtt_bridge.c",
+      "owner": "mqtt_utk_app_take#L.*",
+      "name": "status_turn",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "integer code"
+      },
+      "ownership": "Single network-owner app-take callback.",
+      "synchronization": "Single-owner state.",
+      "constraints": [
+        "Static turn initializes1 and only stores0 or1 around successful status/data handoff."
+      ],
+      "reason": "Static turn initializes1 and only stores0 or1 around successful status/data handoff.",
+      "evidence": [
+        "app_program/subsystem1/mqtt_bridge.c"
+      ]
+    },
+    {
+      "id": "terrain-debug-ring-head",
+      "path": "app_program/subsystem4/buddy4.c",
+      "owner": "",
+      "name": "g_imu_debug_head",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 127,
+        "units": "integer code"
+      },
+      "ownership": "Terrain producer/network debug consumer share g_imu_debug_mutex.",
+      "synchronization": "Existing debug mutex.",
+      "constraints": [
+        "Every head update takes modulo IMU_DEBUG_QUEUE_ROWS=128; initial0."
+      ],
+      "reason": "Every head update takes modulo IMU_DEBUG_QUEUE_ROWS=128; initial0.",
+      "evidence": [
+        "app_program/subsystem4/buddy4.c"
+      ]
+    },
+    {
+      "id": "terrain-debug-ring-count",
+      "path": "app_program/subsystem4/buddy4.c",
+      "owner": "",
+      "name": "g_imu_debug_count",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 128,
+        "units": "integer code"
+      },
+      "ownership": "Terrain producer/network debug consumer share g_imu_debug_mutex.",
+      "synchronization": "Existing debug mutex.",
+      "constraints": [
+        "Drop-oldest decrements when full before append; count retains terminal128. Seven bits would truncate full."
+      ],
+      "reason": "Drop-oldest decrements when full before append; count retains terminal128. Seven bits would truncate full.",
+      "evidence": [
+        "app_program/subsystem4/buddy4.c"
+      ]
+    },
+    {
+      "id": "terrain-debug-distance-sentinels",
+      "path": "app_program/subsystem4/buddy4.c",
+      "owner": "imu_debug_row_t",
+      "name": "wheel_delta_um|hump_travel_um",
+      "status": "preserve",
+      "domain": {
+        "min": -2147483648,
+        "max": 2147483647,
+        "units": "micrometres"
+      },
+      "ownership": "Debug ring producer; network consumer copies under debug mutex.",
+      "synchronization": "Existing debug mutex.",
+      "constraints": [
+        "imu_debug_um preserves signed32 rounded distance, with INT32_MIN for unavailable/nonfinite/out-of-range input. Retain sentinel and conversion behavior."
+      ],
+      "reason": "imu_debug_um preserves signed32 rounded distance, with INT32_MIN for unavailable/nonfinite/out-of-range input. Retain sentinel and conversion behavior.",
+      "evidence": [
+        "app_program/subsystem4/buddy4.c"
+      ]
+    },
+    {
+      "id": "s5-packed-control-word",
+      "path": "app_program/subsystem5/buddy5.c",
+      "owner": "",
+      "name": "g_controller_status",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "integer code"
+      },
+      "ownership": "Controller setter and reader use g_mutex_id.",
+      "synchronization": "Existing S5 mutex.",
+      "constraints": [
+        "Setter masks and fills state3+fault3+route2+leg4+pass3+swapped1=16 bits, including masked invalid public inputs."
+      ],
+      "reason": "Setter masks and fills state3+fault3+route2+leg4+pass3+swapped1=16 bits, including masked invalid public inputs.",
+      "evidence": [
+        "app_program/subsystem5/buddy5.c"
+      ]
+    },
+    {
+      "id": "s5-request-token",
+      "path": "app_program/subsystem5/buddy5.c",
+      "owner": "",
+      "name": "g_requested",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "integer code"
+      },
+      "ownership": "Controller mailbox writer and S5 owner.",
+      "synchronization": "Existing S5 mutex.",
+      "constraints": [
+        "Full uint16 caller scan ID, with0=no-request; no smaller identifier lifetime assumption."
+      ],
+      "reason": "Full uint16 caller scan ID, with0=no-request; no smaller identifier lifetime assumption.",
+      "evidence": [
+        "app_program/subsystem5/buddy5.c"
+      ]
+    },
+    {
+      "id": "s5-servo-observer-byte",
+      "path": "app_program/subsystem5/buddy5.c",
+      "owner": "",
+      "name": "g_servo_deg",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 180,
+        "units": "integer code"
+      },
+      "ownership": "S5 task writes; telemetry reads whole byte.",
+      "synchronization": "Explicit independent aligned-byte observer contract.",
+      "constraints": [
+        "Initial0 or validated servo1..180. Existing comment requires one aligned byte written only by S5 and read whole by telemetry; preserve independent access granularity."
+      ],
+      "reason": "Initial0 or validated servo1..180. Existing comment requires one aligned byte written only by S5 and read whole by telemetry; preserve independent access granularity.",
+      "evidence": [
+        "app_program/subsystem5/buddy5.c"
+      ]
+    },
+    {
+      "id": "s5-request-angle",
+      "path": "app_program/subsystem5/buddy5.c",
+      "owner": "",
+      "name": "g_requested_angle",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 150,
+        "units": "degrees"
+      },
+      "ownership": "Controller request and S5 owner.",
+      "synchronization": "Existing S5 mutex.",
+      "constraints": [
+        "0 means full scan; otherwise s5_peek_angle_valid validates30..60 or120..150 in5-degree steps before storage. Eight numeric bits required unless introducing a separate index encoding."
+      ],
+      "reason": "0 means full scan; otherwise s5_peek_angle_valid validates30..60 or120..150 in5-degree steps before storage. Eight numeric bits required unless introducing a separate index encoding.",
+      "evidence": [
+        "app_program/subsystem5/buddy5.c"
+      ]
+    },
+    {
+      "id": "obstacle-public-validation-view",
+      "path": "app_program/subsystem5/(profile_obstacle|s5_codec).h",
+      "owner": "s5_profile_t|s5_observation_t",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "s5_observation_pack validates full-width ranges/edges before encoding and canonical repacking. Preserve invalid values (including edges outside+-4000 and ranges above4000); retained packed packet is independent.",
+        "units": "integer code"
+      },
+      "ownership": "Public caller input/decoded observation; published transport is23 encoded bytes.",
+      "synchronization": "Snapshot publication retains its existing mutex.",
+      "constraints": [
+        "s5_observation_pack validates full-width ranges/edges before encoding and canonical repacking. Preserve invalid values (including edges outside+-4000 and ranges above4000); retained packed packet is independent."
+      ],
+      "reason": "s5_observation_pack validates full-width ranges/edges before encoding and canonical repacking. Preserve invalid values (including edges outside+-4000 and ranges above4000); retained packed packet is independent.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "s5-input-public-view",
+      "path": "app_program/subsystem5/avoid_obstacle.h",
+      "owner": "s5_input_t",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "Caller-supplied input retains uint32 timestamp, full int8 turn input and existing double/nonfinite behavior until avoidance logic consumes it.",
+        "units": "integer code"
+      },
+      "ownership": "Borrowed controller input; retained avoidance fields are reviewed independently.",
+      "synchronization": "Single controller invocation.",
+      "constraints": [
+        "Caller-supplied input retains uint32 timestamp, full int8 turn input and existing double/nonfinite behavior until avoidance logic consumes it."
+      ],
+      "reason": "Caller-supplied input retains uint32 timestamp, full int8 turn input and existing double/nonfinite behavior until avoidance logic consumes it.",
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "s5-action-public-view",
+      "path": "app_program/subsystem5/avoid_obstacle.h",
+      "owner": "s5_action_t",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "Wide public output/input action view preserves kind, signed value and unsigned speed before downstream motor/peek API validation; no before-validation narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Action producer/caller handoff; no packed ABI change.",
+      "synchronization": "Single controller invocation.",
+      "constraints": [
+        "Wide public output/input action view preserves kind, signed value and unsigned speed before downstream motor/peek API validation; no before-validation narrowing."
+      ],
+      "reason": "Wide public output/input action view preserves kind, signed value and unsigned speed before downstream motor/peek API validation; no before-validation narrowing.",
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "capture-public-input-view",
+      "path": "app_program/controller/bc_capture.h",
+      "owner": "bcap_input_t",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "bcap_record stores raw and letter verbatim; darkness is clamped and status/surface are masked only later. Preserve every original input value and conversion before that work.",
+        "units": "integer code"
+      },
+      "ownership": "Caller supplies each sample; capture owner consumes it synchronously under its existing mutex.",
+      "synchronization": "Borrowed immutable call input; retained capture uses the sampling/report mutex.",
+      "constraints": [
+        "bcap_record stores raw and letter verbatim; darkness is clamped and status/surface are masked only later. Preserve every original input value and conversion before that work."
+      ],
+      "reason": "bcap_record stores raw and letter verbatim; darkness is clamped and status/surface are masked only later. Preserve every original input value and conversion before that work.",
+      "evidence": [
+        "app_program/controller/bc_capture.h"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "ir-debug-public-input-view",
+      "path": "app_program/controller/ir_debug.h",
+      "owner": "ir_debug_sample_t",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "ir_debug_pack rejects masks above7, valid raw above4095, darkness above1000 and surface above2. Fields must retain invalid values until validation; decoded packets are checked by canonical repacking.",
+        "units": "integer code"
+      },
+      "ownership": "Caller-owned wide validation view; the retained debug transport is the packed packet.",
+      "synchronization": "Input/output call boundary; g_ir_debug publication remains protected by g_mutex.",
+      "constraints": [
+        "ir_debug_pack rejects masks above7, valid raw above4095, darkness above1000 and surface above2. Fields must retain invalid values until validation; decoded packets are checked by canonical repacking."
+      ],
+      "reason": "ir_debug_pack rejects masks above7, valid raw above4095, darkness above1000 and surface above2. Fields must retain invalid values until validation; decoded packets are checked by canonical repacking.",
+      "evidence": [
+        "app_program/controller/ir_debug.h"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "mqtt-public-message-view",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h",
+      "owner": "T_MQTT_UTK_APP_MSG",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "Application hook fills this wide struct before payload_len/qos/retain/topic checks. routine is tested as zero/nonzero and can contain any unsigned char. Keep all pre-validation values; private validated retry storage needs separate review.",
+        "units": "integer code"
+      },
+      "ownership": "Application callback writes the message for the network owner; mqtt_utk_poll validates before publication.",
+      "synchronization": "Single CYW43 network task owns pending retry; application handoff follows its existing FIFO synchronization.",
+      "constraints": [
+        "Application hook fills this wide struct before payload_len/qos/retain/topic checks. routine is tested as zero/nonzero and can contain any unsigned char. Keep all pre-validation values; private validated retry storage needs separate review."
+      ],
+      "reason": "Application hook fills this wide struct before payload_len/qos/retain/topic checks. routine is tested as zero/nonzero and can contain any unsigned char. Keep all pre-validation values; private validated retry storage needs separate review.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "integration-request-validation-view",
+      "path": "app_program/controller/s3_integration.h",
+      "owner": "s3_control_request_t",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "Public command request is validated/encoded by s3_control_pack before mailbox storage; preserve invalid enum values and map entries rather than truncating into supported commands.",
+        "units": "integer code"
+      },
+      "ownership": "Caller-owned request; encoded mailbox is a separate retained representation.",
+      "synchronization": "Public request is borrowed; retained packet uses g_mutex.",
+      "constraints": [
+        "Public command request is validated/encoded by s3_control_pack before mailbox storage; preserve invalid enum values and map entries rather than truncating into supported commands."
+      ],
+      "reason": "Public command request is validated/encoded by s3_control_pack before mailbox storage; preserve invalid enum values and map entries rather than truncating into supported commands.",
+      "evidence": [
+        "app_program/controller/s3_integration.h"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "motion-command-public-view",
+      "path": "app_program/subsystem2/motion_pack.h",
+      "owner": "motion_cmd_t",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "Wide decoded command view preserves public command types, full command_id, enum-invalid manoeuvres and all floating values before existing command packing/dispatch.",
+        "units": "integer code"
+      },
+      "ownership": "Caller-owned decoded command; compact command words are the retained transport.",
+      "synchronization": "Public call boundary; controller dispatch retains existing lock.",
+      "constraints": [
+        "Wide decoded command view preserves public command types, full command_id, enum-invalid manoeuvres and all floating values before existing command packing/dispatch."
+      ],
+      "reason": "Wide decoded command view preserves public command types, full command_id, enum-invalid manoeuvres and all floating values before existing command packing/dispatch.",
+      "evidence": [
+        "app_program/subsystem2/motion_pack.h"
+      ],
+      "required_bits": null
+    },
+    {
+      "id": "retained-capture-review",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "",
+      "name": "g_bcap",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing."
+      ],
+      "reason": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ],
+      "required_bits": null,
+      "kind": "VAR_DECL|FIELD_DECL",
+      "type_category": "RECORD"
+    },
+    {
+      "id": "retained-calibration-review",
+      "path": "app_program/subsystem2/motion.c",
+      "owner": "",
+      "name": "g_cal_result",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing."
+      ],
+      "reason": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+      "evidence": [
+        "app_program/subsystem2/motion.c"
+      ],
+      "required_bits": null,
+      "kind": "VAR_DECL|FIELD_DECL",
+      "type_category": "RECORD"
+    },
+    {
+      "id": "retained-sampling-view-review",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "sensor_sample_task#L.*",
+      "name": "frame|command",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing."
+      ],
+      "reason": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ],
+      "required_bits": null,
+      "kind": "VAR_DECL|FIELD_DECL",
+      "type_category": "RECORD"
+    },
+    {
+      "id": "retained-bench-view-review",
+      "path": "app_program/subsystem3/buddy3.c",
+      "owner": ".*",
+      "name": "g_config|frame|output",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing."
+      ],
+      "reason": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+      "evidence": [
+        "app_program/subsystem3/buddy3.c"
+      ],
+      "required_bits": null,
+      "kind": "VAR_DECL|FIELD_DECL",
+      "type_category": "RECORD"
+    },
+    {
+      "id": "retained-terrain-result-review",
+      "path": "app_program/subsystem4/terr_data.h",
+      "owner": "terrain_monitor_t",
+      "name": "result",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing."
+      ],
+      "reason": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+      "evidence": [
+        "app_program/subsystem4/terr_data.h"
+      ],
+      "required_bits": null,
+      "kind": "VAR_DECL|FIELD_DECL",
+      "type_category": "RECORD"
+    },
+    {
+      "id": "retained-terrain-control-view-review",
+      "path": "app_program/controller/terr_link.c",
+      "owner": "terrain_control_t",
+      "name": "sample",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing."
+      ],
+      "reason": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+      "evidence": [
+        "app_program/controller/terr_link.c"
+      ],
+      "required_bits": null,
+      "kind": "VAR_DECL|FIELD_DECL",
+      "type_category": "RECORD"
+    },
+    {
+      "id": "retained-drive-output-review",
+      "path": "app_program/controller/s3_drive.h",
+      "owner": "s3_drive_t",
+      "name": "output",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing."
+      ],
+      "reason": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+      "evidence": [
+        "app_program/controller/s3_drive.h"
+      ],
+      "required_bits": null,
+      "kind": "VAR_DECL|FIELD_DECL",
+      "type_category": "RECORD"
+    },
+    {
+      "id": "retained-navigation-config-review",
+      "path": "app_program/subsystem3/line_navigation.h",
+      "owner": "s3_navigation_t",
+      "name": "config",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing."
+      ],
+      "reason": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h"
+      ],
+      "required_bits": null,
+      "kind": "VAR_DECL|FIELD_DECL",
+      "type_category": "RECORD"
+    },
+    {
+      "id": "existing-one-bit-unsigned-member",
+      "path": ".*",
+      "owner": ".*",
+      "name": ".*",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Compiler observes an existing unsigned one-bit member: its stored value can only be0or1 and one is the smallest nonzero storage width. This proves only representation width, not owner/synchronization safety for moving it."
+      ],
+      "reason": "Compiler observes an existing unsigned one-bit member: its stored value can only be0or1 and one is the smallest nonzero storage width. This proves only representation width, not owner/synchronization safety for moving it.",
+      "evidence": [
+        ".*"
+      ],
+      "kind": "FIELD_DECL",
+      "method": "libclang-ast",
+      "stored_bits": "1",
+      "type_category": "UINT|USHORT|UCHAR|ULONG"
+    },
+    {
+      "id": "static-c-bool-range",
+      "path": ".*",
+      "owner": ".*",
+      "name": ".*",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "integer code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "C _Bool storage converts every assigned value to0or1. Static lifetime is retained state; width reduction remains a packing gap and requires address/owner review."
+      ],
+      "reason": "C _Bool storage converts every assigned value to0or1. Static lifetime is retained state; width reduction remains a packing gap and requires address/owner review.",
+      "evidence": [
+        ".*"
+      ],
+      "kind": "VAR_DECL",
+      "method": "libclang-ast",
+      "storage_duration": "static",
+      "type_category": "BOOL"
+    },
+    {
+      "id": "callback-parameter-abi",
+      "path": ".*",
+      "owner": ".*",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "Parameter belongs to a callback/function-pointer type rather than an ordinary function declaration. Preserve callback ABI, complete input values and pointee compatibility.",
+        "units": "integer code"
+      },
+      "ownership": "Caller/callee callback ABI; parameter has invocation lifetime.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Parameter belongs to a callback/function-pointer type rather than an ordinary function declaration. Preserve callback ABI, complete input values and pointee compatibility."
+      ],
+      "reason": "Parameter belongs to a callback/function-pointer type rather than an ordinary function declaration. Preserve callback ABI, complete input values and pointee compatibility.",
+      "evidence": [
+        ".*"
+      ],
+      "required_bits": null,
+      "kind": "PARM_DECL",
+      "method": "libclang-ast",
+      "function_linkage": "not-function"
+    },
+    {
+      "id": "packed-packet-byte-members",
+      "path": "app_program/.*",
+      "owner": "control_debug_packet_t|s3_control_packet_t|s3_status_packet_t|ir_debug_packet_t|motion_snapshot_t|s3_barcode_packet_t|s3_navigation_packet_t|s3_raw_frame_packet_t|s5_sample_t",
+      "name": "bytes|feedback|metadata",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "raw octet"
+      },
+      "ownership": "Caller-owned packet or existing synchronized mailbox; each encoded element is an octet.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "These arrays are explicit packed protocol/object bytes. All eight bits are significant or must remain available for invalid-input rejection; no native struct image is used as a wire shortcut."
+      ],
+      "reason": "These arrays are explicit packed protocol/object bytes. All eight bits are significant or must remain available for invalid-input rejection; no native struct image is used as a wire shortcut.",
+      "evidence": [
+        "app_program/.*"
+      ]
+    },
+    {
+      "id": "floating-object-bit-alias",
+      "path": "app_program/controller/integration_codec.c",
+      "owner": "value_v",
+      "name": "u",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 18446744073709551615,
+        "units": "object representation bits"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Union view preserves every bit of the existing double object representation, including nonfinite values and signed zero; not a numeric magnitude bound."
+      ],
+      "reason": "Union view preserves every bit of the existing double object representation, including nonfinite values and signed zero; not a numeric magnitude bound.",
+      "evidence": [
+        "app_program/controller/integration_codec.c"
+      ]
+    },
+    {
+      "id": "navigation-floating-bit-alias",
+      "path": "app_program/subsystem3/navigation_codec.c",
+      "owner": "copy",
+      "name": "bits",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "object representation bits"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Union/object view preserves every float bit for explicit serialization; do not quantize control precision."
+      ],
+      "reason": "Union/object view preserves every float bit for explicit serialization; do not quantize control precision.",
+      "evidence": [
+        "app_program/subsystem3/navigation_codec.c"
+      ]
+    },
+    {
+      "id": "capture-letter-bytes",
+      "path": "app_program/controller/bc_capture.h",
+      "owner": "bcap_t",
+      "name": "letters",
+      "status": "preserve",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "raw char object bits"
+      },
+      "ownership": "Sampling capture writer and report readers share g_mutex.",
+      "synchronization": "Existing capture mutex.",
+      "constraints": [
+        "bcap_record copies p_in->letter verbatim whenever status==1 and adds NUL; invalid and embedded-NUL characters survive until text/serializer handling. A-Z five-bit packing would change rejection/output behavior."
+      ],
+      "reason": "bcap_record copies p_in->letter verbatim whenever status==1 and adds NUL; invalid and embedded-NUL characters survive until text/serializer handling. A-Z five-bit packing would change rejection/output behavior.",
+      "evidence": [
+        "app_program/controller/bc_capture.h"
+      ]
+    },
+    {
+      "id": "capture-cursor-episode",
+      "path": "app_program/controller/bc_capture.h",
+      "owner": "bcap_cursor_t",
+      "name": "episode",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 15,
+        "units": "integer code",
+        "valid_min": 0,
+        "valid_max": 12
+      },
+      "ownership": "Each dump owner has its own cursor; network cursor uses capture mutex.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Cursor starts at0, increments after each finished episode and retains terminal episode==episodes<=12."
+      ],
+      "reason": "Cursor starts at0, increments after each finished episode and retains terminal episode==episodes<=12. Existing4-bit public cursor may also contain13..15; binary serializer rejects episode above episodes without truncating further.",
+      "evidence": [
+        "app_program/controller/bc_capture.h"
+      ]
+    },
+    {
+      "id": "capture-cursor-sample",
+      "path": "app_program/controller/bc_capture.h",
+      "owner": "bcap_cursor_t",
+      "name": "sample",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4095,
+        "units": "integer code",
+        "valid_min": 0,
+        "valid_max": 4000
+      },
+      "ownership": "Each dump owner has its own cursor; network cursor uses capture mutex.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Cursor retains consumed sample count including terminal4000; already a12-bit member."
+      ],
+      "reason": "Cursor retains consumed sample count including terminal4000; already a12-bit member. Existing12-bit public member can contain4001..4095; retain those input codes and existing exhaustion behavior.",
+      "evidence": [
+        "app_program/controller/bc_capture.h"
+      ]
+    },
+    {
+      "id": "capture-start-public-validation",
+      "path": "app_program/controller/bc_capture.h",
+      "owner": "bcap_episode_t",
+      "name": "start_ms",
+      "status": "boundary",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "milliseconds",
+        "valid_min": 0,
+        "valid_max": 4294967
+      },
+      "ownership": "Capture-produced metadata also forms the public serializer input.",
+      "synchronization": "Capture mutex when accessing shared capture.",
+      "constraints": [
+        "Produced start_ms is0..4294967 after uint32 timestamp delta/1000, but public bcap_binary_next rejects values above4294967. Preserve full32-bit invalid metadata before that check; private retained adapter review is separate."
+      ],
+      "reason": "Produced start_ms is0..4294967 after uint32 timestamp delta/1000, but public bcap_binary_next rejects values above4294967. Preserve full32-bit invalid metadata before that check; private retained adapter review is separate.",
+      "evidence": [
+        "app_program/controller/bc_capture.h"
+      ]
+    },
+    {
+      "id": "integration-retained-clocks",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": ".*",
+      "name": "epoch|last_id|published_us|sampled_us|stop_sequence|g_collect_since|g_control_last|g_ir_last",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "clock/id code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Remote epochs/IDs and uint32 timestamp subtraction retain all32 bits, wrap and initial0; do not infer session-length bounds."
+      ],
+      "reason": "Remote epochs/IDs and uint32 timestamp subtraction retain all32 bits, wrap and initial0; do not infer session-length bounds.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ]
+    },
+    {
+      "id": "motion-retained-clocks",
+      "path": "app_program/subsystem2/(motion|ctrl_motion).c",
+      "owner": ".*",
+      "name": "g_last_step_us|g_navigation_refresh_us|g_report_loss_count|g_vel_stamp_us|g_mv_deadline_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "clock/count code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "These timers/deadlines or monotonically incremented report-loss counters preserve uint32 wrapping arithmetic and every observed code."
+      ],
+      "reason": "These timers/deadlines or monotonically incremented report-loss counters preserve uint32 wrapping arithmetic and every observed code.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "line-retained-clocks",
+      "path": "app_program/subsystem3/line_detection.h",
+      "owner": "s3_line_detector_t|s3_persistence_t",
+      "name": "last_us|since_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Absolute uint32 timestamps participate in modulo subtraction and retain full timer wrap."
+      ],
+      "reason": "Absolute uint32 timestamps participate in modulo subtraction and retain full timer wrap.",
+      "evidence": [
+        "app_program/subsystem3/line_detection.h"
+      ]
+    },
+    {
+      "id": "diagnostic-full-counts",
+      "path": "app_program/diagnostics/robot_diagnostics.c",
+      "owner": "DIAG_SUMMARY|DIAG_PRODUCER",
+      "name": "samples|publish_skips|last_end_us|gap_min_us|gap_max_us|exec_max_us|previous_start_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "clock/count code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "robot_diagnostics_record accepts full uint32 timestamps; gaps/execution are modulo subtraction, and counts explicitly saturate at UINT32_MAX."
+      ],
+      "reason": "robot_diagnostics_record accepts full uint32 timestamps; gaps/execution are modulo subtraction, and counts explicitly saturate at UINT32_MAX.",
+      "evidence": [
+        "app_program/diagnostics/robot_diagnostics.c"
+      ]
+    },
+    {
+      "id": "bench-full-counts",
+      "path": "app_program/subsystem3/buddy3.c",
+      "owner": "s3_bench_snapshot_t",
+      "name": "samples|max_gap_us|over_5ms|diagnostic_barcodes|adc_errors|rejects|timing_errors|overflows|event_count",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "clock/count code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Bench diagnostic counters increment over arbitrary runtime and gaps retain full uint32 timestamp subtraction; no physical-run duration assumption."
+      ],
+      "reason": "Bench diagnostic counters increment over arbitrary runtime and gaps retain full uint32 timestamp subtraction; no physical-run duration assumption.",
+      "evidence": [
+        "app_program/subsystem3/buddy3.c"
+      ]
+    },
+    {
+      "id": "mqtt-retained-clocks",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "",
+      "name": "last_publish_ms|last_control_ms",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "milliseconds"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "lwIP sys_now is a wrapping uint32 clock; existing publish pacing uses modulo subtraction."
+      ],
+      "reason": "lwIP sys_now is a wrapping uint32 clock; existing publish pacing uses modulo subtraction.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c"
+      ]
+    },
+    {
+      "id": "terrain-debug-identifiers",
+      "path": "app_program/subsystem4/buddy4.c",
+      "owner": "",
+      "name": "g_imu_debug_sequence|g_imu_debug_boot_tag",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "identifier code"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Sequence wraps through every uint32 code; boot tag retains the full hash/timestamp entropy and initial0 (tag later forced odd)."
+      ],
+      "reason": "Sequence wraps through every uint32 code; boot tag retains the full hash/timestamp entropy and initial0 (tag later forced odd).",
+      "evidence": [
+        "app_program/subsystem4/buddy4.c"
+      ]
+    },
+    {
+      "id": "ultrasonic-retained-start",
+      "path": "app_program/subsystem5/ultrasonic_sensor.c",
+      "owner": "",
+      "name": "g_started",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Hardware timestamp deadline arithmetic needs the complete uint32 wrap domain."
+      ],
+      "reason": "Hardware timestamp deadline arithmetic needs the complete uint32 wrap domain.",
+      "evidence": [
+        "app_program/subsystem5/ultrasonic_sensor.c"
+      ]
+    },
+    {
+      "id": "quiet-saturating-timers",
+      "path": "app_program/subsystem3/bc_quiet.h",
+      "owner": "s3_barcode_quiet_t",
+      "name": "strict_us|tolerant_us|pulse_us",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "microseconds"
+      },
+      "ownership": "Barcode-record owner; no shared asynchronous writer.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "s3_quiet_add explicitly saturates at UINT32_MAX. A long high/low interval can continue after threshold crossing, so S3_QUIET_PULSE_US is not a storage bound."
+      ],
+      "reason": "s3_quiet_add explicitly saturates at UINT32_MAX. A long high/low interval can continue after threshold crossing, so S3_QUIET_PULSE_US is not a storage bound.",
+      "evidence": [
+        "app_program/subsystem3/bc_quiet.h"
+      ]
+    },
+    {
+      "id": "terrain-run-and-hump-counters",
+      "path": "app_program/subsystem4/buddy4.c",
+      "owner": ".*",
+      "name": "g_run|g_published_run|g_humps|run",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "integer code"
+      },
+      "ownership": "Terrain owner and snapshot readers use existing g_mutex; debug rows copy the token.",
+      "synchronization": "Existing terrain mutex for cross-task publication.",
+      "constraints": [
+        "Run tokens wrap as uint16 and completed hump count saturates at UINT16_MAX; retain0 and full terminal values."
+      ],
+      "reason": "Run tokens wrap as uint16 and completed hump count saturates at UINT16_MAX; retain0 and full terminal values.",
+      "evidence": [
+        "app_program/subsystem4/buddy4.c"
+      ]
+    },
+    {
+      "id": "terrain-link-token-copies",
+      "path": "app_program/controller/terr_link.c",
+      "owner": "terrain_control_t",
+      "name": "run|expected_run|humps|sent_humps|sent_run",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "integer code"
+      },
+      "ownership": "Single navigation/controller sampling owner.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Copies full public uint16 run IDs and cumulative hump counts including wrap/saturation; no smaller run-count assumption."
+      ],
+      "reason": "Copies full public uint16 run IDs and cumulative hump counts including wrap/saturation; no smaller run-count assumption.",
+      "evidence": [
+        "app_program/controller/terr_link.c"
+      ]
+    },
+    {
+      "id": "integration-debug-sequence",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "",
+      "name": "g_ir_sequence|g_control_sequence",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "integer code"
+      },
+      "ownership": "Sampling owner; debug packet ready/publication uses g_mutex.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "uint8 diagnostic sequence increments and wraps; retain all byte values."
+      ],
+      "reason": "uint8 diagnostic sequence increments and wraps; retain all byte values.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ]
+    },
+    {
+      "id": "integration-debug-event-count",
+      "path": "app_program/controller/s3_integration.c",
+      "owner": "",
+      "name": "g_debug_events",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535,
+        "units": "integer code"
+      },
+      "ownership": "Sampling owner only.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Explicit boot-lifetime diagnostic event counts saturate at UINT16_MAX."
+      ],
+      "reason": "Explicit boot-lifetime diagnostic event counts saturate at UINT16_MAX.",
+      "evidence": [
+        "app_program/controller/s3_integration.c"
+      ]
+    },
+    {
+      "id": "adc-status-wide-view",
+      "path": "app_program/controller/s3_integration.h|app_program/subsystem3/buddy3.c",
+      "owner": "s3_integration_status_t|s3_bench_snapshot_t",
+      "name": "adc_status|status",
+      "status": "boundary",
+      "domain": {
+        "min": -2147483648,
+        "max": 2147483647,
+        "units": "integer code"
+      },
+      "ownership": "Producer records API result; existing snapshot mutex publishes it.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "ADC/kernel error status is retained without changing error-code/sign semantics; SDK/RTOS errors remain full int32."
+      ],
+      "reason": "ADC/kernel error status is retained without changing error-code/sign semantics; SDK/RTOS errors remain full int32.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "mqtt-retained-flags",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "",
+      "name": "connecting|rx_truncated|pending_valid|pending_inflight|pending_warned|publish_paced|capture_turn|debug_valid|control_seen",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "boolean"
+      },
+      "ownership": "Single processor-1 CYW43/network task, including callbacks and timeout polling.",
+      "synchronization": "Single-owner state; no cross-task/ISR writer.",
+      "constraints": [
+        "All writers assign0/1 or comparison results; callbacks execute in the network owner, including synchronous test callbacks."
+      ],
+      "reason": "All writers assign0/1 or comparison results; callbacks execute in the network owner, including synchronous test callbacks.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c"
+      ]
+    },
+    {
+      "id": "mqtt-source-selector",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "",
+      "name": "retry_source",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2,
+        "units": "selector"
+      },
+      "ownership": "Single processor-1 CYW43/network task, including callbacks and timeout polling.",
+      "synchronization": "Single-owner state; no cross-task/ISR writer.",
+      "constraints": [
+        "Only PUBLISH_NONE/APPLICATION/CAPTURE (0,1,2) are stored, including initialization/reconnect paths."
+      ],
+      "reason": "Only PUBLISH_NONE/APPLICATION/CAPTURE (0,1,2) are stored, including initialization/reconnect paths.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c"
+      ]
+    },
+    {
+      "id": "mqtt-preview-gap-counts",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "",
+      "name": "control_data_since|imu_data_since",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2,
+        "units": "successful data packets"
+      },
+      "ownership": "Single processor-1 CYW43/network task, including callbacks and timeout polling.",
+      "synchronization": "Single-owner state; no cross-task/ISR writer.",
+      "constraints": [
+        "Initialized to2, reset to0 after preview, increment only while below2; terminal2 is retained."
+      ],
+      "reason": "Initialized to2, reset to0 after preview, increment only while below2; terminal2 is retained.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c"
+      ]
+    },
+    {
+      "id": "mqtt-rx-length",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "",
+      "name": "rx_len|rx_expected",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 17,
+        "units": "bytes"
+      },
+      "ownership": "Single processor-1 CYW43/network task, including callbacks and timeout polling.",
+      "synchronization": "Single-owner state; no cross-task/ISR writer.",
+      "constraints": [
+        "RX copy increments only below payload max17; expected is assigned only after tot_len<=17, otherwise0. Preserve mismatch and oversize rejection before narrowing."
+      ],
+      "reason": "RX copy increments only below payload max17; expected is assigned only after tot_len<=17, otherwise0. Preserve mismatch and oversize rejection before narrowing.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c"
+      ]
+    },
+    {
+      "id": "mqtt-capture-length",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "",
+      "name": "debug_len",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 164,
+        "units": "bytes"
+      },
+      "ownership": "Single processor-1 CYW43/network task, including callbacks and timeout polling.",
+      "synchronization": "Single-owner state; no cross-task/ISR writer.",
+      "constraints": [
+        "Both capture hook paths reject n>sizeof debug_line before assigning debug_len. Initialization0 and terminal164 are representable."
+      ],
+      "reason": "Both capture hook paths reject n>sizeof debug_line before assigning debug_len. Initialization0 and terminal164 are representable.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c"
+      ]
+    },
+    {
+      "id": "mqtt-pacing-values",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "",
+      "name": "publish_wait_ms",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 100,
+        "units": "milliseconds"
+      },
+      "ownership": "Single CYW43 network task.",
+      "synchronization": "Single-owner state.",
+      "constraints": [
+        "Existing private pace_publish calls pass only20 or100; initial storage is0. Exact reachable set{0,20,100} needs2 encoded bits, while unchanged numeric representation needs7; retain numeric comparisons unless an explicit encoding is introduced."
+      ],
+      "reason": "Existing private pace_publish calls pass only20 or100; initial storage is0. Exact reachable set{0,20,100} needs2 encoded bits, while unchanged numeric representation needs7; retain numeric comparisons unless an explicit encoding is introduced.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c"
+      ]
+    },
+    {
+      "id": "random-state-full-word",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/sys_arch.c",
+      "owner": "lwip_utk_rand#L.*",
+      "name": "state",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295,
+        "units": "PRNG state bits"
+      },
+      "ownership": "lwIP network owner.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "PRNG arithmetic intentionally operates on the full32-bit state; narrowing changes the generated sequence."
+      ],
+      "reason": "PRNG arithmetic intentionally operates on the full32-bit state; narrowing changes the generated sequence.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/sys_arch.c"
+      ]
+    },
+    {
+      "id": "retained-wire-octets",
+      "path": "app_program/controller/s3_integration.c|app_program/subsystem1/buddy1.c|app_program/subsystem4/buddy4.c|app_program/subsystem5/buddy5.c|lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c|lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c",
+      "owner": ".*",
+      "name": "reply|g_latest|g_events|g_snapshot|g_published|debug_line|preview_line|rx_data|tx_buffer",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255,
+        "units": "raw octet"
+      },
+      "ownership": "Enclosing module owns retained state; preserve existing task/ISR serialization.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "Retains packed/raw protocol or console bytes, including zeros and all high bits. Buffer lengths and validation metadata are independently inventoried."
+      ],
+      "reason": "Retains packed/raw protocol or console bytes, including zeros and all high bits. Buffer lengths and validation metadata are independently inventoried.",
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ]
+    },
+    {
+      "id": "rtos-spinlock-storage",
+      "path": ".*",
+      "owner": ".*",
+      "name": ".*",
+      "status": "boundary",
+      "domain": {
+        "description": "Imported T_SPLOCK object representation is consumed by ISpinLock/ISpinUnlock; preserve ABI, alignment and interrupt-preserving lock semantics.",
+        "units": "integer code"
+      },
+      "ownership": "RTOS synchronization primitive shared by the recorded task/ISR owners.",
+      "synchronization": "ISpinLock/ISpinUnlock ABI boundary.",
+      "constraints": [
+        "Imported T_SPLOCK object representation is consumed by ISpinLock/ISpinUnlock; preserve ABI, alignment and interrupt-preserving lock semantics."
+      ],
+      "reason": "Imported T_SPLOCK object representation is consumed by ISpinLock/ISpinUnlock; preserve ABI, alignment and interrupt-preserving lock semantics.",
+      "evidence": [
+        ".*"
+      ],
+      "required_bits": null,
+      "type": "T_SPLOCK"
+    },
+    {
       "id": "debug-wide-validation",
       "status": "boundary",
       "domain": {
@@ -1705,20 +3815,21 @@
       "owner": "bcap_t|bcap_episode_t",
       "name": "used|first|count",
       "kind": "FIELD_DECL",
-      "status": "compare",
+      "status": "boundary",
       "domain": {
-        "min": 0,
-        "max": 4000
+        "valid_min": 0,
+        "valid_max": 4000,
+        "description": "Full declared public metadata input, including invalid values rejected by bcap_binary_next; producer-valid bounds are recorded separately."
       },
       "ownership": "Sampling writer/report readers all hold capture g_mutex.",
       "constraints": [
-        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+        "Do not narrow public capture metadata before serializer validation. Invalid full-width values must still be rejected; use a separate retained adapter if compaction is pursued."
       ],
       "evidence": [
-        "app_program/controller/bc_capture.h:27-30",
-        "app_program/controller/bc_capture.c:143-201"
+        "app_program/controller/bc_capture.c:307-345"
       ],
-      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+      "reason": "Do not narrow public capture metadata before serializer validation. Invalid full-width values must still be rejected; use a separate retained adapter if compaction is pursued.",
+      "required_bits": null
     },
     {
       "id": "capture-pre-head",
@@ -1767,20 +3878,21 @@
       "owner": "bcap_t",
       "name": "episodes",
       "kind": "FIELD_DECL",
-      "status": "compare",
+      "status": "boundary",
       "domain": {
-        "min": 0,
-        "max": 12
+        "valid_min": 0,
+        "valid_max": 12,
+        "description": "Full declared public metadata input, including invalid values rejected by bcap_binary_next; producer-valid bounds are recorded separately."
       },
       "ownership": "Capture mutex; include full episode count.",
       "constraints": [
-        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+        "Do not narrow public capture metadata before serializer validation. Invalid full-width values must still be rejected; use a separate retained adapter if compaction is pursued."
       ],
       "evidence": [
-        "app_program/controller/bc_capture.c:103-109",
-        "app_program/controller/bc_capture.c:143"
+        "app_program/controller/bc_capture.c:307-345"
       ],
-      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+      "reason": "Do not narrow public capture metadata before serializer validation. Invalid full-width values must still be rejected; use a separate retained adapter if compaction is pursued.",
+      "required_bits": null
     },
     {
       "id": "capture-letter-count",
@@ -1788,19 +3900,21 @@
       "owner": "bcap_t",
       "name": "letter_count",
       "kind": "FIELD_DECL",
-      "status": "compare",
+      "status": "boundary",
       "domain": {
-        "min": 0,
-        "max": 8
+        "valid_min": 0,
+        "valid_max": 8,
+        "description": "Full declared public metadata input, including invalid values rejected by bcap_binary_next; producer-valid bounds are recorded separately."
       },
       "ownership": "Capture mutex; NUL terminator stays a byte.",
       "constraints": [
-        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+        "Do not narrow public capture metadata before serializer validation. Invalid full-width values must still be rejected; use a separate retained adapter if compaction is pursued."
       ],
       "evidence": [
-        "app_program/controller/bc_capture.c:119-123"
+        "app_program/controller/bc_capture.c:307-345"
       ],
-      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+      "reason": "Do not narrow public capture metadata before serializer validation. Invalid full-width values must still be rejected; use a separate retained adapter if compaction is pursued.",
+      "required_bits": null
     },
     {
       "id": "capture-dark4",
@@ -1884,22 +3998,24 @@
     },
     {
       "id": "capture-quiet-range",
-      "status": "unresolved",
+      "status": "compare",
       "domain": {
-        "description": "Quiet can continue beyond BCAP_END_QUIET while collecting; derive bound from pool-full closure before reducing width."
+        "min": 0,
+        "max": 4000,
+        "units": "consecutive white samples"
       },
-      "required_bits": null,
-      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "ownership": "Sampling capture owner; report/network readers use g_mutex.",
       "constraints": [
-        "Quiet can continue beyond BCAP_END_QUIET while collecting; derive bound from pool-full closure before reducing width."
+        "While collecting remains true quiet may pass BCAP_END_QUIET. Every active call adds one pool sample; used reaches4000 and closes the episode in that call, bounding quiet at4000 for initialized capture state."
       ],
       "evidence": [
-        "app_program/controller/bc_capture.c:193-201"
+        "app_program/controller/bc_capture.c:190-218"
       ],
-      "reason": "Quiet can continue beyond BCAP_END_QUIET while collecting; derive bound from pool-full closure before reducing width.",
+      "reason": "While collecting remains true quiet may pass BCAP_END_QUIET. Every active call adds one pool sample; used reaches4000 and closes the episode in that call, bounding quiet at4000 for initialized capture state.",
       "owner": "bcap_t",
       "name": "quiet",
-      "kind": "FIELD_DECL"
+      "kind": "FIELD_DECL",
+      "synchronization": "Existing capture mutex."
     },
     {
       "id": "s5-state",
@@ -2529,24 +4645,6 @@
         "app_program/controller/bc_capture.c:146-149"
       ],
       "reason": "Reviewed full-range clock/counter domain."
-    },
-    {
-      "id": "test-fixture-storage",
-      "status": "test",
-      "domain": {
-        "description": "Host/fake/on-device test data must represent rejected and adversarial inputs; this disposition is test-scope only, not firmware compliance."
-      },
-      "required_bits": null,
-      "ownership": "See source producer/consumer and enclosing object ownership.",
-      "constraints": [
-        "Host/fake/on-device test data must represent rejected and adversarial inputs; this disposition is test-scope only, not firmware compliance."
-      ],
-      "evidence": [
-        "testing/README.md"
-      ],
-      "reason": "Host/fake/on-device test data must represent rejected and adversarial inputs; this disposition is test-scope only, not firmware compliance.",
-      "path": "testing/.*|tools/compliance/.*|app_program/.*/buddy[1-5]_test\\.[ch]",
-      "type_category": ".*"
     },
     {
       "id": "floating-point-preservation",

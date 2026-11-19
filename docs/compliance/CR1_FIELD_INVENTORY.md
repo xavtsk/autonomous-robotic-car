@@ -9,12 +9,12 @@ Compiler observations cover 224 files in the recorded profiles; inactive-branch 
 
 | Disposition | Declarations |
 |---|---:|
-| boundary | 1332 |
-| gap | 154 |
-| packed | 215 |
-| preserve | 2832 |
+| boundary | 1440 |
+| gap | 203 |
+| packed | 391 |
+| preserve | 2805 |
 | test | 4032 |
-| unresolved | 412 |
+| unresolved | 106 |
 
 Full machine-readable rows, domains and declaration widths are in [`inventory_fields.json`](../../testing/compliance/inventory_fields.json); each row's `policy` links its ownership, API constraints and evidence in [`inventory_policies.json`](../../testing/compliance/inventory_policies.json). The owned-file boundary is [`inventory_scope.json`](../../testing/compliance/inventory_scope.json).
 
@@ -34,17 +34,11 @@ Distinct compilation contexts and observed target widths are retained. Width var
 
 | Declaration | Domain | Required / stored bits | Ownership |
 |---|---|---|---|
-| [bcap_episode_t.count](../../app_program/controller/bc_capture.h#L48) | 0..4000 | 12 / 16 | Sampling writer/report readers all hold capture g_mutex. |
-| [bcap_episode_t.first](../../app_program/controller/bc_capture.h#L48) | 0..4000 | 12 / 16 | Sampling writer/report readers all hold capture g_mutex. |
-| [bcap_input_t.collecting](../../app_program/controller/bc_capture.h#L77) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [bcap_input_t.rearming](../../app_program/controller/bc_capture.h#L77) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [bcap_t.active](../../app_program/controller/bc_capture.h#L63) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [bcap_t.episodes](../../app_program/controller/bc_capture.h#L62) | 0..12 | 4 / 8 | Capture mutex; include full episode count. |
 | [bcap_t.have_last](../../app_program/controller/bc_capture.h#L63) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [bcap_t.letter_count](../../app_program/controller/bc_capture.h#L67) | 0..8 | 4 / 8 | Capture mutex; NUL terminator stays a byte. |
 | [bcap_t.pre_count](../../app_program/controller/bc_capture.h#L61) | 0..300 | 9 / 16 | Capture mutex; include full prehistory. |
 | [bcap_t.pre_head](../../app_program/controller/bc_capture.h#L61) | 0..299 | 9 / 16 | Capture mutex; current BCAP_PRE=300, assert configuration bound. |
-| [bcap_t.used](../../app_program/controller/bc_capture.h#L61) | 0..4000 | 12 / 16 | Sampling writer/report readers all hold capture g_mutex. |
+| [bcap_t.quiet](../../app_program/controller/bc_capture.h#L61) | 0..4000 | 12 / 16 | Sampling capture owner; report/network readers use g_mutex. |
 | [control_debug_field_info_t.signed_value](../../app_program/controller/control_debug.c#L109) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [operator_t.phase](../../app_program/controller/op_logic.h#L67) | 0..8 | 4 / 32 | Operator task only. |
 | [s3_drive_t.advancing](../../app_program/controller/s3_drive.h#L117) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
@@ -61,13 +55,32 @@ Distinct compilation contexts and observed target widths are retained. Width var
 | [s3_drive_t.touched](../../app_program/controller/s3_drive.h#L117) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [s3_drive_t.turn](../../app_program/controller/s3_drive.h#L116) | 0..4 | 3 / 32 | Sampling owner. |
 | [s3_drive_t.waiting_stop](../../app_program/controller/s3_drive.h#L111) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
+| [g_bcap_net_pending](../../app_program/controller/s3_integration.c#L37) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_bcap_valid](../../app_program/controller/s3_integration.c#L32) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_collecting](../../app_program/controller/s3_integration.c#L61) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_control_ready](../../app_program/controller/s3_integration.c#L69) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_control_seen](../../app_program/controller/s3_integration.c#L69) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_ir_ready](../../app_program/controller/s3_integration.c#L65) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_ir_seen](../../app_program/controller/s3_integration.c#L65) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_reset_remote](../../app_program/controller/s3_integration.c#L59) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_reset_waiting](../../app_program/controller/s3_integration.c#L58) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [report_barcode_capture#L1122.dumping](../../app_program/controller/s3_integration.c#L1122) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [report_barcode_capture#L1122.was_open](../../app_program/controller/s3_integration.c#L1122) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [report_barcode_capture#L1122.was_running](../../app_program/controller/s3_integration.c#L1122) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
 | [s3_integration_status_t.collecting](../../app_program/controller/s3_integration.h#L35) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [s3_integration_status_t.command_ok](../../app_program/controller/s3_integration.h#L35) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [s3_integration_status_t.reason](../../app_program/controller/s3_integration.h#L31) | 0..10 | 4 / 32 | Sampling owner. |
 | [s3_integration_status_t.state](../../app_program/controller/s3_integration.h#L30) | 0..6 | 3 / 32 | Sampling owner; public status copies under mutex. |
 | [terrain_control_t.sent_fault](../../app_program/controller/terr_link.c#L19) | 0..1 | 1 / 32 | Sampling/controller owner; fault_sent separately represents unknown. |
 | [terrain_control_t.sent_height](../../app_program/controller/terr_link.c#L16) | 0..500 | 9 / 16 | Sampling/controller owner; mm integer after validation. |
+| [g_impact_seen](../../app_program/controller/terr_link.c#L24) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
 | [g_telemetry.state](../../app_program/controller/vehicle_controller.c#L25) | 0..6 | 3 / 32 | Sampling owner; public status copies under mutex. |
+| [g_b_faults_seen](../../app_program/controller/vehicle_controller.c#L48) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_start_claimed_map](../../app_program/controller/vehicle_controller.c#L232) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [mqtt_utk_app_take#L79.status_turn](../../app_program/subsystem1/mqtt_bridge.c#L79) | 0..1 | 1 / 32 | Single network-owner app-take callback. |
+| [g_feedback_count](../../app_program/subsystem2/motion.c#L108) | 0..1048575 | 20 / 32 | Motion mutex owner reads/updates feedback baseline. |
+| [g_feedback_ready](../../app_program/subsystem2/motion.c#L107) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_navigation_lease](../../app_program/subsystem2/motion.c#L110) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
 | [motion_calibration_t.b_aborted](../../app_program/subsystem2/motion.h#L131) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [motion_calibration_t.b_enc_l_inverted](../../app_program/subsystem2/motion.h#L122) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [motion_calibration_t.b_enc_l_ok](../../app_program/subsystem2/motion.h#L128) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
@@ -94,15 +107,38 @@ Distinct compilation contexts and observed target widths are retained. Width var
 | [motion_status_t.b_valid](../../app_program/subsystem2/motion.h#L101) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [motion_status_t.fault](../../app_program/subsystem2/motion.h#L93) | 0..5 | 3 / 32 | Motion mutex and explicit report queue packing. |
 | [motion_status_t.state](../../app_program/subsystem2/motion.h#L92) | 0..5 | 3 / 32 | Motion mutex for retained state; output copy caller-owned. |
+| [g_b_running](../../app_program/subsystem2/wheel_encoder.c#L120) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [s3_barcode_decoder_t.observed_gap_us](../../app_program/subsystem3/bc_decoder.h#L58) | 0..214748364 | 28 / 32 | Edge-based barcode decoder owner. |
+| [s3_barcode_decoder_t.trailing_required_us](../../app_program/subsystem3/bc_decoder.h#L59) | 0..2147483647 | 31 / 32 | Edge-based barcode decoder owner. |
 | [s3_barcode_record_t.fit_ticks](../../app_program/subsystem3/bc_decoder.h#L206) | 0..32 | 6 / 16 | Sampling owner; preserve exact per-update fitting budget. |
+| [s3_barcode_record_t.leading_us](../../app_program/subsystem3/bc_decoder.h#L186) | 0..2147483647 | 31 / 32 | Barcode-record owner. |
 | [s3_barcode_record_t.pre_count](../../app_program/subsystem3/bc_decoder.h#L180) | 0..320 | 9 / 16 | Sampling owner; include full ring. |
 | [s3_barcode_record_t.pre_head](../../app_program/subsystem3/bc_decoder.h#L180) | 0..319 | 9 / 16 | Sampling owner; derive bound from S3_REC_PRE_MAX. |
+| [s3_barcode_record_t.pre_us](../../app_program/subsystem3/bc_decoder.h#L181) | 0..1531500 | 21 / 32 | Barcode pre-history owner. |
+| [s3_barcode_record_t.prefix_us](../../app_program/subsystem3/bc_decoder.h#L183) | 0..1500000 | 21 / 32 | Barcode-record owner. |
 | [s3_barcode_record_t.prev](../../app_program/subsystem3/bc_decoder.h#L191) | 0..1000 | 10 / 16 | Sampling owner; input validity and clamp behavior unchanged. |
+| [s3_barcode_record_t.prominence](../../app_program/subsystem3/bc_decoder.h#L194) | 0..100 | 7 / 16 | Frozen per recording by barcode owner. |
+| [s3_barcode_record_t.residual_us](../../app_program/subsystem3/bc_decoder.h#L192) | 0..499 | 9 / 16 | Barcode-record owner. |
+| [s3_barcode_record_t.white_us](../../app_program/subsystem3/bc_decoder.h#L185) | 0..2147483647 | 31 / 32 | Barcode-record owner. |
 | [s3_barcode_record_t.work_units](../../app_program/subsystem3/bc_decoder.h#L206) | 0..128 | 8 / 16 | Sampling owner; preserve exact per-update work count. |
 | [s3_barcode_result_t.reversed](../../app_program/subsystem3/bc_decoder.h#L34) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
+| [s3_barcode_work_t.best](../../app_program/subsystem3/bc_decoder.h#L148) | 0..4095 | 12 / 16 | Per-record incremental work owner. |
+| [s3_barcode_work_t.copy](../../app_program/subsystem3/bc_decoder.h#L149) | 0..125 | 7 / 16 | Per-record incremental work owner. |
+| [s3_barcode_work_t.cursor](../../app_program/subsystem3/bc_decoder.h#L148) | 0..4096 | 13 / 16 | Per-record incremental work owner. |
+| [s3_barcode_work_t.cut](../../app_program/subsystem3/bc_decoder.h#L149) | 0..125 | 7 / 16 | Per-record incremental work owner. |
+| [s3_barcode_work_t.dip](../../app_program/subsystem3/bc_decoder.h#L148) | 0..4095 | 12 / 16 | Per-record incremental work owner. |
+| [s3_barcode_work_t.edge_cursor](../../app_program/subsystem3/bc_decoder.h#L149) | 0..4096 | 13 / 16 | Per-record incremental work owner. |
+| [s3_barcode_work_t.edges](../../app_program/subsystem3/bc_decoder.h#L149) | 0..30 | 5 / 16 | Per-record incremental work owner. |
+| [s3_barcode_work_t.ext](../../app_program/subsystem3/bc_decoder.h#L139) | 0..4095 | 12 / 16 | Per-record incremental work owner. |
 | [s3_barcode_work_t.found](../../app_program/subsystem3/bc_decoder.h#L151) | 0..2 | 2 / 8 | Sampling owner; two matches distinguish ambiguity. |
+| [s3_barcode_work_t.frozen_count](../../app_program/subsystem3/bc_decoder.h#L148) | 0..4096 | 13 / 16 | Per-record incremental work owner. |
+| [s3_barcode_work_t.max_step_us](../../app_program/subsystem3/bc_decoder.h#L143) | 0..31500 | 15 / 32 | Per-record incremental work owner. |
+| [s3_barcode_work_t.n](../../app_program/subsystem3/bc_decoder.h#L148) | 0..127 | 7 / 16 | Per-record incremental work owner. |
 | [s3_barcode_work_t.orientation](../../app_program/subsystem3/bc_decoder.h#L151) | 0..2 | 2 / 8 | Sampling owner; terminal value 2 must not wrap. |
+| [s3_barcode_work_t.peak](../../app_program/subsystem3/bc_decoder.h#L148) | 0..4095 | 12 / 16 | Per-record incremental work owner. |
 | [s3_barcode_work_t.phase](../../app_program/subsystem3/bc_decoder.h#L151) | 0..18 | 5 / 8 | Sampling owner; 0 is initialized state. |
+| [s3_barcode_work_t.scan](../../app_program/subsystem3/bc_decoder.h#L149) | 0..125 | 7 / 16 | Per-record incremental work owner. |
+| [s3_barcode_work_t.segment](../../app_program/subsystem3/bc_decoder.h#L149) | 0..30 | 5 / 16 | Per-record incremental work owner. |
 | [s3_barcode_work_t.star_index](../../app_program/subsystem3/bc_decoder.h#L151) | 0..1 | 1 / 8 | Sampling owner. |
 | [s3_barcode_work_t.tick](../../app_program/subsystem3/bc_decoder.h#L150) | -64..65 | 8 / 16 | Sampling owner; terminal 65 retained before next phase. |
 | [s3_barcode_quiet_t.pulse_bad](../../app_program/subsystem3/bc_quiet.h#L17) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
@@ -143,6 +179,8 @@ Distinct compilation contexts and observed target widths are retained. Width var
 | [imu_debug_row_t.hump_flags](../../app_program/subsystem4/buddy4.c#L84) | 0..127 | 7 / 8 | g_imu_debug_mutex protects queue publication/consumption. |
 | [imu_debug_row_t.hump_reason](../../app_program/subsystem4/buddy4.c#L84) | 0..18 | 5 / 8 | g_imu_debug_mutex protects retained row. |
 | [imu_debug_row_t.safety](../../app_program/subsystem4/buddy4.c#L83) | 0..2 | 2 / 8 | g_imu_debug_mutex protects retained row. |
+| [g_imu_debug_count](../../app_program/subsystem4/buddy4.c#L92) | 0..128 | 8 / 32 | Terrain producer/network debug consumer share g_imu_debug_mutex. |
+| [g_imu_debug_head](../../app_program/subsystem4/buddy4.c#L92) | 0..127 | 7 / 32 | Terrain producer/network debug consumer share g_imu_debug_mutex. |
 | [hump_debug_t.flags](../../app_program/subsystem4/hump_detection.h#L22) | 0..127 | 7 / 8 | Terrain task only; debug build. |
 | [hump_debug_t.reason](../../app_program/subsystem4/hump_detection.h#L22) | 0..18 | 5 / 8 | Terrain task only; debug build. |
 | [hump_debug_t.wheel_delta_valid](../../app_program/subsystem4/hump_detection.h#L21) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
@@ -177,17 +215,28 @@ Distinct compilation contexts and observed target widths are retained. Width var
 | [terrain_result_t.impact](../../app_program/subsystem4/terr_data.h#L36) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [terrain_result_t.safety](../../app_program/subsystem4/terr_data.h#L34) | 0..2 | 2 / 32 | Terrain owner; decoded results are caller-owned. |
 | [terrain_result_t.state](../../app_program/subsystem4/terr_data.h#L33) | 0..7 | 3 / 32 | Terrain owner; copied under S4 mutex for publication. |
-| [s5_input_t.healthy](../../app_program/subsystem5/avoid_obstacle.h#L65) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [s5_input_t.junction](../../app_program/subsystem5/avoid_obstacle.h#L65) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [s5_input_t.line_ready](../../app_program/subsystem5/avoid_obstacle.h#L65) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [s5_input_t.motion_done](../../app_program/subsystem5/avoid_obstacle.h#L65) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [s5_input_t.stopped](../../app_program/subsystem5/avoid_obstacle.h#L65) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [s5_input_t.tape](../../app_program/subsystem5/avoid_obstacle.h#L65) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [s5_profile_t.valid](../../app_program/subsystem5/profile_obstacle.h#L17) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [s5_observation_t.no_echo](../../app_program/subsystem5/s5_codec.h#L11) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [s5_observation_t.range_valid](../../app_program/subsystem5/s5_codec.h#L11) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
-| [s5_observation_t.scan_done](../../app_program/subsystem5/s5_codec.h#L11) | 0..1 | 1 / 8 | Must follow enclosing object ownership; cross-task flags require storage-unit review before packing. |
 | [s5_scan_t.nearest_mm](../../app_program/subsystem5/scan_obstacle.h#L10) | 0..4000 | 12 / 16 | S5 task; initialized zero and4000 clear sentinel included. |
+| [g_active](../../app_program/subsystem5/ultrasonic_sensor.c#L52) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [g_ready](../../app_program/subsystem5/ultrasonic_sensor.c#L52) | 0..1 | 1 / 8 | Enclosing module owns retained state; preserve existing task/ISR serialization. |
+| [capture_turn](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L64) | 0..1 | 1 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [connecting](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L43) | 0..1 | 1 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [control_data_since](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L81) | 0..2 | 2 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [control_seen](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L81) | 0..1 | 1 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [debug_len](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L67) | 0..164 | 8 / 16 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [debug_valid](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L68) | 0..1 | 1 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [imu_data_since](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L85) | 0..2 | 2 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [pending_inflight](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L59) | 0..1 | 1 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [pending_valid](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L59) | 0..1 | 1 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [pending_warned](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L59) | 0..1 | 1 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [publish_paced](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L59) | 0..1 | 1 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [publish_wait_ms](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L58) | 0..100 | 7 / 16 | Single CYW43 network task. |
+| [retry_source](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L64) | 0..2 | 2 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [rx_expected](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L49) | 0..17 | 5 / 16 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [rx_len](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L47) | 0..17 | 5 / 16 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [rx_truncated](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c#L48) | 0..1 | 1 / 8 | Single processor-1 CYW43/network task, including callbacks and timeout polling. |
+| [tx_head](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c#L46) | 0..4095 | 12 / 32 | Any-context producer owns head; USB service task owns tail, under shared TX lock. |
+| [tx_tail](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c#L47) | 0..4095 | 12 / 32 | Any-context producer owns head; USB service task owns tail, under shared TX lock. |
+| [usb_started](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c#L48) | 0..1 | 1 / 8 | Initial kernel task startup path; independent of TX ring writers. |
 
 ## Source and unresolved-domain coverage
 
@@ -199,15 +248,15 @@ Distinct compilation contexts and observed target widths are retained. Width var
 | [app_program/app_types.h](../../app_program/app_types.h) | 3 | 0 | observed |
 | [app_program/build_assert.h](../../app_program/build_assert.h) | 0 | 0 | observed |
 | [app_program/controller/bc_capture.c](../../app_program/controller/bc_capture.c) | 67 | 0 | observed |
-| [app_program/controller/bc_capture.h](../../app_program/controller/bc_capture.h) | 56 | 14 | observed |
+| [app_program/controller/bc_capture.h](../../app_program/controller/bc_capture.h) | 56 | 0 | observed |
 | [app_program/controller/builtin_calibration.h](../../app_program/controller/builtin_calibration.h) | 0 | 0 | observed |
 | [app_program/controller/control_debug.c](../../app_program/controller/control_debug.c) | 53 | 2 | observed |
-| [app_program/controller/control_debug.h](../../app_program/controller/control_debug.h) | 123 | 1 | observed |
+| [app_program/controller/control_debug.h](../../app_program/controller/control_debug.h) | 123 | 0 | observed |
 | [app_program/controller/course_profile.h](../../app_program/controller/course_profile.h) | 2 | 0 | observed |
 | [app_program/controller/integration_codec.c](../../app_program/controller/integration_codec.c) | 60 | 1 | observed |
-| [app_program/controller/integration_codec.h](../../app_program/controller/integration_codec.h) | 12 | 3 | observed |
+| [app_program/controller/integration_codec.h](../../app_program/controller/integration_codec.h) | 12 | 0 | observed |
 | [app_program/controller/ir_debug.c](../../app_program/controller/ir_debug.c) | 21 | 0 | observed |
-| [app_program/controller/ir_debug.h](../../app_program/controller/ir_debug.h) | 15 | 8 | observed |
+| [app_program/controller/ir_debug.h](../../app_program/controller/ir_debug.h) | 15 | 0 | observed |
 | [app_program/controller/op_logic.c](../../app_program/controller/op_logic.c) | 81 | 2 | observed |
 | [app_program/controller/op_logic.h](../../app_program/controller/op_logic.h) | 55 | 0 | observed |
 | [app_program/controller/op_panel.c](../../app_program/controller/op_panel.c) | 17 | 0 | observed |
@@ -215,25 +264,25 @@ Distinct compilation contexts and observed target widths are retained. Width var
 | [app_program/controller/remote_control.h](../../app_program/controller/remote_control.h) | 96 | 0 | observed |
 | [app_program/controller/run_timing.h](../../app_program/controller/run_timing.h) | 13 | 0 | observed |
 | [app_program/controller/s3_drive.c](../../app_program/controller/s3_drive.c) | 86 | 0 | observed |
-| [app_program/controller/s3_drive.h](../../app_program/controller/s3_drive.h) | 96 | 8 | observed |
-| [app_program/controller/s3_integration.c](../../app_program/controller/s3_integration.c) | 202 | 36 | observed |
-| [app_program/controller/s3_integration.h](../../app_program/controller/s3_integration.h) | 27 | 5 | observed |
-| [app_program/controller/terr_link.c](../../app_program/controller/terr_link.c) | 50 | 15 | observed |
+| [app_program/controller/s3_drive.h](../../app_program/controller/s3_drive.h) | 96 | 7 | observed |
+| [app_program/controller/s3_integration.c](../../app_program/controller/s3_integration.c) | 202 | 10 | observed |
+| [app_program/controller/s3_integration.h](../../app_program/controller/s3_integration.h) | 27 | 1 | observed |
+| [app_program/controller/terr_link.c](../../app_program/controller/terr_link.c) | 50 | 3 | observed |
 | [app_program/controller/terr_link.h](../../app_program/controller/terr_link.h) | 10 | 0 | observed |
-| [app_program/controller/vehicle_controller.c](../../app_program/controller/vehicle_controller.c) | 99 | 25 | observed |
+| [app_program/controller/vehicle_controller.c](../../app_program/controller/vehicle_controller.c) | 99 | 14 | observed |
 | [app_program/controller/vehicle_controller.h](../../app_program/controller/vehicle_controller.h) | 9 | 0 | observed |
-| [app_program/diagnostics/robot_diagnostics.c](../../app_program/diagnostics/robot_diagnostics.c) | 40 | 9 | observed |
+| [app_program/diagnostics/robot_diagnostics.c](../../app_program/diagnostics/robot_diagnostics.c) | 40 | 0 | observed |
 | [app_program/diagnostics/robot_diagnostics.h](../../app_program/diagnostics/robot_diagnostics.h) | 21 | 0 | observed |
 | [app_program/diagnostics/smoke_motion.c](../../app_program/diagnostics/smoke_motion.c) | 12 | 0 | observed |
 | [app_program/diagnostics/smoke_motion.h](../../app_program/diagnostics/smoke_motion.h) | 0 | 0 | observed |
 | [app_program/monotonic_clock.h](../../app_program/monotonic_clock.h) | 1 | 0 | observed |
-| [app_program/subsystem1/buddy1.c](../../app_program/subsystem1/buddy1.c) | 69 | 1 | observed |
+| [app_program/subsystem1/buddy1.c](../../app_program/subsystem1/buddy1.c) | 69 | 0 | observed |
 | [app_program/subsystem1/buddy1.h](../../app_program/subsystem1/buddy1.h) | 54 | 4 | observed |
 | [app_program/subsystem1/buddy1_test.c](../../app_program/subsystem1/buddy1_test.c) | 16 | 0 | observed |
 | [app_program/subsystem1/buddy1_test.h](../../app_program/subsystem1/buddy1_test.h) | 0 | 0 | observed |
 | [app_program/subsystem1/command.c](../../app_program/subsystem1/command.c) | 47 | 1 | observed |
 | [app_program/subsystem1/command.h](../../app_program/subsystem1/command.h) | 0 | 0 | observed |
-| [app_program/subsystem1/mqtt_bridge.c](../../app_program/subsystem1/mqtt_bridge.c) | 28 | 3 | observed |
+| [app_program/subsystem1/mqtt_bridge.c](../../app_program/subsystem1/mqtt_bridge.c) | 28 | 2 | observed |
 | [app_program/subsystem1/mqtt_bridge.h](../../app_program/subsystem1/mqtt_bridge.h) | 0 | 0 | observed |
 | [app_program/subsystem1/telemetry_codec.c](../../app_program/subsystem1/telemetry_codec.c) | 76 | 1 | observed |
 | [app_program/subsystem1/telemetry_codec.h](../../app_program/subsystem1/telemetry_codec.h) | 227 | 0 | observed |
@@ -242,49 +291,49 @@ Distinct compilation contexts and observed target widths are retained. Width var
 | [app_program/subsystem2/buddy2_test.c](../../app_program/subsystem2/buddy2_test.c) | 29 | 0 | observed |
 | [app_program/subsystem2/buddy2_test.h](../../app_program/subsystem2/buddy2_test.h) | 0 | 0 | observed |
 | [app_program/subsystem2/codec_motion.c](../../app_program/subsystem2/codec_motion.c) | 27 | 0 | observed |
-| [app_program/subsystem2/codec_motion.h](../../app_program/subsystem2/codec_motion.h) | 16 | 1 | observed |
-| [app_program/subsystem2/ctrl_motion.c](../../app_program/subsystem2/ctrl_motion.c) | 102 | 9 | observed |
+| [app_program/subsystem2/codec_motion.h](../../app_program/subsystem2/codec_motion.h) | 16 | 0 | observed |
+| [app_program/subsystem2/ctrl_motion.c](../../app_program/subsystem2/ctrl_motion.c) | 102 | 0 | observed |
 | [app_program/subsystem2/ctrl_motion.h](../../app_program/subsystem2/ctrl_motion.h) | 20 | 0 | observed |
 | [app_program/subsystem2/estimate_motion.c](../../app_program/subsystem2/estimate_motion.c) | 19 | 0 | observed |
 | [app_program/subsystem2/estimate_motion.h](../../app_program/subsystem2/estimate_motion.h) | 7 | 0 | observed |
-| [app_program/subsystem2/motion.c](../../app_program/subsystem2/motion.c) | 134 | 11 | observed |
+| [app_program/subsystem2/motion.c](../../app_program/subsystem2/motion.c) | 134 | 1 | observed |
 | [app_program/subsystem2/motion.h](../../app_program/subsystem2/motion.h) | 101 | 2 | observed |
 | [app_program/subsystem2/motion_lease.h](../../app_program/subsystem2/motion_lease.h) | 3 | 0 | observed |
 | [app_program/subsystem2/motion_pack.c](../../app_program/subsystem2/motion_pack.c) | 59 | 0 | observed |
-| [app_program/subsystem2/motion_pack.h](../../app_program/subsystem2/motion_pack.h) | 33 | 3 | observed |
-| [app_program/subsystem2/motor_control.c](../../app_program/subsystem2/motor_control.c) | 16 | 1 | observed |
+| [app_program/subsystem2/motion_pack.h](../../app_program/subsystem2/motion_pack.h) | 33 | 0 | observed |
+| [app_program/subsystem2/motor_control.c](../../app_program/subsystem2/motor_control.c) | 16 | 0 | observed |
 | [app_program/subsystem2/motor_control.h](../../app_program/subsystem2/motor_control.h) | 5 | 0 | observed |
 | [app_program/subsystem2/snapshot_motion.c](../../app_program/subsystem2/snapshot_motion.c) | 5 | 0 | observed |
 | [app_program/subsystem2/snapshot_motion.h](../../app_program/subsystem2/snapshot_motion.h) | 1 | 0 | observed |
 | [app_program/subsystem2/speed_pid.c](../../app_program/subsystem2/speed_pid.c) | 19 | 0 | observed |
 | [app_program/subsystem2/speed_pid.h](../../app_program/subsystem2/speed_pid.h) | 20 | 0 | observed |
-| [app_program/subsystem2/wheel_encoder.c](../../app_program/subsystem2/wheel_encoder.c) | 32 | 3 | observed |
+| [app_program/subsystem2/wheel_encoder.c](../../app_program/subsystem2/wheel_encoder.c) | 32 | 1 | observed |
 | [app_program/subsystem2/wheel_encoder.h](../../app_program/subsystem2/wheel_encoder.h) | 14 | 0 | observed |
 | [app_program/subsystem3/bc_decoder.c](../../app_program/subsystem3/bc_decoder.c) | 412 | 1 | observed |
-| [app_program/subsystem3/bc_decoder.h](../../app_program/subsystem3/bc_decoder.h) | 163 | 66 | observed |
-| [app_program/subsystem3/bc_quiet.h](../../app_program/subsystem3/bc_quiet.h) | 35 | 3 | observed |
-| [app_program/subsystem3/buddy3.c](../../app_program/subsystem3/buddy3.c) | 50 | 12 | observed |
+| [app_program/subsystem3/bc_decoder.h](../../app_program/subsystem3/bc_decoder.h) | 163 | 27 | observed |
+| [app_program/subsystem3/bc_quiet.h](../../app_program/subsystem3/bc_quiet.h) | 35 | 0 | observed |
+| [app_program/subsystem3/buddy3.c](../../app_program/subsystem3/buddy3.c) | 50 | 8 | observed |
 | [app_program/subsystem3/buddy3.h](../../app_program/subsystem3/buddy3.h) | 0 | 0 | observed |
 | [app_program/subsystem3/buddy3_test.c](../../app_program/subsystem3/buddy3_test.c) | 0 | 0 | observed |
 | [app_program/subsystem3/buddy3_test.h](../../app_program/subsystem3/buddy3_test.h) | 0 | 0 | observed |
 | [app_program/subsystem3/ir_acquisition.c](../../app_program/subsystem3/ir_acquisition.c) | 11 | 0 | observed |
-| [app_program/subsystem3/ir_acquisition.h](../../app_program/subsystem3/ir_acquisition.h) | 28 | 1 | observed |
+| [app_program/subsystem3/ir_acquisition.h](../../app_program/subsystem3/ir_acquisition.h) | 28 | 0 | observed |
 | [app_program/subsystem3/ir_bench_config.h](../../app_program/subsystem3/ir_bench_config.h) | 0 | 0 | observed |
 | [app_program/subsystem3/ir_calibration.c](../../app_program/subsystem3/ir_calibration.c) | 11 | 0 | observed |
 | [app_program/subsystem3/ir_calibration.h](../../app_program/subsystem3/ir_calibration.h) | 18 | 0 | observed |
 | [app_program/subsystem3/ir_reflectance.c](../../app_program/subsystem3/ir_reflectance.c) | 8 | 0 | observed |
-| [app_program/subsystem3/ir_reflectance.h](../../app_program/subsystem3/ir_reflectance.h) | 20 | 1 | observed |
+| [app_program/subsystem3/ir_reflectance.h](../../app_program/subsystem3/ir_reflectance.h) | 20 | 0 | observed |
 | [app_program/subsystem3/ir_sensor.c](../../app_program/subsystem3/ir_sensor.c) | 15 | 0 | observed |
 | [app_program/subsystem3/ir_sensor.h](../../app_program/subsystem3/ir_sensor.h) | 2 | 0 | observed |
 | [app_program/subsystem3/line_controller.c](../../app_program/subsystem3/line_controller.c) | 8 | 0 | observed |
 | [app_program/subsystem3/line_controller.h](../../app_program/subsystem3/line_controller.h) | 9 | 0 | observed |
 | [app_program/subsystem3/line_detection.c](../../app_program/subsystem3/line_detection.c) | 18 | 0 | observed |
-| [app_program/subsystem3/line_detection.h](../../app_program/subsystem3/line_detection.h) | 37 | 8 | observed |
+| [app_program/subsystem3/line_detection.h](../../app_program/subsystem3/line_detection.h) | 37 | 0 | observed |
 | [app_program/subsystem3/line_navigation.c](../../app_program/subsystem3/line_navigation.c) | 70 | 0 | observed |
-| [app_program/subsystem3/line_navigation.h](../../app_program/subsystem3/line_navigation.h) | 118 | 9 | observed |
+| [app_program/subsystem3/line_navigation.h](../../app_program/subsystem3/line_navigation.h) | 118 | 1 | observed |
 | [app_program/subsystem3/navigation_codec.c](../../app_program/subsystem3/navigation_codec.c) | 74 | 1 | observed |
-| [app_program/subsystem3/navigation_codec.h](../../app_program/subsystem3/navigation_codec.h) | 15 | 3 | observed |
-| [app_program/subsystem4/buddy4.c](../../app_program/subsystem4/buddy4.c) | 143 | 14 | observed |
+| [app_program/subsystem3/navigation_codec.h](../../app_program/subsystem3/navigation_codec.h) | 15 | 0 | observed |
+| [app_program/subsystem4/buddy4.c](../../app_program/subsystem4/buddy4.c) | 143 | 2 | observed |
 | [app_program/subsystem4/buddy4.h](../../app_program/subsystem4/buddy4.h) | 10 | 0 | observed |
 | [app_program/subsystem4/buddy4_test.c](../../app_program/subsystem4/buddy4_test.c) | 8 | 0 | observed |
 | [app_program/subsystem4/buddy4_test.h](../../app_program/subsystem4/buddy4_test.h) | 0 | 0 | observed |
@@ -297,30 +346,30 @@ Distinct compilation contexts and observed target widths are retained. Width var
 | [app_program/subsystem4/imu_sensor.c](../../app_program/subsystem4/imu_sensor.c) | 18 | 0 | observed |
 | [app_program/subsystem4/imu_sensor.h](../../app_program/subsystem4/imu_sensor.h) | 14 | 0 | observed |
 | [app_program/subsystem4/terr_data.c](../../app_program/subsystem4/terr_data.c) | 86 | 0 | observed |
-| [app_program/subsystem4/terr_data.h](../../app_program/subsystem4/terr_data.h) | 60 | 0 | observed |
+| [app_program/subsystem4/terr_data.h](../../app_program/subsystem4/terr_data.h) | 60 | 1 | observed |
 | [app_program/subsystem4/tilt_estimation.c](../../app_program/subsystem4/tilt_estimation.c) | 22 | 0 | observed |
 | [app_program/subsystem4/tilt_estimation.h](../../app_program/subsystem4/tilt_estimation.h) | 8 | 0 | observed |
 | [app_program/subsystem5/avoid_obstacle.c](../../app_program/subsystem5/avoid_obstacle.c) | 78 | 0 | observed |
-| [app_program/subsystem5/avoid_obstacle.h](../../app_program/subsystem5/avoid_obstacle.h) | 88 | 16 | observed |
+| [app_program/subsystem5/avoid_obstacle.h](../../app_program/subsystem5/avoid_obstacle.h) | 88 | 1 | observed |
 | [app_program/subsystem5/avoidance_planner.c](../../app_program/subsystem5/avoidance_planner.c) | 13 | 0 | observed |
-| [app_program/subsystem5/avoidance_planner.h](../../app_program/subsystem5/avoidance_planner.h) | 12 | 1 | observed |
-| [app_program/subsystem5/buddy5.c](../../app_program/subsystem5/buddy5.c) | 87 | 10 | observed |
+| [app_program/subsystem5/avoidance_planner.h](../../app_program/subsystem5/avoidance_planner.h) | 12 | 0 | observed |
+| [app_program/subsystem5/buddy5.c](../../app_program/subsystem5/buddy5.c) | 87 | 2 | observed |
 | [app_program/subsystem5/buddy5.h](../../app_program/subsystem5/buddy5.h) | 0 | 0 | observed |
 | [app_program/subsystem5/buddy5_test.c](../../app_program/subsystem5/buddy5_test.c) | 5 | 0 | observed |
 | [app_program/subsystem5/buddy5_test.h](../../app_program/subsystem5/buddy5_test.h) | 0 | 0 | observed |
 | [app_program/subsystem5/line_recovery.c](../../app_program/subsystem5/line_recovery.c) | 7 | 0 | observed |
-| [app_program/subsystem5/line_recovery.h](../../app_program/subsystem5/line_recovery.h) | 10 | 2 | observed |
+| [app_program/subsystem5/line_recovery.h](../../app_program/subsystem5/line_recovery.h) | 10 | 0 | observed |
 | [app_program/subsystem5/profile_obstacle.c](../../app_program/subsystem5/profile_obstacle.c) | 37 | 2 | observed |
-| [app_program/subsystem5/profile_obstacle.h](../../app_program/subsystem5/profile_obstacle.h) | 23 | 8 | observed |
+| [app_program/subsystem5/profile_obstacle.h](../../app_program/subsystem5/profile_obstacle.h) | 23 | 0 | observed |
 | [app_program/subsystem5/s5_api.h](../../app_program/subsystem5/s5_api.h) | 19 | 0 | observed |
 | [app_program/subsystem5/s5_codec.c](../../app_program/subsystem5/s5_codec.c) | 22 | 0 | observed |
-| [app_program/subsystem5/s5_codec.h](../../app_program/subsystem5/s5_codec.h) | 12 | 3 | observed |
+| [app_program/subsystem5/s5_codec.h](../../app_program/subsystem5/s5_codec.h) | 12 | 0 | observed |
 | [app_program/subsystem5/s5_config.h](../../app_program/subsystem5/s5_config.h) | 10 | 0 | observed |
 | [app_program/subsystem5/scan_obstacle.c](../../app_program/subsystem5/scan_obstacle.c) | 10 | 0 | observed |
-| [app_program/subsystem5/scan_obstacle.h](../../app_program/subsystem5/scan_obstacle.h) | 23 | 8 | observed |
+| [app_program/subsystem5/scan_obstacle.h](../../app_program/subsystem5/scan_obstacle.h) | 23 | 4 | observed |
 | [app_program/subsystem5/scan_servo.c](../../app_program/subsystem5/scan_servo.c) | 1 | 0 | observed |
 | [app_program/subsystem5/scan_servo.h](../../app_program/subsystem5/scan_servo.h) | 1 | 0 | observed |
-| [app_program/subsystem5/ultrasonic_sensor.c](../../app_program/subsystem5/ultrasonic_sensor.c) | 19 | 4 | observed |
+| [app_program/subsystem5/ultrasonic_sensor.c](../../app_program/subsystem5/ultrasonic_sensor.c) | 19 | 1 | observed |
 | [app_program/subsystem5/ultrasonic_sensor.h](../../app_program/subsystem5/ultrasonic_sensor.h) | 8 | 0 | observed |
 | [app_program/system_config.h](../../app_program/system_config.h) | 0 | 0 | observed |
 | [app_program/test_report.h](../../app_program/test_report.h) | 0 | 0 | observed |
@@ -330,27 +379,27 @@ Distinct compilation contexts and observed target widths are retained. Width var
 | [config/config_tm.h](../../config/config_tm.h) | 0 | 0 | observed |
 | [config/wifi_secrets.example.h](../../config/wifi_secrets.example.h) | 0 | 0 | observed |
 | [device/adc/sysdepend/rp2040/adc_cnf_sysdep.h](../../device/adc/sysdepend/rp2040/adc_cnf_sysdep.h) | 0 | 0 | observed |
-| [device/adc/sysdepend/rp2040/adc_rp2040.c](../../device/adc/sysdepend/rp2040/adc_rp2040.c) | 26 | 3 | observed |
+| [device/adc/sysdepend/rp2040/adc_rp2040.c](../../device/adc/sysdepend/rp2040/adc_rp2040.c) | 26 | 2 | observed |
 | [device/adc/sysdepend/rp2040/adc_sysdep.h](../../device/adc/sysdepend/rp2040/adc_sysdep.h) | 0 | 0 | observed |
 | [device/i2c/sysdepend/rp2040/i2c_cnf_sysdep.h](../../device/i2c/sysdepend/rp2040/i2c_cnf_sysdep.h) | 0 | 0 | observed |
 | [kernel/sysdepend/pico_rp2040/devinit.c](../../kernel/sysdepend/pico_rp2040/devinit.c) | 1 | 0 | observed |
 | [lib/liblwip/sysdepend/pico_rp2040/include/arch/cc.h](../../lib/liblwip/sysdepend/pico_rp2040/include/arch/cc.h) | 1 | 0 | observed |
 | [lib/liblwip/sysdepend/pico_rp2040/include/arch/sys_arch.h](../../lib/liblwip/sysdepend/pico_rp2040/include/arch/sys_arch.h) | 0 | 0 | observed |
 | [lib/liblwip/sysdepend/pico_rp2040/lwipopts.h](../../lib/liblwip/sysdepend/pico_rp2040/lwipopts.h) | 0 | 0 | observed |
-| [lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c) | 83 | 22 | observed |
-| [lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h) | 22 | 6 | observed |
-| [lib/liblwip/sysdepend/pico_rp2040/sys_arch.c](../../lib/liblwip/sysdepend/pico_rp2040/sys_arch.c) | 4 | 1 | observed |
+| [lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c) | 83 | 1 | observed |
+| [lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h) | 22 | 0 | observed |
+| [lib/liblwip/sysdepend/pico_rp2040/sys_arch.c](../../lib/liblwip/sysdepend/pico_rp2040/sys_arch.c) | 4 | 0 | observed |
 | [lib/libtm/sysdepend/pico_rp2040/usb/tusb_config.h](../../lib/libtm/sysdepend/pico_rp2040/usb/tusb_config.h) | 0 | 0 | observed |
-| [lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c) | 31 | 12 | observed |
-| [lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c) | 12 | 2 | observed |
-| [lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c) | 21 | 5 | observed |
+| [lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c) | 31 | 0 | observed |
+| [lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c) | 12 | 0 | observed |
+| [lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c) | 21 | 0 | observed |
 | [lib/libtm/sysdepend/pico_rp2040/usb/usb_tinyusb_glue.c](../../lib/libtm/sysdepend/pico_rp2040/usb/usb_tinyusb_glue.c) | 2 | 0 | observed |
 | [lib/libwifi/sysdepend/pico_rp2040/cyw43_configport.h](../../lib/libwifi/sysdepend/pico_rp2040/cyw43_configport.h) | 15 | 0 | observed |
-| [lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c](../../lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c) | 17 | 1 | observed |
-| [lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h](../../lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h) | 15 | 12 | observed |
-| [lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_compat.c](../../lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_compat.c) | 47 | 2 | observed |
+| [lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c](../../lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c) | 17 | 0 | observed |
+| [lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h](../../lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h) | 15 | 0 | observed |
+| [lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_compat.c](../../lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_compat.c) | 47 | 0 | observed |
 | [lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_kernel.c](../../lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_kernel.c) | 4 | 0 | observed |
-| [lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h](../../lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h) | 22 | 4 | observed |
+| [lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h](../../lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h) | 22 | 0 | observed |
 | [testing/change_requirement_1/bend_filter_check.c](../../testing/change_requirement_1/bend_filter_check.c) | 34 | 0 | observed |
 | [testing/change_requirement_1/struct_sizes.c](../../testing/change_requirement_1/struct_sizes.c) | 31 | 0 | partial |
 | [testing/compliance/barcode_replay_trace.c](../../testing/compliance/barcode_replay_trace.c) | 16 | 0 | partial |
