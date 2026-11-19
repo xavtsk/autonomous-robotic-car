@@ -31,6 +31,9 @@
 #define BCAP_MAX_EPISODES (12U)
 #define BCAP_PRE                                                               \
     (S3_REC_PRE_US / S3_SAMPLE_PERIOD_US) /* retain the decoder's history */
+#if BCAP_PRE > 511U
+#error BCAP_PRE must fit nine-bit history counters
+#endif
 #define BCAP_END_QUIET (400U / S3_SAMPLE_PERIOD_MS) /* keep 400 ms of white */
 
 /* flags: bits 0-1 surface (0 unknown, 1 white, 2 black), bits 2-4 decoder
@@ -56,14 +59,26 @@ typedef struct
 typedef struct
 {
     bcap_sample_t pool[BCAP_POOL];
-    bcap_sample_t pre[BCAP_PRE];
+    /* Keep naturally aligned 64-bit storage before the seven-byte samples. */
     int64_t pre_qmm[BCAP_PRE]; /* quantized once on arrival, not during trigger
                                   copy */
     bcap_episode_t episode[BCAP_MAX_EPISODES];
+    bcap_sample_t pre[BCAP_PRE];
     uint32_t run_start_us, last_us;
-    uint16_t used, pre_head, pre_count, quiet;
+
+    /* Recorder-owned after bcap_begin_run(); every reader uses its mutex.
+     * History wraps at BCAP_PRE; collecting can retain quiet through the
+     * terminal BCAP_POOL sample. All five fields share one ARM storage word.
+     * Native struct layout is never serialized. */
+    bool active : 1;
+    bool have_last : 1;
+    uint32_t pre_head : 9;  /* 0..299 */
+    uint32_t quiet : 12;    /* 0..4000, including terminal pool exhaustion */
+    uint32_t pre_count : 9; /* 0..300, including the full-history state */
+
+    /* Public serializer metadata retains every pre-validation input value. */
+    uint16_t used;
     uint8_t episodes, dropped;
-    bool active, have_last;
     /* Decoder results seen during the run (also outside episodes). */
     uint16_t decoded, rejected, timing, overflow;
     char letters[9]; /* decoded letters in order, NUL terminated */
