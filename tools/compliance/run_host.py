@@ -187,6 +187,21 @@ def main():
         str(tooling.parents[1]/'testing/compliance/bcap_storage_test.c'),
         str(root/'app_program/controller/bc_capture.c'), '-lm', '-o', str(bcap_binary)])
     run('bcap_storage', [str(bcap_binary)])
+    from instrument_harnesses import operator_source
+    operator_fixture = operator_source(tooling.parents[1], root, output/'operator-observed.c')
+    operator_binary = output/'operator_observed'
+    operator_modules = [root/'app_program/controller'/(name+'.c') for name in
+                        ('bc_capture', 'op_logic', 'integration_codec', 's3_drive')]
+    operator_modules += [root/'app_program/subsystem3'/(name+'.c') for name in
+                         ('navigation_codec', 'ir_acquisition', 'ir_calibration', 'ir_reflectance',
+                          'line_detection', 'line_controller', 'bc_decoder', 'line_navigation')]
+    operator_fixtures = tooling.parents[1]/'testing/integration'
+    run('operator_observed_build', [compiler, *shlex.split(flags),
+        *['-I'+str(path) for path in (operator_fixtures, operator_fixtures/'fakes',
+                                    root/'app_program/controller')],
+        str(operator_fixture), str(tooling/'traces/op_trace.c'),
+        *map(str, operator_modules), '-lm', '-o', str(operator_binary)])
+    run('operator_observed', [str(operator_binary)])
     # The existing S1 make targets cover 0/0 and 1/1. Exercise each independent
     # debug layout with the same assertions, including under ASan/UBSan.
     mqtt_fixtures = tooling.parents[1]/'testing/subsystem1'

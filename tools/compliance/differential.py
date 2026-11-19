@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 from replay_audit import audit
-from instrument_harnesses import runtime_source, mqtt_source
+from instrument_harnesses import runtime_source, mqtt_source, operator_source
 from run_host import motion_estimation_module, motion_storage_flags
 
 
@@ -90,6 +90,16 @@ def main():
                 ['-pthread', '-DAPP_IR_DEBUG=1', '-DTM_MQTT=1'])
             with (output/(label+'-runtime.trace')).open('wb') as stream:
                 subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
+            operator = operator_source(roots['candidate'], root, output/(label+'-operator.c'))
+            operator_modules = [app/'controller'/(name+'.c') for name in
+                                ('bc_capture', 'op_logic', 'integration_codec', 's3_drive')]
+            operator_modules += [app/'subsystem3'/(name+'.c') for name in
+                                 ('navigation_codec', 'ir_acquisition', 'ir_calibration', 'ir_reflectance',
+                                  'line_detection', 'line_controller', 'bc_decoder', 'line_navigation')]
+            binary = build(label, 'operator', [operator, shared/'op_trace.c', *operator_modules],
+                           [fixtures/'integration', fixtures/'integration/fakes', app/'controller'], ['-pthread'])
+            with (output/(label+'-operator.trace')).open('wb') as stream:
+                subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
             mqtt = mqtt_source(roots['candidate'], output/(label+'-mqtt.c'))
             mqtt_sources = [app/'subsystem1'/(name+'.c') for name in
                             ('telemetry_codec', 'buddy1', 'command', 'mqtt_bridge', 'buddy1_test')]
@@ -124,7 +134,7 @@ def main():
                              ('mqtt_production', b'MQTT_'), ('mqtt_imu', b'MQTT_'),
                              ('mqtt_receive', b'MQSTORE '),
                              ('motion_storage', b'MSTORE '), ('barcode_work', b'BWORK '),
-                             ('bcap_storage', b'BCSTORE ')):
+                             ('bcap_storage', b'BCSTORE '), ('operator', b'OPTRACE ')):
             before_trace = (output / ('baseline-' + name + '.trace')).read_bytes()
             after_trace = (output / ('candidate-' + name + '.trace')).read_bytes()
             if name.startswith('mqtt'):

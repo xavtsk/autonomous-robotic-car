@@ -1,5 +1,6 @@
 """Instrumentation anchor tests: exact semantics, flexible formatting."""
 from pathlib import Path
+import re
 import tempfile
 import unittest
 
@@ -59,6 +60,31 @@ class AnchorTests(unittest.TestCase):
                 'sensor_sample_task(0, NULL);\n    assert(!locked);\n'
                 '    trace_runtime("cycle");\n}'))
         self.assertEqual([path.read_bytes() for path in paths], originals)
+
+    def test_operator_observer_preserves_fixture_tokens_and_subject_selection(self):
+        root = Path(__file__).resolve().parents[2]
+        original_path = root/'testing/integration/operator_test.c'
+        original = original_path.read_bytes()
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory)/'observed.c'
+            # The subject path deliberately differs from the shared fixture.
+            subject = Path(directory)/'separate-baseline'
+            observed = harness.operator_source(root, subject, destination).read_text()
+            self.assertNotIn('"../../app_program/', observed)
+            self.assertIn((subject/'app_program/controller/op_logic.h').as_posix(), observed)
+            self.assertLess(observed.index('#define APP_H'), observed.index('op_trace.h'))
+            self.assertLess(observed.index('operator_step(&op'), observed.index('op_trace_write('))
+            recovered, count = re.subn(r'^#include "[^"\n]*/op_trace\.h"\n', '', observed, flags=re.M)
+            self.assertEqual(count, 1)
+            recovered, count = re.subn(r'const size_t trace_console_begin = console_len;', '', recovered)
+            self.assertEqual(count, 1)
+            recovered, count = re.subn(
+                r'const op_trace_context_t trace_context = \{[^;]+;\s*'
+                r'op_trace_write\([^;]+;', '', recovered)
+            self.assertEqual(count, 1)
+            recovered = recovered.replace('"'+(subject/'app_program').as_posix()+'/', '"../../app_program/')
+            self.assertEqual(code_tokens(recovered), code_tokens(original.decode()))
+        self.assertEqual(original_path.read_bytes(), original)
 
 
 if __name__ == '__main__':

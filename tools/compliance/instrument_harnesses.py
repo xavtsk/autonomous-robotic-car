@@ -57,3 +57,26 @@ def mqtt_source(candidate, destination):
         'trace_publish(topic,payload,len,qos,retain);\n    if (publish_result != ERR_OK) return publish_result;')
     destination.write_text(source, encoding='utf-8')
     return destination
+
+
+def operator_source(candidate, subject, destination):
+    """Observe the existing whole GP20/GP21 fixture without changing assertions."""
+    source = (candidate/'testing/integration/operator_test.c').read_text()
+    source = replace_once(source, 'static void period(void) {',
+        'static void period(void) {\n    const size_t trace_console_begin = console_len;\n')
+    anchor = '''operator_step(&op, now_ms(), go, op_button_held(&stop_b),
+                  op_button_held(&go_b), s3_integration_status(&st) ? &st : 0);'''
+    observation = '''
+    const op_trace_context_t trace_context = {
+        clock_value, remote_stop_seen, sleeps, locked, starts_requested,
+        stops, go_down, stop_down, {raw[0], raw[1], raw[2]}};
+    op_trace_write(&trace_context, &op, &go_b, &stop_b, &st, console,
+                   trace_console_begin, console_len);
+'''
+    source = replace_once(source, anchor, anchor + observation)
+    observer = (Path(__file__).with_name('traces')/'op_trace.h').resolve().as_posix()
+    include = '#include "../../app_program/controller/op_logic.h"'
+    source = replace_once(source, include, include+'\n#include "'+observer+'"')
+    source = source.replace('"../../app_program/', '"' + (subject/'app_program').as_posix() + '/')
+    destination.write_text(source, encoding='utf-8')
+    return destination
