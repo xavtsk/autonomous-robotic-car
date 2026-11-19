@@ -83,6 +83,81 @@ typedef struct
     uint8_t bytes[CONTROL_DEBUG_PACKET_SIZE];
 } control_debug_packet_t;
 
+/** Field selectors follow the explicit wire schema, independent of C layout. */
+typedef enum
+{
+    CD_TIMESTAMP_US,
+    CD_MOTION_TIMESTAMP_US,
+    CD_SEQUENCE,
+    CD_MOTION_AVAILABLE,
+    CD_MOTION_VALID,
+    CD_BRAKED,
+    CD_BUSY,
+    CD_MOTION_STATE,
+    CD_MOTION_FAULT,
+    CD_SETPOINT_LEFT,
+    CD_SETPOINT_RIGHT,
+    CD_MEASURED_LEFT,
+    CD_MEASURED_RIGHT,
+    CD_DUTY_LEFT,
+    CD_DUTY_RIGHT,
+    CD_ENCODER_LEFT,
+    CD_ENCODER_RIGHT,
+    CD_DRIVE_STATE,
+    CD_REASON,
+    CD_PENDING,
+    CD_LINE_ERROR,
+    CD_LINE_FLAGS,
+    CD_BARCODE_STATUS,
+    CD_ACCEPTED_CALIBRATION,
+    CD_READINESS,
+    CD_BARCODE_EVENTS,
+    CD_JUNCTION_EVENTS,
+    CD_LOST_EVENTS,
+    CD_SAMPLE_GAP_US,
+    CD_RUN_MAX_GAP_US,
+    CD_LEFT_WHITE,
+    CD_LEFT_BLACK,
+    CD_LEFT_WHITE_LIMIT,
+    CD_LEFT_BLACK_LIMIT,
+    CD_RIGHT_WHITE,
+    CD_RIGHT_BLACK,
+    CD_RIGHT_WHITE_LIMIT,
+    CD_RIGHT_BLACK_LIMIT,
+    CD_BARCODE_WHITE,
+    CD_BARCODE_BLACK,
+    CD_BARCODE_WHITE_LIMIT,
+    CD_BARCODE_BLACK_LIMIT,
+    CD_CAL_SENSOR,
+    CD_COLLECTING,
+    CD_WHITE_MIN,
+    CD_WHITE_MAX,
+    CD_BLACK_MIN,
+    CD_BLACK_MAX,
+    CD_WHITE_COUNT,
+    CD_BLACK_COUNT,
+    CD_FIELD_COUNT
+} control_debug_field_t;
+
+/** Sampling-owner scratch; no pointer to this object is published to tasks. */
+typedef struct
+{
+    control_debug_packet_t packet;
+    bool valid : 1;
+} control_debug_builder_t;
+
+/** Reset the builder to the version-1 zero sample, owned by the caller. */
+void control_debug_builder_init (control_debug_builder_t * p_builder);
+/** Validate an unsigned public value before encoding; errors remain latched. */
+void control_debug_builder_u (control_debug_builder_t * p_builder,
+                              control_debug_field_t field, uint32_t value);
+/** Validate a signed public value before encoding; errors remain latched. */
+void control_debug_builder_s (control_debug_builder_t * p_builder,
+                              control_debug_field_t field, int32_t value);
+/** Publish only a valid complete sample; failure leaves p_packet unchanged. */
+bool control_debug_builder_end (const control_debug_builder_t * p_builder,
+                                control_debug_packet_t * p_packet);
+
 /** Encode a debug sample; return false for null pointers or invalid fields. */
 bool control_debug_pack (const control_debug_sample_t * p_sample,
                          control_debug_packet_t * p_packet);

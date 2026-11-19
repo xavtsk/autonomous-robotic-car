@@ -99,3 +99,199 @@ bool control_debug_unpack (const control_debug_packet_t * p_packet,
     return control_debug_pack(p_sample, &canonical) &&
            memcmp(p_packet, &canonical, sizeof *p_packet) == 0;
 }
+
+/** Explicit bit positions describe protocol bytes, never native struct layout.
+ */
+typedef struct
+{
+    uint16_t bit;
+    uint8_t width;
+    bool signed_value;
+} control_debug_field_info_t;
+
+static const control_debug_field_info_t g_debug_fields[CD_FIELD_COUNT] = {
+    {0U, 32U, false},   /* timestamp_us */
+    {32U, 32U, false},  /* motion_timestamp_us */
+    {64U, 8U, false},   /* sequence */
+    {72U, 1U, false},   /* motion_available */
+    {73U, 1U, false},   /* motion_valid */
+    {74U, 1U, false},   /* braked */
+    {75U, 1U, false},   /* busy */
+    {76U, 3U, false},   /* motion_state */
+    {79U, 3U, false},   /* motion_fault */
+    {82U, 13U, true},   /* setpoint_left */
+    {95U, 13U, true},   /* setpoint_right */
+    {108U, 13U, true},  /* measured_left */
+    {121U, 13U, true},  /* measured_right */
+    {134U, 8U, true},   /* duty_left */
+    {142U, 8U, true},   /* duty_right */
+    {150U, 20U, true},  /* encoder_left */
+    {170U, 20U, true},  /* encoder_right */
+    {190U, 3U, false},  /* drive_state */
+    {193U, 4U, false},  /* reason */
+    {197U, 3U, false},  /* pending */
+    {200U, 8U, true},   /* line_error */
+    {208U, 5U, false},  /* line_flags */
+    {213U, 3U, false},  /* barcode_status */
+    {216U, 3U, false},  /* accepted_calibration */
+    {219U, 5U, false},  /* readiness */
+    {224U, 16U, false}, /* barcode_events */
+    {240U, 16U, false}, /* junction_events */
+    {256U, 16U, false}, /* lost_events */
+    {272U, 32U, false}, /* sample_gap_us */
+    {304U, 32U, false}, /* run_max_gap_us */
+    {336U, 12U, false}, /* left_white */
+    {348U, 12U, false}, /* left_black */
+    {360U, 10U, false}, /* left_white_limit */
+    {370U, 10U, false}, /* left_black_limit */
+    {380U, 12U, false}, /* right_white */
+    {392U, 12U, false}, /* right_black */
+    {404U, 10U, false}, /* right_white_limit */
+    {414U, 10U, false}, /* right_black_limit */
+    {424U, 12U, false}, /* barcode_white */
+    {436U, 12U, false}, /* barcode_black */
+    {448U, 10U, false}, /* barcode_white_limit */
+    {458U, 10U, false}, /* barcode_black_limit */
+    {468U, 2U, false},  /* cal_sensor */
+    {470U, 1U, false},  /* collecting */
+    {471U, 12U, false}, /* white_min */
+    {483U, 12U, false}, /* white_max */
+    {495U, 12U, false}, /* black_min */
+    {507U, 12U, false}, /* black_max */
+    {519U, 16U, false}, /* white_count */
+    {535U, 16U, false}, /* black_count */
+};
+
+/** Apply the same additional domains as the wide public pack interface. */
+static bool debug_unsigned_domain (control_debug_field_t field, uint32_t value)
+{
+    switch (field)
+    {
+    case CD_MOTION_STATE:
+    case CD_MOTION_FAULT:
+        return value <= 5U;
+    case CD_DRIVE_STATE:
+        return value <= 6U;
+    case CD_REASON:
+        return value <= 10U;
+    case CD_PENDING:
+    case CD_BARCODE_STATUS:
+        return value <= 4U;
+    case CD_CAL_SENSOR:
+        return value <= 2U;
+    case CD_LEFT_WHITE_LIMIT:
+    case CD_LEFT_BLACK_LIMIT:
+    case CD_RIGHT_WHITE_LIMIT:
+    case CD_RIGHT_BLACK_LIMIT:
+    case CD_BARCODE_WHITE_LIMIT:
+    case CD_BARCODE_BLACK_LIMIT:
+        return value <= 1000U;
+    default:
+        return true;
+    }
+}
+
+/** Apply the same signed semantic limits as the wide public pack interface. */
+static bool debug_signed_domain (control_debug_field_t field, int32_t value)
+{
+    switch (field)
+    {
+    case CD_LINE_ERROR:
+    case CD_DUTY_LEFT:
+    case CD_DUTY_RIGHT:
+        return (value >= -100) && (value <= 100);
+    default:
+        return true;
+    }
+}
+
+/** Replace a field, including clearing a previously populated zero value. */
+static void debug_builder_write (control_debug_builder_t * p_builder,
+                                 control_debug_field_t field, uint32_t value)
+{
+    const control_debug_field_info_t * p_info = &g_debug_fields[field];
+    uint32_t index = 0U;
+    for (index = 0U; index < p_info->width; ++index)
+    {
+        const uint32_t bit = p_info->bit + index;
+        const uint32_t byte = 1U + (bit / 8U);
+        const uint32_t mask = UINT32_C(1) << (bit % 8U);
+        const uint32_t previous = p_builder->packet.bytes[byte];
+        const uint32_t next =
+            (previous & ~mask) | (((value >> index) & 1U) << (bit % 8U));
+        /* The mask only changes one bit of an existing byte. */
+        p_builder->packet.bytes[byte] = (uint8_t)next;
+    }
+}
+
+void control_debug_builder_init (control_debug_builder_t * p_builder)
+{
+    if (NULL != p_builder)
+    {
+        (void)memset(p_builder, 0, sizeof(*p_builder));
+        p_builder->packet.bytes[0] = 1U;
+        p_builder->valid = true;
+    }
+}
+
+void control_debug_builder_u (control_debug_builder_t * p_builder,
+                              control_debug_field_t field, uint32_t value)
+{
+    if (NULL == p_builder)
+    {
+        return;
+    }
+    /* Converting a negative selector to unsigned also makes it out of range. */
+    if (((uint32_t)field >= CD_FIELD_COUNT) ||
+        g_debug_fields[field].signed_value ||
+        !unsigned_fits(value, g_debug_fields[field].width) ||
+        !debug_unsigned_domain(field, value))
+    {
+        p_builder->valid = false;
+    }
+    else
+    {
+        debug_builder_write(p_builder, field, value);
+    }
+}
+
+void control_debug_builder_s (control_debug_builder_t * p_builder,
+                              control_debug_field_t field, int32_t value)
+{
+    if (NULL == p_builder)
+    {
+        return;
+    }
+    /* Converting a negative selector to unsigned also makes it out of range. */
+    if (((uint32_t)field >= CD_FIELD_COUNT) ||
+        !g_debug_fields[field].signed_value ||
+        !signed_fits(value, g_debug_fields[field].width) ||
+        !debug_signed_domain(field, value))
+    {
+        p_builder->valid = false;
+    }
+    else
+    {
+        /* Conversion modulo 2^32 preserves the low-width two's-complement
+         * encoding already used by the public packer for signed values. */
+        debug_builder_write(p_builder, field, (uint32_t)value);
+    }
+}
+
+bool control_debug_builder_end (const control_debug_builder_t * p_builder,
+                                control_debug_packet_t * p_packet)
+{
+    unsigned int available_bit = g_debug_fields[CD_MOTION_AVAILABLE].bit;
+    unsigned int valid_bit = g_debug_fields[CD_MOTION_VALID].bit;
+    if ((NULL == p_builder) || (NULL == p_packet) || !p_builder->valid)
+    {
+        return false;
+    }
+    if ((0U != get(p_builder->packet.bytes, &valid_bit, 1U)) &&
+        (0U == get(p_builder->packet.bytes, &available_bit, 1U)))
+    {
+        return false;
+    }
+    *p_packet = p_builder->packet;
+    return true;
+}

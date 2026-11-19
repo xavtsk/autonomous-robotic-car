@@ -496,11 +496,28 @@ static bool debug_scaled (float value, float scale, int32_t limit,
     return true;
 }
 
+/** Convert with the original rounding/range helper before field encoding.
+ * The sampling owner alone uses the builder. A failed conversion leaves its
+ * target field untouched, preserving the original short-circuit sequence. */
+static bool debug_builder_scaled (control_debug_builder_t * p_builder,
+                                  control_debug_field_t field, float value,
+                                  float scale, int32_t limit)
+{
+    int32_t converted = 0;
+    if (!debug_scaled(value, scale, limit, &converted))
+    {
+        return false;
+    }
+    control_debug_builder_s(p_builder, field, converted);
+    return true;
+}
+
 static bool capture_control_debug (const s3_integration_status_t * p_st,
                                    control_debug_packet_t * p_packet)
 {
     /* Owned by the sampling task. Static scratch avoids growing its stack. */
-    static control_debug_sample_t d;
+    static control_debug_builder_t builder;
+    bool motion_valid = false;
     static motion_debug_snapshot_t value_m;
     const uint32_t now = p_st->navigation.timestamp_us;
     static const uint32_t event_bits[3] = {S3_EVENT_BARCODE, S3_EVENT_JUNCTION,
@@ -523,84 +540,129 @@ static bool capture_control_debug (const s3_integration_status_t * p_st,
     }
     g_control_seen = true;
     g_control_last = now;
-    d = (control_debug_sample_t){0};
-    d.timestamp_us = now;
-    d.sequence = g_control_sequence++;
+    control_debug_builder_init(&builder);
+    control_debug_builder_u(&builder, CD_TIMESTAMP_US, now);
+    control_debug_builder_u(&builder, CD_SEQUENCE, g_control_sequence++);
     if (motion_try_debug_snapshot(&value_m))
     {
-        d.motion_available = 1;
-        d.motion_timestamp_us = value_m.timestamp_us;
-        d.motion_state = value_m.state;
-        d.motion_fault = value_m.fault;
-        d.braked = value_m.braked;
-        d.busy = value_m.busy;
+        control_debug_builder_u(&builder, CD_MOTION_AVAILABLE, 1);
+        control_debug_builder_u(&builder, CD_MOTION_TIMESTAMP_US,
+                                value_m.timestamp_us);
+        control_debug_builder_u(&builder, CD_MOTION_STATE, value_m.state);
+        control_debug_builder_u(&builder, CD_MOTION_FAULT, value_m.fault);
+        control_debug_builder_u(&builder, CD_BRAKED, value_m.braked);
+        control_debug_builder_u(&builder, CD_BUSY, value_m.busy);
         /* Motion can preempt this task after the ADC frame was timestamped.
          * Judge freshness against the current clock, not that older frame. */
-        d.motion_valid = value_m.valid &&
-                         (uint32_t)(now_us() - value_m.timestamp_us) <= 50000U;
-        d.motion_valid =
-            d.motion_valid &&
-            debug_scaled(value_m.setpoint_mps[0], 1000, 4095,
-                         &d.setpoint_left) &&
-            debug_scaled(value_m.setpoint_mps[1], 1000, 4095,
-                         &d.setpoint_right) &&
-            debug_scaled(value_m.measured_mps[0], 1000, 4095,
-                         &d.measured_left) &&
-            debug_scaled(value_m.measured_mps[1], 1000, 4095,
-                         &d.measured_right) &&
-            debug_scaled(value_m.duty[0], 100, 100, &d.duty_left) &&
-            debug_scaled(value_m.duty[1], 100, 100, &d.duty_right) &&
+        motion_valid = value_m.valid &&
+                       (uint32_t)(now_us() - value_m.timestamp_us) <= 50000U;
+        motion_valid =
+            motion_valid &&
+            debug_builder_scaled(&builder, CD_SETPOINT_LEFT,
+                                 value_m.setpoint_mps[0], 1000, 4095) &&
+            debug_builder_scaled(&builder, CD_SETPOINT_RIGHT,
+                                 value_m.setpoint_mps[1], 1000, 4095) &&
+            debug_builder_scaled(&builder, CD_MEASURED_LEFT,
+                                 value_m.measured_mps[0], 1000, 4095) &&
+            debug_builder_scaled(&builder, CD_MEASURED_RIGHT,
+                                 value_m.measured_mps[1], 1000, 4095) &&
+            debug_builder_scaled(&builder, CD_DUTY_LEFT, value_m.duty[0], 100,
+                                 100) &&
+            debug_builder_scaled(&builder, CD_DUTY_RIGHT, value_m.duty[1], 100,
+                                 100) &&
             value_m.encoder[0] >= -524288 && value_m.encoder[0] <= 524287 &&
             value_m.encoder[1] >= -524288 && value_m.encoder[1] <= 524287;
-        if (d.motion_valid)
+        if (motion_valid)
         {
-            d.encoder_left = value_m.encoder[0];
-            d.encoder_right = value_m.encoder[1];
+            control_debug_builder_s(&builder, CD_ENCODER_LEFT,
+                                    value_m.encoder[0]);
+            control_debug_builder_s(&builder, CD_ENCODER_RIGHT,
+                                    value_m.encoder[1]);
         }
         else
         {
-            d.setpoint_left = d.setpoint_right = d.measured_left =
-                d.measured_right = 0;
-            d.duty_left = d.duty_right = 0;
+            control_debug_builder_s(&builder, CD_SETPOINT_LEFT, 0);
+            control_debug_builder_s(&builder, CD_SETPOINT_RIGHT, 0);
+            control_debug_builder_s(&builder, CD_MEASURED_LEFT, 0);
+            control_debug_builder_s(&builder, CD_MEASURED_RIGHT, 0);
+            control_debug_builder_s(&builder, CD_DUTY_LEFT, 0);
+            control_debug_builder_s(&builder, CD_DUTY_RIGHT, 0);
         }
     }
-    d.drive_state = p_st->state;
-    d.reason = p_st->reason;
-    d.pending = g_drive.pending;
-    d.line_error =
-        p_st->navigation.line.valid ? p_st->navigation.line.error : 0;
-    d.line_flags =
-        p_st->navigation.line.valid | p_st->navigation.line.present << 1 |
-        p_st->navigation.line.junction_candidate << 2 |
-        p_st->navigation.line.touching << 3 | p_st->navigation.rearming << 4;
-    d.barcode_status = g_last_barcode_status;
-    d.accepted_calibration = p_st->navigation.accepted_calibration;
-    d.readiness = p_st->navigation.readiness_blockers;
-    d.barcode_events = g_debug_events[0];
-    d.junction_events = g_debug_events[1];
-    d.lost_events = g_debug_events[2];
-    d.sample_gap_us = p_st->navigation.sample_gap_us;
-    d.run_max_gap_us = p_st->run_timing.max_gap_us;
-#define DEBUG_CAL(prefix, id)                                                  \
-    d.prefix##_white = g_drive.navigation.config.calibration[id].white_raw;    \
-    d.prefix##_black = g_drive.navigation.config.calibration[id].black_raw;    \
-    d.prefix##_white_limit =                                                   \
-        g_drive.navigation.config.calibration[id].white_limit;                 \
-    d.prefix##_black_limit =                                                   \
-        g_drive.navigation.config.calibration[id].black_limit;
-    DEBUG_CAL(left, S3_SENSOR_LEFT)
-    DEBUG_CAL(right, S3_SENSOR_RIGHT)
-    DEBUG_CAL(barcode, S3_SENSOR_BARCODE)
-#undef DEBUG_CAL
-    d.cal_sensor = p_st->calibration_sensor;
-    d.collecting = p_st->collecting;
-    d.white_min = p_st->white.count ? p_st->white.minimum : 0;
-    d.white_max = p_st->white.count ? p_st->white.maximum : 0;
-    d.black_min = p_st->black.count ? p_st->black.minimum : 0;
-    d.black_max = p_st->black.count ? p_st->black.maximum : 0;
-    d.white_count = p_st->white.count;
-    d.black_count = p_st->black.count;
-    return control_debug_pack(&d, p_packet);
+    control_debug_builder_u(&builder, CD_DRIVE_STATE, p_st->state);
+    control_debug_builder_u(&builder, CD_REASON, p_st->reason);
+    control_debug_builder_u(&builder, CD_PENDING, g_drive.pending);
+    control_debug_builder_s(
+        &builder, CD_LINE_ERROR,
+        p_st->navigation.line.valid ? p_st->navigation.line.error : 0);
+    control_debug_builder_u(&builder, CD_LINE_FLAGS,
+                            p_st->navigation.line.valid |
+                                p_st->navigation.line.present << 1 |
+                                p_st->navigation.line.junction_candidate << 2 |
+                                p_st->navigation.line.touching << 3 |
+                                p_st->navigation.rearming << 4);
+    control_debug_builder_u(&builder, CD_BARCODE_STATUS, g_last_barcode_status);
+    control_debug_builder_u(&builder, CD_ACCEPTED_CALIBRATION,
+                            p_st->navigation.accepted_calibration);
+    control_debug_builder_u(&builder, CD_READINESS,
+                            p_st->navigation.readiness_blockers);
+    control_debug_builder_u(&builder, CD_BARCODE_EVENTS, g_debug_events[0]);
+    control_debug_builder_u(&builder, CD_JUNCTION_EVENTS, g_debug_events[1]);
+    control_debug_builder_u(&builder, CD_LOST_EVENTS, g_debug_events[2]);
+    control_debug_builder_u(&builder, CD_SAMPLE_GAP_US,
+                            p_st->navigation.sample_gap_us);
+    control_debug_builder_u(&builder, CD_RUN_MAX_GAP_US,
+                            p_st->run_timing.max_gap_us);
+    control_debug_builder_u(
+        &builder, CD_LEFT_WHITE,
+        g_drive.navigation.config.calibration[S3_SENSOR_LEFT].white_raw);
+    control_debug_builder_u(
+        &builder, CD_LEFT_BLACK,
+        g_drive.navigation.config.calibration[S3_SENSOR_LEFT].black_raw);
+    control_debug_builder_u(
+        &builder, CD_LEFT_WHITE_LIMIT,
+        g_drive.navigation.config.calibration[S3_SENSOR_LEFT].white_limit);
+    control_debug_builder_u(
+        &builder, CD_LEFT_BLACK_LIMIT,
+        g_drive.navigation.config.calibration[S3_SENSOR_LEFT].black_limit);
+    control_debug_builder_u(
+        &builder, CD_RIGHT_WHITE,
+        g_drive.navigation.config.calibration[S3_SENSOR_RIGHT].white_raw);
+    control_debug_builder_u(
+        &builder, CD_RIGHT_BLACK,
+        g_drive.navigation.config.calibration[S3_SENSOR_RIGHT].black_raw);
+    control_debug_builder_u(
+        &builder, CD_RIGHT_WHITE_LIMIT,
+        g_drive.navigation.config.calibration[S3_SENSOR_RIGHT].white_limit);
+    control_debug_builder_u(
+        &builder, CD_RIGHT_BLACK_LIMIT,
+        g_drive.navigation.config.calibration[S3_SENSOR_RIGHT].black_limit);
+    control_debug_builder_u(
+        &builder, CD_BARCODE_WHITE,
+        g_drive.navigation.config.calibration[S3_SENSOR_BARCODE].white_raw);
+    control_debug_builder_u(
+        &builder, CD_BARCODE_BLACK,
+        g_drive.navigation.config.calibration[S3_SENSOR_BARCODE].black_raw);
+    control_debug_builder_u(
+        &builder, CD_BARCODE_WHITE_LIMIT,
+        g_drive.navigation.config.calibration[S3_SENSOR_BARCODE].white_limit);
+    control_debug_builder_u(
+        &builder, CD_BARCODE_BLACK_LIMIT,
+        g_drive.navigation.config.calibration[S3_SENSOR_BARCODE].black_limit);
+    control_debug_builder_u(&builder, CD_CAL_SENSOR, p_st->calibration_sensor);
+    control_debug_builder_u(&builder, CD_COLLECTING, p_st->collecting);
+    control_debug_builder_u(&builder, CD_WHITE_MIN,
+                            p_st->white.count ? p_st->white.minimum : 0);
+    control_debug_builder_u(&builder, CD_WHITE_MAX,
+                            p_st->white.count ? p_st->white.maximum : 0);
+    control_debug_builder_u(&builder, CD_BLACK_MIN,
+                            p_st->black.count ? p_st->black.minimum : 0);
+    control_debug_builder_u(&builder, CD_BLACK_MAX,
+                            p_st->black.count ? p_st->black.maximum : 0);
+    control_debug_builder_u(&builder, CD_WHITE_COUNT, p_st->white.count);
+    control_debug_builder_u(&builder, CD_BLACK_COUNT, p_st->black.count);
+    control_debug_builder_u(&builder, CD_MOTION_VALID, motion_valid);
+    return control_debug_builder_end(&builder, p_packet);
 }
 #endif
 static void sensor_sample_task (INT code, void * p_unused)
