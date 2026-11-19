@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_commit": "3fda4d5",
   "toolchain": "Arm GNU14.3.1 -O2 -std=c99 cortex-m0plus",
-  "evidence_level": "Focused target compilation and complete object-symbol/stack reports; no target execution or linked firmware claim.",
+  "evidence_level": "Initial focused object compilation retained below; executed Linux characterization and linked target evidence are recorded in linux_gate.",
   "selection": "All120 orderings of the same five fields were compiled in ignored scratch; selected active/have_last/pre_head/quiet/pre_count retains80-byte record stack and uses5202 capture text-symbol bytes. No field widths, operations or domains varied.",
   "field_domains": {
     "active": "bool0..1",
@@ -937,5 +937,172 @@
       ]
     }
   },
-  "behavior_gate": "Pending candidate Linux BCSTORE comparison; pre-compaction fixture passed all6 modes in44586316814,776 semantic rows exact."
+  "behavior_gate": "Candidate BCSTORE characterization passed all six Linux host modes and exact 776-row differential comparison in run44595295824. Overall workflow remains failed for the separately recorded gates.",
+  "initial_evidence_level": "Focused target compilation and complete object-symbol/stack reports; no target execution or linked firmware claim.",
+  "linux_gate": {
+    "run_id": 44595295824,
+    "url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44595295824",
+    "revision": "302100ecf10f088f26a5b6278a8efa4149cdc06b",
+    "fixed_baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+    "preceding_production_revision": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
+    "six_host_modes": [
+      {
+        "artifact": 14564279193,
+        "revision": "302100ecf10f088f26a5b6278a8efa4149cdc06b",
+        "mode": "clang",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3",
+          "python_change_requirement_1"
+        ]
+      },
+      {
+        "artifact": 14564743747,
+        "revision": "302100ecf10f088f26a5b6278a8efa4149cdc06b",
+        "mode": "sanitize",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3"
+        ]
+      },
+      {
+        "artifact": 14565101639,
+        "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+        "mode": "gcc",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3"
+        ]
+      },
+      {
+        "artifact": 14565477147,
+        "revision": "302100ecf10f088f26a5b6278a8efa4149cdc06b",
+        "mode": "gcc",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3",
+          "python_change_requirement_1"
+        ]
+      },
+      {
+        "artifact": 14565691349,
+        "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+        "mode": "sanitize",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3"
+        ]
+      },
+      {
+        "artifact": 14565890881,
+        "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+        "mode": "clang",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3"
+        ]
+      }
+    ],
+    "differential_artifact": 14564553597,
+    "replay": {
+      "name": "recorded_replay",
+      "cases": 1008,
+      "mismatches": 0,
+      "expectation_failures": 2,
+      "matched": true
+    },
+    "all_twelve_target_profiles_pass": true,
+    "production_artifact": 14566022142,
+    "production_before": {
+      "text": 466012,
+      "data": 696,
+      "bss": 128816,
+      "static_ram": 129512
+    },
+    "production_after": {
+      "text": 465852,
+      "data": 696,
+      "bss": 128808,
+      "static_ram": 129504
+    },
+    "production_delta": {
+      "text": -160,
+      "data": 0,
+      "bss": -8,
+      "static_ram": -8
+    },
+    "all_normalized_function_stack_rows_unchanged": true,
+    "production_flash_sha256": "d4a0bb724368d25dad8c3dd9d44e548354ffc15b19cd57aec07a01bf9dc433c9",
+    "production_artifacts": {
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": "21da2b30a41b3d2b1dbf5a5fbba5584f641175b9b26fff55593246743fab046c",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": "05d491507cbecc2df5531ae7acd0e996a6c046b1845a38a72637abca825e8c2f",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": "d870463ef2e673d6cb1c739485f0b654a5d71a246864b2881a62986e18612448"
+    },
+    "downloaded_elf_uf2_map_flash_hashes_verified": true,
+    "conditional_union": {
+      "artifact": 14566411162,
+      "status": "INCOMPLETE",
+      "observed": 376,
+      "total": 420,
+      "errors": [],
+      "missing_profiles": [],
+      "unobserved": 44,
+      "expected_profiles": 14,
+      "received_profiles": 14
+    },
+    "overall_workflow_passed": false,
+    "other_failures": [
+      "Two original replay expectations still fail in both subjects; all 1008 replay comparisons match.",
+      "Candidate GCC and Clang host Python suites fail two stale test_c_style formatter mocks after the EOF checker change.",
+      "Formatting, full inventory completion and BARR audits remain incomplete/failing.",
+      "Conditional union leaves 44 of 420 explicit arms unobserved; no collector/receipt errors or missing profiles."
+    ],
+    "physical_execution": false,
+    "limits": [
+      "Exercised host traces do not establish RTOS scheduling or physical timing.",
+      "Stack estimates are compiler per-function rows, not measured task high-water or call-chain maxima.",
+      "The production comparison includes BCAP packing, three prune helpers and the other separately recorded source batches in revision302100e."
+    ],
+    "semantic_trace": {
+      "name": "bcap_storage_semantic_trace",
+      "matched": true,
+      "semantic_rows": 776,
+      "baseline_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2",
+      "candidate_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2"
+    },
+    "downloaded_trace_bytes_independently_hashed": true,
+    "g_bcap_symbol_bytes": {
+      "before": 32736,
+      "after": 32728,
+      "delta": -8
+    },
+    "bcap_record_stack_bytes": {
+      "before": 80,
+      "after": 80
+    }
+  }
 }

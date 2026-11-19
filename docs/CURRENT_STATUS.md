@@ -45,8 +45,8 @@ Local Windows compile/link checks must remain distinct because Application
 Control has blocked generated native test programs in this workspace.
 
 The most recently examined complete production image is cleanup revision
-`3fda4d517e5720c51da7c41033bc0b9c221b11b5`, built with public example network
-settings in [Linux run 44589867778](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44589867778).
+`302100ecf10f088f26a5b6278a8efa4149cdc06b`, built with public example network
+settings in [Linux run 44595295824](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44595295824).
 It has not been flashed. The physical baseline above remains the rollback image.
 
 | Work or evidence | Current result |
@@ -55,17 +55,17 @@ It has not been flashed. The physical baseline above remains the rollback image.
 | Compact debug packet builder | Executed boundary tests and exact packet traces match; matched production static RAM decreases by 128 bytes. |
 | C99 aliases and assertions | Original assertion conditions retained; exercised C99 checks pass. One primitive `float` spelling is retained under pending BARR-P12. |
 | Repaired production executable | Entire flash payload is byte-identical to the pre-alias debug-builder image; [matched evidence](compliance/evidence/alias-repaired-target.json). |
-| Semantic comparison at `3fda4d5` | Motion, terrain, obstacle, controller/MQTT, debug packets, navigation and all 1008 barcode replay comparisons match. Additional fixtures compare 802 motion-storage, 854 barcode-work, 776 capture-storage and 2093 fragmented-receive trace rows. |
-| Complete regression gate | **Failed:** two original barcode fixture expectations also fail on the fixed baseline. [Investigation](compliance/evidence/BASELINE_FAILURES.md) preserves those expectations. |
+| Semantic comparison at `302100e` | Motion, terrain, obstacle, controller/MQTT, debug packets, navigation and all 1008 barcode replay comparisons match. Additional fixtures compare 802 motion-storage, 854 barcode-work, 776 capture-storage and 2093 fragmented-receive trace rows. All six host modes execute these four characterization fixtures successfully, including sanitizers. |
+| Complete regression gate | **Failed:** two original barcode fixture expectations also fail on the fixed baseline. [Investigation](compliance/evidence/BASELINE_FAILURES.md) preserves those expectations. Candidate GCC/Clang also expose two stale formatter mocks in `testing/change_requirement_1/test_c_style.py` after the EOF-checker change; their failed run evidence is retained. |
 | Historical test contexts | Three obsolete harnesses fail to compile on both fixed baseline and candidate against the current APIs. [Exact commands and diagnostics](compliance/evidence/historical-fixture-compilation.json) are retained; no replacement API or weakened assertion hides these gaps. |
 | BARR formatting/module comments | Token-preserving batch `6326fcb` covers 239 files. Production bytes match exactly and the repaired differential rerun matches; [record](compliance/evidence/FORMAT_CI_44579973340.md) retains the earlier harness failure. |
 | Motion private storage | Six Linux host modes pass, exact 802-row traces match; linked production static RAM decreases by 32 bytes versus the preceding image. [Evidence](compliance/evidence/motion-storage-candidate.json). Physical timing remains pending. |
 | Estimator module rename | Production flash payload and UF2 are byte-identical to the motion candidate, with link order preserved. [Evidence](compliance/evidence/estimator-rename-linux.json). |
 | MQTT private storage | All six Linux host modes and four MQTT profiles pass; linked static RAM decreases by 24 bytes while text increases by 40 bytes. Packet bytes and retry/receive traces match. [Evidence](compliance/evidence/mqtt-state-linux.json). |
-| Conditional-compilation collector | Repaired parser executes successfully in all 12 target jobs. Per-profile branch receipts are retained; their union still requires closure review. Collector success alone is not full branch coverage. |
-| Header pairs and function contracts | Twenty standalone test pairs and 19 controller-debug contracts pass their Linux gates. Later motion/IR contracts, fake guards and the shared navigation header have bounded source/compiler proofs; next Linux run pending. Project-wide naming and documentation remain open. |
-| Barcode phase extraction | First four helpers pass six host modes, all 854 detailed work rows and all 12 target builds, with unchanged compiler stack rows. [Evidence](compliance/evidence/barcode-phase-extraction.json). Three later pruning helpers await their Linux gate. |
-| Capture private storage | Five recorder-owned fields compacted without changing serializers or function bodies. Focused target compilation saves 8 bytes with unchanged stack estimates; candidate execution/full linking pending. [Evidence](compliance/evidence/bcap-storage-candidate.json). |
+| Conditional-compilation collector | All 14 host/target receipts pass pristine and instrumented preprocessing with zero collector/receipt errors and no missing profiles. The official union is **incomplete: 376/420 explicit arms observed, 44 unobserved** (artifact `14566411162`). No unobserved guard or alternate branch is silently exempted. |
+| Header pairs and function contracts | Twenty standalone test pairs, controller-debug and motion/IR contracts, fake guards and the shared navigation header pass their bounded Linux audit gates at `302100e`; 177 tooling tests pass without skips. Project-wide naming and documentation remain open. |
+| Barcode phase extraction | First four helpers and three later pruning helpers pass six host modes, all 854 detailed work rows and all 12 target builds. The pruning candidate retains the 8324-byte record-update symbol and its 376-byte compiler stack estimate; every normalized production stack row is unchanged. [Pruning evidence](compliance/evidence/barcode-prune-extraction.json) retains the differing instruction/table bytes and separate timing limit. |
+| Capture private storage | Five recorder-owned fields compacted without changing serializers or function bodies. All six Linux host modes and the exact 776-row differential trace pass. Linked `g_bcap` decreases from 32736 to 32728 bytes; production static RAM decreases by 8 bytes versus `3fda4d5`, with all compiler stack rows unchanged. [Evidence](compliance/evidence/bcap-storage-candidate.json). |
 | Imported template preservation | Fifteen unchanged imported files restored to fixed-baseline text; [provenance correction](compliance/TEMPLATE_BOUNDARY_CORRECTION.md). Actual team network modifications remain in scope. |
 | Data inventory binding | 254 owned/mixed files and 9,210 declarations recorded, with consumer/header dependencies checked. Integrity passes; 238 representation items and three historical compiler contexts remain open. |
 | Complete BARR / CR1 closure | **Incomplete:** remaining field gaps, function contracts, statement/naming rules, profile coverage and pending exceptions remain in their ledgers. |
@@ -75,12 +75,16 @@ The [alias/assertion batch record](compliance/ALIAS_ASSERT_BATCH.md) and
 [compiler investigation](compliance/evidence/ALIAS_TARGET_INVESTIGATION.md)
 distinguish source equivalence, executed traces and target-byte evidence.
 The later branch commits and working tree are implementation work in progress;
-they do not inherit the exact-image or execution result of `3fda4d5`.
+they do not inherit the exact-image or execution result of `302100e`.
 
-The inspected `3fda4d5` production image has 466,012 text bytes, 696 data bytes
-and 128,816 BSS bytes (129,512 bytes of static RAM). Relative to the fixed
-baseline's matched CI profile, text decreases by 264 bytes and static RAM by
-184 bytes. These are actual linker allocations, not a sum of information bits.
+The inspected `302100e` production image has 465,852 text bytes, 696 data bytes
+and 128,808 BSS bytes (129,504 bytes of static RAM). Relative to the preceding
+`3fda4d5` production image, text decreases by 160 bytes and static RAM by 8 bytes.
+Relative to the fixed baseline's matched CI profile, text decreases by 424 bytes
+and static RAM by 192 bytes. Production artifact `14566022142` has flash SHA-256
+`d4a0bb724368d25dad8c3dd9d44e548354ffc15b19cd57aec07a01bf9dc433c9`;
+the downloaded ELF, UF2, map and flash hashes were independently verified.
+These are actual linker allocations, not a sum of information bits.
 Compiler stack estimates and any increases remain in the target manifests;
 physical task high-water measurements are still outstanding.
 

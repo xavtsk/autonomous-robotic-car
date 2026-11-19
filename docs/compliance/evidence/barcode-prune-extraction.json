@@ -39,7 +39,7 @@
     "Token equivalence after bounded inversion does not prove equal machine code, stack or physical timing."
   ],
   "before_revision": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
-  "status": "three pruning phase helpers inverse-verified and compiled; candidate Linux execution pending",
+  "status": "Three pruning phase helpers inverse-verified, executed in six Linux host modes with exact854-row scratch traces, and linked in all12target profiles; overall workflow remains failed for separately recorded gates.",
   "predecessor_gate": {
     "run_id": 44589867778,
     "revision": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
@@ -70,9 +70,179 @@
     "interpretation": "Instruction and switch-table bytes differ despite equal size. Timing equivalence is not inferred.",
     "artifacts": "build/barcode-prune-extraction/{before,candidate}/{command.json,bc_decoder.o,bc_decoder.su,symbols.txt,disassembly.txt}, target-compile-comparison.json and object-equivalence.json"
   },
-  "verification_command": "python tools/compliance/verify_barcode_phase_batch.py --manifest docs/compliance/evidence/barcode-prune-extraction.json --candidate WORKTREE --json (pin the new commit after publication)",
+  "verification_command": "python tools/compliance/verify_barcode_phase_batch.py --manifest docs/compliance/evidence/barcode-prune-extraction.json --candidate 10ffc2c0dfeb800727cf0be49780867c64cab3e0 --json",
   "pending": [
-    "Linux execution of this candidate with exact full scratch/replay/runtime traces and sanitizers.",
-    "Matched target-profile links; physical timing and task high-water evidence remain separate."
-  ]
+    "Physical timing and task high-water evidence remain outstanding.",
+    "Complete replay expectations, conditional coverage and repository-wide compliance gates remain open."
+  ],
+  "linux_gate": {
+    "run_id": 44595295824,
+    "url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44595295824",
+    "revision": "302100ecf10f088f26a5b6278a8efa4149cdc06b",
+    "fixed_baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+    "preceding_production_revision": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
+    "six_host_modes": [
+      {
+        "artifact": 14564279193,
+        "revision": "302100ecf10f088f26a5b6278a8efa4149cdc06b",
+        "mode": "clang",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3",
+          "python_change_requirement_1"
+        ]
+      },
+      {
+        "artifact": 14564743747,
+        "revision": "302100ecf10f088f26a5b6278a8efa4149cdc06b",
+        "mode": "sanitize",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3"
+        ]
+      },
+      {
+        "artifact": 14565101639,
+        "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+        "mode": "gcc",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3"
+        ]
+      },
+      {
+        "artifact": 14565477147,
+        "revision": "302100ecf10f088f26a5b6278a8efa4149cdc06b",
+        "mode": "gcc",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3",
+          "python_change_requirement_1"
+        ]
+      },
+      {
+        "artifact": 14565691349,
+        "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+        "mode": "sanitize",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3"
+        ]
+      },
+      {
+        "artifact": 14565890881,
+        "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+        "mode": "clang",
+        "checks": {
+          "barcode_work": "PASS",
+          "bcap_storage": "PASS"
+        },
+        "sanitizer_errors": 0,
+        "failed_checks": [
+          "subsystem3"
+        ]
+      }
+    ],
+    "differential_artifact": 14564553597,
+    "replay": {
+      "name": "recorded_replay",
+      "cases": 1008,
+      "mismatches": 0,
+      "expectation_failures": 2,
+      "matched": true
+    },
+    "all_twelve_target_profiles_pass": true,
+    "production_artifact": 14566022142,
+    "production_before": {
+      "text": 466012,
+      "data": 696,
+      "bss": 128816,
+      "static_ram": 129512
+    },
+    "production_after": {
+      "text": 465852,
+      "data": 696,
+      "bss": 128808,
+      "static_ram": 129504
+    },
+    "production_delta": {
+      "text": -160,
+      "data": 0,
+      "bss": -8,
+      "static_ram": -8
+    },
+    "all_normalized_function_stack_rows_unchanged": true,
+    "production_flash_sha256": "d4a0bb724368d25dad8c3dd9d44e548354ffc15b19cd57aec07a01bf9dc433c9",
+    "production_artifacts": {
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": "21da2b30a41b3d2b1dbf5a5fbba5584f641175b9b26fff55593246743fab046c",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": "05d491507cbecc2df5531ae7acd0e996a6c046b1845a38a72637abca825e8c2f",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": "d870463ef2e673d6cb1c739485f0b654a5d71a246864b2881a62986e18612448"
+    },
+    "downloaded_elf_uf2_map_flash_hashes_verified": true,
+    "conditional_union": {
+      "artifact": 14566411162,
+      "status": "INCOMPLETE",
+      "observed": 376,
+      "total": 420,
+      "errors": [],
+      "missing_profiles": [],
+      "unobserved": 44,
+      "expected_profiles": 14,
+      "received_profiles": 14
+    },
+    "overall_workflow_passed": false,
+    "other_failures": [
+      "Two original replay expectations still fail in both subjects; all 1008 replay comparisons match.",
+      "Candidate GCC and Clang host Python suites fail two stale test_c_style formatter mocks after the EOF checker change.",
+      "Formatting, full inventory completion and BARR audits remain incomplete/failing.",
+      "Conditional union leaves 44 of 420 explicit arms unobserved; no collector/receipt errors or missing profiles."
+    ],
+    "physical_execution": false,
+    "limits": [
+      "Exercised host traces do not establish RTOS scheduling or physical timing.",
+      "Stack estimates are compiler per-function rows, not measured task high-water or call-chain maxima.",
+      "The production comparison includes BCAP packing, three prune helpers and the other separately recorded source batches in revision302100e."
+    ],
+    "semantic_trace": {
+      "name": "barcode_work_semantic_trace",
+      "matched": true,
+      "semantic_rows": 854,
+      "baseline_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+      "candidate_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9"
+    },
+    "downloaded_trace_bytes_independently_hashed": true,
+    "record_update_symbol_bytes": {
+      "before": 8324,
+      "after": 8324
+    },
+    "record_update_stack_bytes": {
+      "before": 376,
+      "after": 376
+    },
+    "prune_inverse_audit": {
+      "artifact": 14564843461,
+      "status": "PASS",
+      "candidate_revision": "10ffc2c0dfeb800727cf0be49780867c64cab3e0"
+    }
+  }
 }
