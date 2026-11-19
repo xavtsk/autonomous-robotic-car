@@ -8,6 +8,7 @@ import subprocess
 import sys
 from replay_audit import audit
 from instrument_harnesses import runtime_source, mqtt_source
+from run_host import motion_storage_flags
 
 
 def main():
@@ -57,6 +58,14 @@ def main():
                                [directory, harness_dir], flags)
                 with (output / (label + '-' + name + '.trace')).open('wb') as stream:
                     subprocess.run([str(binary)], stdout=stream, check=True, timeout=120)
+            binary = build(label, 'motion_storage',
+                [fixtures/'compliance/motion_storage_test.c',
+                 *[app/'subsystem2'/(name+'.c') for name in
+                   ('ctrl_motion', 'motion_pack', 'estimate_motion', 'speed_pid')]],
+                [root, app/'subsystem2', fixtures/'subsystem3'],
+                [*motion_storage_flags(root), '-include', str(fixtures/'subsystem3/motion_kernel_stub.h')])
+            with (output/(label+'-motion_storage.trace')).open('wb') as stdout, (output/(label+'-motion_storage.log')).open('wb') as stderr:
+                subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
             runtime = runtime_source(roots['candidate'], root, output/(label+'-runtime.c'))
             runtime_sources = [app/'controller'/(name+'.c') for name in
                                ('bc_capture', 'integration_codec', 's3_drive', 'ir_debug', 'control_debug')]
@@ -89,11 +98,13 @@ def main():
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=180)
             binaries[label] = build(label, 'replay', [roots['candidate']/'testing/compliance/barcode_replay_trace.c', source/'bc_decoder.c'], [root])
         for name, prefix in (('motion', b'M '), ('terrain', b'T '), ('obstacle', b'O '),
-                             ('runtime', b'RUNTIME '), ('mqtt', b'MQTT_')):
+                             ('runtime', b'RUNTIME '), ('mqtt', b'MQTT_'),
+                             ('motion_storage', b'MSTORE ')):
             before_trace = (output / ('baseline-' + name + '.trace')).read_bytes()
             after_trace = (output / ('candidate-' + name + '.trace')).read_bytes()
             rows = sum(line.startswith(prefix) for line in before_trace.splitlines())
-            matched = before_trace == after_trace and rows > 10
+            minimum_rows = 802 if name == 'motion_storage' else 11
+            matched = before_trace == after_trace and rows >= minimum_rows
             results['checks'].append(dict(name=name+'_semantic_trace', matched=matched, semantic_rows=rows,
                 baseline_sha256=hashlib.sha256(before_trace).hexdigest(), candidate_sha256=hashlib.sha256(after_trace).hexdigest()))
             failed |= not matched

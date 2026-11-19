@@ -30,6 +30,13 @@ def classify_output(status, contents):
                 empty_discovery=empty_discovery)
 
 
+def motion_storage_flags(root):
+    """Select the private adapter only when the subject defines that helper."""
+    source = (root/'app_program/subsystem2/motion.c').read_text(encoding='utf-8')
+    compact = re.search(r'\bstatic\s+void\s+motion_calibration_store\s*\(', source)
+    return ['-DMOTION_COMPACT_RETAINED=1'] if compact else []
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, required=True)
@@ -135,6 +142,17 @@ def main():
         run('control_builder_build', [compiler, *shlex.split(flags), '-I'+str(root),
             str(builder_test), str(root/'app_program/controller/control_debug.c'), '-o', str(builder_binary)])
         run('control_builder', [str(builder_binary)])
+    motion_fixture = tooling.parents[1]/'testing/compliance/motion_storage_test.c'
+    motion_stubs = tooling.parents[1]/'testing/subsystem3'
+    motion_app = root/'app_program/subsystem2'
+    motion_binary = output/'motion_storage_test'
+    run('motion_storage_build', [compiler, *shlex.split(flags),
+        *motion_storage_flags(root), '-I'+str(root), '-I'+str(motion_app),
+        '-I'+str(motion_stubs), '-include', str(motion_stubs/'motion_kernel_stub.h'),
+        str(motion_fixture), *[str(motion_app/(name+'.c')) for name in
+            ('ctrl_motion', 'motion_pack', 'estimate_motion', 'speed_pid')],
+        '-o', str(motion_binary)])
+    run('motion_storage', [str(motion_binary)])
     if args.mode != 'sanitize':
         for folder in ('dashboard', 'change_requirement_1', 'diagnostics'):
             run('python_' + folder, [sys.executable, '-m', 'unittest', 'discover', '-v',
