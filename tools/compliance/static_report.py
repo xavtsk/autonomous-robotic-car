@@ -38,6 +38,8 @@ def main():
         ('barr_matrix', [sys.executable, 'tools/compliance/barr_matrix.py', '--check']),
         ('alias_batch', [sys.executable, 'tools/compliance/verify_alias_batch.py', '--json',
                          '--candidate', 'c37570cbd155249b000b0580336cd18e68ac3ea0']),
+        ('format_batch', [sys.executable, 'tools/compliance/verify_format_batch.py', '--json',
+                          '--candidate', '6326fcbecc1519f1332cda7f1ffb24d7a498e046']),
         ('audit_tests', [sys.executable, '-m', 'unittest', 'discover', '-v', '-s', 'testing/compliance', '-p', 'test_*.py']),
     ]
     for label, path in (('cr1_runner_syntax', 'testing/change_requirement_1/run_all.sh'),

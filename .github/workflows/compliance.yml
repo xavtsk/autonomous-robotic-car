@@ -61,6 +61,9 @@ jobs:
         run: /usr/bin/python3 tooling/tools/compliance/install_host.py
       - name: Execute host suites
         run: /usr/bin/python3 tooling/tools/compliance/run_host.py --root subject --output evidence --mode '${{ matrix.mode }}' ${{ matrix.revision == 'candidate' && '--check-c99' || '' }}
+      - name: Observe host conditional compilation
+        if: always() && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
+        run: /usr/bin/python3 tooling/tools/compliance/conditional_coverage.py --root subject --commands evidence/compile_commands.jsonl --output evidence/conditional-coverage --profile 'host-${{ matrix.mode }}'
       - name: Save execution evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -122,6 +125,9 @@ jobs:
           bash candidate/tools/compliance/install_arm.sh "$RUNNER_TEMP/arm"
       - name: Build identical baseline and candidate profiles
         run: /usr/bin/python3 candidate/tools/compliance/build_targets.py --baseline baseline --candidate candidate --sdk pico-sdk --profile '${{ matrix.profile }}' --output evidence
+      - name: Observe target conditional compilation
+        if: success()
+        run: /usr/bin/python3 candidate/tools/compliance/conditional_coverage.py --root candidate --commands evidence/candidate/compile_commands.json --output evidence/conditional-coverage --profile 'target-${{ matrix.profile }}'
       - name: Collect compiler observations (partial diagnostics remain explicit)
         if: matrix.profile == 'production' && success()
         run: |

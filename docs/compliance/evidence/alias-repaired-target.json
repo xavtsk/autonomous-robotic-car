@@ -1,0 +1,77 @@
+{
+  "baseline_sha": "4ad2cc42595722cedb47102e4343298339040d40",
+  "runs": [
+    44572895123,
+    44579354977
+  ],
+  "artifact_ids": [
+    14553294744,
+    14557897973
+  ],
+  "comparisons": {
+    "baseline": {
+      "before_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+      "after_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+      "before_sha256": "d3acb183b72825419eea84c0d09c6d86a78322d9e34fb0c3e9da2d1571704e2b",
+      "after_sha256": "d3acb183b72825419eea84c0d09c6d86a78322d9e34fb0c3e9da2d1571704e2b",
+      "bytes_identical": true,
+      "before_sizes": {
+        "text": 466276,
+        "data": 688,
+        "bss": 129008,
+        "static_ram": 129696
+      },
+      "after_sizes": {
+        "text": 466276,
+        "data": 688,
+        "bss": 129008,
+        "static_ram": 129696
+      }
+    },
+    "candidate": {
+      "before_revision": "2e44326dabcb862d4028aa52676cbc507bf0924e",
+      "after_revision": "e7d1366fdde697a50e578f95a97290765a72c969",
+      "before_sha256": "f09ff492fe30fdfb14a8bc259b0f7fbc386fee81290cbff707580422040ac2f8",
+      "after_sha256": "f09ff492fe30fdfb14a8bc259b0f7fbc386fee81290cbff707580422040ac2f8",
+      "bytes_identical": true,
+      "before_sizes": {
+        "text": 465980,
+        "data": 688,
+        "bss": 128880,
+        "static_ram": 129568
+      },
+      "after_sizes": {
+        "text": 465980,
+        "data": 688,
+        "bss": 128880,
+        "static_ram": 129568
+      }
+    }
+  },
+  "target_profile": {
+    "SMP": 1,
+    "CONSOLE": "usb_cdc",
+    "CRASH_REPORT": 0,
+    "WIFI": "cyw43",
+    "NET": "lwip",
+    "MQTT": 1,
+    "TEST": 0,
+    "IR_BENCH": 0,
+    "IR_CHANNELS": 1,
+    "S3_MOTION": 1,
+    "S3_STRAIGHT_TEST": 0,
+    "DIAGNOSTICS": 0,
+    "MOTION_SMOKE": 0,
+    "S4": 1,
+    "S4_BENCH": 0,
+    "S5": 1,
+    "S5_HARDWARE_CONFIRMED": 1,
+    "IR_DEBUG": 1,
+    "IMU_DEBUG": 0
+  },
+  "compiler": "arm-none-eabi-gcc (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+  "sdk": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+  "example_configuration_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+  "hardware_verified": false,
+  "pending_exception": "BARR-P12"
+}

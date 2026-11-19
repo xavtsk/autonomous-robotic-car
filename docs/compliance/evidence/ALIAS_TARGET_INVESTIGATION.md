@@ -37,7 +37,24 @@ variant is `00a2c7bc85315a940406725815f3cecd53746d3c25850969e9e81523657cdfba`.
 The complete comparison is retained in [the checked object evidence](alias-target-object.json).
 Detailed compiler dumps and build commands remain locally under
 `build/alias-investigation/`; no generated application executable was run on
-Windows. A subsequent matched CI build must confirm the complete repaired image.
+Windows.
+
+The subsequent matched [Linux run 44579354977](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44579354977)
+confirms the **complete repaired production flash payload is byte-identical**
+to the pre-alias `2e44326` candidate. Both have SHA-256
+`f09ff492fe30fdfb14a8bc259b0f7fbc386fee81290cbff707580422040ac2f8`,
+465,980 text bytes and 129,568 static RAM bytes. The fixed `4ad2cc4` baseline
+payload also matches across both runs. See the
+[matched image record](alias-repaired-target.json) for exact revisions, artifact
+IDs, public configuration hash, toolchain, SDK and sizes. This comparison is
+between otherwise identical public-example builds; it is not the private
+hotspot-configured rollback UF2's hash.
+
+The repaired revision also matches all exercised semantic traces, including
+1,782 production-layout terrain observations and 1,916 debug-layout observations.
+Its CI run remains failed for the two unchanged barcode fixture expectations
+and the explicitly incomplete standards audits. Byte identity does not approve
+the exception or establish new hardware validation.
 
 This single primitive spelling is **BARR-P12, pending approval** under rule
 5.4.b.i. Its precision is still the same checked binary32 type. It protects the
