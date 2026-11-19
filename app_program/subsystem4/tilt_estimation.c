@@ -6,6 +6,13 @@
 #include <math.h>
 #define DEG 57.295779513f
 
+/** @brief Reject unusable acceleration before assigning pitch and roll.
+ * @param[in] p_a Stable vehicle-axis acceleration in g.
+ * @param[out] p_pitch Nose-up-positive degrees; unchanged on rejection.
+ * @param[out] p_roll Right-side-up-positive degrees; unchanged on rejection.
+ * @return True for an accepted near-1 g vector with positive Z, else false.
+ * @see tilt_estimation.h for exact bounds, pointer ownership and signed zero.
+ */
 bool tilt_estimation (const float32_t p_a[3], float32_t * p_pitch,
                       float32_t * p_roll)
 {
@@ -23,6 +30,13 @@ bool tilt_estimation (const float32_t p_a[3], float32_t * p_pitch,
     return true;
 }
 
+/** @brief Project magnetic north and vehicle forward onto the level plane.
+ * @param[in] p_a Stable vehicle-axis acceleration in g.
+ * @param[in] p_m Stable vehicle-axis magnetic field in gauss.
+ * @param[out] p_heading Anticlockwise degrees; unchanged on rejected geometry.
+ * @return True after assigning a heading, false when a norm/projection fails.
+ * @see tilt_estimation.h for thresholds, caller calibration and zero handling.
+ */
 bool tilt_heading (const float32_t p_a[3], const float32_t p_m[3],
                    float32_t * p_heading)
 {
@@ -71,6 +85,9 @@ bool tilt_heading (const float32_t p_a[3], const float32_t p_m[3],
     return true;
 }
 
+/** @brief Apply one strict +/-180-degree correction to a heading difference.
+ * @see tilt_estimation.h for supported heading domains and nonfinite inputs.
+ */
 float32_t tilt_angle_delta (float32_t now, float32_t previous)
 {
     float32_t value_d = now - previous;

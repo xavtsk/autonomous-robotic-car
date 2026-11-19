@@ -5,11 +5,18 @@
 #include "../app_types.h"
 #include <math.h>
 
+/** @brief Replace calibration state with a fresh zeroed capture.
+ * @see imu_calibration.h for state ownership and the non-null precondition.
+ */
 void imu_calibration_reset (imu_calibration_t * p_c)
 {
     *p_c = (imu_calibration_t){0};
 }
 
+/** @brief Validate stationarity/spread and latch the 100-sample mean bias.
+ * @see imu_calibration.h for axes, exact thresholds, resets and ready-state
+ * short-circuit behavior. Timestamp continuity is enforced by the caller.
+ */
 bool imu_calibration_feed (imu_calibration_t * p_c, const imu_sample_t * p_s,
                            bool stationary)
 {

@@ -11,6 +11,9 @@ static const int16_t g_cy[25] = {500, 574, 643, 707,  766, 819, 866, 906, 940,
                                  966, 985, 996, 1000, 996, 985, 966, 940, 906,
                                  866, 819, 766, 707,  643, 574, 500};
 
+/** @brief Validate angle/range before writing one canonical sample packet.
+ * @see profile_obstacle.h for integer units, invalid echoes and bit layout.
+ */
 bool s5_sample_pack (unsigned angle, unsigned value_mm, bool valid,
                      s5_sample_t * p_out)
 {
@@ -29,6 +32,14 @@ bool s5_sample_pack (unsigned angle, unsigned value_mm, bool valid,
     return true;
 }
 
+/** @brief Decode sample fields before the final semantic range check.
+ * @param[in] p_s Stable three-byte packed sample.
+ * @param[out] p_angle Servo degrees; may change on a range failure.
+ * @param[out] p_mm Range in mm; may change on a range failure.
+ * @param[out] p_valid Echo usability; may change on a range failure.
+ * @return True only for valid angle/padding and canonical range/validity.
+ * @see profile_obstacle.h for exact ranges and unchanged early-failure cases.
+ */
 bool s5_sample_unpack (const s5_sample_t * p_s, unsigned * p_angle,
                        unsigned * p_mm, bool * p_valid)
 {
@@ -50,6 +61,10 @@ bool s5_sample_unpack (const s5_sample_t * p_s, unsigned * p_angle,
                     : *p_mm == 0U;
 }
 
+/** @brief Clear output, validate scan coverage and derive padded geometry.
+ * @see profile_obstacle.h for axes, integer rounding, threshold and failure
+ * behavior. The configuration is not independently range-checked here.
+ */
 bool s5_profile_build (const s5_sample_t * p_samples, unsigned count,
                        const s5_config_t * p_cfg, s5_profile_t * p_out)
 {
@@ -155,6 +170,12 @@ bool s5_profile_build (const s5_sample_t * p_samples, unsigned count,
     return true;
 }
 
+/** @brief Replace the measured side clearance without recomputing geometry.
+ * @param[in,out] p_p Caller-owned profile, initialized minimally if invalid.
+ * @param[in] p_s Stable packed side-peek sample with a valid echo.
+ * @return True after a side update, or false with the profile unchanged.
+ * @see profile_obstacle.h for accepted angles and fields retained/reset.
+ */
 bool s5_peek_merge (s5_profile_t * p_p, const s5_sample_t * p_s)
 {
     unsigned angle, value_mm;
