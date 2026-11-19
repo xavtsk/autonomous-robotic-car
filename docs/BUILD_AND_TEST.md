@@ -59,7 +59,7 @@ The operating periods are distinct and unchanged:
 Bench, self-test, diagnostics and movement-smoke profiles are separate:
 consult [IR bench](../testing/subsystem3/README.md),
 [motion smoke](../testing/diagnostics/MOTION_SMOKE.md), and the
-[hardware session guide](../testing/diagnostics/ROBOT_TEST_SESSION.md).
+[hardware validation guide](PHYSICAL_VALIDATION.md).
 Do not substitute a test image for the integrated deployment profile.
 
 ## Executed host regressions

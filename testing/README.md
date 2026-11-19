@@ -6,7 +6,7 @@ All test records for the project live in this folder. A test only counts as
 done when it is **written down here with its result and a saved log**.
 
 Before a new robot session, use the
-[Buddies 1-3 session guide](diagnostics/ROBOT_TEST_SESSION.md) and
+[current supervised validation guide](../docs/PHYSICAL_VALIDATION.md) and
 [notes template](diagnostics/SESSION_NOTES_TEMPLATE.md). The optional laptop
 logger saves raw bytes plus session metadata. Its replay mode and host tests
 work without a robot and are explicitly not hardware evidence.

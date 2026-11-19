@@ -1,5 +1,11 @@
 # First robot test session: Buddies 1-3
 
+> Historical first-session procedure. Its protocol-v2, 10 ms integrated IR,
+> proposed priority changes and unwired start-adapter statements describe the
+> earlier project. Keep this record for context; use the
+> [current supervised validation guide](../../docs/PHYSICAL_VALIDATION.md) and
+> [current build profiles](../../docs/BUILD_AND_TEST.md) for the cleanup candidate.
+
 Goal: keep the working baseline, record what actually happened, and change one
 setting at a time. Software tests and replay logs are not hardware evidence.
 Do not add Buddy 4/5 behaviour during this session.

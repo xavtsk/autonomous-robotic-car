@@ -37,8 +37,9 @@ obstacle avoidance under the same controller ownership contract.
   then black, 1 s each), then GP20 = START after a 3 s countdown, hold GP20
   2 s = recalibrate, GP20 after a FAULT = RESET, GP21 = STOP at any time.
   It only calls `s3_integration_submit()`/`s3_integration_status()`, so the
-  single owner is unchanged. USB text stays output-only. Buttons held at
-  power-up are ignored. Software stop only; the power switch is the cutoff.
+  single owner is unchanged. USB text stays output-only. GP20 held at startup
+  is ignored until released; a debounced GP21 hold still requests STOP,
+  including at startup. Software stop only; the power switch is the cutoff.
 - The facade's `begin()`/`request_stop()` only queue requests. Its legacy
   external navigation submission returns E_NOSPT, preventing a second producer.
 - Buddy 1 validates four distinct A-Z mapping letters. On START the owner
@@ -57,7 +58,7 @@ obstacle avoidance under the same controller ownership contract.
 - Shared telemetry fault ownership remains separate from controller safety:
   the facade updates only stall, encoder and IR bits. Unknown motion status
   cannot clear a previously known motor fault. Other modules' bits survive.
-- Motion telemetry is sampled every 20 owner cycles (~5 Hz at 10 ms).
+- Motion telemetry has a 200 ms cadence (40 current 5 ms owner cycles, ~5 Hz).
   Network publishing is best-effort through Buddy 1's bounded outbox and never
   the path that makes a safety/motion decision.
 
@@ -68,6 +69,11 @@ backoff. MQTT retains one fixed pending packet on temporary publish failure,
 allows one application request in flight and paces sends (20 ms) and retries
 (100 ms). Existing bounded application queues can still overflow; reconnect
 retries can duplicate delivery. Binary MQTT protocol v2 is unchanged.
+
+The paragraph above records the 27 October protocol state. Current Buddy 1
+telemetry uses [version 3](../subsystem1/MQTT_PROTOCOL.md); dashboard control
+requests/status use version 3 and replies use
+[version 4](../../docs/REMOTE_CONTROL_PROTOCOL.md).
 
 The current sampling period is 5 ms (200 Hz). `above_target` includes ordinary jitter,
 not a count of missed deadlines. Separate RUN timing resets at accepted START,

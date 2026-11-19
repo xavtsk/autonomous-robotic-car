@@ -29,7 +29,7 @@ are additional and unmeasured. The operating ranges remain engineering choices,
 not claimed instructor-approved values.
 
 Version 4 uses two bits that were zero in version 3. The controller reads the
-safety field in both snapshots and queued events. Buddy 1 MQTT protocol v2
+safety field in both snapshots and queued events. Buddy 1 MQTT protocol v3
 reports the existing IMU fault bit and the controller terrain fault when a
 safety detection stops the run.
 

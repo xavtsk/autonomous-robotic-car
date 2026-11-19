@@ -9,7 +9,7 @@ Records named for an earlier date retain their original results and assumptions.
 | [Build and test](BUILD_AND_TEST.md) | Explicit build profiles, host commands and result interpretation. |
 | [Team ownership](../TEAM.md) | Pins, peripherals, tasks and module owners. |
 | [Testing guide](../testing/README.md) | Recording host, integration and physical results. |
-| [Hardware session guide](../testing/diagnostics/ROBOT_TEST_SESSION.md) | Controlled robot-session procedure. |
+| [Hardware validation](PHYSICAL_VALIDATION.md) | Matched supervised course tests and the three-minute reconnection capture. |
 | [Dashboard guide](DASHBOARD.md) | Laptop dashboard and communication behavior. |
 
 | Compliance and interfaces | Purpose |

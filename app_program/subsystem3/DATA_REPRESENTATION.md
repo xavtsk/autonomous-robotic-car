@@ -1,5 +1,11 @@
 # Buddy 3: Tribunal 1 data representation
 
+> The dated sections retain earlier implementation evidence. In particular,
+> later protocol-v2 and unwired-start statements below are historical. Current
+> operation uses [Buddy 1 v3](../subsystem1/MQTT_PROTOCOL.md), the existing
+> [operator/dashboard controls](../controller/README.md), and the
+> [current validation procedure](../../docs/PHYSICAL_VALIDATION.md).
+
 ## 19 November faster-sampling capacity
 
 The integration build samples every 5 ms. The current record buffer contains
