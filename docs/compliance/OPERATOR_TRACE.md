@@ -33,11 +33,31 @@ ASan/UBSan modes for both revisions. `differential.py` compares the complete
 output bytes, including state rows, console rows and original fixture output.
 Build commands, logs and outputs are retained in each unique CI artifact.
 
-The local Windows check is compilation and linking only. Linux execution and
-matched baseline/candidate output must be recorded before using this fixture as
-evidence for a subsequent operator-state refactor. The fixture's existing 10 ms
-simulated period is unchanged; it does not measure the physical integrated
-5 ms IR sampling task, RTOS scheduling or hardware latency.
+Linux execution is recorded for candidate
+`b4ad5d09a9953cfd308bf4e2d19cd9ffcd4d0c60` in
+[run 44597427198](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44597427198).
+All six baseline/candidate GCC, Clang and ASan/UBSan modes compile and execute
+the operator fixture successfully, with no sanitizer errors. The differential
+artifact `14566786566` contains 8,066 semantic rows and 8,173 total output rows
+per subject; the complete bytes match SHA-256
+`5a759cfcded604288fab493d7361673ae767bf5868f163a115a0ff36a92c2a1f`.
+
+All 12 target profiles build successfully. Production artifact `14565678331`
+has 465,852 text bytes and 129,504 bytes of static RAM. Its flash payload is
+byte-identical to the preceding `302100e` image, with SHA-256
+`d4a0bb724368d25dad8c3dd9d44e548354ffc15b19cd57aec07a01bf9dc433c9`.
+The [execution receipt](evidence/operator-linux.json) binds exact source and
+artifact hashes, all six host results and the independently checked output.
+
+The complete workflow remains failed: two original replay expectations remain,
+the conditional union observes 376/421 arms with 45 unobserved and zero receipt
+errors, and repository compliance audits remain open. The stale formatter mocks
+from the preceding run are fixed and pass in this run.
+
+The local Windows check remains compilation and linking only. The fixture's
+existing 10 ms simulated period is unchanged; it does not measure the physical
+integrated 5 ms IR sampling task, RTOS scheduling or hardware latency. This image
+has not been flashed. Later source changes need their own matching execution.
 
 Sources: [observer](../../tools/compliance/traces/op_trace.c),
 [interface](../../tools/compliance/traces/op_trace.h),

@@ -1,0 +1,154 @@
+{
+  "run": 44597427198,
+  "revision": "b4ad5d09a9953cfd308bf4e2d19cd9ffcd4d0c60",
+  "hosts": [
+    {
+      "artifact": 14565229873,
+      "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+      "mode": "clang",
+      "operator": "PASS",
+      "sanitizer_errors": 0,
+      "failed_checks": [
+        "subsystem3"
+      ],
+      "build_returncode": 0,
+      "execution_returncode": 0
+    },
+    {
+      "artifact": 14565969296,
+      "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+      "mode": "sanitize",
+      "operator": "PASS",
+      "sanitizer_errors": 0,
+      "failed_checks": [
+        "subsystem3"
+      ],
+      "build_returncode": 0,
+      "execution_returncode": 0
+    },
+    {
+      "artifact": 14566686697,
+      "revision": "b4ad5d09a9953cfd308bf4e2d19cd9ffcd4d0c60",
+      "mode": "gcc",
+      "operator": "PASS",
+      "sanitizer_errors": 0,
+      "failed_checks": [
+        "subsystem3"
+      ],
+      "build_returncode": 0,
+      "execution_returncode": 0
+    },
+    {
+      "artifact": 14566956727,
+      "revision": "b4ad5d09a9953cfd308bf4e2d19cd9ffcd4d0c60",
+      "mode": "sanitize",
+      "operator": "PASS",
+      "sanitizer_errors": 0,
+      "failed_checks": [
+        "subsystem3"
+      ],
+      "build_returncode": 0,
+      "execution_returncode": 0
+    },
+    {
+      "artifact": 14567051173,
+      "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+      "mode": "gcc",
+      "operator": "PASS",
+      "sanitizer_errors": 0,
+      "failed_checks": [
+        "subsystem3"
+      ],
+      "build_returncode": 0,
+      "execution_returncode": 0
+    },
+    {
+      "artifact": 14567620089,
+      "revision": "b4ad5d09a9953cfd308bf4e2d19cd9ffcd4d0c60",
+      "mode": "clang",
+      "operator": "PASS",
+      "sanitizer_errors": 0,
+      "failed_checks": [
+        "subsystem3"
+      ],
+      "build_returncode": 0,
+      "execution_returncode": 0
+    }
+  ],
+  "operator_trace": {
+    "name": "operator_semantic_trace",
+    "matched": true,
+    "semantic_rows": 8066,
+    "baseline_sha256": "5a759cfcded604288fab493d7361673ae767bf5868f163a115a0ff36a92c2a1f",
+    "candidate_sha256": "5a759cfcded604288fab493d7361673ae767bf5868f163a115a0ff36a92c2a1f"
+  },
+  "operator_artifact": 14566786566,
+  "production_artifact": 14565678331,
+  "sizes": {
+    "text": 465852,
+    "data": 696,
+    "bss": 128808,
+    "static_ram": 129504
+  },
+  "flash_sha256": "d4a0bb724368d25dad8c3dd9d44e548354ffc15b19cd57aec07a01bf9dc433c9",
+  "flash_identical_to_302100e": true,
+  "downloaded_artifact_hashes_verified": true,
+  "union": {
+    "artifact": 14565159154,
+    "observed": 376,
+    "total": 421,
+    "errors": [],
+    "missing_profiles": [],
+    "unobserved": 45
+  },
+  "replay": {
+    "name": "recorded_replay",
+    "cases": 1008,
+    "mismatches": 0,
+    "expectation_failures": 2,
+    "matched": true
+  },
+  "physical_execution": false,
+  "schema_version": 1,
+  "url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44597427198",
+  "fixed_baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+  "candidate_source_sha256": {
+    "testing/integration/operator_test.c": "8e49a1d82b3957548f4e3aed44608650a6c1aaa2d3d877078ed908b168227888",
+    "tools/compliance/traces/op_trace.c": "4711f222e0b8eabc6aa51630f1319ffdfd667b1b3c7b67e839b10544321e69ea",
+    "tools/compliance/traces/op_trace.h": "bfd35f6be40591e4b69fadbb56b62f60d9d693ab2cafb5e2bdf71d4fbdd0830d",
+    "tools/compliance/instrument_harnesses.py": "cee60aa9f42d5a90c8146c05e85d982bd9e5f9db1c73ef64c9ee5e69f7c2c97f",
+    "app_program/controller/op_logic.c": "e0ad2368886b5b6bc65bd328fd92efe7d35edca10e89d359f869cdedb31e975b",
+    "app_program/controller/op_logic.h": "cb5eef576f616393445276b043b2634440530ac2cb79a5ce847adb9399a969d0",
+    "app_program/controller/op_panel.c": "b4580287f727c19f76bcbb9103966954d1eee2972e3e1550e12979c4f7d99e2e",
+    "app_program/controller/op_panel.h": "314ed32776dd81644524cc782e7d159f4d7aee1788cf6bf45621b9f2071700db"
+  },
+  "baseline_operator_source_sha256": {
+    "app_program/controller/op_logic.c": "78ceafb108680a9184b51016390ae90a0633581fcf7ea514ea2a01abdbcfa474",
+    "app_program/controller/op_logic.h": "ee7c5c956f8e2321e1cd66779df185c25960389b0712bf27d2b35c15733aba9e",
+    "app_program/controller/op_panel.c": "b389e029e54e3af7d2d3bdeec0245c5d3d04b7717d0e3e628537cd4bfc6a2750",
+    "app_program/controller/op_panel.h": "d004cb10a73e8d3968d72c14d1c56f46408577f32ecdd3a2b6e00be29c759b5f"
+  },
+  "trace_total_rows": 8173,
+  "trace_bytes_independently_hashed": true,
+  "production_artifacts": {
+    "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": "21da2b30a41b3d2b1dbf5a5fbba5584f641175b9b26fff55593246743fab046c",
+    "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": "05d491507cbecc2df5531ae7acd0e996a6c046b1845a38a72637abca825e8c2f",
+    "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": "d870463ef2e673d6cb1c739485f0b654a5d71a246864b2881a62986e18612448"
+  },
+  "sdk_revision": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+  "compiler": "arm-none-eabi-gcc (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+  "same_image_comparison_revision": "302100ecf10f088f26a5b6278a8efa4149cdc06b",
+  "all_twelve_target_profiles_pass": true,
+  "overall_workflow_passed": false,
+  "remaining_failures": [
+    "Two unchanged replay expectations fail against both subjects;1008 actual replay comparisons match.",
+    "Conditional union remains incomplete at376/421 arms, with45unobserved; no receipt errors or missing profiles.",
+    "Repository formatting, BARR and full representation-completion audits remain open."
+  ],
+  "limits": [
+    "The existing fixture assertions and observer inversion are preserved; no operator storage change is claimed by this batch.",
+    "The existing10ms simulated period does not measure physical5ms IR sampling, RTOS scheduling, latency or task high-water.",
+    "Executed scenarios do not establish every invalid-input domain for later representation changes.",
+    "No firmware was flashed and no hardware was executed for this proof."
+  ]
+}
