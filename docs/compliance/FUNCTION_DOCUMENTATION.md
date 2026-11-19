@@ -62,6 +62,13 @@ wrapping behavior, calibration readiness latching, and the exact order in which
 sample/profile outputs can change before rejection. These are comments-only
 proofs, with generated-reference evidence recorded separately.
 
+The [sensor and terrain contracts](SENSOR_TERRAIN_FUNCTION_CONTRACTS.md) add ten
+definitions and seven prototypes at `4dd87b3`. They document partial device
+writes and output mutation, optional magnetic validity, crossing completion and
+rearming, preserved historical peaks and classification precedence. Twenty-four
+recorded compiler contexts have unchanged interfaces and no documentation
+warnings. None of these bounded batches establishes whole-project completion.
+
 ## Earlier observed workload snapshot
 
 `tools/compliance/barr_functions.py` reuses the compiler contexts and six profile
@@ -95,10 +102,10 @@ python tools/compliance/barr_functions.py --compile-db <target.json> --compile-d
 
 ## Next review batches
 
-1. Finish pure codecs and calculation modules with their headers: navigation,
-   telemetry, motion packing, PID, reflectance/calibration, tilt and obstacle
-   profile calculations. Document exact rejection, sentinel, units and mutation
-   rules before touching their statements or representations.
+1. Reconcile the completed codec/calculation/sensor batches above with the
+   current compiler inventory. Keep any remaining pure helpers and public
+   prototypes visible rather than repeating already completed batches or
+   assuming a whole directory is documented.
 2. Review owner/state-machine modules in smaller groups: motion and controller,
    sampling/runtime, barcode work scheduling, terrain owner and obstacle owner.
    Their task/ISR ownership, deferred requests, reset transitions and bounded

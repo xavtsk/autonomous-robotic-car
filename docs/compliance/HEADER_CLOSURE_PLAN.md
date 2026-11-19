@@ -68,17 +68,14 @@ declared and called by `test_core.c`; that existing interface must not be
 misrepresented as empty. Fake SDK/kernel callbacks keep their established
 external declarations and receive a symbol-by-symbol ABI record.
 
-The remaining source candidates are listed below. Implementation-inclusion
-harnesses remain independently open under 4.3.f; adding a header does not close
-their private-access review.
+The current lexical scan at `4dd87b3` reports the 34 same-root source candidates
+listed below, after the second standalone-header batch. They still require actual
+compiler-context/interface review. Implementation-inclusion harnesses remain
+independently open under 4.3.f; adding a header does not close private-access review.
 
 ```
-testing/change_requirement_1/bend_filter_check.c
 testing/change_requirement_1/struct_sizes.c
-testing/compliance/barcode_replay_trace.c
 testing/compliance/barcode_work_test.c
-testing/compliance/control_builder_test.c
-testing/compliance/control_debug_trace.c
 testing/compliance/motion_storage_test.c
 testing/compliance/mqtt_receive_test.c
 testing/diagnostics/firmware_test.c
@@ -95,21 +92,13 @@ testing/integration/runtime_test.c
 testing/integration/team_adapter_test.c
 testing/network_wifi/runtime_test.c
 testing/subsystem1/host_test.c
-testing/subsystem1/size_report.c
 testing/subsystem2/controller_adapter_test.c
 testing/subsystem2/host_regression.c
 testing/subsystem2/pack_test.c
-testing/subsystem2/size_report.c
 testing/subsystem3/bench_trace.c
 testing/subsystem3/host_trace.c
-testing/subsystem3/replay_barcode_record.c
-testing/subsystem3/size_report.c
-testing/subsystem3/test_barcode_quiet.c
-testing/subsystem3/test_barcode_quiet_record.c
-testing/subsystem3/test_codec.c
 testing/subsystem3/test_drive.c
 testing/subsystem3/test_motion_feedback.c
-testing/subsystem3/test_navigation.c
 testing/subsystem4/integration_test.c
 testing/subsystem4/transport_test.c
 testing/subsystem5/bypass_course_test.c
@@ -119,30 +108,17 @@ testing/subsystem5/hardware_test.c
 testing/subsystem5/runtime_test.c
 testing/subsystem5/telemetry_test.c
 tools/compliance/traces/motion_trace.c
-tools/compliance/traces/obstacle_trace.c
-tools/compliance/traces/terrain_trace.c
 ```
 
 ## Guards and module names
 
-The following 13 header candidates need unique portable inclusion guards.
-Preserve existing contents and verify both normal and repeated inclusion in
-their actual host contexts. The observer headers contain private definitions
-and, for MQTT, storage; guards alone do not resolve 4.2.c.ii or the distinction
-between an interface header and a generated instrumentation fragment.
+The eleven fake-header guards were completed in their separately verified
+batch. The two remaining observer fragments are listed below. They contain
+private definitions and, for MQTT, storage; guards alone do not resolve 4.2.c.ii
+or the distinction between an interface header and generated instrumentation.
+Review their actual insertion contexts before changing those boundaries.
 
 ```
-testing/network_wifi/fakes/cyw43_country.h
-testing/network_wifi/fakes/lwip/init.h
-testing/network_wifi/fakes/lwip/netif.h
-testing/network_wifi/fakes/lwip/timeouts.h
-testing/network_wifi/fakes/mqtt_utk.h
-testing/network_wifi/fakes/tm/tmonitor.h
-testing/network_wifi/fakes/wifi_secrets.h
-testing/subsystem1/fakes/lwip/timeouts.h
-testing/subsystem1/fakes/tm/tmonitor.h
-testing/subsystem1/fakes/wifi_secrets.h
-testing/subsystem2/fakes/tm/tmonitor.h
 tools/compliance/traces/mqtt_observer.h
 tools/compliance/traces/runtime_observer.h
 ```
