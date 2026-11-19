@@ -2568,6 +2568,291 @@
       "type_category": "FLOAT|DOUBLE|LONGDOUBLE"
     },
     {
+      "id": "rtos-abi-values",
+      "status": "boundary",
+      "domain": {
+        "description": "Full RTOS-declared representation, including negative errors/timeouts, zero or invalid handles, processor masks and externally returned values. Required application minimum bits is not substituted for the imported ABI."
+      },
+      "required_bits": null,
+      "ownership": "RTOS boundary: task callbacks and kernel calls own interpretation; the enclosing task/module owns each handle. Retain exact typedef and synchronization.",
+      "constraints": [
+        "Preserve RTOS typedefs, callback signatures and address-compatible output objects. Do not treat signed error or ID values as small nonnegative application enums.",
+        "Generic RTOS integer aliases UW/INT/UINT/BOOL do not exempt retained application state; those require their own domain/ownership review."
+      ],
+      "evidence": [
+        "include/tk/typedef.h:33-91",
+        "app_program/app_main.c:26-58",
+        "app_program/controller/s3_integration.c:1296-1439",
+        "app_program/diagnostics/robot_diagnostics.c:31-62"
+      ],
+      "reason": "Preserve RTOS typedefs, callback signatures and address-compatible output objects. Do not treat signed error or ID values as small nonnegative application enums.",
+      "type": "(?:const )?(?:ID|PRI|ER|ER_ID|ER_UINT|TMO|RELTIM|ATR|MSEC)",
+      "method": "libclang-ast"
+    },
+    {
+      "id": "external-parameter-validation-boundary",
+      "status": "boundary",
+      "domain": {
+        "description": "Entire declared C parameter representation reaches the existing function, including out-of-range inputs, enum-invalid values, signedness and any validation sentinel. Retained copies are inventoried separately."
+      },
+      "required_bits": null,
+      "ownership": "Caller-owned input or output-address boundary; the callee validates/consumes values under the original API contract.",
+      "constraints": [
+        "Keep public function parameter types and argument conversion behavior. Narrow only validated retained representations, never before the original validation or callback ABI."
+      ],
+      "evidence": [
+        "testing/compliance/inventory_ast.py:parse_one compiler FUNCTION_DECL linkage",
+        "app_program/controller/control_debug.c",
+        "app_program/subsystem4/terr_data.c"
+      ],
+      "reason": "Keep public function parameter types and argument conversion behavior. Narrow only validated retained representations, never before the original validation or callback ABI.",
+      "kind": "PARM_DECL",
+      "function_linkage": "EXTERNAL",
+      "method": "libclang-ast"
+    },
+    {
+      "id": "automatic-private-parameter-arithmetic",
+      "status": "preserve",
+      "domain": {
+        "description": "Existing private helper parameter representation and C argument conversions; no retained object is covered by this policy."
+      },
+      "required_bits": null,
+      "ownership": "Invocation-local value; any referenced retained object is independently inventoried.",
+      "constraints": [
+        "Preserve evaluation width, signedness, overflow/shift behavior and invalid-input propagation in private arithmetic helpers. No static storage or member field is waived."
+      ],
+      "evidence": [
+        "testing/compliance/inventory_ast.py:storage_duration",
+        "testing/compliance/inventory_ast.py:parse_one"
+      ],
+      "reason": "Preserve evaluation width, signedness, overflow/shift behavior and invalid-input propagation in private arithmetic helpers. No static storage or member field is waived.",
+      "kind": "PARM_DECL",
+      "function_linkage": "INTERNAL",
+      "storage_duration": "automatic",
+      "method": "libclang-ast"
+    },
+    {
+      "id": "automatic-execution-temporary",
+      "status": "preserve",
+      "domain": {
+        "description": "Existing automatic execution temporary representation, including loop terminal values, arithmetic intermediates and address-compatible SDK outputs. This is a preservation constraint rather than a claim of minimum retained-state width."
+      },
+      "required_bits": null,
+      "ownership": "Function invocation owns lifetime. Direct address uses are separately recorded; escape/alias absence is not inferred.",
+      "constraints": [
+        "Preserve automatic arithmetic types and evaluation order. This rule excludes static-duration locals, globals and record fields; retained state remains independently reviewed."
+      ],
+      "evidence": [
+        "testing/compliance/inventory_ast.py:storage_duration",
+        "testing/compliance/inventory_ast.py:parse_one"
+      ],
+      "reason": "Preserve automatic arithmetic types and evaluation order. This rule excludes static-duration locals, globals and record fields; retained state remains independently reviewed.",
+      "kind": "VAR_DECL",
+      "storage_duration": "automatic",
+      "method": "libclang-ast"
+    },
+    {
+      "id": "motion-sink-lifecycle",
+      "path": "app_program/subsystem2/ctrl_motion.c",
+      "owner": "",
+      "name": "g_p_sink",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO",
+      "status": "boundary",
+      "domain": {
+        "description": "Full pointer/function-pointer ABI representation, including NULL where accepted."
+      },
+      "required_bits": null,
+      "ownership": "Motion controller initialization assigns the callback; controller report generation invokes it in the existing motion execution path. Retain initialization order and callback lifetime.",
+      "constraints": [
+        "Preserve full function pointer and NULL guard; do not pack with flags or change publication timing."
+      ],
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c:95-96",
+        "app_program/subsystem2/ctrl_motion.c:214-216",
+        "app_program/subsystem2/ctrl_motion.c:384-392"
+      ],
+      "reason": "Preserve full function pointer and NULL guard; do not pack with flags or change publication timing.",
+      "synchronization": "Initialize callback before starting the motion owner; no new concurrent writer or pointer packing."
+    },
+    {
+      "id": "mqtt-client-single-owner",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "",
+      "name": "client",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO",
+      "status": "boundary",
+      "domain": {
+        "description": "Full pointer/function-pointer ABI representation, including NULL where accepted."
+      },
+      "required_bits": null,
+      "ownership": "CYW43 processor-1 network task owns the lwIP client and timeout callbacks; no other task/core may mutate it.",
+      "constraints": [
+        "Retain the lwIP client pointer and single-task ownership. Do not narrow, index-encode, or share it across cores."
+      ],
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c:4-14",
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c:41"
+      ],
+      "reason": "Retain the lwIP client pointer and single-task ownership. Do not narrow, index-encode, or share it across cores.",
+      "synchronization": "Single processor-1 CYW43/network task; callbacks run through its timeout polling."
+    },
+    {
+      "id": "adc-buffer-isr-boundary",
+      "path": "device/adc/sysdepend/rp2040/adc_rp2040.c",
+      "owner": "ll_devcb",
+      "name": "buf",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO",
+      "status": "boundary",
+      "domain": {
+        "description": "Full pointer/function-pointer ABI representation, including NULL where accepted."
+      },
+      "required_bits": null,
+      "ownership": "Caller buffer is borrowed by ADC conversion and used by ADC ISR under ADC_LOCK/ADC_UNLOCK; lifetime extends through completion/timeout cleanup.",
+      "constraints": [
+        "Preserve address-compatible UW buffer and lock-protected task/ISR handoff. Packing neighboring flags cannot change atomic storage or synchronization."
+      ],
+      "evidence": [
+        "device/adc/sysdepend/rp2040/adc_rp2040.c:35-50",
+        "device/adc/sysdepend/rp2040/adc_rp2040.c:62-75",
+        "device/adc/sysdepend/rp2040/adc_rp2040.c:85-100"
+      ],
+      "reason": "Preserve address-compatible UW buffer and lock-protected task/ISR handoff. Packing neighboring flags cannot change atomic storage or synchronization.",
+      "synchronization": "ADC_LOCK/ADC_UNLOCK around shared driver state, spinlock with SMP or interrupt disable otherwise."
+    },
+    {
+      "id": "usb-isr-callback-boundary",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c",
+      "owner": "",
+      "name": "usb_irq_handler",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO",
+      "status": "boundary",
+      "domain": {
+        "description": "Full pointer/function-pointer ABI representation, including NULL where accepted."
+      },
+      "required_bits": null,
+      "ownership": "SDK registration task writes the callback; USB interrupt dispatch reads it. Removal disables the IRQ before unregistering and clearing the pointer.",
+      "constraints": [
+        "Preserve pointer-width accesses, registration/removal ordering and IRQ synchronization; no shared bitfield storage."
+      ],
+      "evidence": [
+        "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c:31-70"
+      ],
+      "reason": "Preserve pointer-width accesses, registration/removal ordering and IRQ synchronization; no shared bitfield storage.",
+      "synchronization": "Removal disables USB IRQ before unregister/clear; preserve initialization order and pointer-sized accesses."
+    },
+    {
+      "id": "imu-bus-callback-boundary",
+      "path": "app_program/subsystem4/imu_sensor.h",
+      "owner": "imu_bus_t",
+      "name": "context|read|write",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO",
+      "status": "boundary",
+      "domain": {
+        "description": "Full pointer/function-pointer ABI representation, including NULL where accepted."
+      },
+      "required_bits": null,
+      "ownership": "Caller-owned bus descriptor is borrowed synchronously by imu_sensor_init/read; terrain transport supplies context and callbacks.",
+      "constraints": [
+        "Preserve callback signatures, context address and caller lifetime; function-pointer values have no application bit-compression domain."
+      ],
+      "evidence": [
+        "app_program/subsystem4/imu_sensor.h:18-37",
+        "app_program/subsystem4/imu_sensor.c"
+      ],
+      "reason": "Preserve callback signatures, context address and caller lifetime; function-pointer values have no application bit-compression domain.",
+      "synchronization": "Synchronous borrowed descriptor; caller must retain descriptor/context while invocation runs."
+    },
+    {
+      "id": "drive-port-callback-boundary",
+      "path": "app_program/controller/s3_drive.h",
+      "owner": "s3_drive_port_t",
+      "name": ".*",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO",
+      "status": "boundary",
+      "domain": {
+        "description": "Full pointer/function-pointer ABI representation, including NULL where accepted."
+      },
+      "required_bits": null,
+      "ownership": "Drive owner injects the motion port callback table at initialization and invokes it in the controller execution path. Snapshot/output objects follow each callback ABI.",
+      "constraints": [
+        "Preserve callback table representations and signatures; retained drive state fields are independently inventoried."
+      ],
+      "evidence": [
+        "app_program/controller/s3_drive.h:49-60",
+        "app_program/controller/s3_drive.c"
+      ],
+      "reason": "Preserve callback table representations and signatures; retained drive state fields are independently inventoried.",
+      "synchronization": "Initialization-before-use in drive owner; preserve caller serialization."
+    },
+    {
+      "id": "operator-port-callback-boundary",
+      "path": "app_program/controller/op_logic.h",
+      "owner": "op_port_t",
+      "name": ".*",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO",
+      "status": "boundary",
+      "domain": {
+        "description": "Full pointer/function-pointer ABI representation, including NULL where accepted."
+      },
+      "required_bits": null,
+      "ownership": "Operator panel owner supplies submit/print callbacks and passes the table to operator logic.",
+      "constraints": [
+        "Preserve function signatures, including variadic print calling convention, and callback lifetime."
+      ],
+      "evidence": [
+        "app_program/controller/op_logic.h:58-62",
+        "app_program/controller/op_panel.c"
+      ],
+      "reason": "Preserve function signatures, including variadic print calling convention, and callback lifetime.",
+      "synchronization": "Caller-owned callback table passed to operator execution; retain lifetime."
+    },
+    {
+      "id": "readonly-pointer-tables",
+      "path": "app_program/controller/op_logic.c|app_program/subsystem1/telemetry_codec.c|app_program/subsystem3/buddy3.c|lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c",
+      "owner": ".*",
+      "name": "name|g_topics|names|string_table",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO",
+      "status": "boundary",
+      "domain": {
+        "description": "Full pointer/function-pointer ABI representation, including NULL where accepted."
+      },
+      "required_bits": null,
+      "ownership": "Read-only static string pointer tables; shared reads do not mutate the pointed-to literals.",
+      "constraints": [
+        "Preserve literal addresses, string bytes, table order and full pointer representation."
+      ],
+      "evidence": [
+        "app_program/controller/op_logic.c:11",
+        "app_program/subsystem1/telemetry_codec.c:26",
+        "app_program/subsystem3/buddy3.c:147",
+        "lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c:51"
+      ],
+      "reason": "Preserve literal addresses, string bytes, table order and full pointer representation.",
+      "synchronization": "Immutable tables/literals; concurrent reads require no mutation synchronization."
+    },
+    {
+      "id": "usb-interrupt-descriptor-abi",
+      "path": "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c",
+      "owner": "mtk_dint_t",
+      "name": "inthdr",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO",
+      "status": "boundary",
+      "domain": {
+        "description": "Full pointer/function-pointer ABI representation, including NULL where accepted."
+      },
+      "required_bits": null,
+      "ownership": "Automatic interrupt registration descriptor is copied/consumed by tk_def_int using the mirrored imported ABI.",
+      "constraints": [
+        "Preserve exact descriptor layout and function-pointer ABI; not application-packed retained state."
+      ],
+      "evidence": [
+        "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c:9-16",
+        "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c:54-61"
+      ],
+      "reason": "Preserve exact descriptor layout and function-pointer ABI; not application-packed retained state.",
+      "synchronization": "Automatic registration argument; tk_def_int consumes ABI descriptor during call."
+    },
+    {
       "id": "pointer-function-abi",
       "status": "boundary",
       "domain": {

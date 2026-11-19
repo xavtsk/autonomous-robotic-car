@@ -72,15 +72,15 @@ def compiler_include_arguments(compiler):
     if "arm-none-eabi" in executable.name:
         prefix = executable.resolve().parent.parent
         result.append("--target=arm-none-eabi")
-        candidates = [prefix / "arm-none-eabi/include"]
-        candidates += sorted((prefix / "lib/gcc/arm-none-eabi").glob("*/include"))
+        candidates = sorted((prefix / "lib/gcc/arm-none-eabi").glob("*/include"))
+        candidates += [prefix / "arm-none-eabi/include"]
         for path in candidates:
             if path.is_dir():
                 result += ["-isystem", str(path)]
     elif os.name == "nt" and executable.name in {"gcc.exe", "cc.exe"}:
         prefix = executable.resolve().parent.parent
-        candidates = [prefix / "include"]
-        candidates += sorted((prefix / "lib/gcc").glob("*/*/include"))
+        candidates = sorted((prefix / "lib/gcc").glob("*/*/include"))
+        candidates += [prefix / "include"]
         result.append("--target=x86_64-w64-windows-gnu")
         for path in candidates:
             if path.is_dir():
@@ -110,6 +110,15 @@ def scalar_type(type_value):
         count = count * size if size >= 0 and count is not None else None
         canonical = canonical.get_array_element_type().get_canonical()
     return canonical, count
+
+
+def storage_duration(kind, parent_kind, storage):
+    """C99 storage duration, kept separate from Clang's storage-class token."""
+    if kind == "PARM_DECL":
+        return "automatic"
+    if kind == "VAR_DECL":
+        return "automatic" if parent_kind == "FUNCTION_DECL" and storage not in {"STATIC", "EXTERN"} else "static"
+    return "enclosing-object" if kind == "FIELD_DECL" else "none"
 
 
 def parse_one(job, root, owned, lexical_index):
@@ -145,8 +154,24 @@ def parse_one(job, root, owned, lexical_index):
             if owned_path(child) is not None:
                 yield child
                 yield from walk_owned(child)
+    cursors = list(walk_owned(unit.cursor))
+    address_uses = {}
+    for cursor in cursors:
+        if cursor.kind.name != "UNARY_OPERATOR":
+            continue
+        tokens = iter(cursor.get_tokens())
+        first = next(tokens, None)
+        if first is None or first.spelling != "&":
+            continue
+        for child in cursor.walk_preorder():
+            if child.kind.name not in {"DECL_REF_EXPR", "MEMBER_REF_EXPR"} or not child.referenced:
+                continue
+            key = child.referenced.get_usr()
+            if key:
+                address_uses.setdefault(key, set()).add(
+                    f"{owned_path(cursor)}:{cursor.location.line}")
     kinds = {"FIELD_DECL", "VAR_DECL", "PARM_DECL", "ENUM_CONSTANT_DECL"}
-    for cursor in walk_owned(unit.cursor):
+    for cursor in cursors:
         path = owned_path(cursor)
         seen.add(path)
         if cursor.kind.name not in kinds or not cursor.spelling:
@@ -171,8 +196,12 @@ def parse_one(job, root, owned, lexical_index):
                "allocation_bits": declared_size * 8 if declared_size >= 0 else None,
                "method": "libclang-recovery" if errors else "libclang-ast",
                "profiles": [profile], "storage": cursor.storage_class.name,
+               "storage_duration": storage_duration(cursor.kind.name, parent.kind.name if parent else "", cursor.storage_class.name),
+               "linkage": cursor.linkage.name,
+               "function_linkage": parent.linkage.name if parent and parent.kind.name == "FUNCTION_DECL" else "not-function",
                "compiler_target": target,
-               "address_taken": "not yet audited"}
+               "address_taken": "observed-direct" if cursor.get_usr() in address_uses else "not-observed-in-recorded-TUs",
+               "address_evidence": sorted(address_uses.get(cursor.get_usr(), set()))}
         if cursor.kind.name == "ENUM_CONSTANT_DECL":
             row["enum_value"] = cursor.enum_value
         if scalar.kind.name == "ENUM":
@@ -194,7 +223,9 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
         lexical_index.update({(r["path"], r["name"], r["line"]): r["owner"] for r in rows})
     commands, common = {}, None
     for database in databases:
-        for entry in inventory.read_json(database):
+        entries = ([json.loads(line) for line in database.read_text(encoding="utf-8").splitlines() if line.strip()]
+                   if database.suffix == ".jsonl" else inventory.read_json(database))
+        for entry in entries:
             directory = Path(entry.get("directory", entry.get("cwd", root))).resolve()
             arguments = entry.get("arguments", entry.get("command"))
             if isinstance(arguments, str):
@@ -209,18 +240,24 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
                 path = Path(name)
                 path = (path if path.is_absolute() else directory / path).resolve()
                 if path in owned:
-                    commands.setdefault(path, clean)
+                    contexts = commands.setdefault(path, [])
+                    if clean not in contexts:
+                        contexts.append(clean)
     if common is None:
         raise ValueError("Compile database contained no usable compiler arguments")
     jobs = []
     for source in sorted(owned):
         if limit_paths and not any(source.relative_to(root).as_posix().startswith(p) for p in limit_paths):
             continue
-        args = commands.get(source, common)
-        selected_profiles = ["configured"] if source.relative_to(root).parts[0] in {"testing", "tools"} else profiles
-        for profile in selected_profiles:
-            # Headers are parsed as C translation units; no object is produced.
-            jobs.append((source, profile_arguments([*args, "-x", "c"], PROFILES[profile]), profile))
+        host_only = source.relative_to(root).parts[0] in {"testing", "tools"}
+        contexts = list(commands.get(source, []))
+        if not contexts or (not host_only and common not in contexts):
+            contexts.insert(0, common)
+        for args in contexts:
+            selected_profiles = ["configured"] if host_only or args != common else profiles
+            for profile in selected_profiles:
+                # Headers are parsed as C translation units; no object is produced.
+                jobs.append((source, profile_arguments([*args, "-x", "c"], PROFILES[profile]), profile))
     rows, files, receipts = {}, {}, []
     with ThreadPoolExecutor(max_workers=jobs_count) as executor:
         results = executor.map(lambda job: parse_one(job, root, owned, lexical_index), jobs)
@@ -239,12 +276,19 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
                     rows[key] = row
                 else:
                     saved = rows[key]
-                    saved["profiles"] = sorted(set(saved["profiles"] + row["profiles"]))
+                    merged_profiles = sorted(set(saved["profiles"] + row["profiles"]))
+                    merged_addresses = sorted(set(saved.get("address_evidence", []) + row.get("address_evidence", [])))
+                    merged_targets = sorted(set(saved.get("compiler_targets", [saved.get("compiler_target")]) + [row.get("compiler_target")]))
+                    widths = sorted(set(saved.get("profile_width_variants", []) +
+                        [v for v in (saved.get("stored_bits"), row.get("stored_bits")) if v is not None]))
                     if saved["method"] == "libclang-recovery" and row["method"] == "libclang-ast":
                         saved.update({k: v for k, v in row.items() if k != "profiles"})
-                    if saved.get("stored_bits") != row.get("stored_bits"):
-                        saved["profile_width_variants"] = sorted(set(saved.get("profile_width_variants", []) +
-                            [v for v in (saved.get("stored_bits"), row.get("stored_bits")) if v is not None]))
+                    saved["profiles"] = merged_profiles
+                    saved["compiler_targets"] = merged_targets
+                    saved["address_evidence"] = merged_addresses
+                    saved["address_taken"] = "observed-direct" if merged_addresses else "not-observed-in-recorded-TUs"
+                    if len(widths) > 1:
+                        saved["profile_width_variants"] = widths
             if index % 50 == 0:
                 print(f"Parsed {index}/{len(jobs)} translation units", flush=True)
     return {"schema_version": 1, "compiler": "libclang 18.1.1 Python binding",

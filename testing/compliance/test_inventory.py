@@ -1,5 +1,7 @@
 """Integrity regressions for source/field coverage; no C binary is executed."""
 import copy
+import csv
+import io
 import importlib.util
 import hashlib
 import json
@@ -11,9 +13,62 @@ HERE = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("cr1_inventory", HERE / "inventory.py")
 inventory = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(inventory)
+AST_SPEC = importlib.util.spec_from_file_location("cr1_inventory_ast", HERE / "inventory_ast.py")
+inventory_ast = importlib.util.module_from_spec(AST_SPEC)
+AST_SPEC.loader.exec_module(inventory_ast)
 
 
 class DiscoveryTests(unittest.TestCase):
+    def test_storage_duration_distinguishes_retained_local_from_automatic(self):
+        self.assertEqual(inventory_ast.storage_duration("VAR_DECL", "FUNCTION_DECL", "NONE"), "automatic")
+        self.assertEqual(inventory_ast.storage_duration("VAR_DECL", "FUNCTION_DECL", "STATIC"), "static")
+        self.assertEqual(inventory_ast.storage_duration("VAR_DECL", "FUNCTION_DECL", "EXTERN"), "static")
+        self.assertEqual(inventory_ast.storage_duration("VAR_DECL", "TRANSLATION_UNIT", "NONE"), "static")
+        self.assertEqual(inventory_ast.storage_duration("FIELD_DECL", "STRUCT_DECL", "INVALID"), "enclosing-object")
+
+    def test_compiler_observes_address_use_and_function_linkage(self):
+        try:
+            from clang import cindex
+            cindex.Index.create()
+        except (ImportError, OSError):
+            self.skipTest("Optional pinned libclang is not installed")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            file = root / "fixture.c"
+            file.write_text("struct state { int count; }; static struct state saved;\n"
+                            "static void private_fn(int arg) { static int held; int local = arg; int *p = &saved.count; }\n"
+                            "void public_fn(int external) { private_fn(external); }\n")
+            result = inventory_ast.parse_one((file, ["-std=c99"], "configured"), root, {file}, {})
+            self.assertEqual(result["errors"], [])
+            rows = {row["name"]: row for row in result["declarations"]}
+            self.assertEqual(rows["held"]["storage_duration"], "static")
+            self.assertEqual(rows["local"]["storage_duration"], "automatic")
+            self.assertEqual(rows["arg"]["function_linkage"], "INTERNAL")
+            self.assertEqual(rows["external"]["function_linkage"], "EXTERNAL")
+            self.assertEqual(rows["count"]["address_taken"], "observed-direct")
+            self.assertEqual(rows["local"]["address_taken"], "not-observed-in-recorded-TUs")
+
+    def test_width_variants_cannot_claim_minimum_bit_compliance(self):
+        rule = {"id": "reviewed", "status": "compare", "domain": {"min": 0, "max": 7}}
+        row = {"stored_bits": 3, "method": "libclang-ast", "profile_width_variants": [3, 32]}
+        self.assertEqual(inventory.classify(row, {"rules": [rule]})["status"], "unresolved")
+
+    def test_automatic_policy_does_not_waive_static_local_or_recovery_ast(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        row = {"path": "app_program/example.c", "owner": "helper#L3", "name": "value",
+               "kind": "VAR_DECL", "type": "unsigned int", "type_category": "UINT",
+               "stored_bits": 32, "storage_duration": "automatic", "method": "libclang-ast"}
+        self.assertEqual(inventory.classify(row, policies)["policy"], "automatic-execution-temporary")
+        self.assertEqual(inventory.classify(dict(row, storage_duration="static"), policies)["status"], "unresolved")
+        self.assertEqual(inventory.classify(dict(row, method="libclang-recovery"), policies)["status"], "unresolved")
+
+    def test_generic_rtos_integer_is_not_retained_abi_waiver(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        row = {"path": "app_program/example.c", "owner": "state_t", "name": "active",
+               "kind": "FIELD_DECL", "type": "BOOL", "type_category": "UINT",
+               "stored_bits": 32, "storage_duration": "enclosing-object", "method": "libclang-ast"}
+        self.assertEqual(inventory.classify(row, policies)["status"], "unresolved")
+
     def test_inactive_branches_are_discovered(self):
         source = """
         typedef struct {
@@ -168,6 +223,21 @@ class IntegrityTests(unittest.TestCase):
         expanded = inventory.expand_ledger(compact, self.policies)
         self.assertEqual(self.errors(expanded), [])
         self.assertEqual(expanded["fields"], self.ledger["fields"])
+
+    def test_complete_csv_contains_every_row_and_explicit_unknowns(self):
+        rows = list(csv.DictReader(io.StringIO(inventory.render_csv(self.ledger))))
+        self.assertEqual(len(rows), len(self.ledger["fields"]))
+        self.assertTrue(all(row["units"] == "unresolved" for row in rows))
+        self.assertTrue(all("unreviewed" in row["synchronization"] for row in rows))
+        self.assertIn("Required/stored bits", inventory.render_retained(self.ledger))
+
+    def test_generated_table_drift_fails_even_when_ledger_is_unchanged(self):
+        for name, content in inventory.generated_artifacts(self.ledger).items():
+            (self.root / name).write_text(content, encoding="utf-8")
+        self.assertEqual(inventory.artifact_errors(self.root, self.ledger), [])
+        (self.root / "CR1_FIELDS.csv").write_text("stale")
+        self.assertEqual(inventory.artifact_errors(self.root, self.ledger),
+                         ["GENERATED DOCUMENT STALE: regenerate CR1_FIELDS.csv"])
 
 
 if __name__ == "__main__":

@@ -10,7 +10,9 @@ integrity, whereas --require-complete additionally gates CR1 closure.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
+import io
 import json
 import re
 import subprocess
@@ -238,7 +240,8 @@ def minimum_bits(lo, hi):
 def classify(row, policies):
     """Apply reviewed domain rules; do not infer bounded domains from types."""
     for rule in policies.get("rules", []):
-        selectors = ("path", "owner", "name", "kind", "type_category", "storage", "type")
+        selectors = ("path", "owner", "name", "kind", "type_category", "storage", "type",
+                     "storage_duration", "function_linkage", "linkage", "method")
         if all(re.fullmatch(rule.get(key, ".*"), str(row.get(key, "")))
                for key in selectors):
             result = {key: value for key, value in rule.items()
@@ -251,7 +254,7 @@ def classify(row, policies):
                 result.setdefault("required_bits", None)
             if result.get("status") == "compare":
                 used, need = row.get("stored_bits"), result["required_bits"]
-                result["status"] = "unresolved" if used is None or row.get("method") == "libclang-recovery" else "packed" if used == need else "gap" if used > need else "unresolved"
+                result["status"] = "unresolved" if used is None or row.get("method") == "libclang-recovery" or len(row.get("profile_width_variants", [])) > 1 else "packed" if used == need else "gap" if used > need else "unresolved"
             return result
     return {"status": "unresolved", "policy": None, "domain": None, "required_bits": None,
             "ownership": "unreviewed", "constraints": ["Derive accepted, sentinel and terminal values from every producer/consumer before narrowing."],
@@ -378,8 +381,12 @@ def render(ledger):
              "| Disposition | Declarations |", "|---|---:|"]
     lines += [f"| {status} | {count} |" for status, count in counts.items()]
     lines += ["", "Full machine-readable rows, domains and declaration widths are in [`inventory_fields.json`](../../testing/compliance/inventory_fields.json); each row's `policy` links its ownership, API constraints and evidence in [`inventory_policies.json`](../../testing/compliance/inventory_policies.json). The owned-file boundary is [`inventory_scope.json`](../../testing/compliance/inventory_scope.json).", "",
+              "Complete generated tables: [`CR1_FIELDS.csv`](CR1_FIELDS.csv) contains every declaration, and [`CR1_RETAINED_FIELDS.md`](CR1_RETAINED_FIELDS.md) focuses on owned retained objects and record members. Unknown ranges, units and synchronization are explicit; neither artifact treats an unknown as compliant.", "",
               "Every tracked/nonignored untracked C/header file is classified. Unclassified paths anywhere in the repository fail the check. [`inventory_imports.json`](../../testing/compliance/inventory_imports.json) records template/baseline Git blob provenance for the preserved imported files. The mixed kernel integration region is explicitly listed in the scope manifest; its surrounding imported body is not authorized for wholesale cleanup.", "",
               "Continuous-value precision, invalid-input rejection, sentinels, terminal counters, wire bytes and synchronization remain preservation requirements. Compiler ABI widths and padding are not application minimum-bit proofs.", "",
+              "Compiler rows distinguish storage class from C99 storage duration and record external/private function linkage. Automatic arithmetic temporaries and function parameters retain evaluation and validation behavior; these policies do not exempt static locals, globals or record fields. Generic RTOS integer aliases alone do not prove a retained value is an ABI boundary.", "",
+              "`address_evidence` records direct address-of expressions seen by the compiler. `not-observed-in-recorded-TUs` is not proof that an object has no aliases or escapes. Before narrowing a retained member, review all owner tasks/ISRs, pointer-compatible API uses and synchronization at the storage-unit level. Callback and retained pointer rules record concrete lifecycle owners where reviewed.", "",
+              "Distinct compilation contexts and observed target widths are retained. Width variants cannot establish a minimum-bit pass. Recovery ASTs and headers requiring an enclosing translation unit remain partial observations until a valid context covers them.", "",
               "## Reviewed packing gaps", "", "| Declaration | Domain | Required / stored bits | Ownership |", "|---|---|---|---|"]
     for row in fields:
         if row["status"] == "gap":
@@ -392,6 +399,84 @@ def render(ledger):
         selected = [r for r in fields if r["path"] == path]
         lines.append(f"| [{path}](../../{path}) | {len(selected)} | {sum(r['status'] == 'unresolved' for r in selected)} | {file['compiler_status']} |")
     return "\n".join(lines) + "\n"
+
+
+def table_row(row):
+    """Expose reviewed facts without inventing units or interval resolution."""
+    domain = row.get("domain") or {}
+    numeric = "min" in domain and "max" in domain
+    range_text = f"{domain['min']}..{domain['max']}" if numeric else domain.get("description", "unresolved")
+    resolution = domain.get("resolution", "unresolved")
+    if numeric and row.get("type_category") not in {"FLOAT", "DOUBLE", "LONGDOUBLE"}:
+        resolution = "integer code step 1; application units separately reviewed"
+    if row.get("type_category") in {"FLOAT", "DOUBLE", "LONGDOUBLE"}:
+        resolution = "existing binary floating representation/precision preserved; no fixed-point quantization"
+    return {
+        "source": row["path"], "line": row["line"], "kind": row["kind"],
+        "owner": row.get("owner", "") or "translation unit", "name": row["name"],
+        "type": row.get("type", "unresolved"), "range_or_domain": range_text,
+        "units": domain.get("units", "unresolved"), "resolution": resolution,
+        "required_bits": row.get("required_bits") if row.get("required_bits") is not None else "unresolved / preservation boundary",
+        "stored_bits_per_scalar_or_bitfield": row.get("stored_bits") if row.get("stored_bits") is not None else "unresolved",
+        "array_count": row.get("array_count") if row.get("array_count") is not None else "unresolved",
+        "declared_type_allocation_bits": row.get("allocation_bits") if row.get("allocation_bits") is not None else "unresolved",
+        "storage_duration": row.get("storage_duration", "unresolved"),
+        "ownership": row.get("ownership", "unreviewed"),
+        "synchronization": row.get("synchronization", "unreviewed; inspect ownership/constraints before changing storage"),
+        "address_observation": row.get("address_taken", "not audited"),
+        "address_evidence": "; ".join(row.get("address_evidence", [])),
+        "rationale": row.get("reason", "unreviewed"),
+        "constraints": "; ".join(row.get("constraints", [])),
+        "status": row["status"], "policy": row.get("policy") or "unresolved",
+        "method": row.get("method", "unresolved"),
+        "profiles": "; ".join(row.get("profiles", [])),
+        "evidence": "; ".join(row.get("evidence", [])),
+    }
+
+
+def render_csv(ledger):
+    rows = [table_row(row) for row in ledger["fields"]]
+    output = io.StringIO(newline="")
+    if rows:
+        writer = csv.DictWriter(output, fieldnames=list(rows[0]), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+    return output.getvalue()
+
+
+def render_retained(ledger):
+    selected = [row for row in ledger["fields"] if not row["path"].startswith(("testing/", "tools/"))
+                and (row["kind"] == "FIELD_DECL" or
+                     (row["kind"] == "VAR_DECL" and row.get("storage_duration") == "static"))]
+    lines = ["# CR1 retained-object and member inventory", "",
+             "Generated from the same source-bound ledger as [the inventory summary](CR1_FIELD_INVENTORY.md) and [all declaration rows](CR1_FIELDS.csv). Do not edit this table manually.", "",
+             "Record members are listed independently of each instance's lifetime. Static-duration variables include extern declarations and read-only tables; duplicate declarations are not additional allocations. Required bits describe reviewed domains only. Declared-type allocation is not additive for bitfields, unions, arrays or repeated declarations; use target structure/map measurements for actual RAM.", "",
+             "A preserved ABI or floating representation does not establish its synchronization. Unreviewed ranges, units and synchronization remain explicit. Direct address observations are positive evidence only; absence does not prove absence of aliases.", "",
+             f"{len(selected)} retained declaration/member rows.", "",
+             "| Declaration | Range/domain; units; resolution | Required/stored bits; storage | Ownership and synchronization | Rationale/status |",
+             "|---|---|---|---|---|"]
+    def escape(value):
+        return str(value).replace("|", "&#124;").replace("\n", " ")
+    for source in selected:
+        row = table_row(source)
+        label = f"{row['owner']}.{row['name']}"
+        values = [f"[{label}](../../{row['source']}#L{row['line']}) ({row['type']})",
+                  f"{row['range_or_domain']}; units: {row['units']}; resolution: {row['resolution']}",
+                  f"{row['required_bits']} / {row['stored_bits_per_scalar_or_bitfield']}; {row['storage_duration']}",
+                  f"{row['ownership']} Sync: {row['synchronization']}",
+                  f"{row['rationale']} [{row['status']}; {row['policy']}]"]
+        lines.append("| " + " | ".join(escape(value) for value in values) + " |")
+    return "\n".join(lines) + "\n"
+
+
+def generated_artifacts(ledger):
+    return {"CR1_FIELD_INVENTORY.md": render(ledger), "CR1_FIELDS.csv": render_csv(ledger),
+            "CR1_RETAINED_FIELDS.md": render_retained(ledger)}
+
+
+def artifact_errors(directory, ledger):
+    return [f"GENERATED DOCUMENT STALE: regenerate {name}" for name, content in generated_artifacts(ledger).items()
+            if not (directory / name).is_file() or (directory / name).read_text(encoding="utf-8") != content]
 
 
 def main(argv=None):
@@ -421,12 +506,12 @@ def main(argv=None):
         serialized += ",\n".join("    " + json.dumps(r, separators=(",", ":")) for r in compact["fields"])
         target.write_text(serialized + "\n  ]\n}\n", encoding="utf-8")
         document.parent.mkdir(parents=True, exist_ok=True)
-        document.write_text(render(ledger), encoding="utf-8")
+        for name, content in generated_artifacts(ledger).items():
+            (document.parent / name).write_text(content, encoding="utf-8", newline="\n")
     else:
         ledger = expand_ledger(read_json(target), policies)
     errors = validate(root, scope, policies, ledger, args.require_complete)
-    if document.read_text(encoding="utf-8") != render(ledger):
-        errors.append("GENERATED DOCUMENT STALE: regenerate CR1_FIELD_INVENTORY.md")
+    errors.extend(artifact_errors(document.parent, ledger))
     for error in errors:
         print(error)
     open_fields = sum(r["status"] in {"unresolved", "gap"} for r in ledger["fields"])
