@@ -52,4 +52,3 @@ static bool trace_report(motion_report_t *report)
     putchar('\n');
     return okay;
 }
-

@@ -24,6 +24,6 @@ SpaceBeforeParensOptions:
   BeforeNonEmptyParentheses: false
 SortIncludes: Never
 IncludeBlocks: Preserve
-ReflowComments: Always
+ReflowComments: true
 BreakStringLiterals: true
 SeparateDefinitionBlocks: Always

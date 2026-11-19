@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 from replay_audit import audit
+from instrument_harnesses import runtime_source, mqtt_source
 
 
 def main():
@@ -56,6 +57,27 @@ def main():
                                [directory, harness_dir], flags)
                 with (output / (label + '-' + name + '.trace')).open('wb') as stream:
                     subprocess.run([str(binary)], stdout=stream, check=True, timeout=120)
+            runtime = runtime_source(roots['candidate'], root, output/(label+'-runtime.c'))
+            runtime_sources = [app/'controller'/(name+'.c') for name in
+                               ('bc_capture', 'integration_codec', 's3_drive', 'ir_debug', 'control_debug')]
+            runtime_sources += [app/'subsystem3'/(name+'.c') for name in
+                                ('navigation_codec', 'ir_acquisition', 'ir_calibration', 'ir_reflectance',
+                                 'line_detection', 'line_controller', 'bc_decoder', 'line_navigation')]
+            binary = build(label, 'runtime', [runtime, *runtime_sources],
+                [fixtures/'integration', fixtures/'integration/fakes', root/'lib/liblwip/sysdepend/pico_rp2040'],
+                ['-pthread', '-DAPP_IR_DEBUG=1', '-DTM_MQTT=1'])
+            with (output/(label+'-runtime.trace')).open('wb') as stream:
+                subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
+            mqtt = mqtt_source(roots['candidate'], output/(label+'-mqtt.c'))
+            mqtt_sources = [app/'subsystem1'/(name+'.c') for name in
+                            ('telemetry_codec', 'buddy1', 'command', 'mqtt_bridge', 'buddy1_test')]
+            mqtt_sources += [root/'lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c']
+            binary = build(label, 'mqtt', [mqtt, *mqtt_sources],
+                [fixtures/'subsystem1', fixtures/'subsystem1/fakes', app/'subsystem1', root/'lib/liblwip/sysdepend/pico_rp2040'],
+                ['-pthread', '-DAPP_H', '-DAPP_TEST=1', '-DTM_MQTT=1', '-DAPP_IR_DEBUG=1', '-DAPP_IMU_DEBUG=1',
+                 '-include', str(fixtures/'subsystem1/host_kernel.h')])
+            with (output/(label+'-mqtt.trace')).open('wb') as stream:
+                subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
             source = root / 'app_program/subsystem3'
             harness = root / 'testing/subsystem3'
             modules = ['ir_acquisition', 'ir_calibration', 'ir_reflectance', 'line_detection',
@@ -66,7 +88,8 @@ def main():
             with (output / (label + '-navigation.trace')).open('wb') as stdout, (output / (label + '-navigation.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=180)
             binaries[label] = build(label, 'replay', [roots['candidate']/'testing/compliance/barcode_replay_trace.c', source/'bc_decoder.c'], [root])
-        for name, prefix in (('motion', b'M '), ('terrain', b'T '), ('obstacle', b'O ')):
+        for name, prefix in (('motion', b'M '), ('terrain', b'T '), ('obstacle', b'O '),
+                             ('runtime', b'RUNTIME '), ('mqtt', b'MQTT_')):
             before_trace = (output / ('baseline-' + name + '.trace')).read_bytes()
             after_trace = (output / ('candidate-' + name + '.trace')).read_bytes()
             rows = sum(line.startswith(prefix) for line in before_trace.splitlines())

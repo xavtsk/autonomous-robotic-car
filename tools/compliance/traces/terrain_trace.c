@@ -34,4 +34,3 @@ static void trace_terrain(terrain_monitor_t *monitor, const imu_sample_t *sample
     }
     putchar('\n');
 }
-

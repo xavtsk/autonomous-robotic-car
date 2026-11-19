@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install the reviewed host tool versions; fail on runner/tool drift."""
+"""Install reviewed tool versions; record the hosted runner image separately."""
 import json
 import os
 from pathlib import Path
@@ -10,11 +10,12 @@ if sys.platform != 'linux':
     sys.exit('This installer is only for the isolated Linux CI runner.')
 lock = json.loads(Path(__file__).with_name('toolchain.lock.json').read_text())
 image = os.environ.get('ImageVersion')
-if image != lock['runner_image_version']:
-    sys.exit(f'Runner image changed: {image!r}; review and update toolchain.lock.json explicitly.')
+print('Hosted runner image', image, '(recorded, not selectable by immutable image ID)', flush=True)
 subprocess.run(['sudo', 'apt-get', 'update'], check=True)
 packages = [name + '=' + version for name, version in lock['host_packages'].items()]
-subprocess.run(['sudo', 'apt-get', 'install', '-y', *packages], check=True)
+# Deliberately request these exact reviewed versions even when the hosted
+# image has newer tools. No unversioned tool downgrade is requested.
+subprocess.run(['sudo', 'apt-get', 'install', '-y', '--allow-downgrades', *packages], check=True)
 for name, expected in lock['host_packages'].items():
     actual = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', name], text=True)
     if actual != expected:

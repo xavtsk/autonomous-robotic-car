@@ -18,4 +18,3 @@ static s5_action_t trace_obstacle(s5_avoidance_t *avoidance, const s5_input_t *i
            avoidance->searched_mm, avoidance->lat_mm, avoidance->peek_lat_mm);
     return result;
 }
-

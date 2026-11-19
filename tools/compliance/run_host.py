@@ -88,12 +88,13 @@ def main():
         suite_flags = flags
         if name in ('subsystem3', 'subsystem4', 'subsystem5', 'diagnostics'):
             suite_flags += ' -pedantic'
-        cmd += list(targets) + [f'CC={compiler}', f'BUILD={output / "bin" / name}', f'CFLAGS={suite_flags}']
+        cmd += list(targets) + [f'CC={compiler}', 'PYTHON=/usr/bin/python3', f'BUILD={output / "bin" / name}', f'CFLAGS={suite_flags}']
         run(name, cmd)
 
     run('environment', [sys.executable, '-c',
         'import platform,sys;print(platform.platform());print(sys.version)'])
     run('compiler', [compiler, '--version'])
+    run('node', ['/usr/bin/node', '--version'])
     run('packages', ['dpkg-query', '-W', 'gcc-13', 'g++-13', 'clang-18', 'libc6',
                      'make', 'python3', 'nodejs', 'mosquitto', 'mosquitto-clients'])
     # The fixed baseline's Python codec test uses this historical path even
@@ -116,12 +117,18 @@ def main():
     run('control_debug_trace_build', [compiler, *shlex.split(flags), '-I' + str(root),
         str(trace), str(root / 'app_program/controller/control_debug.c'), '-o', str(trace_binary)])
     run('control_debug_trace', [str(trace_binary)])
+    builder_test = root / 'testing/compliance/control_builder_test.c'
+    if builder_test.is_file():
+        builder_binary = output/'control_builder_test'
+        run('control_builder_build', [compiler, *shlex.split(flags), '-I'+str(root),
+            str(builder_test), str(root/'app_program/controller/control_debug.c'), '-o', str(builder_binary)])
+        run('control_builder', [str(builder_binary)])
     if args.mode != 'sanitize':
         for folder in ('dashboard', 'change_requirement_1', 'diagnostics'):
             run('python_' + folder, [sys.executable, '-m', 'unittest', 'discover', '-v',
                                     '-s', 'testing/' + folder, '-p', 'test_*.py'])
         run('laptop_codec', [sys.executable, 'testing/subsystem1/test_laptop_codec.py'])
-        run('frontend', ['node', '--test', 'testing/dashboard/test_frontend_controls.js'])
+        run('frontend', ['/usr/bin/node', '--test', 'testing/dashboard/test_frontend_controls.js'])
         run('widths', [sys.executable, 'testing/change_requirement_1/check_widths.py'])
     manifest = dict(recorded_at=datetime.now(timezone.utc).isoformat(),
                     revision=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
