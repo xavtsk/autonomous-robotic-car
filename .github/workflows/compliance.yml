@@ -64,6 +64,13 @@ jobs:
       - name: Observe host conditional compilation
         if: always() && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
         run: /usr/bin/python3 tooling/tools/compliance/conditional_coverage.py --root subject --commands evidence/compile_commands.jsonl --output evidence/conditional-coverage --profile 'host-${{ matrix.mode }}'
+      - name: Save host branch receipt for matrix union
+        if: always() && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: branches-host-${{ matrix.mode }}-${{ github.sha }}
+          path: evidence/conditional-coverage/results.json
+          if-no-files-found: error
       - name: Save execution evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -128,6 +135,13 @@ jobs:
       - name: Observe target conditional compilation
         if: success()
         run: /usr/bin/python3 candidate/tools/compliance/conditional_coverage.py --root candidate --commands evidence/candidate/compile_commands.json --output evidence/conditional-coverage --profile 'target-${{ matrix.profile }}'
+      - name: Save target branch receipt for matrix union
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: branches-target-${{ matrix.profile }}-${{ github.sha }}
+          path: evidence/conditional-coverage/results.json
+          if-no-files-found: error
       - name: Collect compiler observations (partial diagnostics remain explicit)
         if: matrix.profile == 'production' && success()
         run: |
@@ -137,5 +151,31 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: target-${{ matrix.profile }}-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+
+  conditional-union:
+    runs-on: ubuntu-24.04
+    needs: [host, target]
+    if: always()
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - run: /usr/bin/python3 tools/compliance/install_host.py
+      - name: Download this run's separate branch receipts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: branches-*-${{ github.sha }}
+          path: branch-receipts
+          merge-multiple: false
+      - name: Require complete matching profile and source coverage
+        if: always()
+        run: /usr/bin/python3 tools/compliance/coverage_union.py --receipts branch-receipts --output evidence
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: conditional-union-${{ github.sha }}
           path: evidence/
           if-no-files-found: error

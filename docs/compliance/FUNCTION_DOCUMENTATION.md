@@ -38,6 +38,15 @@ claimed. Both batches are rechecked at their immutable revisions in Linux CI.
 python tools/compliance/verify_comment_batch.py --manifest docs/compliance/CONTROL_DEBUG_CONTRACTS.json --candidate 07ad498a49428b7362c0e5bcc010f66f1bb650d8
 ```
 
+Two later source-preserving batches add [motion/PID contracts](MOTION_FUNCTION_CONTRACTS.md)
+for 31 definitions and 17 prototypes, and [IR contracts](IR_FUNCTION_CONTRACTS.json)
+for ten definitions and nine prototypes. The IR contracts distinguish overall
+scan success from individual ADC errors, full output clearing on configuration
+rejection, calibration rejection with unchanged active settings, and retained
+surface hysteresis. Each batch has exact preprocessing fingerprints, preserved
+old comments and zero Clang documentation diagnostics in its recorded contexts.
+Their immutable commits are checked separately by the audit workflow.
+
 ## Observed remaining workload
 
 `tools/compliance/barr_functions.py` reuses the compiler contexts and six profile

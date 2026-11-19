@@ -19,16 +19,16 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from testing.compliance import inventory
-from format_owned import TOKEN
+try:
+    from .format_owned import TOKEN
+except ImportError:
+    from format_owned import TOKEN
 
 MARKER = 'CODEX_CONDITIONAL_'
 
 
-def instrument(source, path):
-    """Preserve logical-line boundaries; ignore directives inside comments/literals."""
-    if re.search(r'\?\?[=/\'()!<>-]', source):
-        raise ValueError('Trigraph source requires an explicit preprocessing review: ' + path)
-    # Build physical offsets for the C99 phase-2 line-spliced view.
+def source_view(source):
+    """Return the phase-2 text, masked directives view and physical offsets."""
     logical, offsets = [], []
     cursor = 0
     for match in re.finditer(r'\\\r?\n', source):
@@ -40,6 +40,118 @@ def instrument(source, path):
     spliced = ''.join(logical)
     masked = TOKEN.sub(lambda item: re.sub(r'[^\n]', ' ', item[0])
                        if item.lastgroup in {'comment', 'literal'} else item[0], spliced)
+    return spliced, masked, offsets
+
+
+def macro_definitions(source):
+    """Retain every definition, including redefinitions, without expanding it."""
+    spliced, masked, _ = source_view(source)
+    definitions = []
+    pattern = r'(?m)^[ \t]*(?:#|%:)\s*define\s+([A-Za-z_]\w*)([^\n]*)'
+    for match in re.finditer(pattern, masked):
+        tail = spliced[match.start(2):match.end(2)]
+        parameters = set()
+        if tail.startswith('('):
+            closing = tail.find(')')
+            if closing < 0:
+                raise ValueError('Unclosed macro parameter list: '+match[1])
+            parameters = set(re.findall(r'[A-Za-z_]\w*', tail[1:closing]))
+            parameters.add('__VA_ARGS__')
+            tail = tail[closing+1:]
+        values = [item[0] for item in TOKEN.finditer(tail)
+                  if item.lastgroup not in {'comment', 'literal'}]
+        definitions.append(dict(name=match[1],
+            dependencies=sorted(set(value for value in values
+                if re.fullmatch(r'[A-Za-z_]\w*', value)) - parameters),
+            unsupported=any(value in {'##', '%:%:', 'defined'} for value in values),
+            definition=spliced[match.start():match.end()].strip()))
+    return definitions
+
+
+def expression_names(expression):
+    """defined(NAME) tests existence; it does not expand NAME's value."""
+    values = [item[0] for item in TOKEN.finditer(expression)
+              if item.lastgroup not in {'comment', 'literal'}]
+    names, index = set(), 0
+    while index < len(values):
+        value = values[index]
+        if value == 'defined':
+            index += 1
+            if index < len(values) and values[index] == '(':
+                index += 1
+                if index < len(values):
+                    index += 1
+                if index < len(values) and values[index] == ')':
+                    index += 1
+            elif index < len(values):
+                index += 1
+            continue
+        if re.fullmatch(r'[A-Za-z_]\w*', value):
+            names.add(value)
+        index += 1
+    return names
+
+
+def line_safety_errors(sources, observed_definitions=()):
+    """Conservatively reject line-dependent conditions and include selection.
+
+    Definitions from pristine -dD runs include active imported-header and -D
+    macros. Lexical owned definitions also cover inactive/undefined aliases.
+    All definitions are unioned; no ordering or argument-use proof is claimed.
+    """
+    definitions = list(observed_definitions)
+    for source in sources.values():
+        definitions.extend(macro_definitions(source))
+    dependencies, unsupported = {}, set()
+    for row in definitions:
+        dependencies.setdefault(row['name'], set()).update(row['dependencies'])
+        if row['unsupported']:
+            unsupported.add(row['name'])
+
+    def dependency_path(name):
+        pending, seen = [(name, [name])], set()
+        while pending:
+            current, chain = pending.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            if current == '__LINE__':
+                return chain, 'line value'
+            if current in unsupported:
+                return chain, 'token-pasting or generated defined operator'
+            pending.extend((value, chain+[value])
+                           for value in sorted(dependencies.get(current, ()), reverse=True))
+        return None
+
+    errors = []
+    for path, source in sources.items():
+        spliced, masked, offsets = source_view(source)
+        for match in re.finditer(r'(?m)^[ \t]*(?:#|%:)\s*(?:line\b|[0-9])[^\n]*', masked):
+            line = source.count('\n', 0, offsets[match.start()])+1
+            errors.append(f'{path}:{line}: explicit source line control is unsupported')
+        pattern = r'(?m)^[ \t]*(?:#|%:)\s*(if|elif|include|include_next)\b([^\n]*)'
+        for match in re.finditer(pattern, masked):
+            expression = spliced[match.start(2):match.end(2)].strip()
+            if match[1].startswith('include') and expression.startswith(('"', '<')):
+                continue
+            for name in sorted(expression_names(expression)):
+                found = dependency_path(name)
+                if found:
+                    chain, reason = found
+                    line = source.count('\n', 0, offsets[match.start()])+1
+                    errors.append(f'{path}:{line}: #{match[1]} depends on {reason}: '+
+                                  ' -> '.join(chain))
+    return errors
+
+
+def instrument(source, path):
+    """Preserve logical lines; reject unsupported line-dependent directives."""
+    if re.search(r'\?\?[=/\'()!<>-]', source):
+        raise ValueError('Trigraph source requires an explicit preprocessing review: ' + path)
+    sensitive = line_safety_errors({path: source})
+    if sensitive:
+        raise ValueError('; '.join(sensitive))
+    spliced, masked, offsets = source_view(source)
     insertions, branches, stack = [], [], []
     for match in re.finditer(r'(?m)^[ \t]*(?:#|%:)\s*(if|ifdef|ifndef|elif|else|endif)\b[^\n]*', masked):
         kind = match[1]
@@ -98,6 +210,31 @@ def preprocess_arguments(arguments, source):
     return [*result, '-E', '-P', str(source)]
 
 
+def pristine_observation(command, cwd, output, number):
+    """Preprocess the untouched overlay and retain macro/failure evidence."""
+    command = [*command[:-1], '-dD', command[-1]]
+    log = f'pristine-{number}.log'
+    macros = f'pristine-{number}.macros'
+    receipt = dict(command=command, directory=str(cwd), log=log,
+                   macro_definitions_log=macros)
+    try:
+        result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, timeout=120)
+        (output/log).write_text(result.stderr, encoding='utf-8')
+        definitions = macro_definitions(result.stdout)
+        (output/macros).write_text('\n'.join(row['definition'] for row in definitions)+'\n', encoding='utf-8')
+        receipt.update(returncode=result.returncode,
+                       stdout_sha256=hashlib.sha256(result.stdout.encode()).hexdigest(),
+                       definition_count=len(definitions), definitions=definitions)
+        if result.returncode:
+            failed_output = f'pristine-{number}.failed.i'
+            (output/failed_output).write_text(result.stdout, encoding='utf-8')
+            receipt['failed_preprocessing_output'] = failed_output
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        (output/log).write_text(str(exc), encoding='utf-8')
+        receipt.update(returncode=125, definitions=[], error=str(exc))
+    return receipt
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, required=True)
@@ -123,23 +260,12 @@ def main():
         shutil.copyfile(example, overlay/'config/wifi_secrets.h')
     scope = inventory.read_json(ROOT/'testing/compliance/inventory_scope.json')
     owned = inventory.owned_files(root, scope)
-    branches, hashes, errors = [], {}, []
+    branches, hashes, errors, sources = [], {}, [], {}
     for file in owned:
         path = file.relative_to(root).as_posix()
         text = file.read_text(encoding='utf-8-sig')
         hashes[path] = hashlib.sha256(text.encode()).hexdigest()
-        try:
-            changed, rows = instrument(text, path)
-            # Mixed ownership: observe only the explicitly owned conditional.
-            if path in scope.get('mixed_files', {}):
-                region = scope['mixed_files'][path]
-                ranges = [(text.count('\n', 0, start)+1, text.count('\n', 0, end-1)+1)
-                          for start, end in inventory.mixed_region_spans(text, region)]
-                rows = [row for row in rows if any(first <= row['line'] <= last for first, last in ranges)]
-            branches.extend(rows)
-            (overlay/path).write_text(changed, encoding='utf-8')
-        except ValueError as exc:
-            errors.append(str(exc))
+        sources[path] = text
     contents = args.commands.read_text(encoding='utf-8')
     commands = json.loads(contents) if contents.lstrip().startswith('[') else [json.loads(row) for row in contents.splitlines() if row]
     work, seen = [], set()
@@ -160,6 +286,41 @@ def main():
             if key not in seen:
                 seen.add(key)
                 work.append((command, cwd))
+    # Collect active header and command-line definitions before inserting any
+    # marker. Failed pristine commands cannot supply a passing coverage union.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        pristine = list(pool.map(lambda item: pristine_observation(
+            item[1][0], item[1][1], output, item[0]), enumerate(work)))
+    definitions = [definition for row in pristine for definition in row.pop('definitions')]
+    errors.extend('Pristine preprocessing failed: '+row['log']
+                  for row in pristine if row['returncode'])
+    try:
+        safety_errors = line_safety_errors(sources, definitions)
+    except ValueError as exc:
+        safety_errors = ['Line-safety review failed: '+str(exc)]
+    errors.extend(safety_errors)
+    changed_sources = {}
+    for path, text in sources.items():
+        try:
+            changed, rows = instrument(text, path)
+            # Mixed ownership: observe only the explicitly owned conditional.
+            if path in scope.get('mixed_files', {}):
+                region = scope['mixed_files'][path]
+                ranges = [(text.count('\n', 0, start)+1, text.count('\n', 0, end-1)+1)
+                          for start, end in inventory.mixed_region_spans(text, region)]
+                rows = [row for row in rows if any(first <= row['line'] <= last for first, last in ranges)]
+            branches.extend(rows)
+            changed_sources[path] = changed
+        except ValueError as exc:
+            errors.append(str(exc))
+    derived_inputs = {}
+    if not errors:
+        for path, changed in changed_sources.items():
+            (overlay/path).write_text(changed, encoding='utf-8')
+        # Both pristine and instrumented passes use the public example alias.
+        if example.is_file():
+            shutil.copyfile(overlay/'config/wifi_secrets.example.h', overlay/'config/wifi_secrets.h')
+            derived_inputs['config/wifi_secrets.h'] = 'config/wifi_secrets.example.h'
     def observe(item):
         number, (command, cwd) = item
         try:
@@ -170,8 +331,10 @@ def main():
                         active=active if result.returncode == 0 else [], log=f'preprocess-{number}.log')
         except (OSError, subprocess.SubprocessError) as exc:
             return dict(command=command, directory=str(cwd), returncode=125, active=[], error=str(exc))
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        observations = list(pool.map(observe, enumerate(work)))
+    observations = []
+    if not errors:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            observations = list(pool.map(observe, enumerate(work)))
     active = {value for row in observations for value in row['active']}
     for row in branches:
         row['observed'] = row['id'] in active
@@ -180,13 +343,18 @@ def main():
         if current != digest:
             errors.append('Measured source changed during preprocessing: '+path)
     failures = [row for row in observations if row['returncode']]
-    report = dict(profile=args.profile, source_sha256=hashes, branches=branches,
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+    report = dict(profile=args.profile, revision=revision, source_sha256=hashes, branches=branches,
+                  derived_inputs=derived_inputs,
+                  pristine_observations=pristine, line_safety_errors=safety_errors,
                   observations=observations, errors=errors, missing=[row['id'] for row in branches if not row['observed']],
                   measurement_passed=bool(observations) and not errors and not failures,
                   coverage_complete=bool(observations) and not errors and not failures and all(row['observed'] for row in branches),
                   network_configuration='Public example in disposable overlay only.',
                   limitations=['Explicit conditional arms only; implicit empty else arms contain no owned code.',
                                'Host-only files need host compile records; a target profile alone is incomplete.',
+                               'Line-safety dependencies conservatively union macro definitions and contexts; harmless redefinitions or unused arguments can be rejected.',
+                               'Token-pasting/generated defined macros reaching conditions or include selection require explicit review; no full macro-expansion equivalence is claimed.',
                                'Preprocessor visibility is not branch execution or full-course validation.'])
     (output/'results.json').write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')
     if overlay.resolve().parent != output or overlay.name != 'source-overlay':

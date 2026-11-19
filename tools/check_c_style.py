@@ -12,6 +12,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 
 def module_errors(paths):
@@ -44,15 +45,32 @@ def text_errors(path):
     return errors
 
 
+def canonical_format(text):
+    """BARR 3.3.c keeps an extra blank line after the end-of-file comment.
+
+    clang-format 18 removes that final blank line. Normalize its proposed output
+    to the selected project rule; do not suppress other formatting differences.
+    """
+    return text.rstrip() + "\n\n"
+
+
 def check(paths, formatter):
     errors = [error for path in paths for error in text_errors(path)]
     if not formatter:
         return 2, errors + ["INCOMPLETE: clang-format is unavailable; use --formatter."]
-    result = subprocess.run(
-        [formatter, "--dry-run", "--Werror", "--style=file", *map(str, paths)],
-        cwd=ROOT, capture_output=True, text=True, check=False)
-    if result.returncode:
-        errors.append(result.stdout + result.stderr)
+    for path in paths:
+        result = subprocess.run([formatter, "--style=file", str(path)],
+                                cwd=ROOT, capture_output=True, text=True, check=False)
+        if result.returncode:
+            errors.append(f"{path}: formatter failed: " + result.stderr)
+            continue
+        expected = canonical_format(result.stdout)
+        current = path.read_text(encoding="utf-8")
+        if current != expected:
+            old, new = current.splitlines(), expected.splitlines()
+            first = next((index+1 for index, pair in enumerate(zip(old, new))
+                          if pair[0] != pair[1]), min(len(old), len(new))+1)
+            errors.append(f"{path}:{first}: differs from clang-format plus BARR end-of-file blank line")
     return (1 if errors else 0), errors
 
 
@@ -62,14 +80,20 @@ def main(argv=None):
     parser.add_argument("--check", nargs="+", type=Path,
                         help="check only these C/header files")
     args = parser.parse_args(argv)
-    paths = args.check or sorted(path for path in (ROOT / "app_program").rglob("*")
-                                if path.suffix in (".c", ".h"))
+    # Whole-file formatting is applied only where the whole file is owned.
+    # Mixed template files remain in the rule/field audits at owned-region scope.
+    from testing.compliance import inventory
+    scope = inventory.read_json(ROOT / "testing/compliance/inventory_scope.json")
+    paths = args.check or sorted(path for path in inventory.owned_files(ROOT, scope)
+                                if path.relative_to(ROOT).as_posix() not in scope.get("mixed_files", {}))
     if not paths:
         parser.error("No C/header files selected")
     try:
         status, errors = check(paths, args.formatter)
         if not args.check:
-            modules = module_errors(paths)
+            # Existing module-name checks have application-only assumptions.
+            # The full-scope checker resolves split adapter/header directories.
+            modules = module_errors([path for path in paths if path.is_relative_to(ROOT / "app_program")])
             errors.extend(modules)
             if modules and status == 0:
                 status = 1

@@ -328,7 +328,11 @@
       "enforcement": "ast-documentation",
       "requirement": "Document every module and function for automatic documentation generation.",
       "status": "unreviewed",
-      "evidence": []
+      "evidence": [
+        "docs/compliance/CONTROL_DEBUG_CONTRACTS.json; 13 definitions and 6 prototypes; comment-only source proof and clean compiler documentation check at 07ad498",
+        "docs/compliance/MOTION_FUNCTION_CONTRACTS.json; 31 definitions and 17 prototypes; reviewed units and invalid-output semantics at 0c5c53b",
+        "docs/compliance/IR_FUNCTION_CONTRACTS.json; 10 definitions and 9 prototypes; reviewed scan, calibration and hysteresis contracts at 2a10215"
+      ]
     },
     {
       "id": "2.2.i",

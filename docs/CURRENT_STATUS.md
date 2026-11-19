@@ -45,8 +45,8 @@ Local Windows compile/link checks must remain distinct because Application
 Control has blocked generated native test programs in this workspace.
 
 The most recently examined complete production image is cleanup revision
-`d26a9808f00add85ee3b6701b415cdec21444e29`, built with public example network
-settings in [Linux run 44587222244](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44587222244).
+`3fda4d517e5720c51da7c41033bc0b9c221b11b5`, built with public example network
+settings in [Linux run 44589867778](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44589867778).
 It has not been flashed. The physical baseline above remains the rollback image.
 
 | Work or evidence | Current result |
@@ -55,15 +55,19 @@ It has not been flashed. The physical baseline above remains the rollback image.
 | Compact debug packet builder | Executed boundary tests and exact packet traces match; matched production static RAM decreases by 128 bytes. |
 | C99 aliases and assertions | Original assertion conditions retained; exercised C99 checks pass. One primitive `float` spelling is retained under pending BARR-P12. |
 | Repaired production executable | Entire flash payload is byte-identical to the pre-alias debug-builder image; [matched evidence](compliance/evidence/alias-repaired-target.json). |
-| Semantic comparison at `d26a980` | Motion, terrain, obstacle, controller/MQTT, debug packets, navigation and all 1008 barcode replay comparisons match. Additional fixtures compare 802 motion-storage, 854 barcode-work, 776 capture-storage and 2093 fragmented-receive trace rows. |
+| Semantic comparison at `3fda4d5` | Motion, terrain, obstacle, controller/MQTT, debug packets, navigation and all 1008 barcode replay comparisons match. Additional fixtures compare 802 motion-storage, 854 barcode-work, 776 capture-storage and 2093 fragmented-receive trace rows. |
 | Complete regression gate | **Failed:** two original barcode fixture expectations also fail on the fixed baseline. [Investigation](compliance/evidence/BASELINE_FAILURES.md) preserves those expectations. |
+| Historical test contexts | Three obsolete harnesses fail to compile on both fixed baseline and candidate against the current APIs. [Exact commands and diagnostics](compliance/evidence/historical-fixture-compilation.json) are retained; no replacement API or weakened assertion hides these gaps. |
 | BARR formatting/module comments | Token-preserving batch `6326fcb` covers 239 files. Production bytes match exactly and the repaired differential rerun matches; [record](compliance/evidence/FORMAT_CI_44579973340.md) retains the earlier harness failure. |
 | Motion private storage | Six Linux host modes pass, exact 802-row traces match; linked production static RAM decreases by 32 bytes versus the preceding image. [Evidence](compliance/evidence/motion-storage-candidate.json). Physical timing remains pending. |
 | Estimator module rename | Production flash payload and UF2 are byte-identical to the motion candidate, with link order preserved. [Evidence](compliance/evidence/estimator-rename-linux.json). |
 | MQTT private storage | All six Linux host modes and four MQTT profiles pass; linked static RAM decreases by 24 bytes while text increases by 40 bytes. Packet bytes and retry/receive traces match. [Evidence](compliance/evidence/mqtt-state-linux.json). |
 | Conditional-compilation collector | Repaired parser executes successfully in all 12 target jobs. Per-profile branch receipts are retained; their union still requires closure review. Collector success alone is not full branch coverage. |
-| Header pairs and function contracts | Twenty standalone test pairs and 19 controller-debug contracts have bounded source/compiler proofs; their exact historical commits are checked by CI. Project-wide naming and documentation remain open. |
-| Barcode phase extraction | Four helpers preserve the original dispatcher guards and per-update budget; inverse-token and local compile checks pass. Extracted-candidate Linux traces and target matrix are pending. |
+| Header pairs and function contracts | Twenty standalone test pairs and 19 controller-debug contracts pass their Linux gates. Later motion/IR contracts, fake guards and the shared navigation header have bounded source/compiler proofs; next Linux run pending. Project-wide naming and documentation remain open. |
+| Barcode phase extraction | First four helpers pass six host modes, all 854 detailed work rows and all 12 target builds, with unchanged compiler stack rows. [Evidence](compliance/evidence/barcode-phase-extraction.json). Three later pruning helpers await their Linux gate. |
+| Capture private storage | Five recorder-owned fields compacted without changing serializers or function bodies. Focused target compilation saves 8 bytes with unchanged stack estimates; candidate execution/full linking pending. [Evidence](compliance/evidence/bcap-storage-candidate.json). |
+| Imported template preservation | Fifteen unchanged imported files restored to fixed-baseline text; [provenance correction](compliance/TEMPLATE_BOUNDARY_CORRECTION.md). Actual team network modifications remain in scope. |
+| Data inventory binding | 254 owned/mixed files and 9,210 declarations recorded, with consumer/header dependencies checked. Integrity passes; 238 representation items and three historical compiler contexts remain open. |
 | Complete BARR / CR1 closure | **Incomplete:** remaining field gaps, function contracts, statement/naming rules, profile coverage and pending exceptions remain in their ledgers. |
 | New candidate physical behavior | **Not verified:** no cleanup image has been flashed or driven in this implementation session. |
 
@@ -71,11 +75,11 @@ The [alias/assertion batch record](compliance/ALIAS_ASSERT_BATCH.md) and
 [compiler investigation](compliance/evidence/ALIAS_TARGET_INVESTIGATION.md)
 distinguish source equivalence, executed traces and target-byte evidence.
 The later branch commits and working tree are implementation work in progress;
-they do not inherit the exact-image or execution result of `d26a980`.
+they do not inherit the exact-image or execution result of `3fda4d5`.
 
-The inspected `d26a980` production image has 466,036 text bytes, 696 data bytes
+The inspected `3fda4d5` production image has 466,012 text bytes, 696 data bytes
 and 128,816 BSS bytes (129,512 bytes of static RAM). Relative to the fixed
-baseline's matched CI profile, text decreases by 240 bytes and static RAM by
+baseline's matched CI profile, text decreases by 264 bytes and static RAM by
 184 bytes. These are actual linker allocations, not a sum of information bits.
 Compiler stack estimates and any increases remain in the target manifests;
 physical task high-water measurements are still outstanding.

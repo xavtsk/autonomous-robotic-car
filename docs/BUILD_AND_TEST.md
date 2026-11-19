@@ -97,6 +97,9 @@ recorded compiler definitions and public example network settings. Original
 sources are hashed before and after observation. Missing arms, preprocessing
 failures and host-only paths remain explicit; a successful collector invocation
 does not mean every supported conditional branch has been covered.
+The [matrix union](compliance/CONDITIONAL_COVERAGE.md) now requires every named
+profile receipt and matches them to the complete current source inventory.
+An unobserved arm or a failed/stale receipt keeps that gate incomplete.
 
 ## Compliance tooling
 
