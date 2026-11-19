@@ -161,6 +161,75 @@
       ]
     },
     {
+      "id": "barcode-work-run-envelope-review",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "runs",
+      "status": "unresolved",
+      "domain": {
+        "min": 0,
+        "max": 214748364,
+        "units": "microseconds",
+        "minimum_width_proved": false
+      },
+      "ownership": "Navigation sampling owner updates the initialized record and its incremental workspace.",
+      "synchronization": "Preserve existing owner serialization and snapshot boundaries.",
+      "constraints": [
+        "Original edge differences lie within the4095*31500=128992500us recorded span. work_apply writes a corrected element only after width>0 and width<=validated max_run_us, whose configuration bound is214748364; an early failure retains already-written corrections. This28-bit safe envelope is not an exact minimum proof. Establish a reachable extreme across direct/shared/varying paths before packing, and preserve the addressable uint32_t array used by public validators."
+      ],
+      "reason": "Original edge differences lie within the4095*31500=128992500us recorded span. work_apply writes a corrected element only after width>0 and width<=validated max_run_us, whose configuration bound is214748364; an early failure retains already-written corrections. This28-bit safe envelope is not an exact minimum proof. Establish a reachable extreme across direct/shared/varying paths before packing, and preserve the addressable uint32_t array used by public validators.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-record-quiet-envelope-review",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t|s3_barcode_record_t",
+      "name": "quiet_required_us",
+      "status": "unresolved",
+      "domain": {
+        "min": 0,
+        "max": 2147483647,
+        "units": "microseconds",
+        "minimum_width_proved": false
+      },
+      "ownership": "Navigation sampling owner updates the initialized record and its incremental workspace.",
+      "synchronization": "Preserve existing owner serialization and snapshot boundaries.",
+      "constraints": [
+        "work_keep_candidate runs only after batch validation succeeds. rec_narrow is a mean of six accepted widths<=max_run_us, and config_valid requires max_run_us*quiet_modules<2^31. The record copies this workspace threshold or resets it to zero. This31-bit safe envelope does not establish the tight reachable threshold once finite recorded-frame length and character constraints are combined."
+      ],
+      "reason": "work_keep_candidate runs only after batch validation succeeds. rec_narrow is a mean of six accepted widths<=max_run_us, and config_valid requires max_run_us*quiet_modules<2^31. The record copies this workspace threshold or resets it to zero. This31-bit safe envelope does not establish the tight reachable threshold once finite recorded-frame length and character constraints are combined.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-record-required-envelope-review",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t|s3_barcode_record_t",
+      "name": "required_us",
+      "status": "unresolved",
+      "domain": {
+        "min": 0,
+        "max": 2147483647,
+        "units": "microseconds",
+        "minimum_width_proved": false
+      },
+      "ownership": "Navigation sampling owner updates the initialized record and its incremental workspace.",
+      "synchronization": "Preserve existing owner serialization and snapshot boundaries.",
+      "constraints": [
+        "work_keep_candidate adds last edge, chosen half-bias and quiet then explicitly caps at INT32_MAX; record threshold copies it or resets to zero. For an initialized recorded frame, last edge covers the original sentinel span while |half-bias|<=3/8 of its narrow mean, so the sum cannot be negative. This31-bit safe envelope is not a minimum proof: finite frame duration and successful fitting may tighten the reachable maximum. Preserve one-microsecond resolution, signed intermediate arithmetic and cap ordering."
+      ],
+      "reason": "work_keep_candidate adds last edge, chosen half-bias and quiet then explicitly caps at INT32_MAX; record threshold copies it or resets to zero. For an initialized recorded frame, last edge covers the original sentinel span while |half-bias|<=3/8 of its narrow mean, so the sum cannot be negative. This31-bit safe envelope is not a minimum proof: finite frame duration and successful fitting may tighten the reachable maximum. Preserve one-microsecond resolution, signed intermediate arithmetic and cap ordering.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
       "id": "barcode-fit-signed-envelope-review",
       "path": "app_program/subsystem3/bc_decoder.h",
       "owner": "s3_barcode_work_t",

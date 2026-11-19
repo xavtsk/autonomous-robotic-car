@@ -129,6 +129,7 @@ def parse_one(job, root, owned, lexical_index):
         unit = cindex.Index.create().parse(str(source), args=arguments)
     except cindex.TranslationUnitLoadError as error:
         return {"source": source.relative_to(root).as_posix(), "profile": profile,
+                "arguments": arguments, "compiler_target": target,
                 "errors": [str(error)], "declarations": [], "seen": []}
     errors = [str(d) for d in unit.diagnostics if d.severity >= cindex.Diagnostic.Error]
     declarations, seen = [], {source.relative_to(root).as_posix()}
@@ -210,6 +211,7 @@ def parse_one(job, root, owned, lexical_index):
                                   if child.kind.name == "ENUM_CONSTANT_DECL"}
         declarations.append(row)
     return {"source": source.relative_to(root).as_posix(), "profile": profile,
+            "arguments": arguments, "compiler_target": target,
             "errors": errors, "declarations": declarations, "seen": sorted(seen)}
 
 
@@ -217,9 +219,16 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
     root = root.resolve()
     scope = inventory.read_json(root / "testing/compliance/inventory_scope.json")
     owned = set(inventory.owned_files(root, scope))
+    # Bind every observation to all owned inputs in its translation unit. A
+    # header change can alter a global's layout without changing the .c file.
+    input_bindings = {}
     lexical_index = {}
     for file in owned:
-        rows, _ = inventory.lexical_fields(file.read_text(encoding="utf-8-sig"), file.relative_to(root).as_posix())
+        text = file.read_text(encoding="utf-8-sig")
+        path = file.relative_to(root).as_posix()
+        input_bindings[path] = {"semantic_sha256": inventory.semantic_digest(text),
+                                "source_location_sha256": inventory.source_location_digest(text)}
+        rows, _ = inventory.lexical_fields(text, path)
         lexical_index.update({(r["path"], r["name"], r["line"], r.get("column")): r["owner"] for r in rows})
     commands, common = {}, None
     for database in databases:
@@ -263,10 +272,12 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
         results = executor.map(lambda job: parse_one(job, root, owned, lexical_index), jobs)
         for index, result in enumerate(results, 1):
             receipts.append({k: v for k, v in result.items() if k not in {"declarations", "seen"}})
+            receipts[-1]["owned_inputs"] = result["seen"]
             for path in result["seen"]:
                 receipt = files.setdefault(path, {"profiles": [], "status": "partial",
-                    "source_location_sha256": inventory.source_location_digest((root / path).read_text(encoding="utf-8-sig")),
-                    "semantic_sha256": inventory.semantic_digest((root / path).read_text(encoding="utf-8-sig"))})
+                    **input_bindings[path], "input_bindings": {}})
+                receipt["input_bindings"].update({dependency: input_bindings[dependency]
+                                                  for dependency in result["seen"]})
                 if result["profile"] not in receipt["profiles"]:
                     receipt["profiles"].append(result["profile"])
                 if not result["errors"]:
@@ -292,7 +303,13 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
                         saved["profile_width_variants"] = widths
             if index % 50 == 0:
                 print(f"Parsed {index}/{len(jobs)} translation units", flush=True)
-    return {"schema_version": 1, "compiler": "libclang 18.1.1 Python binding",
+    for path, before in input_bindings.items():
+        text = (root / path).read_text(encoding="utf-8-sig")
+        after = {"semantic_sha256": inventory.semantic_digest(text),
+                 "source_location_sha256": inventory.source_location_digest(text)}
+        if after != before:
+            raise ValueError(f"Compiler input changed during collection: {path}; recollect frozen sources")
+    return {"schema_version": 2, "compiler": "libclang 18.1.1 Python binding",
             "profiles": {p: PROFILES[p] for p in profiles}, "translation_units": receipts,
             "files": files, "declarations": [rows[k] for k in sorted(rows)]}
 

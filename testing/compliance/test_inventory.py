@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("cr1_inventory", HERE / "inventory.py")
@@ -20,6 +21,15 @@ AST_SPEC.loader.exec_module(inventory_ast)
 
 
 class DiscoveryTests(unittest.TestCase):
+    def require_libclang(self):
+        try:
+            from clang import cindex
+            cindex.Index.create()
+        except (ImportError, OSError):
+            if os.environ.get("CR1_REQUIRE_LIBCLANG") == "1":
+                self.fail("CR1_REQUIRE_LIBCLANG=1 requires pinned libclang==18.1.1; compiler audit cannot be skipped")
+            self.skipTest("Optional pinned libclang is not installed")
+
     def test_storage_duration_distinguishes_retained_local_from_automatic(self):
         self.assertEqual(inventory_ast.storage_duration("VAR_DECL", "FUNCTION_DECL", "NONE"), "automatic")
         self.assertEqual(inventory_ast.storage_duration("VAR_DECL", "FUNCTION_DECL", "STATIC"), "static")
@@ -36,25 +46,22 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(len({inventory.row_id(row) for row in rows}), 2)
 
     def test_compiler_observes_address_use_and_function_linkage(self):
-        try:
-            from clang import cindex
-            cindex.Index.create()
-        except (ImportError, OSError):
-            if os.environ.get("CR1_REQUIRE_LIBCLANG") == "1":
-                self.fail("CR1_REQUIRE_LIBCLANG=1 requires pinned libclang==18.1.1; compiler audit cannot be skipped")
-            self.skipTest("Optional pinned libclang is not installed")
+        self.require_libclang()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             file = root / "fixture.c"
-            file.write_text("struct state { int count; }; static struct state saved;\n"
+            header = root / "fixture.h"
+            header.write_text("struct state { int count; };\n")
+            file.write_text('#include "fixture.h"\nstatic struct state saved;\n'
                             "static void private_fn(int arg) { static int held; int local = arg; int *p = &saved.count; }\n"
                             "void public_fn(int external) { private_fn(external); }\n"
                             "void first(void) { union { unsigned long long bits; } value; }\n"
                             "void second(void) { union { unsigned int bits; } value; }\n")
             fields, _ = inventory.lexical_fields(file.read_text(), "fixture.c")
             lexical = {(r["path"], r["name"], r["line"], r["column"]): r["owner"] for r in fields}
-            result = inventory_ast.parse_one((file, ["-std=c99"], "configured"), root, {file}, lexical)
+            result = inventory_ast.parse_one((file, ["-std=c99"], "configured"), root, {file, header}, lexical)
             self.assertEqual(result["errors"], [])
+            self.assertEqual(result["seen"], ["fixture.c", "fixture.h"])
             rows = {row["name"]: row for row in result["declarations"]}
             self.assertEqual(rows["held"]["storage_duration"], "static")
             self.assertEqual(rows["local"]["storage_duration"], "automatic")
@@ -65,6 +72,38 @@ class DiscoveryTests(unittest.TestCase):
             bits = {inventory.row_id(row): (row["owner"], row["stored_bits"])
                     for row in result["declarations"] if row["name"] == "bits"}
             self.assertEqual(sorted(bits.values()), [("value", 64), ("value@2", 32)])
+
+    def test_collector_binds_includes_and_rejects_mid_parse_source_changes(self):
+        self.require_libclang()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / "app").mkdir()
+            (root / "testing/compliance").mkdir(parents=True)
+            header = root / "app/a.h"
+            header.write_text("struct retained { unsigned field; };\n")
+            source = root / "app/a.c"
+            source.write_text('#include "a.h"\nstatic struct retained saved;\n')
+            (root / "testing/compliance/inventory_scope.json").write_text(json.dumps({
+                "include_globs": ["app/*.[ch]"], "exclude_globs": []}))
+            database = root / "commands.json"
+            database.write_text(json.dumps([{"directory": str(root), "file": str(source),
+                "arguments": ["clang", "-std=c99", "-c", str(source)]}]))
+            report = inventory_ast.collect(root, [database], ["configured"], 1)
+            bindings = report["files"]["app/a.c"]["input_bindings"]
+            self.assertEqual(set(bindings), {"app/a.c", "app/a.h"})
+            self.assertEqual(bindings["app/a.h"]["semantic_sha256"],
+                             inventory.semantic_digest(header.read_text()))
+            self.assertTrue(all("arguments" in receipt for receipt in report["translation_units"]))
+            original = inventory_ast.parse_one
+
+            def mutate_after_parse(*args):
+                result = original(*args)
+                header.write_text(header.read_text() + "/* moved source locations */\nint added;\n")
+                return result
+
+            with mock.patch.object(inventory_ast, "parse_one", side_effect=mutate_after_parse):
+                with self.assertRaisesRegex(ValueError, "Compiler input changed during collection"):
+                    inventory_ast.collect(root, [database], ["configured"], 1)
 
     def test_width_variants_cannot_claim_minimum_bit_compliance(self):
         rule = {"id": "reviewed", "status": "compare", "domain": {"min": 0, "max": 7}}
@@ -197,6 +236,21 @@ class DiscoveryTests(unittest.TestCase):
         self.assertIsNone(result["required_bits"])
         self.assertEqual(result["safe_upper_bound_bits"], 25)
         self.assertEqual(result["status"], "unresolved")
+
+    def test_record_threshold_envelopes_remain_open_until_minimum_proof(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        for owner, name, safe_bits in [("s3_barcode_work_t", "runs", 28),
+                ("s3_barcode_work_t", "required_us", 31),
+                ("s3_barcode_record_t", "required_us", 31),
+                ("s3_barcode_work_t", "quiet_required_us", 31),
+                ("s3_barcode_record_t", "quiet_required_us", 31)]:
+            row = {"path": "app_program/subsystem3/bc_decoder.h", "owner": owner,
+                   "name": name, "kind": "FIELD_DECL", "stored_bits": safe_bits,
+                   "method": "libclang-ast"}
+            result = inventory.classify(row, policies)
+            self.assertEqual(result["status"], "unresolved")
+            self.assertIsNone(result["required_bits"])
+            self.assertEqual(result["safe_upper_bound_bits"], safe_bits)
 
     def test_macro_schema_does_not_claim_wire_width_is_ram_width(self):
         fields, _ = inventory.lexical_fields("""
@@ -340,17 +394,61 @@ class IntegrityTests(unittest.TestCase):
     def test_ast_adds_global_declarations_that_fallback_does_not_find(self):
         ast = {"declarations": [{"path": "app/a.h", "owner": "", "name": "g_count",
                 "kind": "VAR_DECL", "line": 2, "type": "unsigned int",
-                "stored_bits": 32, "method": "libclang-ast", "profiles": ["configured"]}]}
+                "stored_bits": 32, "method": "libclang-ast", "profiles": ["configured"]}],
+               "files": {"app/a.h": self.ast_receipt("app/a.h")}}
         ledger = inventory.collect(self.root, self.scope, self.policies, ast)
         self.assertTrue(any(r["name"] == "g_count" and r["status"] == "unresolved" for r in ledger["fields"]))
         ledger["fields"] = [r for r in ledger["fields"] if r["name"] != "g_count"]
         self.assertTrue(any("DECLARATION MANIFEST DIFFERS" in e for e in self.errors(ledger)))
+
+    def ast_receipt(self, path, dependencies=()):
+        bindings = {}
+        for dependency in (path, *dependencies):
+            text = (self.root / dependency).read_text()
+            bindings[dependency] = {"semantic_sha256": inventory.semantic_digest(text),
+                                    "source_location_sha256": inventory.source_location_digest(text)}
+        return {**bindings[path], "input_bindings": bindings, "status": "observed",
+                "profiles": ["configured"]}
+
+    def test_changed_header_invalidates_unchanged_consumer_observations(self):
+        header = self.root / "app/layout.h"
+        header.write_text("struct stored { unsigned value; };\n")
+        ast = {"files": {"app/a.h": self.ast_receipt("app/a.h", ("app/layout.h",)),
+                          "app/layout.h": self.ast_receipt("app/layout.h")}}
+        ledger = inventory.collect(self.root, self.scope, self.policies, ast)
+        header.write_text("struct stored { unsigned value : 1; };\n")
+        ast["files"]["app/layout.h"] = self.ast_receipt("app/layout.h")
+        with self.assertRaisesRegex(ValueError, "Stale compiler dependency for app/a.h: app/layout.h"):
+            inventory.collect(self.root, self.scope, self.policies, ast)
+        self.assertTrue(any("STALE COMPILER DEPENDENCY: app/a.h" in e for e in self.errors(ledger)))
+
+    def test_missing_dependency_binding_cannot_refresh_compiler_observations(self):
+        receipt = self.ast_receipt("app/a.h")
+        del receipt["input_bindings"]
+        with self.assertRaisesRegex(ValueError, "Missing compiler dependency binding"):
+            inventory.collect(self.root, self.scope, self.policies, {"files": {"app/a.h": receipt}})
+
+    def test_unbound_compiler_declaration_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Missing compiler input binding"):
+            inventory.collect(self.root, self.scope, self.policies,
+                              {"declarations": [{"path": "app/a.h"}]})
 
     def test_compaction_retains_classification_and_domains(self):
         compact = inventory.compact_ledger(self.ledger)
         expanded = inventory.expand_ledger(compact, self.policies)
         self.assertEqual(self.errors(expanded), [])
         self.assertEqual(expanded["fields"], self.ledger["fields"])
+
+    def test_compact_dependency_refs_preserve_and_validate_source_bindings(self):
+        bound = inventory.collect(self.root, self.scope, self.policies,
+                                  {"files": {"app/a.h": self.ast_receipt("app/a.h")}})
+        compact = inventory.compact_ledger(bound)
+        self.assertEqual(compact["files"]["app/a.h"]["compiler_input_refs"], ["app/a.h"])
+        self.assertNotIn("compiler_input_bindings", compact["files"]["app/a.h"])
+        self.assertEqual(self.errors(inventory.expand_ledger(compact, self.policies)), [])
+        compact["compiler_inputs"].clear()
+        errors = self.errors(inventory.expand_ledger(compact, self.policies))
+        self.assertTrue(any("STALE COMPILER DEPENDENCY" in error for error in errors))
 
     def test_complete_csv_contains_every_row_and_explicit_unknowns(self):
         rows = list(csv.DictReader(io.StringIO(inventory.render_csv(self.ledger))))

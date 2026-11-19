@@ -365,6 +365,8 @@ def collect(root, scope, policies, ast=None):
         for row in ast.get("declarations", []):
             if row["path"] not in files:
                 continue
+            if row["path"] not in ast.get("files", {}):
+                raise ValueError(f"Missing compiler input binding for {row['path']}; recollect AST before refresh")
             if row["path"] in mixed_lines and row["line"] not in mixed_lines[row["path"]]:
                 continue
             key = row_id(row)
@@ -379,8 +381,16 @@ def collect(root, scope, policies, ast=None):
                     raise ValueError(f"Stale compiler observations for {path}; recollect AST before refresh")
                 if receipt.get("source_location_sha256") != files[path]["source_location_sha256"]:
                     raise ValueError(f"Stale or missing compiler source-location binding for {path}; recollect AST before refresh")
+                bindings = receipt.get("input_bindings", {})
+                if path not in bindings:
+                    raise ValueError(f"Missing compiler dependency binding for {path}; recollect AST before refresh")
+                for dependency, binding in bindings.items():
+                    if dependency not in files or any(files[dependency].get(key) != binding.get(key)
+                            for key in ("semantic_sha256", "source_location_sha256")):
+                        raise ValueError(f"Stale compiler dependency for {path}: {dependency}; recollect affected translation units")
                 files[path]["compiler_profiles"] = receipt.get("profiles", [])
                 files[path]["compiler_status"] = receipt.get("status", "partial")
+                files[path]["compiler_input_bindings"] = bindings
     for key, row in rows.items():
         row.update(classify(row, policies))
     for path, file in files.items():
@@ -401,6 +411,20 @@ def semantic_json_digest(value):
 def compact_ledger(ledger):
     """Factor repeated explanations into the reviewed policy dictionary."""
     result = dict(ledger)
+    result["compiler_inputs"] = {}
+    result["files"] = {}
+    for path, source in ledger["files"].items():
+        file = dict(source)
+        bindings = file.pop("compiler_input_bindings", {})
+        if bindings:
+            file["compiler_input_refs"] = sorted(bindings)
+            for dependency, binding in bindings.items():
+                if (dependency in result["compiler_inputs"] and
+                        result["compiler_inputs"][dependency] != binding):
+                    raise ValueError(f"Conflicting compiler input snapshots: {dependency}")
+                result["compiler_inputs"][dependency] = binding
+        result["files"][path] = file
+    result["compiler_inputs"] = dict(sorted(result["compiler_inputs"].items()))
     result["classification_format"] = "Domain/width/status are inline; ownership, constraints, evidence and reason resolve through the policy ID in inventory_policies.json. Null policy is explicitly unresolved."
     omitted = {"id", "ownership", "constraints", "evidence", "reason"}
     result["fields"] = [{key: value for key, value in row.items() if key not in omitted}
@@ -410,6 +434,13 @@ def compact_ledger(ledger):
 
 def expand_ledger(ledger, policies):
     result = dict(ledger)
+    result["files"] = {}
+    for path, source in ledger["files"].items():
+        file = dict(source)
+        if "compiler_input_refs" in file:
+            file["compiler_input_bindings"] = {dependency: ledger.get("compiler_inputs", {}).get(dependency, {})
+                                               for dependency in file.pop("compiler_input_refs")}
+        result["files"][path] = file
     result["fields"] = []
     for source in ledger["fields"]:
         row = dict(source)
@@ -424,6 +455,11 @@ def validate(root, scope, policies, ledger, require_complete=False):
     errors = repository_errors(root, scope)
     actual = {p.relative_to(root).as_posix(): p for p in owned_files(root, scope)}
     recorded = ledger.get("files", {})
+    current_bindings = {}
+    for path, file in actual.items():
+        text = file.read_text(encoding="utf-8-sig")
+        current_bindings[path] = {"semantic_sha256": semantic_digest(text),
+                                  "source_location_sha256": source_location_digest(text)}
     for path in sorted(actual.keys() - recorded.keys()):
         errors.append(f"UNCLASSIFIED FILE: {path}")
     for path in sorted(recorded.keys() - actual.keys()):
@@ -449,6 +485,16 @@ def validate(root, scope, policies, ledger, require_complete=False):
             errors.append(f"SOURCE CHANGED: {path}; rediscover declarations and review domains")
         if source_location_digest(text) != recorded[path].get("source_location_sha256"):
             errors.append(f"SOURCE LOCATIONS CHANGED: {path}; refresh compiler rows and generated field links")
+        bindings = recorded[path].get("compiler_input_bindings", {})
+        if recorded[path].get("compiler_status") == "observed" and path not in bindings:
+            errors.append(f"MISSING COMPILER DEPENDENCY BINDING: {path}")
+        for dependency, binding in bindings.items():
+            if dependency not in actual:
+                errors.append(f"STALE COMPILER DEPENDENCY: {path} includes removed owned input {dependency}")
+                continue
+            if any(current_bindings[dependency][key] != binding.get(key)
+                   for key in ("semantic_sha256", "source_location_sha256")):
+                errors.append(f"STALE COMPILER DEPENDENCY: {path} observed with old {dependency}")
         owned_text = mixed_owned_text(text, scope["mixed_files"][path]) if path in scope.get("mixed_files", {}) else text
         fields, unsupported = lexical_fields(owned_text, path)
         for field in fields:
@@ -484,6 +530,8 @@ def render(ledger):
               "Compiler rows distinguish storage class from C99 storage duration and record external/private function linkage. Automatic arithmetic temporaries and function parameters retain evaluation and validation behavior; these policies do not exempt static locals, globals or record fields. Generic RTOS integer aliases alone do not prove a retained value is an ABI boundary.", "",
               "`address_evidence` records direct address-of expressions seen by the compiler. `not-observed-in-recorded-TUs` is not proof that an object has no aliases or escapes. Before narrowing a retained member, review all owner tasks/ISRs, pointer-compatible API uses and synchronization at the storage-unit level. Callback and retained pointer rules record concrete lifecycle owners where reviewed.", "",
               "Distinct compilation contexts and observed target widths are retained. Width variants cannot establish a minimum-bit pass. Recovery ASTs and headers requiring an enclosing translation unit remain partial observations until a valid context covers them.", "",
+              "Each compiler file receipt also binds all owned inputs of its observed translation units. A changed included header invalidates dependent observations, including aggregate sizes in otherwise unchanged C files; refresh affected translation units together. Collection rejects sources changed while parsing.", "",
+              "[Historical fixture compilation receipts](evidence/historical-fixture-compilation.json) preserve exact baseline/candidate commands and diagnostics for retained obsolete test interfaces. A historical designation does not turn a failed compiler observation into a pass.", "",
               "## Reviewed packing gaps", "", "| Declaration | Domain | Required / stored bits | Ownership |", "|---|---|---|---|"]
     for row in fields:
         if row["status"] == "gap":
