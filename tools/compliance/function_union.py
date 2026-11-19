@@ -128,6 +128,7 @@ def combine(reports, revision, bindings, scope_hash):
         'translation_units':[contexts[key] for key in sorted(contexts)], 'report_evidence':evidence,
         'limits':['Source-bound union of three required observation reports; not complete conditional or runtime coverage.',
                   'Successful recorded observations do not remove failed, fallback or derived contexts.',
+                  'Recorded invocations do not include original compiler exit codes; parser success is not a native-build or runtime result.',
                   'Comment recognition and Doxygen generation do not prove contract correctness.']})
 
 

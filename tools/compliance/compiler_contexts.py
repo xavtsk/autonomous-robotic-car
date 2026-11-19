@@ -158,12 +158,15 @@ def plan(root, databases, paths, profiles, resource, alternatives=(), recorded_o
             directory = Path(remap(str(entry.get('directory', entry.get('cwd', root))), root, alternatives)).resolve()
             mapped = [remap(value, root, alternatives) for value in original]
             cleaned = inventory_ast.clean_arguments(mapped, directory)
+            default_abi = inventory_ast.compiler_default_abi_arguments(mapped[0], mapped)
             cleaned = [*extra_arguments, *cleaned,
-                       *inventory_ast.compiler_include_arguments(mapped[0], resource), '-x', 'c']
+                       *inventory_ast.compiler_include_arguments(mapped[0], resource),
+                       *default_abi, '-x', 'c']
             context = {'database': str(database.resolve()), 'database_sha256': database_hash,
                        'entry_index': index, 'original_directory': str(entry.get('directory', entry.get('cwd', root))),
                        'original_arguments': original, 'mapped_directory': str(directory),
                        'arguments': cleaned, 'argument_derivations': list(derivations),
+                       'queried_compiler_default_abi_flags': default_abi,
                        'equivalent_root_remapping': [str(path) for path in alternatives]}
             if common is None:
                 common = context

@@ -105,11 +105,22 @@ class ContextTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root, database, resource = self.fixture(directory)
             rows = json.loads(database.read_text())
-            rows[0]['arguments'] = ['cc','-include','app/unrecorded.c','app/a.c']
+            rows[0]['arguments'] = ['clang','-include','app/unrecorded.c','app/a.c']
             rows[0]['file'] = 'app/unrecorded.c'
             database.write_text(json.dumps(rows))
             with self.assertRaisesRegex(ValueError, 'not a positional C input'):
                 contexts.plan(root,[database],{root/'app/a.c',root/'app/unrecorded.c'},['configured'],resource)
+
+    def test_recorded_command_keeps_queried_compiler_abi_default_explicit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, database, resource = self.fixture(directory)
+            with patch.object(inventory_ast,'compiler_default_abi_arguments',return_value=['-fshort-enums']) as query:
+                planned = contexts.plan(root,[database],{root/'app/a.c'},['configured'],resource)
+            job, metadata = planned[0]
+            self.assertEqual(query.call_args.args[0], 'clang')
+            self.assertIn('-fshort-enums', job[1])
+            self.assertEqual(metadata['queried_compiler_default_abi_flags'], ['-fshort-enums'])
+            self.assertNotIn('-fshort-enums', metadata['original_arguments'])
 
     def test_non_source_context_inputs_are_rechecked_after_parse(self):
         for changed in ('scope','database','template','derived','settings-presence'):

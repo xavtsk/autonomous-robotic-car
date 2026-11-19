@@ -193,6 +193,7 @@ def collect(root, databases, profiles, jobs, *, alternatives=(), recorded_only=F
         "Observed definition variants are keyed by path, source line and name; profiles are unioned.",
         "Every failed, derived or fallback context remains explicit even when another recorded context parses cleanly.",
         "Recovery ASTs, synthetic profile combinations, fallback parses and unobserved declarations remain incomplete.",
+        "Compiler proxy receipts record invocations without original compiler exit codes; libclang-ast means parser success only.",
         "Comment recognition does not validate contract meaning or generated Doxygen output.",
         "Mixed imported file bodies are excluded using the shared owned-region selectors.",
         "No compiled C test, target binary or hardware action is executed."]
