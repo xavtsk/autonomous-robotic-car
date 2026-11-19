@@ -9,6 +9,16 @@
     "git diff --name-status 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 4ad2cc42595722cedb47102e4343298339040d40 -- config device include kernel lib tools"
   ],
   "files": {
+    "app_program/test_report.h": {
+      "classification": "imported-with-prior-formatting",
+      "upstream_blob": "a60d85afe30b1648163bc32b6020cdfc51b6b126",
+      "template_blob": "a60d85afe30b1648163bc32b6020cdfc51b6b126",
+      "baseline_blob": "75e5bd93d6ca2b07b0f084debac98d3f90eb7bbd",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "cfcb7079cc8611b42e5d8246388e93ddbe33d8e30a4c088929d6e7e5e7eec3dc",
+      "upstream_preprocessing_fingerprint_sha256": "9663987dd9773ff6b3812bc4ba79befd33659f5bab6871e64ef765db7e9ffbd4",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
     "config/config_func.h": {
       "classification": "imported-with-prior-formatting",
       "upstream_blob": "f60546abd6ca0303c8e3f8f8afc3d87174fd739e",
@@ -28,6 +38,16 @@
       "baseline_content_sha256_lf": "05f555826cae20c8cdcb866bdfbb4923fda778d43e974e7cb4a2825522913799",
       "upstream_semantic_sha256": "9e9a35f41f0c3412a9d58f5387559f440288fc040694623892ade2e5d1c13dbf",
       "evidence": "Upstream and adoption blobs byte-identical; baseline preprocessing tokens unchanged; existing formatting is pinned, not authorization for further imported edits."
+    },
+    "config/wifi_secrets.example.h": {
+      "classification": "imported-with-prior-formatting",
+      "upstream_blob": "0f764dccf9953c571dcf07e758174d9def6db784",
+      "template_blob": "0f764dccf9953c571dcf07e758174d9def6db784",
+      "baseline_blob": "43fc32379eff0e8db0ba93b182ccd2a7bacfc611",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+      "upstream_preprocessing_fingerprint_sha256": "7c867945dce13d1e794cdaad305cd924c935b9170b80961ea0fdcd50c6a349c5",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
     },
     "device/adc/adc.c": {
       "classification": "imported",
@@ -3069,6 +3089,46 @@
       "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
       "baseline_content_sha256_lf": "63f01683133376cf5952b70442c9e034544b9cee837106741cfd9192f574f4fa"
     },
+    "lib/liblwip/sysdepend/pico_rp2040/include/arch/cc.h": {
+      "classification": "imported",
+      "upstream_blob": "ba0b0dd638f03b8959dc7686f0b6e4b3c51eb405",
+      "template_blob": "ba0b0dd638f03b8959dc7686f0b6e4b3c51eb405",
+      "baseline_blob": "ba0b0dd638f03b8959dc7686f0b6e4b3c51eb405",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "932154492994a301c97d14fc342ed1876b597e2724504c9ca9249401d18fc85d",
+      "upstream_preprocessing_fingerprint_sha256": "0ebd3f702b4b274eb56dbaec9629d367d4ccea03e408b0d79404e0bc8161195b",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/liblwip/sysdepend/pico_rp2040/include/arch/sys_arch.h": {
+      "classification": "imported",
+      "upstream_blob": "598f2b95d64c8a0f554bd6da02efcf655789a4cc",
+      "template_blob": "598f2b95d64c8a0f554bd6da02efcf655789a4cc",
+      "baseline_blob": "598f2b95d64c8a0f554bd6da02efcf655789a4cc",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "63ae2d79112b11bba9547a03f8d9568e8d0ff7663b4dfb0feef4ed5211188072",
+      "upstream_preprocessing_fingerprint_sha256": "16268924815dfc1002e577e1cf96753909664963146b26b5179db32168f2a935",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/liblwip/sysdepend/pico_rp2040/lwipopts.h": {
+      "classification": "imported",
+      "upstream_blob": "47424e0fda87ecc9948a13e0a7bd07ea2b83fe9c",
+      "template_blob": "47424e0fda87ecc9948a13e0a7bd07ea2b83fe9c",
+      "baseline_blob": "47424e0fda87ecc9948a13e0a7bd07ea2b83fe9c",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "14f5b5149a259db3619dd2f61a8f56cdbec449f533b80c9ccf99571cc2976b69",
+      "upstream_preprocessing_fingerprint_sha256": "e4b103065d7be29aa7910772589c5101caf345b6a52a53513ba4c3c838b8f044",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/liblwip/sysdepend/pico_rp2040/sys_arch.c": {
+      "classification": "imported",
+      "upstream_blob": "5397fa12d2895f0db3af5df522fcbe2ae5a1da32",
+      "template_blob": "5397fa12d2895f0db3af5df522fcbe2ae5a1da32",
+      "baseline_blob": "5397fa12d2895f0db3af5df522fcbe2ae5a1da32",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "352baed0c947dc8a31b6a88ad291fe67a8473c5ce18e52a7fcdbbd3b718cde47",
+      "upstream_preprocessing_fingerprint_sha256": "a8e7c8f905cad21b8935740096dace1ae2650bce6ff24327c6b77559c67ef037",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
     "lib/libtk/fastlock.c": {
       "classification": "imported",
       "template_blob": "46ce208058923e7d245817e46f5c69298427d7e9",
@@ -3356,6 +3416,56 @@
       "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
       "baseline_content_sha256_lf": "9109dde0a3d139a613f862bdab8dedf5fafa2d93cbee200eb39b5321dcb8856d"
     },
+    "lib/libtm/sysdepend/pico_rp2040/usb/tusb_config.h": {
+      "classification": "imported",
+      "upstream_blob": "72b20aebe18ff428ffd38becf976ef46b9270ea0",
+      "template_blob": "72b20aebe18ff428ffd38becf976ef46b9270ea0",
+      "baseline_blob": "72b20aebe18ff428ffd38becf976ef46b9270ea0",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "2bb749e285f5d7f0387764c37b09ed273b7f683ad0340799b3b839189fe6c0b0",
+      "upstream_preprocessing_fingerprint_sha256": "ed6ec422c13720d53d2e3810f5b6532911172c4d74aa2befb6dcf5b35a8d864d",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c": {
+      "classification": "imported",
+      "upstream_blob": "b3438913ca5e7f806a984e112a4581346681d3c5",
+      "template_blob": "b3438913ca5e7f806a984e112a4581346681d3c5",
+      "baseline_blob": "b3438913ca5e7f806a984e112a4581346681d3c5",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "58681e20dba24b81d4feeb047028a0abded53463503f18605567fe3fd99ee250",
+      "upstream_preprocessing_fingerprint_sha256": "a91478962962890061960ff1f17bb8b78df23a86409552101e852bd401ae68d3",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c": {
+      "classification": "imported",
+      "upstream_blob": "b7127a6a7db310777480c215a620ba05e172db0f",
+      "template_blob": "b7127a6a7db310777480c215a620ba05e172db0f",
+      "baseline_blob": "b7127a6a7db310777480c215a620ba05e172db0f",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "5eb2e2725bfded9deffd0f67cfe5fc4f33a6d7a9e760676842cc4341fdeb6613",
+      "upstream_preprocessing_fingerprint_sha256": "bcbe8fd543e6456ef5096532e2680411b26747ec910e9f21ec574e07a30ea62d",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c": {
+      "classification": "imported",
+      "upstream_blob": "c9f27239b0c1f8fc7cfd3c490c1889de9b718f1e",
+      "template_blob": "c9f27239b0c1f8fc7cfd3c490c1889de9b718f1e",
+      "baseline_blob": "c9f27239b0c1f8fc7cfd3c490c1889de9b718f1e",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "68e15b6db48c442fb7c14aa8699fe59542d119c19ac9e4a08c799224f7b47161",
+      "upstream_preprocessing_fingerprint_sha256": "b3a3ef7b1f9a48ef3d74357a1c8a596bbbe616ce0838550608c6917d0b8f53b2",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_tinyusb_glue.c": {
+      "classification": "imported",
+      "upstream_blob": "2f48a9d46bec539084b5c1acceda10276030d1b4",
+      "template_blob": "2f48a9d46bec539084b5c1acceda10276030d1b4",
+      "baseline_blob": "2f48a9d46bec539084b5c1acceda10276030d1b4",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "ea77a8e59d29129637f8ef96897da03b9738d99ff4604ed223d3501abaa6de25",
+      "upstream_preprocessing_fingerprint_sha256": "0023c65e08d98b067362e517071ee80037d4ba3aa7aa47baaa8b806d5eb59185",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
     "lib/libtm/sysdepend/rsk_rz65n/tm_com.c": {
       "classification": "imported",
       "template_blob": "3f956cb8d6b9e5d14c69467fd4551f4f7757711b",
@@ -3369,6 +3479,46 @@
       "baseline_blob": "dd9e4047b15ebb6f3fbaec68dbb5bc679c8a038f",
       "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
       "baseline_content_sha256_lf": "33e13eed0c7ac52eea959232ef4d4d30a734a1eca0c333a6247aca6674b5505d"
+    },
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_configport.h": {
+      "classification": "imported",
+      "upstream_blob": "e916206cd667e71ed9d5dd1b9603871d20e2f446",
+      "template_blob": "e916206cd667e71ed9d5dd1b9603871d20e2f446",
+      "baseline_blob": "e916206cd667e71ed9d5dd1b9603871d20e2f446",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "e0b35fa78dbcbd95d03075c07bc5bc0dfe844922f166c54cd28592a1936e95bd",
+      "upstream_preprocessing_fingerprint_sha256": "569296748e7cb7f489ec64eb10cd6678c93183df3686c7848dfa15b73f46d619",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h": {
+      "classification": "imported",
+      "upstream_blob": "ee60570aa9a208d758b253de417076ac21e5a69e",
+      "template_blob": "ee60570aa9a208d758b253de417076ac21e5a69e",
+      "baseline_blob": "ee60570aa9a208d758b253de417076ac21e5a69e",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "9f68ad006dd19f0d579030f423633f195689d4d533c119a00824f19abf916979",
+      "upstream_preprocessing_fingerprint_sha256": "e839d5f6c093f4ef9ed67a4dc554d790fe8a2aaa1e862e40b44e1ceeb283b825",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_compat.c": {
+      "classification": "imported",
+      "upstream_blob": "8c6fa25a77f75078654f0e46e02ffcd04052a4e6",
+      "template_blob": "8c6fa25a77f75078654f0e46e02ffcd04052a4e6",
+      "baseline_blob": "8c6fa25a77f75078654f0e46e02ffcd04052a4e6",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "91856a2a38c9dcaf25588ade3331ee2078871914bb71c3d007d2a084d39210f2",
+      "upstream_preprocessing_fingerprint_sha256": "b171b56e235795522c7b4e71f43be561efc06088f289615ebb4c58fe163ec812",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
+    },
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_kernel.c": {
+      "classification": "imported",
+      "upstream_blob": "5fad1f47058e819e04b1bd854f8d314731a43bed",
+      "template_blob": "5fad1f47058e819e04b1bd854f8d314731a43bed",
+      "baseline_blob": "5fad1f47058e819e04b1bd854f8d314731a43bed",
+      "origin_commit": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+      "baseline_content_sha256_lf": "e2dd7029b3a0f31e2ad8ad44397420fdc9c0fdab3ceb80df2322cc181cc42e0a",
+      "upstream_preprocessing_fingerprint_sha256": "974b23b24e68c1aed7dd37f46b7f10306dd41563527215a0e0266a154d3af5b7",
+      "evidence": "docs/compliance/evidence/RESTORED_TEMPLATE_BOUNDARIES.json; upstream/adoption equality and fixed-baseline bytes verified; baseline-only formatting preserves C phase1/2 preprocessing tokens and directives."
     },
     "tools/elf2uf2/boot/uf2.h": {
       "classification": "imported",

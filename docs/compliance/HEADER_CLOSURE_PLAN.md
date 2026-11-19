@@ -1,5 +1,24 @@
 # Header pairing and guard closure
 
+## Current ownership correction
+
+The subsequent [upstream/adoption review](evidence/RESTORED_TEMPLATE_BOUNDARIES.json)
+establishes that all seven adapter implementations listed in the historical
+table below are imported. Their baseline text has been restored with identical
+preprocessing tokens, and they are preserved boundaries, **not header-edit
+targets**. The prior adapter proposals are withdrawn. This also removes their
+missing-pair diagnostics from the owned remediation scope; it does not approve
+a deviation for any team-owned implementation.
+
+The sys_arch include-resolution receipt remains valid evidence about the
+recorded compiler context. It establishes neither ownership nor authorization
+to alter the source or its imported header. The 268-file/55-candidate counts
+below describe the earlier batch-1 snapshot and are historical after the
+ownership correction. Current counts come from the scope/inventory manifest.
+The owned fake-header guards, standalone tests and actual shared test APIs
+remain the actionable parts of this plan. In particular, changed
+`mqtt_utk.c/.h` and `cyw43_utk.c` retain their explicit owned scope.
+
 BARR 4.2.a requires one same-root header for each source; it does not require
 the two files to occupy one directory. Rule 4.3.c separately requires direct
 inclusion of that header. Rule 4.2.c limits the exported interface to what other
@@ -15,7 +34,7 @@ same-root header and 13 headers without a conventional guard. These are review
 candidates, not 55 proven absent module interfaces. No rule is closed solely
 because the lexical diagnostic becomes a review finding.
 
-## Compiler-resolved adapter work
+## Historical adapter review: proposals withdrawn
 
 | Source | Observed interface and next change |
 | --- | --- |
@@ -32,7 +51,7 @@ run `44584191817`, artifact `14561042452`, with explicit local path/toolchain
 mapping. It substitutes an include-only in-memory probe and does not edit or
 compile a target program. Actual direct inclusion is still open.
 
-For every adapter batch, retain exact before/after declarations and compiler
+For any future owned-adapter batch, retain exact before/after declarations and compiler
 contexts, run syntax checks across supported profiles, compare preprocessed
 declarations, and require the matched target-image gate. Added declarations can
 affect optimizer decisions even when their C types are equivalent; the earlier

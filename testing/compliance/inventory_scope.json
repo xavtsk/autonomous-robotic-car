@@ -22,9 +22,24 @@
     "lib/libtm/sysdepend/pico_rp2040/usb/tusb_config.h"
   ],
   "exclude_globs": [
+    "app_program/test_report.h",
     "config/config_func.h",
     "config/config_tm.h",
-    "config/wifi_secrets.h"
+    "config/wifi_secrets.example.h",
+    "config/wifi_secrets.h",
+    "lib/liblwip/sysdepend/pico_rp2040/include/arch/cc.h",
+    "lib/liblwip/sysdepend/pico_rp2040/include/arch/sys_arch.h",
+    "lib/liblwip/sysdepend/pico_rp2040/lwipopts.h",
+    "lib/liblwip/sysdepend/pico_rp2040/sys_arch.c",
+    "lib/libtm/sysdepend/pico_rp2040/usb/tusb_config.h",
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_console.c",
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_descriptors.c",
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_sdk_compat.c",
+    "lib/libtm/sysdepend/pico_rp2040/usb/usb_tinyusb_glue.c",
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_configport.h",
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.h",
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_compat.c",
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk_kernel.c"
   ],
   "mixed_files": {
     "kernel/sysdepend/pico_rp2040/devinit.c": {
@@ -122,6 +137,7 @@
     "The imported kernel, SDK libraries, generated PIO program and generated SDK version/config headers remain unchanged.",
     "Only explicitly listed team-owned adapters are included outside app_program and testing; imported generic device layers and other CPU ports are excluded.",
     "RTOS/SDK callback signatures, handles, register types and ABI structures are preserved even inside an owned adapter.",
-    "Upstream c3b09544 and adoption437f46 blobs are identical for eight ADC/config/I2C provenance-reviewed files. ADC is imported; config_func/config_tm have only pinned prior formatting; three config/I2C files own exact listed macro/conditional regions."
+    "Upstream c3b09544 and adoption437f46 blobs are identical for eight ADC/config/I2C provenance-reviewed files. ADC is imported; config_func/config_tm have only pinned prior formatting; three config/I2C files own exact listed macro/conditional regions.",
+    "Fifteen additional unchanged template interfaces/adapters are explicitly excluded from broad owned globs and pinned to fixed-baseline bytes; exact upstream/adoption/baseline provenance is recorded in RESTORED_TEMPLATE_BOUNDARIES.json. Changed MQTT and CYW43 implementations remain included."
   ]
 }

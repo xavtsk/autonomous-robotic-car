@@ -1,7 +1,3 @@
-/** @file sys_arch.c
- * @brief Supply kernel-backed lwIP time, diagnostics and pseudo-random platform
- * hooks.
- */
 /*
  *	sys_arch.c
  *	lwIP OS abstraction for micro T-Kernel (RP2040, NO_SYS=1)
@@ -33,12 +29,12 @@
  * wraparound every ~49.7 days is the documented, accepted behaviour of
  * sys_now() on every lwIP port, not specific to this one.
  */
-u32_t sys_now (void)
+u32_t sys_now(void)
 {
-    SYSTIM otm;
+	SYSTIM	otm;
 
-    tk_get_otm(&otm);
-    return (u32_t)otm.lo;
+	tk_get_otm(&otm);
+	return (u32_t)otm.lo;
 }
 
 /*
@@ -47,23 +43,21 @@ u32_t sys_now (void)
  * IDs; deliberately not claimed as cryptographic-quality entropy (see the
  * comment on LWIP_RAND() in cc.h).
  */
-unsigned int lwip_utk_rand (void)
+unsigned int lwip_utk_rand(void)
 {
-    static UW state = 0;
-    SYSTIM otm;
+	static UW	state = 0;
+	SYSTIM		otm;
 
-    if (state == 0)
-    {
-        tk_get_otm(&otm);
-        state = otm.lo ^ 0x9e3779b9u;
-        if (state == 0)
-            state = 0x2545f491u;
-    }
+	if(state == 0) {
+		tk_get_otm(&otm);
+		state = otm.lo ^ 0x9e3779b9u;
+		if(state == 0) state = 0x2545f491u;
+	}
 
-    state ^= state << 13;
-    state ^= state >> 17;
-    state ^= state << 5;
-    return (unsigned int)state;
+	state ^= state << 13;
+	state ^= state >> 17;
+	state ^= state << 5;
+	return (unsigned int)state;
 }
 
 /*
@@ -72,13 +66,8 @@ unsigned int lwip_utk_rand (void)
  * without pulling in tk/typedef.h. The cast to UB* is only ever done here,
  * where tk/tkernel.h is already safely in scope.
  */
-void lwip_utk_assert (const char * msg)
+void lwip_utk_assert(const char *msg)
 {
-    tm_printf((UB *)"lwIP assert: %s\n", (UB *)msg);
-    for (;;)
-    {
-    }
+	tm_printf((UB*)"lwIP assert: %s\n", (UB*)msg);
+	for( ; ; ) { }
 }
-
-/* End of file. */
-

@@ -1,7 +1,3 @@
-/** @file sys_arch.h
- * @brief Provide the lwIP OS-abstraction include boundary for the single-owner
- * NO_SYS port.
- */
 /*
  *	sys_arch.h
  *	lwIP OS abstraction for micro T-Kernel (RP2040, NO_SYS=1)
@@ -22,6 +18,3 @@
 #define LWIP_ARCH_SYS_ARCH_H
 
 #endif /* LWIP_ARCH_SYS_ARCH_H */
-
-/* End of file. */
-
