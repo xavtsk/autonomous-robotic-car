@@ -150,6 +150,22 @@ def main():
         if number == 3:
             targets += ['codec', 'drive', 'feedback', 'replay']
         make(f'subsystem{number}', f'testing/subsystem{number}', targets)
+    # These existing PowerShell/Make recipes were absent from the Linux runner.
+    # Keep the same shared assertions for both subjects and record every build
+    # and execution independently, even when another suite has already failed.
+    from host_recipes import additional_host_recipes
+    try:
+        recipes = additional_host_recipes(root, fixtures_root, output, compiler, shlex.split(flags))
+    except (OSError, ValueError) as error:
+        log = output/'additional-host-recipes.log'
+        log.write_text(str(error)+'\n', encoding='utf-8')
+        results.append(dict(name='additional_host_recipes', command=[], returncode=125,
+                            **classify_output(125, str(error)), duration_s=0, log=log.name))
+        print('FAIL: additional host recipe preparation: '+str(error), flush=True)
+    else:
+        for recipe in recipes:
+            run(recipe['name']+'_build', recipe['build'])
+            run(recipe['name'], recipe['execute'])
     # Production disables the extra IMU diagnostics fields. Exercise its actual
     # layout and branches, including under sanitizers, with the same fixture.
     terrain_binary = output/'terrain_production_test'
@@ -249,6 +265,7 @@ def main():
     manifest = dict(recorded_at=datetime.now(timezone.utc).isoformat(),
                     revision=revision, mode=args.mode, results=results,
                     fixture_bindings='fixture-bindings.json',
+                    additional_host_recipes='additional-host-recipes.json',
                     runner_image={key: os.environ.get(key) for key in ('ImageOS', 'ImageVersion', 'RUNNER_OS', 'RUNNER_ARCH')},
                     limits=['Host fakes do not prove physical timing or hardware behavior.',
                             'S5 turn=0.9 remains an explicitly documented geometric limitation.'])
