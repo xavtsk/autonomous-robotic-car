@@ -37,6 +37,11 @@ hashes before and after observation. Functions
 from error-free compiler observations are compared against XML definition names,
 files and body locations. Recovery observations, missing definitions and
 undocumented comments remain separate counts. Missing/stale reports fail closed.
+The union also retains failures from every observed compiler context. A clean
+host observation cannot erase a failed target observation for the same function.
+Both the diagnostic-translation-unit count and recovery-observation count must
+be explicitly zero before the documentation gate can pass; absent counts remain
+unknown rather than defaulting to success.
 
 Doxygen preprocessing is disabled so alternative source branches can appear in
 the reference. This is deliberately a documentation view, not a compilation
@@ -62,6 +67,6 @@ if they had identical inputs. The historical artifact is retained.
 
 That run also reported an obsolete `HTML_TIMESTAMP` setting in `generation.log`.
 The setting has been removed and both diagnostic streams now gate completion.
-Nine focused Python tests cover binding, invalid XML, configuration diagnostics,
+Ten focused Python tests cover binding, invalid XML, configuration diagnostics,
 quiet successful generation and source preservation after failed generation.
 These checks use mocked generation; no local Doxygen execution is claimed.

@@ -121,6 +121,8 @@ def compare_functions(report, observed):
                 compiler_definition_variants=len(report['functions']),
                 compiler_recovery_variants=sum(row['method'] != 'libclang-ast' for row in report['functions']),
                 compiler_undocumented_variants=sum(not row['definition_documented'] for row in report['functions']),
+                diagnostic_translation_unit_count=report.get('diagnostic_translation_unit_count'),
+                recovery_function_observation_count=report.get('recovery_function_observation_count'),
                 doxygen_definition_sites=len(observed))
 
 
@@ -169,7 +171,13 @@ def main(argv=None):
         result['warning_lines'] = len(warnings)
         observed = observed_functions(output/'reference/xml', staged)
         result.update(compare_functions(report, observed))
-        if not warnings and not generation_lines and not result['missing_observed_definitions'] and not result['compiler_recovery_variants'] and not result['compiler_undocumented_variants'] and report.get('coverage_complete') is True:
+        if (not warnings and not generation_lines and
+                not result['missing_observed_definitions'] and
+                not result['compiler_recovery_variants'] and
+                not result['compiler_undocumented_variants'] and
+                result['diagnostic_translation_unit_count'] == 0 and
+                result['recovery_function_observation_count'] == 0 and
+                report.get('coverage_complete') is True):
             result['status'] = 'PASS'
             result['coverage_complete'] = True
     except (OSError, ValueError, KeyError, ET.ParseError, subprocess.SubprocessError) as error:

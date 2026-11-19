@@ -59,6 +59,13 @@ class DocumentationTests(unittest.TestCase):
         self.assertEqual(result['missing_observed_definitions'], [])
         self.assertEqual(result['compiler_recovery_variants'], 1)
         self.assertEqual(result['compiler_undocumented_variants'], 1)
+        self.assertIsNone(result['diagnostic_translation_unit_count'])
+        self.assertIsNone(result['recovery_function_observation_count'])
+        contexts = docs.compare_functions({'functions': rows,
+            'diagnostic_translation_unit_count': 4,
+            'recovery_function_observation_count': 9}, {('a.c', 11, 'same')})
+        self.assertEqual(contexts['diagnostic_translation_unit_count'], 4)
+        self.assertEqual(contexts['recovery_function_observation_count'], 9)
         for wrong in ({('b.c', 11, 'same')}, {('a.c', 21, 'same')}, set()):
             self.assertEqual(len(docs.compare_functions({'functions': rows}, wrong)['missing_observed_definitions']), 1)
 
@@ -87,7 +94,8 @@ class DocumentationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'outside'):
                 docs.observed_functions(xml, staged)
 
-    def run_generation(self, root, output_text='', returncode=0, mutate=False):
+    def run_generation(self, root, output_text='', returncode=0, mutate=False,
+                       diagnostic_units=0, recovery_observations=0):
         source = root/'a.c'
         source.write_text('int fun(void) { return 0; }\n')
         report_path = root/'functions.json'
@@ -109,7 +117,9 @@ class DocumentationTests(unittest.TestCase):
             return SimpleNamespace(returncode=returncode)
 
         comparison = dict(missing_observed_definitions=[], compiler_recovery_variants=0,
-                          compiler_undocumented_variants=0)
+                          compiler_undocumented_variants=0,
+                          diagnostic_translation_unit_count=diagnostic_units,
+                          recovery_function_observation_count=recovery_observations)
         with patch.object(docs, 'stage_sources', side_effect=stage), \
                 patch.object(docs, 'validate_functions'), \
                 patch.object(docs.subprocess, 'check_output', return_value='1.9.8\n'), \
@@ -146,6 +156,14 @@ class DocumentationTests(unittest.TestCase):
             self.assertFalse(result['source_unchanged'])
             self.assertEqual(result['generation_returncode'], 1)
             self.assertEqual(len(result['errors']), 2)
+
+    def test_clean_best_function_row_cannot_hide_context_errors(self):
+        for diagnostics, recoveries in ((1, 0), (0, 1), (None, 0), (0, None)):
+            with self.subTest(contexts=(diagnostics, recoveries)), tempfile.TemporaryDirectory() as directory:
+                code, result = self.run_generation(Path(directory),
+                    diagnostic_units=diagnostics, recovery_observations=recoveries)
+                self.assertEqual(code, 2)
+                self.assertFalse(result['coverage_complete'])
 
 
 if __name__ == '__main__':
