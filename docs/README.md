@@ -29,6 +29,7 @@ Records named for an earlier date retain their original results and assumptions.
 | [Template boundary correction](compliance/TEMPLATE_BOUNDARY_CORRECTION.md) | Provenance-based restoration of unchanged imported adapters. |
 | [Conditional compilation](compliance/CONDITIONAL_COVERAGE.md) | Matching profile receipts, full matrix union and remaining arm coverage. |
 | [Motion contracts](compliance/MOTION_FUNCTION_CONTRACTS.md) | Exact PID, packed motion-word and failed-output semantics. |
+| [Sensor and terrain contracts](compliance/SENSOR_TERRAIN_FUNCTION_CONTRACTS.md) | IMU transaction failures, hump state and classification priority. |
 | [MQTT protocol](../app_program/subsystem1/MQTT_PROTOCOL.md) | Topic and byte contracts. |
 | [Remote control](REMOTE_CONTROL_PROTOCOL.md) | START/STOP/RESET request, reply and ownership contracts. |
 | [Barcode capture protocol](BARCODE_WIRE_PROTOCOL.md) | Trace transfer and replay data. |

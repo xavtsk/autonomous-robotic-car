@@ -84,6 +84,9 @@ def main():
         ('calculation_contracts_batch', [sys.executable, 'tools/compliance/verify_comment_batch.py',
                                          '--manifest', 'docs/compliance/CALCULATION_FUNCTION_CONTRACTS.json',
                                          '--candidate', '4ce9b14aa4db6c26ea5f7546fb906d937c98d43f']),
+        ('sensor_terrain_contracts_batch', [sys.executable, 'tools/compliance/verify_comment_batch.py',
+                                            '--manifest', 'docs/compliance/SENSOR_TERRAIN_FUNCTION_CONTRACTS.json',
+                                            '--candidate', '4dd87b375aa4da0ca7ed4e17ac39c0e278f80700']),
         ('audit_tests', [sys.executable, '-m', 'unittest', 'discover', '-v', '-s', 'testing/compliance', '-p', 'test_*.py']),
     ]
     for label, path in (('cr1_runner_syntax', 'testing/change_requirement_1/run_all.sh'),
