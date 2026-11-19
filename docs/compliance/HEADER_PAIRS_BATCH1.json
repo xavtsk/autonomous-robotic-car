@@ -36,7 +36,8 @@
           "private_definition_count": 4,
           "preprocessed_tokens_sha256": "4d6824d8263f379a1bf046dc51938a95e6781ad1d592aaaf956a9fd4e16334f5",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -67,7 +68,8 @@
           "private_definition_count": 1,
           "preprocessed_tokens_sha256": "1836eac0289cc1287432f24c1f3ecea1ed34805587c0d4d87b4f278259291cf3",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -97,7 +99,8 @@
           "private_definition_count": 1,
           "preprocessed_tokens_sha256": "49b5e07d6e63568af1e52dad87c02d3f02520167185f78dd3f8d9a775e35aecd",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -127,7 +130,8 @@
           "private_definition_count": 0,
           "preprocessed_tokens_sha256": "a7e458dae62a42e0357bc86bb43cd65d3ea53b4b738950d2b13cbfce27f95a1e",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -157,7 +161,8 @@
           "private_definition_count": 0,
           "preprocessed_tokens_sha256": "5fe27efdda34e06380f3cf3ca0343dbaac21954c9f2d2bd44b910f62f0d02b4f",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -187,7 +192,8 @@
           "private_definition_count": 0,
           "preprocessed_tokens_sha256": "4735e140cef6189123c0ce4b655d446e711a448b349adc9196c36a7550359e43",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -222,7 +228,8 @@
           "private_definition_count": 0,
           "preprocessed_tokens_sha256": "1a0dfeaa5e10743c63e6c472b7e294ffd4e75eadeec04838230f507e7a137add",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -255,7 +262,8 @@
           "private_definition_count": 3,
           "preprocessed_tokens_sha256": "a3c4b9ae7f6ef74a2b821e555b7ec9524a283d11e6779e704bf731479d1abc31",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -288,7 +296,8 @@
           "private_definition_count": 6,
           "preprocessed_tokens_sha256": "87a8d4b8a89bbc34d651a2a7ed31a894c7eb1842d965694ac0b6e4cd4e9d6181",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -319,7 +328,8 @@
           "private_definition_count": 5,
           "preprocessed_tokens_sha256": "456ce0707bc65eed3d1f2998f2891767604c9e34a360581ddf043eaab32d6162",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -350,7 +360,8 @@
           "private_definition_count": 5,
           "preprocessed_tokens_sha256": "6b3b17b598347aa35136f8d13c64c24a37598462e93a671642d0b8a4187269aa",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -383,7 +394,8 @@
           "private_definition_count": 26,
           "preprocessed_tokens_sha256": "66c6cd5194ee65144458de2c14df006296ba490c9ca493b6d6dfdba6b5704efd",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -416,7 +428,8 @@
           "private_definition_count": 8,
           "preprocessed_tokens_sha256": "8743e6dfdd3507397fa4f1da7016483c4f8ca9198fff01c1d36eac834dbbbeb2",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -449,7 +462,8 @@
           "private_definition_count": 9,
           "preprocessed_tokens_sha256": "ae957e9432d0a1e0f2eb8881f035bab506585d04e93f500e8b0d1054c7ff5720",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -482,7 +496,8 @@
           "private_definition_count": 8,
           "preprocessed_tokens_sha256": "e53715e422c03f5b50844b807eaa0f0043462634db954e312991ed1b2cb11910",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -515,7 +530,8 @@
           "private_definition_count": 1,
           "preprocessed_tokens_sha256": "9424d25b889f4cbae1880d50c92180e94a2dec1e90ec53abc68a8a5a09fd20fe",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -548,7 +564,8 @@
           "private_definition_count": 4,
           "preprocessed_tokens_sha256": "9079e16e331cc9fb919481cd923bcc841f105dc446e6000a3db7f673c9a31577",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -581,7 +598,8 @@
           "private_definition_count": 13,
           "preprocessed_tokens_sha256": "f39f14346077193214cdec9bbe41dbec01fbe11737db1fdf964bbe8f8d15775e",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -617,7 +635,8 @@
           "private_definition_count": 13,
           "preprocessed_tokens_sha256": "84ef3a48fa628669e5063be5f33c5995f6e57427addb593aa7c43d3451abbc23",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     },
@@ -647,7 +666,8 @@
           "private_definition_count": 17,
           "preprocessed_tokens_sha256": "811d5f9141e38a92933892d0485460b33a232d017ec0c2b88639a582a5ddfb27",
           "preprocessed_tokens_equal_with_line_normalized": true,
-          "syntax_before_after": "PASS"
+          "syntax_before_after": "PASS",
+          "external_file_scope_variable_definitions": []
         }
       ]
     }

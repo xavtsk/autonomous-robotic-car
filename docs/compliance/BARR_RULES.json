@@ -614,9 +614,9 @@
       "requirement": "Give each C source exactly one same-basename header.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/HEADER_PAIRS_BATCH1.json;20 exact same-root source/header pairs bound to d26a980; not source-wide closure",
+        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 exact same-root source/header pairs bound to d26a980; not source-wide closure",
         "docs/compliance/evidence/SYS_ARCH_HEADER_PAIR.json; sys_arch.c already has compiler-resolved include/arch/sys_arch.h",
-        "docs/compliance/HEADER_CLOSURE_PLAN.md;55 remaining non-colocated candidates require module/interface resolution"
+        "docs/compliance/HEADER_CLOSURE_PLAN.md; 55 remaining non-colocated candidates require module/interface resolution"
       ]
     },
     {
@@ -626,7 +626,7 @@
       "requirement": "Protect every header from repeated inclusion.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/HEADER_PAIRS_BATCH1.json;20 added headers contain unique conventional ifndef/define guards;13 previously existing guard candidates remain open"
+        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 added headers contain unique conventional ifndef/define guards; 13 previously existing guard candidates remain open"
       ]
     },
     {
@@ -636,7 +636,7 @@
       "requirement": "Expose only the interface necessary to other modules.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/HEADER_PAIRS_BATCH1.json;20 standalone host sources have only main externally defined and no external file-scope variables in recorded contexts; paired headers expose no invented API"
+        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 standalone host sources have only main externally defined and no external file-scope variables in recorded contexts; paired headers expose no invented API"
       ]
     },
     {
@@ -654,7 +654,7 @@
       "requirement": "Allocate no object storage in headers.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/HEADER_PAIRS_BATCH1.json;20 added headers contain no C declarations or storage; existing observer headers and other headers remain unreviewed"
+        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 added headers contain no C declarations or storage; existing observer headers and other headers remain unreviewed"
       ]
     },
     {
@@ -688,7 +688,7 @@
       "requirement": "Include the corresponding same-basename header in each C source.",
       "status": "unreviewed",
       "evidence": [
-        "docs/compliance/HEADER_PAIRS_BATCH1.json;20 source files directly include their exact same-root header; include inversion restores original sources; other files remain open"
+        "docs/compliance/HEADER_PAIRS_BATCH1.json; 20 source files directly include their exact same-root header; include inversion restores original sources; other files remain open"
       ]
     },
     {

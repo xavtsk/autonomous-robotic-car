@@ -1,0 +1,267 @@
+{
+  "run_id": 44587222244,
+  "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44587222244",
+  "candidate_revision": "d26a9808f00add85ee3b6701b415cdec21444e29",
+  "baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+  "hosts": {
+    "baseline-clang": {
+      "artifact_id": 14559754614,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "baseline-gcc": {
+      "artifact_id": 14559834610,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "candidate-clang": {
+      "artifact_id": 14560094646,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "candidate-gcc": {
+      "artifact_id": 14561054401,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "candidate-sanitize": {
+      "artifact_id": 14561702269,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "baseline-sanitize": {
+      "artifact_id": 14563015227,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    }
+  },
+  "differential_artifact": 14559724493,
+  "differential_checks": [
+    {
+      "name": "motion_semantic_trace",
+      "matched": true,
+      "semantic_rows": 74,
+      "baseline_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071",
+      "candidate_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071"
+    },
+    {
+      "name": "terrain_semantic_trace",
+      "matched": true,
+      "semantic_rows": 1916,
+      "baseline_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8",
+      "candidate_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8"
+    },
+    {
+      "name": "terrain_production_semantic_trace",
+      "matched": true,
+      "semantic_rows": 1782,
+      "baseline_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a",
+      "candidate_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a"
+    },
+    {
+      "name": "obstacle_semantic_trace",
+      "matched": true,
+      "semantic_rows": 969,
+      "baseline_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5",
+      "candidate_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5"
+    },
+    {
+      "name": "runtime_semantic_trace",
+      "matched": true,
+      "semantic_rows": 2398,
+      "baseline_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907",
+      "candidate_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907"
+    },
+    {
+      "name": "mqtt_semantic_trace",
+      "matched": true,
+      "semantic_rows": 269,
+      "baseline_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665",
+      "candidate_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665"
+    },
+    {
+      "name": "mqtt_plain_semantic_trace",
+      "matched": true,
+      "semantic_rows": 99,
+      "baseline_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad",
+      "candidate_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad"
+    },
+    {
+      "name": "mqtt_production_semantic_trace",
+      "matched": true,
+      "semantic_rows": 251,
+      "baseline_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6",
+      "candidate_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6"
+    },
+    {
+      "name": "mqtt_imu_semantic_trace",
+      "matched": true,
+      "semantic_rows": 116,
+      "baseline_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643",
+      "candidate_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643"
+    },
+    {
+      "name": "mqtt_receive_semantic_trace",
+      "matched": true,
+      "semantic_rows": 2093,
+      "baseline_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e",
+      "candidate_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e"
+    },
+    {
+      "name": "motion_storage_semantic_trace",
+      "matched": true,
+      "semantic_rows": 802,
+      "baseline_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336",
+      "candidate_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336"
+    },
+    {
+      "name": "barcode_work_semantic_trace",
+      "matched": true,
+      "semantic_rows": 854,
+      "baseline_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+      "candidate_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9"
+    },
+    {
+      "name": "bcap_storage_semantic_trace",
+      "matched": true,
+      "semantic_rows": 776,
+      "baseline_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2",
+      "candidate_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2"
+    },
+    {
+      "name": "control_debug_wire_and_mutation_trace",
+      "matched": true,
+      "rows": 487,
+      "baseline_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2",
+      "candidate_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2"
+    },
+    {
+      "name": "navigation_semantic_trace",
+      "matched": true,
+      "semantic_rows": 60007,
+      "baseline_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143",
+      "candidate_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143"
+    },
+    {
+      "name": "recorded_replay",
+      "cases": 1008,
+      "mismatches": 0,
+      "expectation_failures": 2,
+      "matched": true
+    }
+  ],
+  "remaining_failures": "Two unchanged recorded-replay expectation failures; all 1008 replay traces match. The separate compliance audit remains nonpassing.",
+  "batch": "Private MQTT retained state",
+  "status": "six host modes and exact differential traces pass; all twelve target jobs succeed; production hashes verified",
+  "production_validation": {
+    "artifact_id": 14563235395,
+    "preceding_artifact_id": 14561730792,
+    "preceding_revision": "b8328bda4d2d59113fe647b96c5956412520bf4a",
+    "revision": "d26a9808f00add85ee3b6701b415cdec21444e29",
+    "sizes": {
+      "text": 466036,
+      "data": 696,
+      "bss": 128816,
+      "static_ram": 129512
+    },
+    "deltas_from_preceding_revision": {
+      "text": 40,
+      "data": 8,
+      "bss": -32,
+      "static_ram": -24
+    },
+    "flash_sha256": "e17ca241bb37cb4c1ce4f9c54ca921ce4752367356efc76e85dc73c9a62f125c",
+    "artifacts": {
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": "a84732073ef70baf73bc7d38ae275707ee5757c17c09d63efb00550fbfe4254b",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": "5345ed248148a54c64d501a64f7118f8bf33c0e27775e48d00ffa345be138585",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": "2fca6e9c1e140ab30c5653d30d5be3c1cf8ce6d6fa49365ebaaa23b37af2eb7e"
+    },
+    "downloaded_artifact_hashes_verified": true,
+    "flash_bytes": 466732,
+    "preceding_flash_bytes": 466684,
+    "compiler_stack_changes": {
+      "mqtt_utk_poll": [
+        64,
+        40
+      ],
+      "publish_preview": [
+        40,
+        32
+      ]
+    },
+    "other_function_stack_estimates_unchanged": true
+  },
+  "target_jobs": {
+    "target (stationary_1)": 135784010539,
+    "target (offline_motion)": 135784010589,
+    "target (single_core)": 135784010721,
+    "target (s5_unconfirmed)": 135784010807,
+    "target (imu_debug)": 135784010831,
+    "target (straight_test)": 135784010841,
+    "target (diagnostics)": 135784010855,
+    "target (self_tests)": 135784010867,
+    "target (production)": 135784010939,
+    "target (motion_smoke)": 135784010961,
+    "target (stationary_3)": 135784011031,
+    "target (s4_bench)": 135784011156
+  },
+  "limits": [
+    "Compiler stack estimates are per function, not complete call-chain or physical task high-water measurements.",
+    "No physical timing/reconnection or device execution is established.",
+    "No native C test executable was run on Windows."
+  ]
+}

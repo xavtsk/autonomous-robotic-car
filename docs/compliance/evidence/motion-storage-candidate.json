@@ -1,7 +1,9 @@
 {
   "batch": "Private retained motion storage",
-  "status": "candidate compiled; candidate execution pending",
-  "changed_production_files": ["app_program/subsystem2/motion.c"],
+  "status": "compact candidate executed in six host modes with exact 802-row differential; all twelve target jobs succeeded",
+  "changed_production_files": [
+    "app_program/subsystem2/motion.c"
+  ],
   "prior_motion_git_blob": "fe5b9a0b517cfeab12d2ecef1fa0dc13ef484225",
   "candidate_motion_lf_sha256": "ee236789df711185907265d07ed987c1cfc646dc9af8d3687d7642136aa189e5",
   "characterization_before_change": {
@@ -39,22 +41,49 @@
   },
   "candidate_compile_checks": {
     "host": "C99, -pedantic-errors -Wall -Wextra -Werror -O2; fixture compiled and linked with MOTION_COMPACT_RETAINED=1; not executed",
-    "target": "Arm GNU 14.3.1; motion.c compiled with the recorded production-profile arguments and -fstack-usage; no target link or execution performed for this candidate",
+    "target": "Initial local Arm GNU 14.3.1 compile-only measurement; superseded for production linking by the Linux receipt below.",
     "imported_sources_changed": false,
     "public_structure_layouts_changed": false,
     "retained_symbol_bytes": {
-      "g_cal_result": [36, 28],
-      "g_feedback": [32, 16],
-      "g_flags": [4, 4],
-      "g_feedback_ready": [1, 0],
-      "g_navigation_lease": [1, 0]
+      "g_cal_result": [
+        36,
+        28
+      ],
+      "g_feedback": [
+        32,
+        16
+      ],
+      "g_flags": [
+        4,
+        4
+      ],
+      "g_feedback_ready": [
+        1,
+        0
+      ],
+      "g_navigation_lease": [
+        1,
+        0
+      ]
     },
     "summed_retained_symbol_reduction_bytes": 26,
     "static_stack_bytes": {
-      "motion_process": [152, 112],
-      "motion_get_calibration": [24, 16],
-      "motion_get_feedback": [16, 16],
-      "motion_try_debug_snapshot": [24, 24]
+      "motion_process": [
+        152,
+        112
+      ],
+      "motion_get_calibration": [
+        24,
+        16
+      ],
+      "motion_get_feedback": [
+        16,
+        16
+      ],
+      "motion_try_debug_snapshot": [
+        24,
+        24
+      ]
     },
     "local_artifacts": "build/motion-storage-compile/{before,candidate}/{command.json,motion.o,motion.su,symbols.txt} and comparison.json"
   },
@@ -66,9 +95,149 @@
     "Existing report/calibration flag positions and mutex acquisition/release boundaries are preserved. Three retained Boolean values now occupy unused bits of the same protected word."
   ],
   "pending_evidence": [
-    "Execute the compact candidate's 802 cases under Linux GCC, Clang and ASan/UBSan.",
-    "Compare compact candidate semantic traces against the fixed baseline, including actual motion, runtime and MQTT observations.",
-    "Link every target profile and measure actual linked static RAM, flash and stack reports; symbol sums exclude linker alignment.",
-    "Static .su reports are per-function compiler estimates, not full call-chain or physical task high-water measurements."
-  ]
+    "Physical timing and task high-water measurements remain pending; no hardware execution was performed.",
+    "These results do not close the two recorded-replay expectation failures or the repository-wide BARR/CR1 audit."
+  ],
+  "linux_candidate_validation": {
+    "run_id": 44584191817,
+    "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44584191817",
+    "candidate_revision": "ba4f3391261e47ede38649b231324269d86c60bb",
+    "baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+    "host_artifacts": {
+      "baseline-gcc": {
+        "artifact_id": 14559168636,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "baseline-clang": {
+        "artifact_id": 14559258630,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "baseline-sanitize": {
+        "artifact_id": 14560696835,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "candidate-clang": {
+        "artifact_id": 14561031450,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "candidate-sanitize": {
+        "artifact_id": 14561386078,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "candidate-gcc": {
+        "artifact_id": 14561506036,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      }
+    },
+    "differential_artifact": 14559782444,
+    "compact_motion_commit": "ea830e7",
+    "semantic_rows": 802,
+    "trace_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336",
+    "trace_matched": true,
+    "all_other_recorded_semantic_traces_match": true,
+    "limit": "The prior MQTT plain-row minimum was an infrastructure false failure; replay expectation failures remain separately red."
+  },
+  "linked_production_validation": {
+    "artifact_id": 14561042452,
+    "revision": "ba4f3391261e47ede38649b231324269d86c60bb",
+    "sizes": {
+      "text": 465996,
+      "data": 688,
+      "bss": 128848,
+      "static_ram": 129536
+    },
+    "flash_sha256": "a75815c9cf213cace9171b3b506048ffbe6efa8a79896e5fa86736ff616f3034",
+    "artifacts": {
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": "323c0136013656b39cea27e16b692346bcaa7c6067dc5b8f3a50278a697b3eeb",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": "ca0bf4bfec7d72493fab428bf7f726dbeb5018076be609187cef1cc22a36ee0e",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": "37fdbbd84051e1b2f90d8c38061e652b48fc0c68164ac3208183ad81d6769b31"
+    },
+    "local_elf_uf2_and_regenerated_flash_hashes_verified": true,
+    "immediate_prior_revision": "133115478bb204df3e8e346810959a691eb245e2",
+    "immediate_prior_static_ram": 129568,
+    "immediate_prior_text": 465980,
+    "motion_batch_static_ram_delta": -32,
+    "motion_batch_text_delta": 16,
+    "fixed_baseline_static_ram_delta": -160,
+    "fixed_baseline_text_delta": -280,
+    "compiler_stack_bytes": {
+      "motion_process": [
+        152,
+        112
+      ],
+      "motion_init": [
+        24,
+        16
+      ],
+      "motion_get_calibration": [
+        24,
+        16
+      ],
+      "motion_get_feedback": [
+        16,
+        16
+      ],
+      "motion_try_debug_snapshot": [
+        24,
+        24
+      ]
+    },
+    "limit": "Per-function compiler estimates; not measured task high-water or complete call-chain maxima."
+  },
+  "target_jobs": {
+    "target (diagnostics)": 135772565683,
+    "target (s5_unconfirmed)": 135772565849,
+    "target (stationary_1)": 135772565902,
+    "target (imu_debug)": 135772565929,
+    "target (motion_smoke)": 135772565932,
+    "target (single_core)": 135772565943,
+    "target (production)": 135772566004,
+    "target (offline_motion)": 135772566027,
+    "target (self_tests)": 135772566028,
+    "target (stationary_3)": 135772566038,
+    "target (straight_test)": 135772566236,
+    "target (s4_bench)": 135772566373
+  }
 }

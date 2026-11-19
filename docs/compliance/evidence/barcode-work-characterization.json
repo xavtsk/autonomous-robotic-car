@@ -1,6 +1,6 @@
 {
   "batch": "Barcode private phase-boundary characterization",
-  "status": "fixture compiled against baseline and candidate; Linux execution pending",
+  "status": "baseline and pre-extraction candidate executed: six host modes pass, complete scratch traces match",
   "fixture": "testing/compliance/barcode_work_test.c",
   "fixed_baseline": "4ad2cc42595722cedb47102e4343298339040d40",
   "production_changes": [],
@@ -87,9 +87,97 @@
     "No change to the existing recorded-replay fixtures or their assertion predicates"
   ],
   "pending": [
-    "Actual baseline/candidate Linux execution, sanitizer results and trace equality",
-    "Production phase extraction is not part of this fixture batch",
-    "Later decomposition needs target code/stack measurement and existing replay/runtime traces; host characterization alone does not establish RTOS timing or physical behavior"
+    "Helper extraction is a separate batch requiring its own Linux execution and target build evidence.",
+    "The two pre-existing recorded-replay expectation failures remain failures; all 1008 replay traces match.",
+    "Host characterization does not establish RTOS timing or physical behavior."
   ],
-  "fixture_lf_sha256": "2ca4bbe70caadb1ac9976dcada0e12665c82d49c773d8cf5b6d65f1c690b0714"
+  "fixture_lf_sha256": "2ca4bbe70caadb1ac9976dcada0e12665c82d49c773d8cf5b6d65f1c690b0714",
+  "linux_characterization_before_extraction": {
+    "run_id": 44584191817,
+    "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44584191817",
+    "candidate_revision": "ba4f3391261e47ede38649b231324269d86c60bb",
+    "baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+    "host_artifacts": {
+      "baseline-gcc": {
+        "artifact_id": 14559168636,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "baseline-clang": {
+        "artifact_id": 14559258630,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "baseline-sanitize": {
+        "artifact_id": 14560696835,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "candidate-clang": {
+        "artifact_id": 14561031450,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "candidate-sanitize": {
+        "artifact_id": 14561386078,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      },
+      "candidate-gcc": {
+        "artifact_id": 14561506036,
+        "returncode": 0,
+        "sanitizer_errors": false,
+        "skipped": [],
+        "counts": {
+          "motion_storage": 802,
+          "barcode_work": 854,
+          "mqtt_receive": 2093
+        }
+      }
+    },
+    "differential_artifact": 14559782444,
+    "calls_per_subject": 427,
+    "semantic_rows_per_subject": 854,
+    "trace_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+    "trace_matched": true
+  },
+  "prior_run_infrastructure_failure": {
+    "artifact_id": 14559782444,
+    "check": "mqtt_plain_semantic_trace",
+    "actual_rows": 99,
+    "old_generic_minimum": 100,
+    "baseline_and_candidate_bytes_equal": true,
+    "correction": "Bind each MQTT profile minimum to its complete fixed-baseline observation count: 269/99/251/116. No fixture assertion changed.",
+    "original_results_preserved": "build/compliance-ci/44584191817/artifact-14559782444/results.json"
+  }
 }

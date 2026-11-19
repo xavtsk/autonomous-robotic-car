@@ -106,6 +106,34 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(result["required_bits"], 12)
         self.assertEqual(result["status"], "gap")
 
+    def test_edge_run_storage_includes_transition_before_validation(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        row = {"path": "app_program/subsystem3/bc_decoder.h", "owner": "s3_barcode_decoder_t",
+               "name": "runs", "kind": "FIELD_DECL", "stored_bits": 32, "method": "libclang-ast"}
+        result = inventory.classify(row, policies)
+        self.assertEqual(result["domain"]["max"], 2 * 214748364)
+        self.assertEqual(result["required_bits"], 29)
+
+    def test_noise_domain_has_inductive_bound_and_ten_bit_counterexample(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        row = {"path": "app_program/subsystem3/bc_decoder.h", "owner": "s3_barcode_record_t",
+               "name": "noise_q4", "kind": "FIELD_DECL", "stored_bits": 16, "method": "libclang-ast"}
+        result = inventory.classify(row, policies)
+        limit = result["domain"]["max"]
+        self.assertTrue(all(n - n // 16 + 75 <= limit for n in range(limit + 1)))
+        paper = previous = 951
+        noise = 0
+        sequence = [1000 if index % 2 == 0 else 951 for index in range(71)]
+        sequence += list(range(925, 24, -75))
+        for dark in sequence:
+            paper = min(paper, dark) if dark < paper else paper + ((dark - paper) >> 5)
+            self.assertLess(dark, paper + 50)
+            self.assertLessEqual(previous, paper + 75)
+            noise = noise - noise // 16 + abs(dark - previous)
+            previous = dark
+        self.assertEqual(noise, 1024)
+        self.assertEqual(result["required_bits"], 11)
+
     def test_retained_public_view_needs_instance_review(self):
         policies = inventory.read_json(HERE / "inventory_policies.json")
         row = {"path": "app_program/subsystem2/motion.c", "owner": "", "name": "g_cal_result",
@@ -161,6 +189,14 @@ class DiscoveryTests(unittest.TestCase):
         rule["domain"]["step"] = 26
         with self.assertRaises(ValueError):
             inventory.classify({}, {"rules": [rule]})
+
+    def test_safe_envelope_does_not_claim_a_proved_minimum(self):
+        rule = {"id": "envelope", "status": "compare", "domain": {
+            "min": -16124062, "max": 16124062, "minimum_width_proved": False}}
+        result = inventory.classify({"stored_bits": 32, "method": "libclang-ast"}, {"rules": [rule]})
+        self.assertIsNone(result["required_bits"])
+        self.assertEqual(result["safe_upper_bound_bits"], 25)
+        self.assertEqual(result["status"], "unresolved")
 
     def test_macro_schema_does_not_claim_wire_width_is_ram_width(self):
         fields, _ = inventory.lexical_fields("""

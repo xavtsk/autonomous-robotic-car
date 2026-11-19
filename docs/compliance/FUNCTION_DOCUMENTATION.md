@@ -19,10 +19,24 @@ Doxygen output has not yet been generated or reviewed, so this is not closure of
 BARR 2.2.h across the project.
 
 ```sh
-python tools/compliance/verify_format_batch.py --manifest docs/compliance/FUNCTION_DOCS_BATCH1.json --candidate 4f5dd616198455d9784e7a60f3bd1edc873fa89e
+python tools/compliance/verify_comment_batch.py --manifest docs/compliance/FUNCTION_DOCS_BATCH1.json --candidate 4f5dd616198455d9784e7a60f3bd1edc873fa89e
 ```
 
 This command checks the bounded historical batch despite later source changes.
+
+The [controller debug contract batch](CONTROL_DEBUG_CONTRACTS.json) separately
+documents 13 definitions and six public prototypes at `07ad498`. Its contracts
+distinguish pack rejection with unchanged output, unpack rejection after fields
+were written, latched field errors and a non-latching final relationship check.
+Inputs retain their full validation widths. Clang reports no documentation
+diagnostics and attaches every parameter contract. Preprocessing fingerprints
+and the order of all existing comments match the prior sources. This is a
+comments-only source proof; no new runtime behavior or full-project coverage is
+claimed. Both batches are rechecked at their immutable revisions in Linux CI.
+
+```sh
+python tools/compliance/verify_comment_batch.py --manifest docs/compliance/CONTROL_DEBUG_CONTRACTS.json --candidate 07ad498a49428b7362c0e5bcc010f66f1bb650d8
+```
 
 ## Observed remaining workload
 

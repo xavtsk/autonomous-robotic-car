@@ -1,0 +1,233 @@
+{
+  "run_id": 44586316814,
+  "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44586316814",
+  "candidate_revision": "b8328bda4d2d59113fe647b96c5956412520bf4a",
+  "baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+  "hosts": {
+    "baseline-sanitize": {
+      "artifact_id": 14559933803,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "candidate-sanitize": {
+      "artifact_id": 14560444897,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "candidate-clang": {
+      "artifact_id": 14560689480,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "candidate-gcc": {
+      "artifact_id": 14561008291,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "baseline-clang": {
+      "artifact_id": 14561512779,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "baseline-gcc": {
+      "artifact_id": 14561656386,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    }
+  },
+  "differential_artifact": 14559858714,
+  "differential_checks": [
+    {
+      "name": "motion_semantic_trace",
+      "matched": true,
+      "semantic_rows": 74,
+      "baseline_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071",
+      "candidate_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071"
+    },
+    {
+      "name": "terrain_semantic_trace",
+      "matched": true,
+      "semantic_rows": 1916,
+      "baseline_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8",
+      "candidate_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8"
+    },
+    {
+      "name": "terrain_production_semantic_trace",
+      "matched": true,
+      "semantic_rows": 1782,
+      "baseline_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a",
+      "candidate_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a"
+    },
+    {
+      "name": "obstacle_semantic_trace",
+      "matched": true,
+      "semantic_rows": 969,
+      "baseline_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5",
+      "candidate_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5"
+    },
+    {
+      "name": "runtime_semantic_trace",
+      "matched": true,
+      "semantic_rows": 2398,
+      "baseline_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907",
+      "candidate_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907"
+    },
+    {
+      "name": "mqtt_semantic_trace",
+      "matched": true,
+      "semantic_rows": 269,
+      "baseline_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665",
+      "candidate_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665"
+    },
+    {
+      "name": "mqtt_plain_semantic_trace",
+      "matched": true,
+      "semantic_rows": 99,
+      "baseline_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad",
+      "candidate_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad"
+    },
+    {
+      "name": "mqtt_production_semantic_trace",
+      "matched": true,
+      "semantic_rows": 251,
+      "baseline_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6",
+      "candidate_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6"
+    },
+    {
+      "name": "mqtt_imu_semantic_trace",
+      "matched": true,
+      "semantic_rows": 116,
+      "baseline_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643",
+      "candidate_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643"
+    },
+    {
+      "name": "mqtt_receive_semantic_trace",
+      "matched": true,
+      "semantic_rows": 2093,
+      "baseline_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e",
+      "candidate_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e"
+    },
+    {
+      "name": "motion_storage_semantic_trace",
+      "matched": true,
+      "semantic_rows": 802,
+      "baseline_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336",
+      "candidate_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336"
+    },
+    {
+      "name": "barcode_work_semantic_trace",
+      "matched": true,
+      "semantic_rows": 854,
+      "baseline_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+      "candidate_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9"
+    },
+    {
+      "name": "bcap_storage_semantic_trace",
+      "matched": true,
+      "semantic_rows": 776,
+      "baseline_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2",
+      "candidate_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2"
+    },
+    {
+      "name": "control_debug_wire_and_mutation_trace",
+      "matched": true,
+      "rows": 487,
+      "baseline_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2",
+      "candidate_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2"
+    },
+    {
+      "name": "navigation_semantic_trace",
+      "matched": true,
+      "semantic_rows": 60007,
+      "baseline_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143",
+      "candidate_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143"
+    },
+    {
+      "name": "recorded_replay",
+      "cases": 1008,
+      "mismatches": 0,
+      "expectation_failures": 2,
+      "matched": true
+    }
+  ],
+  "remaining_failures": "Two unchanged recorded-replay expectation failures; all 1008 replay traces match. The separate compliance audit remains nonpassing.",
+  "batch": "Estimator module filename rename",
+  "status": "pure rename production flash/UF2, symbol allocation and normalized compiler stack verified identical",
+  "immediate_production_comparison": {
+    "before_revision": "ba4f3391261e47ede38649b231324269d86c60bb",
+    "after_revision": "b8328bda4d2d59113fe647b96c5956412520bf4a",
+    "before_artifact": 14561042452,
+    "after_artifact": 14561730792,
+    "flash_sha256": "a75815c9cf213cace9171b3b506048ffbe6efa8a79896e5fa86736ff616f3034",
+    "flash_identical": true,
+    "uf2_identical": true,
+    "all_named_symbol_rows_identical": true,
+    "compiler_stack_identical_after_filename_normalization": true,
+    "sizes": {
+      "text": 465996,
+      "data": 688,
+      "bss": 128848,
+      "static_ram": 129536
+    },
+    "hash_verification": "Downloaded ELF/UF2/map and flash.bin checked against recorded hashes; flash compared against ba4f339, not the older pre-motion revision.",
+    "ELF_metadata": "Whole ELF differs because source/debug paths changed; flashed bytes are identical."
+  },
+  "limits": [
+    "Compiler stack reports are per function, not task high-water measurements.",
+    "No physical device execution or Windows native test execution."
+  ]
+}

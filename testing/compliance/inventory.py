@@ -335,6 +335,10 @@ def classify(row, policies):
                 result["required_bits"] = minimum_bits(0, (domain["max"] - domain["min"]) // step)
             else:
                 result.setdefault("required_bits", None)
+            if domain.get("minimum_width_proved") is False:
+                result["safe_upper_bound_bits"] = result["required_bits"]
+                result["required_bits"] = None
+                result["status"] = "unresolved"
             if result.get("status") == "compare":
                 used, need = row.get("stored_bits"), result["required_bits"]
                 result["status"] = "unresolved" if used is None or row.get("method") == "libclang-recovery" or len(row.get("profile_width_variants", [])) > 1 else "packed" if used == need else "gap" if used > need else "unresolved"
@@ -515,9 +519,12 @@ def table_row(row):
         "units": domain.get("units", "unresolved"), "resolution": resolution,
         "required_encoding": domain.get("encoding", "retain existing numeric representation unless separately reviewed"),
         "required_bits": row.get("required_bits") if row.get("required_bits") is not None else "unresolved / preservation boundary",
+        "safe_upper_bound_bits_if_minimum_unproved": row.get("safe_upper_bound_bits", "not separately applicable"),
         "stored_bits_per_scalar_or_bitfield": row.get("stored_bits") if row.get("stored_bits") is not None else "unresolved",
         "array_count": row.get("array_count") if row.get("array_count") is not None else "unresolved",
         "declared_type_allocation_bits": row.get("allocation_bits") if row.get("allocation_bits") is not None else "unresolved",
+        "observed_storage_width_variants_bits": "; ".join(map(str, row.get("profile_width_variants", []))) or "no differing width observed",
+        "compiler_targets": "; ".join(row.get("compiler_targets", [row.get("compiler_target", "unobserved")])),
         "storage_duration": row.get("storage_duration", "unresolved"),
         "ownership": row.get("ownership", "unreviewed"),
         "synchronization": row.get("synchronization", "unreviewed; inspect ownership/constraints before changing storage"),

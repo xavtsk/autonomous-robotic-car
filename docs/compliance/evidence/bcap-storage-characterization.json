@@ -1,0 +1,115 @@
+{
+  "run_id": 44586316814,
+  "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44586316814",
+  "candidate_revision": "b8328bda4d2d59113fe647b96c5956412520bf4a",
+  "baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+  "hosts": {
+    "baseline-sanitize": {
+      "artifact_id": 14559933803,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "candidate-sanitize": {
+      "artifact_id": 14560444897,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "candidate-clang": {
+      "artifact_id": 14560689480,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "candidate-gcc": {
+      "artifact_id": 14561008291,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "baseline-clang": {
+      "artifact_id": 14561512779,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    },
+    "baseline-gcc": {
+      "artifact_id": 14561656386,
+      "checks": [
+        "motion_storage",
+        "barcode_work",
+        "bcap_storage",
+        "mqtt_production",
+        "mqtt_imu",
+        "mqtt_receive"
+      ],
+      "returncode": 0,
+      "sanitizer_errors": false,
+      "skipped": []
+    }
+  },
+  "remaining_failures": "Two unchanged recorded-replay expectation failures; all 1008 replay traces match. The separate compliance audit remains nonpassing.",
+  "batch": "BCAP storage characterization before private counter compaction",
+  "status": "all six host modes pass; baseline/candidate semantic trace exact",
+  "differential": {
+    "artifact_id": 14559858714,
+    "name": "bcap_storage_semantic_trace",
+    "matched": true,
+    "semantic_rows": 776,
+    "baseline_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2",
+    "candidate_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2"
+  },
+  "coverage": {
+    "complete_state_snapshots": 39,
+    "binary_calls": 540,
+    "text_calls": 80,
+    "semantic_rows": 776,
+    "note": "Each complete state snapshot emits multiple named rows. Semantic traces exclude summary/sizes and struct padding."
+  },
+  "limits": [
+    "This execution precedes BCAP private-counter packing.",
+    "The later paired-header addition is not covered by this immutable run.",
+    "Host fixtures do not establish physical capture/upload timing."
+  ]
+}

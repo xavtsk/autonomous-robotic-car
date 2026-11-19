@@ -25,6 +25,165 @@
       "type_category": ".*"
     },
     {
+      "id": "retained-mqtt-message-review",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "",
+      "name": "pending",
+      "status": "unresolved",
+      "domain": {
+        "description": "Retained instance of a wide public/validation view. Child API-boundary classifications do not certify this storage. Review a private compact adapter, address-compatible producer writes, invalid intermediate values and exact round trips before narrowing.",
+        "units": "integer code"
+      },
+      "ownership": "Network owner retains the object passed to the public application-take callback.",
+      "synchronization": "unreviewed; retain existing owner synchronization",
+      "constraints": [
+        "This retained instance receives wide hook writes before payload_len/qos/retain/topic validation, including invalid or partially written values. Public-view child boundary policies do not certify its retained storage. Any private compact adapter must preserve callback/address lifetime, validation order and retry contents; current implementation is unchanged."
+      ],
+      "reason": "This retained instance receives wide hook writes before payload_len/qos/retain/topic validation, including invalid or partially written values. Public-view child boundary policies do not certify its retained storage. Any private compact adapter must preserve callback/address lifetime, validation order and retry contents; current implementation is unchanged.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h"
+      ],
+      "required_bits": null,
+      "kind": "VAR_DECL|FIELD_DECL",
+      "type_category": "RECORD",
+      "canonical_type": "T_MQTT_UTK_APP_MSG"
+    },
+    {
+      "id": "mqtt-private-interval-code",
+      "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
+      "owner": "mqtt_utk_state_t",
+      "name": "publish_interval",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2,
+        "units": "encoded pacing selector",
+        "encoding": "0 ->0ms,1 ->20ms,2 ->100ms; decode before elapsed-time comparison."
+      },
+      "ownership": "Single CYW43 network task.",
+      "synchronization": "Single-owner state.",
+      "constraints": [
+        "Private pace_publish stores only INITIAL/GAP/RETRY selectors. The decoder reconstructs the exact original0/20/100ms interval; timestamps remain full32bits. Existing callbacks and owner serialization are unchanged."
+      ],
+      "reason": "Private pace_publish stores only INITIAL/GAP/RETRY selectors. The decoder reconstructs the exact original0/20/100ms interval; timestamps remain full32bits. Existing callbacks and owner serialization are unchanged.",
+      "evidence": [
+        "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c"
+      ]
+    },
+    {
+      "id": "barcode-edge-prevalidation-run",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_decoder_t",
+      "name": "runs",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 429496728,
+        "units": "us"
+      },
+      "ownership": "Navigation sampling owner updates the initialized decoder/record context.",
+      "synchronization": "Preserve existing navigation owner serialization and snapshot boundaries.",
+      "constraints": [
+        "A transition stores elapsed before later batch validation. The preceding same-colour elapsed can equal max_run_us and the next accepted gap can equal max_gap_us <= max_run_us. Valid configuration bounds max_run_us at214748364, so the reachable prevalidation maximum is429496728, requiring29bits. Existing const uint32_t* validators need a private packed-array adapter; narrowing to accepted wire/run widths would change rejection behavior."
+      ],
+      "reason": "A transition stores elapsed before later batch validation. The preceding same-colour elapsed can equal max_run_us and the next accepted gap can equal max_gap_us <= max_run_us. Valid configuration bounds max_run_us at214748364, so the reachable prevalidation maximum is429496728, requiring29bits. Existing const uint32_t* validators need a private packed-array adapter; narrowing to accepted wire/run widths would change rejection behavior.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-noise-proved-width",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_record_t",
+      "name": "noise_q4",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1200,
+        "units": "Q4 noise units",
+        "minimum_width_proved": true
+      },
+      "ownership": "Navigation sampling owner updates the initialized decoder/record context.",
+      "synchronization": "Preserve existing navigation owner serialization and snapshot boundaries.",
+      "constraints": [
+        "Both inputs to a noise update are within75 of the new paper reference, so delta<=75 and n-floor(n/16)+delta preserves the closed envelope0..1200. Eleven bits is minimal: from paper951 alternate1000/951 for71 updates until noise784 and previous1000, then13 successive drops of75 reach1024 while every near-paper guard holds.1200 is an inductive envelope, not a claim that every value or its upper endpoint is reachable. Preserve the existing integer recurrence before storage."
+      ],
+      "reason": "Both inputs to a noise update are within75 of the new paper reference, so delta<=75 and n-floor(n/16)+delta preserves the closed envelope0..1200. Eleven bits is minimal: from paper951 alternate1000/951 for71 updates until noise784 and previous1000, then13 successive drops of75 reach1024 while every near-paper guard holds.1200 is an inductive envelope, not a claim that every value or its upper endpoint is reachable. Preserve the existing integer recurrence before storage.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-fit-prevalidation-narrow",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "narrow",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 21498750,
+        "units": "us"
+      },
+      "ownership": "Navigation sampling owner updates the initialized decoder/record context.",
+      "synchronization": "Preserve existing navigation owner serialization and snapshot boundaries.",
+      "constraints": [
+        "RW_FIT_BEGIN writes the mean of six disjoint original extracted widths before applying configuration bounds. Those widths share a sample span at most128992500us, so the mean is at most floor(128992500/6)=21498750. A later rejection does not remove this transient scratch value; never use the accepted min_narrow/max_run interval alone."
+      ],
+      "reason": "RW_FIT_BEGIN writes the mean of six disjoint original extracted widths before applying configuration bounds. Those widths share a sample span at most128992500us, so the mean is at most floor(128992500/6)=21498750. A later rejection does not remove this transient scratch value; never use the accepted min_narrow/max_run interval alone.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-fit-nonnegative-bound",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "bound",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 16124062,
+        "units": "us"
+      },
+      "ownership": "Navigation sampling owner updates the initialized decoder/record context.",
+      "synchronization": "Preserve existing navigation owner serialization and snapshot boundaries.",
+      "constraints": [
+        "After the mean range guard, bound=floor(minimum*3/4). The prevalidation six-width mean is bounded by21498750, hence bound<=16124062. It is initialized to zero and otherwise nonnegative; a24-bit unsigned or offset representation requires preserving signed arithmetic conversions at use sites."
+      ],
+      "reason": "After the mean range guard, bound=floor(minimum*3/4). The prevalidation six-width mean is bounded by21498750, hence bound<=16124062. It is initialized to zero and otherwise nonnegative; a24-bit unsigned or offset representation requires preserving signed arithmetic conversions at use sites.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
+      "id": "barcode-fit-signed-envelope-review",
+      "path": "app_program/subsystem3/bc_decoder.h",
+      "owner": "s3_barcode_work_t",
+      "name": "best_bias|chosen|trial_bias",
+      "status": "unresolved",
+      "domain": {
+        "min": -16124062,
+        "max": 16124062,
+        "units": "us",
+        "minimum_width_proved": false
+      },
+      "ownership": "Navigation sampling owner updates the initialized decoder/record context.",
+      "synchronization": "Preserve existing navigation owner serialization and snapshot boundaries.",
+      "constraints": [
+        "work_fit_trial derives signed trials within +/-bound, where bound<=16124062; retained best/chosen/trial copies stay within that envelope. Successful character validation may tighten the reachable retained extrema. The safe25-bit envelope is recorded, but the exact minimum representation and candidate-success witness still require review; this is not a compliance disposition."
+      ],
+      "reason": "work_fit_trial derives signed trials within +/-bound, where bound<=16124062; retained best/chosen/trial copies stay within that envelope. Successful character validation may tighten the reachable retained extrema. The safe25-bit envelope is recorded, but the exact minimum representation and candidate-success witness still require review; this is not a compliance disposition.",
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c",
+        "app_program/subsystem3/bc_decoder.h"
+      ]
+    },
+    {
       "id": "motion-private-feedback-time-epoch",
       "path": "app_program/subsystem2/motion.c",
       "owner": "motion_stored_feedback_t",
@@ -3104,8 +3263,8 @@
     {
       "id": "mqtt-retained-flags",
       "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
-      "owner": "",
-      "name": "connecting|rx_truncated|pending_valid|pending_inflight|pending_warned|publish_paced|capture_turn|debug_valid|control_seen",
+      "owner": "(?:|mqtt_utk_state_t)",
+      "name": "(?:b_)?(?:connecting|rx_truncated|pending_valid|pending_inflight|pending_warned|publish_paced|capture_turn|debug_valid|control_seen)",
       "status": "compare",
       "domain": {
         "min": 0,
@@ -3125,7 +3284,7 @@
     {
       "id": "mqtt-source-selector",
       "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
-      "owner": "",
+      "owner": "(?:|mqtt_utk_state_t)",
       "name": "retry_source",
       "status": "compare",
       "domain": {
@@ -3146,7 +3305,7 @@
     {
       "id": "mqtt-preview-gap-counts",
       "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
-      "owner": "",
+      "owner": "(?:|mqtt_utk_state_t)",
       "name": "control_data_since|imu_data_since",
       "status": "compare",
       "domain": {
@@ -3167,7 +3326,7 @@
     {
       "id": "mqtt-rx-length",
       "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
-      "owner": "",
+      "owner": "(?:|mqtt_utk_state_t)",
       "name": "rx_len|rx_expected",
       "status": "compare",
       "domain": {
@@ -3188,7 +3347,7 @@
     {
       "id": "mqtt-capture-length",
       "path": "lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c",
-      "owner": "",
+      "owner": "(?:|mqtt_utk_state_t)",
       "name": "debug_len",
       "status": "compare",
       "domain": {
@@ -4036,7 +4195,7 @@
         "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
       ],
       "evidence": [
-        "app_program/subsystem2/estimate_motion.c:11-17"
+        "app_program/subsystem2/motion_estimation.c"
       ],
       "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
     },
@@ -5840,7 +5999,7 @@
       ],
       "evidence": [
         "app_program/subsystem2/ctrl_motion.c:7-12",
-        "app_program/subsystem2/estimate_motion.c:11",
+        "app_program/subsystem2/motion_estimation.c",
         "app_program/subsystem4/terr_data.c"
       ],
       "reason": "Preserve existing float/double values, precision, NaN/infinity/signed-zero behavior and arithmetic order; telemetry quantization does not justify changing control storage.",

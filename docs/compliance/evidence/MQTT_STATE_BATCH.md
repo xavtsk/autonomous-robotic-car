@@ -28,8 +28,8 @@ not evidence that the new candidate executed.
 
 Local Arm 14.3.1 compilation with the recorded production flags measures
 19 bytes of old discrete symbols versus an 8-byte private state object. This is
-an 11-byte symbol sum reduction; final linker padding and whole-image RAM still
-require matched CI builds. Compiler stack estimates change from 64 to 40 bytes
+an 11-byte symbol sum reduction; linker padding and whole-image RAM are measured
+separately by the matched CI build below. Compiler stack estimates change from 64 to 40 bytes
 for `mqtt_utk_poll`, and from 40 to 32 bytes for `publish_preview`; other emitted
 function estimates are unchanged. These are not physical stack measurements.
 Commands, objects and `.su` files are retained under `build/mqtt-state-target/`.
@@ -42,6 +42,19 @@ occupies 8. The allocation assertion is therefore specific to the Arm target;
 field-domain assertions apply to every build. Compiler contexts and padded
 type variants remain visible in the data inventory.
 
-Candidate Linux differential/sanitizer tests, final target manifests and
-physical timing/reconnection evidence are pending. No firmware has been flashed
-as part of this batch.
+Candidate Linux run
+[44587222244](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44587222244)
+at `d26a980` passes the 2,093 receive cases and separate production/IMU host
+profiles in all six baseline/candidate GCC, Clang and ASan/UBSan modes. All four
+MQTT profile traces match the fixed baseline, including exact payload and queue
+observations. All twelve target-profile jobs succeed. The production build uses
+129,512 bytes of linked static RAM, 24 fewer than the preceding pure rename:
+data grows by 8 bytes and BSS shrinks by 32. Text grows by 40 bytes to 466,036.
+The linked compiler reports confirm `mqtt_utk_poll` 64 to 40 bytes and
+`publish_preview` 40 to 32; other function stack estimates are unchanged.
+The [Linux evidence record](mqtt-state-linux.json) contains exact artifact IDs,
+hashes and comparisons. The overall run remains red for the two unchanged
+replay expectation failures and the separate compliance audit.
+
+Physical timing/reconnection and task high-water evidence remain pending.
+No firmware has been flashed as part of this batch.
