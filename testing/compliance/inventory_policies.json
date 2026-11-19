@@ -7,6 +7,422 @@
   ],
   "rules": [
     {
+      "kind": "FIELD_DECL",
+      "type_category": "ENUM",
+      "status": "boundary",
+      "ownership": "Caller-owned public copy; motion producers copy under the existing motion mutex, navigation producers run in the sampling owner. This rule does not classify any retained aggregate instance.",
+      "synchronization": "Preserve producer locking and caller copy ownership; no shared storage unit is added.",
+      "constraints": [
+        "Retain the complete compatible integer domain for each observed ABI, including unnamed and invalid enum values already held by the public object.",
+        "Keep public type layout, addressable members, const input contents, staged validation and failure-output mutation unchanged.",
+        "Named producer-valid values are not a universal bound on externally mutable storage; retained private adapter obligations remain separately open."
+      ],
+      "id": "motion-public-state-native-domain",
+      "path": "app_program/subsystem2/motion.h",
+      "owner": "motion_status_t|motion_feedback_t|motion_debug_snapshot_t",
+      "name": "state",
+      "reason": "Named motion states are 0..5, but the public object can retain every native enum value. motion_unpack_status also emits unnamed states 6/7; motion_state_name returns ? for unnamed values. Debug snapshots feed the builder validation before encoding. Narrowing an externally supplied state 8 to three bits would change the default-name/validation result to IDLE; private ctrl_t state remains separately bounded.",
+      "evidence": [
+        "app_program/subsystem2/motion.h:39-47",
+        "app_program/subsystem2/motion.h:95-96",
+        "app_program/subsystem2/motion.h:265-266",
+        "app_program/subsystem2/motion.h:284-285",
+        "app_program/subsystem2/motion_pack.c:239-241",
+        "app_program/subsystem2/motion_pack.c:273",
+        "app_program/subsystem2/motion.c:804-834",
+        "app_program/controller/s3_integration.c:578-579",
+        "app_program/controller/control_debug.c:238-241"
+      ],
+      "domain": {
+        "description": "Full unsigned native enum object domain: 0..255 in the reviewed short-enum ABI; 0..4294967295 in the reviewed normal-enum ABI. Supported combinations require clean compiler-compatible-type evidence.",
+        "valid_min": 0,
+        "valid_max": 5,
+        "units": "enum code",
+        "resolution": "exact integer code; no renumbering",
+        "native_enum_abis": [
+          {
+            "compatible_kind": "UCHAR",
+            "bits": 8,
+            "min": 0,
+            "max": 255,
+            "enum_option": "-fshort-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          },
+          {
+            "compatible_kind": "UINT",
+            "bits": 32,
+            "min": 0,
+            "max": 4294967295,
+            "enum_option": "-fno-short-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          }
+        ],
+        "other_producer_domain": "motion_unpack_status decodes all three-bit values 0..7, including unnamed 6 and 7."
+      }
+    },
+    {
+      "kind": "FIELD_DECL",
+      "type_category": "ENUM",
+      "status": "boundary",
+      "ownership": "Caller-owned public copy; motion producers copy under the existing motion mutex, navigation producers run in the sampling owner. This rule does not classify any retained aggregate instance.",
+      "synchronization": "Preserve producer locking and caller copy ownership; no shared storage unit is added.",
+      "constraints": [
+        "Retain the complete compatible integer domain for each observed ABI, including unnamed and invalid enum values already held by the public object.",
+        "Keep public type layout, addressable members, const input contents, staged validation and failure-output mutation unchanged.",
+        "Named producer-valid values are not a universal bound on externally mutable storage; retained private adapter obligations remain separately open."
+      ],
+      "id": "motion-public-fault-native-domain",
+      "path": "app_program/subsystem2/motion.h",
+      "owner": "motion_report_t|motion_status_t|motion_feedback_t|motion_debug_snapshot_t",
+      "name": "fault",
+      "reason": "Named faults are 0..5; public report unpacking also yields 6/7 and name lookup preserves its default for all unnamed codes. Keep every native input value until the existing consumer applies its own contract. motion_fault_bit requires a valid code and does not generally reject invalid input; defined input 12 produces a shifted value that truncates to uint8_t zero, whereas a proposed three-bit member would first turn 12 into 4. This preserves defined behavior without assigning meaning to invalid shift counts.",
+      "evidence": [
+        "app_program/subsystem2/motion.h:49-57",
+        "app_program/subsystem2/motion_pack.h:47-62",
+        "app_program/subsystem2/motion_pack.c:240-241",
+        "app_program/subsystem2/motion_pack.c:311",
+        "app_program/subsystem2/motion_pack.c:328",
+        "app_program/subsystem2/motion.c:836-866",
+        "app_program/controller/s3_integration.c:579",
+        "app_program/controller/control_debug.c:238-241"
+      ],
+      "domain": {
+        "description": "Full unsigned native enum object domain: 0..255 in the reviewed short-enum ABI; 0..4294967295 in the reviewed normal-enum ABI. Supported combinations require clean compiler-compatible-type evidence.",
+        "valid_min": 0,
+        "valid_max": 5,
+        "units": "enum code",
+        "resolution": "exact integer code; no renumbering",
+        "native_enum_abis": [
+          {
+            "compatible_kind": "UCHAR",
+            "bits": 8,
+            "min": 0,
+            "max": 255,
+            "enum_option": "-fshort-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          },
+          {
+            "compatible_kind": "UINT",
+            "bits": 32,
+            "min": 0,
+            "max": 4294967295,
+            "enum_option": "-fno-short-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          }
+        ],
+        "other_producer_domain": "motion_unpack_report decodes all three-bit fault values 0..7; motion_fault_bit has its separately documented valid-code precondition."
+      }
+    },
+    {
+      "kind": "FIELD_DECL",
+      "type_category": "ENUM",
+      "status": "boundary",
+      "ownership": "Caller-owned public copy; motion producers copy under the existing motion mutex, navigation producers run in the sampling owner. This rule does not classify any retained aggregate instance.",
+      "synchronization": "Preserve producer locking and caller copy ownership; no shared storage unit is added.",
+      "constraints": [
+        "Retain the complete compatible integer domain for each observed ABI, including unnamed and invalid enum values already held by the public object.",
+        "Keep public type layout, addressable members, const input contents, staged validation and failure-output mutation unchanged.",
+        "Named producer-valid values are not a universal bound on externally mutable storage; retained private adapter obligations remain separately open."
+      ],
+      "id": "motion-public-outcome-native-domain",
+      "path": "app_program/subsystem2/motion.h",
+      "owner": "motion_report_t",
+      "name": "outcome",
+      "reason": "The report API exposes an addressable native enum object. motion_pack_report masks to two wire bits without rejecting or modifying the const input; packing is a separate boundary and does not narrow the object holding the input. The private report queue is already packed and has its own allocation/domain evidence.",
+      "evidence": [
+        "app_program/subsystem2/motion.h:70-83",
+        "app_program/subsystem2/motion_pack.h:118-132",
+        "app_program/subsystem2/motion_pack.c:299-314",
+        "app_program/subsystem2/motion_pack.c:323-333"
+      ],
+      "domain": {
+        "description": "Full unsigned native enum object domain: 0..255 in the reviewed short-enum ABI; 0..4294967295 in the reviewed normal-enum ABI. Supported combinations require clean compiler-compatible-type evidence.",
+        "valid_min": 0,
+        "valid_max": 3,
+        "units": "enum code",
+        "resolution": "exact integer code; no renumbering",
+        "native_enum_abis": [
+          {
+            "compatible_kind": "UCHAR",
+            "bits": 8,
+            "min": 0,
+            "max": 255,
+            "enum_option": "-fshort-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          },
+          {
+            "compatible_kind": "UINT",
+            "bits": 32,
+            "min": 0,
+            "max": 4294967295,
+            "enum_option": "-fno-short-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "FIELD_DECL",
+      "type_category": "ENUM",
+      "status": "boundary",
+      "ownership": "Caller-owned public copy; motion producers copy under the existing motion mutex, navigation producers run in the sampling owner. This rule does not classify any retained aggregate instance.",
+      "synchronization": "Preserve producer locking and caller copy ownership; no shared storage unit is added.",
+      "constraints": [
+        "Retain the complete compatible integer domain for each observed ABI, including unnamed and invalid enum values already held by the public object.",
+        "Keep public type layout, addressable members, const input contents, staged validation and failure-output mutation unchanged.",
+        "Named producer-valid values are not a universal bound on externally mutable storage; retained private adapter obligations remain separately open."
+      ],
+      "id": "navigation-public-action-native-domain",
+      "path": "app_program/subsystem3/line_navigation.h",
+      "owner": "s3_navigation_output_t",
+      "name": "action",
+      "reason": "s3_navigation_pack validates the existing wide public input before publishing its local packet. S3_NAV_ACTION_COUNT=5 is explicitly rejected; an input 8 narrowed to three bits would alias NONE and be accepted. Preserve all native invalid codes and unchanged-on-failure output; the previously packed s3_navigation_t members are separate producer-domain records; this rule does not approve narrowing any other exposed member.",
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:16-37",
+        "app_program/subsystem3/line_navigation.h:102-123",
+        "app_program/subsystem3/navigation_codec.c:299",
+        "app_program/subsystem3/navigation_codec.c:291-316"
+      ],
+      "domain": {
+        "description": "Full unsigned native enum object domain: 0..255 in the reviewed short-enum ABI; 0..4294967295 in the reviewed normal-enum ABI. Supported combinations require clean compiler-compatible-type evidence.",
+        "valid_min": 0,
+        "valid_max": 4,
+        "units": "enum code",
+        "resolution": "exact integer code; no renumbering",
+        "native_enum_abis": [
+          {
+            "compatible_kind": "UCHAR",
+            "bits": 8,
+            "min": 0,
+            "max": 255,
+            "enum_option": "-fshort-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          },
+          {
+            "compatible_kind": "UINT",
+            "bits": 32,
+            "min": 0,
+            "max": 4294967295,
+            "enum_option": "-fno-short-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "FIELD_DECL",
+      "type_category": "ENUM",
+      "status": "boundary",
+      "ownership": "Caller-owned public copy; motion producers copy under the existing motion mutex, navigation producers run in the sampling owner. This rule does not classify any retained aggregate instance.",
+      "synchronization": "Preserve producer locking and caller copy ownership; no shared storage unit is added.",
+      "constraints": [
+        "Retain the complete compatible integer domain for each observed ABI, including unnamed and invalid enum values already held by the public object.",
+        "Keep public type layout, addressable members, const input contents, staged validation and failure-output mutation unchanged.",
+        "Named producer-valid values are not a universal bound on externally mutable storage; retained private adapter obligations remain separately open."
+      ],
+      "id": "navigation-public-lifecycle-native-domain",
+      "path": "app_program/subsystem3/line_navigation.h",
+      "owner": "s3_navigation_output_t",
+      "name": "lifecycle",
+      "reason": "s3_navigation_pack validates the existing wide public input before publishing its local packet. An input 4 narrowed to two bits would alias INACTIVE and be accepted. Preserve all native invalid codes and unchanged-on-failure output; the previously packed s3_navigation_t members are separate producer-domain records; this rule does not approve narrowing any other exposed member.",
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:16-37",
+        "app_program/subsystem3/line_navigation.h:102-123",
+        "app_program/subsystem3/navigation_codec.c:302",
+        "app_program/subsystem3/navigation_codec.c:291-316"
+      ],
+      "domain": {
+        "description": "Full unsigned native enum object domain: 0..255 in the reviewed short-enum ABI; 0..4294967295 in the reviewed normal-enum ABI. Supported combinations require clean compiler-compatible-type evidence.",
+        "valid_min": 0,
+        "valid_max": 2,
+        "units": "enum code",
+        "resolution": "exact integer code; no renumbering",
+        "native_enum_abis": [
+          {
+            "compatible_kind": "UCHAR",
+            "bits": 8,
+            "min": 0,
+            "max": 255,
+            "enum_option": "-fshort-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          },
+          {
+            "compatible_kind": "UINT",
+            "bits": 32,
+            "min": 0,
+            "max": 4294967295,
+            "enum_option": "-fno-short-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "FIELD_DECL",
+      "type_category": "ENUM",
+      "status": "boundary",
+      "ownership": "Caller-owned public copy; motion producers copy under the existing motion mutex, navigation producers run in the sampling owner. This rule does not classify any retained aggregate instance.",
+      "synchronization": "Preserve producer locking and caller copy ownership; no shared storage unit is added.",
+      "constraints": [
+        "Retain the complete compatible integer domain for each observed ABI, including unnamed and invalid enum values already held by the public object.",
+        "Keep public type layout, addressable members, const input contents, staged validation and failure-output mutation unchanged.",
+        "Named producer-valid values are not a universal bound on externally mutable storage; retained private adapter obligations remain separately open."
+      ],
+      "id": "navigation-public-barcode_status-native-domain",
+      "path": "app_program/subsystem3/line_navigation.h",
+      "owner": "s3_navigation_output_t",
+      "name": "barcode_status",
+      "reason": "s3_navigation_pack validates the existing wide public input before publishing its local packet. An input 8 narrowed to three bits would alias NONE and be accepted. Preserve all native invalid codes and unchanged-on-failure output; the previously packed s3_navigation_t members are separate producer-domain records; this rule does not approve narrowing any other exposed member.",
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:16-37",
+        "app_program/subsystem3/line_navigation.h:102-123",
+        "app_program/subsystem3/navigation_codec.c:298",
+        "app_program/subsystem3/navigation_codec.c:291-316"
+      ],
+      "domain": {
+        "description": "Full unsigned native enum object domain: 0..255 in the reviewed short-enum ABI; 0..4294967295 in the reviewed normal-enum ABI. Supported combinations require clean compiler-compatible-type evidence.",
+        "valid_min": 0,
+        "valid_max": 4,
+        "units": "enum code",
+        "resolution": "exact integer code; no renumbering",
+        "native_enum_abis": [
+          {
+            "compatible_kind": "UCHAR",
+            "bits": 8,
+            "min": 0,
+            "max": 255,
+            "enum_option": "-fshort-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          },
+          {
+            "compatible_kind": "UINT",
+            "bits": 32,
+            "min": 0,
+            "max": 4294967295,
+            "enum_option": "-fno-short-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "FIELD_DECL",
+      "type_category": "ENUM",
+      "status": "boundary",
+      "ownership": "Caller-owned public copy; motion producers copy under the existing motion mutex, navigation producers run in the sampling owner. This rule does not classify any retained aggregate instance.",
+      "synchronization": "Preserve producer locking and caller copy ownership; no shared storage unit is added.",
+      "constraints": [
+        "Retain the complete compatible integer domain for each observed ABI, including unnamed and invalid enum values already held by the public object.",
+        "Keep public type layout, addressable members, const input contents, staged validation and failure-output mutation unchanged.",
+        "Named producer-valid values are not a universal bound on externally mutable storage; retained private adapter obligations remain separately open."
+      ],
+      "id": "navigation-public-surface-native-domain",
+      "path": "app_program/subsystem3/line_navigation.h",
+      "owner": "s3_processed_sensor_t",
+      "name": "surface",
+      "reason": "s3_navigation_pack rejects surface values above BLACK before writing the destination packet. A public input 4 narrowed to two bits would become UNKNOWN and be accepted. The public processed copy retains every native enum value; retained ir_reflectance_t state remains a separately reviewed producer domain.",
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:95-100",
+        "app_program/subsystem3/ir_reflectance.h:12-17",
+        "app_program/subsystem3/navigation_codec.c:308-314"
+      ],
+      "domain": {
+        "description": "Full unsigned native enum object domain: 0..255 in the reviewed short-enum ABI; 0..4294967295 in the reviewed normal-enum ABI. Supported combinations require clean compiler-compatible-type evidence.",
+        "valid_min": 0,
+        "valid_max": 2,
+        "units": "enum code",
+        "resolution": "exact integer code; no renumbering",
+        "native_enum_abis": [
+          {
+            "compatible_kind": "UCHAR",
+            "bits": 8,
+            "min": 0,
+            "max": 255,
+            "enum_option": "-fshort-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          },
+          {
+            "compatible_kind": "UINT",
+            "bits": 32,
+            "min": 0,
+            "max": 4294967295,
+            "enum_option": "-fno-short-enums",
+            "compiler_targets": [
+              "arm-none-eabi",
+              "x86_64-w64-windows-gnu",
+              "x86_64-linux-gnu",
+              "x86_64-unknown-linux-gnu"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "test-fixture-storage",
       "status": "test",
       "domain": {

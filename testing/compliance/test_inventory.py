@@ -110,6 +110,122 @@ class DiscoveryTests(unittest.TestCase):
         row = {"stored_bits": 3, "method": "libclang-ast", "profile_width_variants": [3, 32]}
         self.assertEqual(inventory.classify(row, {"rules": [rule]})["status"], "unresolved")
 
+    def enum_boundary_row(self):
+        return {"path": "app_program/subsystem2/motion.h", "owner": "motion_status_t",
+                "name": "state", "kind": "FIELD_DECL", "type_category": "ENUM",
+                "stored_bits": 8, "profile_width_variants": [8, 32], "method": "libclang-ast",
+                "enum_abi_observations": [
+                    {"compiler_target": "arm-none-eabi", "enum_option": "-fshort-enums",
+                     "compatible_kind": "UCHAR", "compatible_bits": 8, "stored_bits": 8,
+                     "method": "libclang-ast"},
+                    {"compiler_target": "x86_64-w64-windows-gnu", "enum_option": "-fno-short-enums",
+                     "compatible_kind": "UINT", "compatible_bits": 32, "stored_bits": 32,
+                     "method": "libclang-ast"}]}
+
+    def test_named_public_enum_boundary_records_complete_domains_per_abi(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        result = inventory.classify(self.enum_boundary_row(), policies)
+        self.assertEqual(result["status"], "boundary")
+        self.assertEqual(result["required_bits"], 8)
+        self.assertEqual([(v["min"], v["max"], v["required_bits"])
+                          for v in result["required_bits_by_abi"]], [(0, 255, 8), (0, 4294967295, 32)])
+        self.assertEqual(result["domain"]["valid_max"], 5)
+        self.assertIn("6/7", result["reason"])
+
+    def test_public_enum_boundary_rejects_missing_unapproved_or_narrowed_evidence(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        cases = [dict(self.enum_boundary_row(), enum_abi_observations=[]),
+                 dict(self.enum_boundary_row(), method="libclang-recovery"),
+                 dict(self.enum_boundary_row(), profile_width_variants=[8, 16, 32])]
+        for change in [{"compatible_kind": "SCHAR"}, {"compatible_bits": 16},
+                       {"compatible_bits": 64}, {"stored_bits": 3},
+                       {"compiler_target": "unreviewed-abi"},
+                       {"enum_option": "compiler-default-unqueried"},
+                       {"method": "libclang-recovery"}]:
+            row = self.enum_boundary_row()
+            row["enum_abi_observations"][0].update(change)
+            cases.append(row)
+        for row in cases:
+            with self.subTest(row=row):
+                result = inventory.classify(row, policies)
+                self.assertEqual(result["status"], "unresolved")
+                self.assertIsNone(result["required_bits"])
+
+    def test_enum_boundary_needs_actual_full_integer_range_in_policy(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        rule = next(r for r in policies["rules"] if r["id"] == "motion-public-state-native-domain")
+        for mutation in ["missing", "producer-only"]:
+            changed = copy.deepcopy(rule)
+            abi = changed["domain"]["native_enum_abis"][0]
+            if mutation == "missing":
+                abi.pop("max")
+            else:
+                abi["max"] = 5
+            result = inventory.classify(self.enum_boundary_row(), {"rules": [changed]})
+            self.assertEqual(result["status"], "unresolved")
+
+    def test_public_enum_rule_does_not_waive_retained_object_or_private_field(self):
+        policies = inventory.read_json(HERE / "inventory_policies.json")
+        row = dict(self.enum_boundary_row(), path="app_program/subsystem2/ctrl_motion.c", owner="ctrl_t")
+        self.assertEqual(inventory.classify(row, policies)["status"], "unresolved")
+        row = dict(self.enum_boundary_row(), kind="VAR_DECL", owner="", name="retained")
+        self.assertEqual(inventory.classify(row, policies)["status"], "unresolved")
+
+    def test_gcc_default_enum_abi_is_queried_with_actual_target_options(self):
+        inventory_ast.gcc_short_enum_default.cache_clear()
+        with mock.patch.object(inventory_ast.subprocess, "run") as run:
+            run.return_value = mock.Mock(returncode=0, stdout="  -fshort-enums  [enabled]\n", stderr="")
+            flags = inventory_ast.compiler_default_abi_arguments("arm-none-eabi-gcc", [
+                "-mcpu=cortex-m0plus", "-mthumb", "-mfloat-abi=soft", "-DSECRET=not-forwarded", "-o", "out.o"])
+            self.assertEqual(flags, ["-fshort-enums"])
+            args = run.call_args.args[0]
+            self.assertEqual(args[1:], ["-mcpu=cortex-m0plus", "-mthumb", "-mfloat-abi=soft", "-Q", "--help=c"])
+        inventory_ast.gcc_short_enum_default.cache_clear()
+
+    def test_gcc_explicit_enum_abi_overrides_are_preserved_and_not_queried(self):
+        with mock.patch.object(inventory_ast.subprocess, "run") as run:
+            for flags in [["-fno-short-enums"], ["-fshort-enums"],
+                          ["-fno-short-enums", "-fshort-enums"]]:
+                self.assertEqual(inventory_ast.compiler_default_abi_arguments("arm-none-eabi-gcc", flags), [])
+            self.assertEqual(inventory_ast.compiler_default_abi_arguments("clang", ["--target=arm-none-eabi"]), [])
+            run.assert_not_called()
+
+    def test_gcc_unknown_default_fails_instead_of_assuming_arm_short_enums(self):
+        inventory_ast.gcc_short_enum_default.cache_clear()
+        with mock.patch.object(inventory_ast.subprocess, "run") as run:
+            for result in [mock.Mock(returncode=1, stdout="", stderr="unsupported"),
+                           mock.Mock(returncode=0, stdout="", stderr="")]:
+                run.return_value = result
+                with self.assertRaisesRegex(ValueError, "Cannot establish GCC enum ABI"):
+                    inventory_ast.compiler_default_abi_arguments("arm-none-eabi-gcc", [])
+            run.return_value = mock.Mock(returncode=0, stdout="  -fshort-enums [disabled]\n", stderr="")
+            self.assertEqual(inventory_ast.compiler_default_abi_arguments("arm-none-eabi-gcc", []), ["-fno-short-enums"])
+        inventory_ast.gcc_short_enum_default.cache_clear()
+
+    def test_compiler_observes_enum_compatible_type_and_last_explicit_option(self):
+        self.require_libclang()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            file = root / "enum.c"
+            file.write_text("enum state { IDLE, ACTIVE }; struct record { enum state state; };\n")
+            for flags, kind, bits in [(["-fshort-enums"], "UCHAR", 8),
+                                     (["-fshort-enums", "-fno-short-enums"], "UINT", 32)]:
+                result = inventory_ast.parse_one((file, ["--target=arm-none-eabi", "-std=c99", *flags], "configured"),
+                                                 root, {file}, {})
+                self.assertEqual(result["errors"], [])
+                row = next(r for r in result["declarations"] if r["kind"] == "FIELD_DECL")
+                observed = row["enum_abi_observations"][0]
+                self.assertEqual((observed["compatible_kind"], observed["compatible_bits"], observed["stored_bits"]),
+                                 (kind, bits, bits))
+                self.assertEqual(observed["enum_option"], flags[-1])
+
+    def test_separated_macro_operands_are_not_removed_as_source_paths(self):
+        args = inventory_ast.clean_arguments(
+            ["gcc", "-D", "TEXT=macro.c", "-U", "APP_TEST", "-DAPP_TEST=0", "actual.c"], HERE)
+        self.assertEqual(args, ["-D", "TEXT=macro.c", "-U", "APP_TEST", "-DAPP_TEST=0"])
+        self.assertEqual(inventory_ast.profile_arguments(args, {"APP_TEST": 1}),
+                         ["-D", "TEXT=macro.c", "-DAPP_TEST=1"])
+
     def test_automatic_policy_does_not_waive_static_local_or_recovery_ast(self):
         policies = inventory.read_json(HERE / "inventory_policies.json")
         row = {"path": "app_program/example.c", "owner": "helper#L3", "name": "value",

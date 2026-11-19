@@ -314,6 +314,51 @@ def minimum_bits(lo, hi):
     return max(1, (hi - lo).bit_length())
 
 
+def reviewed_enum_abi(row, approved):
+    """Validate a named public enum boundary against clean, explicit ABIs.
+
+    A width variant is not itself a range proof. Require an approved target,
+    compatible integer kind, compiler option and width for every observation;
+    each combination must have a clean AST, including any recovery sightings.
+    """
+    observations = row.get("enum_abi_observations", [])
+    if row.get("type_category") != "ENUM" or row.get("method") != "libclang-ast" or not observations:
+        return None
+    observed_keys, clean_keys, widths, domains = set(), set(), set(), {}
+    for item in observations:
+        candidates = [abi for abi in approved
+                      if item.get("compatible_kind") == abi["compatible_kind"]
+                      and item.get("compatible_bits") == abi["bits"]
+                      and item.get("stored_bits") == abi["bits"]
+                      and item.get("enum_option") == abi["enum_option"]
+                      and item.get("compiler_target") in abi["compiler_targets"]]
+        if len(candidates) != 1 or item.get("method") not in {"libclang-ast", "libclang-recovery"}:
+            return None
+        abi = candidates[0]
+        # The policy must independently state the complete compatible integer
+        # domain, not merely assert that a convenient enum width is supported.
+        bits, kind = abi["bits"], abi["compatible_kind"]
+        unsigned = kind in {"UCHAR", "USHORT", "UINT", "ULONG", "ULONGLONG"}
+        signed = kind in {"SCHAR", "SHORT", "INT", "LONG", "LONGLONG"}
+        if not (unsigned or signed) or bits < 1:
+            return None
+        expected = (0, (1 << bits) - 1) if unsigned else (-(1 << (bits - 1)), (1 << (bits - 1)) - 1)
+        if (abi.get("min"), abi.get("max")) != expected:
+            return None
+        key = (item["compiler_target"], kind, bits, item["enum_option"])
+        observed_keys.add(key)
+        if item["method"] == "libclang-ast":
+            clean_keys.add(key)
+        widths.add(bits)
+        domains[key] = {"compiler_target": key[0], "compatible_kind": kind,
+                        "enum_option": key[3], "min": expected[0], "max": expected[1],
+                        "required_bits": bits, "stored_bits": bits}
+    reported_widths = set(row.get("profile_width_variants", [])) | {row.get("stored_bits")}
+    if observed_keys != clean_keys or widths != reported_widths:
+        return None
+    return [domains[key] for key in sorted(domains)]
+
+
 def classify(row, policies):
     """Apply reviewed domain rules; do not infer bounded domains from types."""
     for rule in policies.get("rules", []):
@@ -335,6 +380,15 @@ def classify(row, policies):
                 result["required_bits"] = minimum_bits(0, (domain["max"] - domain["min"]) // step)
             else:
                 result.setdefault("required_bits", None)
+            if "native_enum_abis" in domain:
+                observed = reviewed_enum_abi(row, domain["native_enum_abis"])
+                if observed is None:
+                    result["status"] = "unresolved"
+                    result["required_bits"] = None
+                    result["reason"] += " Missing or unsupported clean enum ABI/domain evidence; no boundary closure."
+                else:
+                    result["required_bits"] = row["stored_bits"]
+                    result["required_bits_by_abi"] = observed
             if domain.get("minimum_width_proved") is False:
                 result["safe_upper_bound_bits"] = result["required_bits"]
                 result["required_bits"] = None
@@ -569,6 +623,8 @@ def table_row(row):
         "units": domain.get("units", "unresolved"), "resolution": resolution,
         "required_encoding": domain.get("encoding", "retain existing numeric representation unless separately reviewed"),
         "required_bits": row.get("required_bits") if row.get("required_bits") is not None else "unresolved / preservation boundary",
+        "required_domains_and_bits_by_abi": (json.dumps(row["required_bits_by_abi"], sort_keys=True)
+                                             if row.get("required_bits_by_abi") else "not separately applicable / unresolved"),
         "safe_upper_bound_bits_if_minimum_unproved": row.get("safe_upper_bound_bits", "not separately applicable"),
         "stored_bits_per_scalar_or_bitfield": row.get("stored_bits") if row.get("stored_bits") is not None else "unresolved",
         "array_count": row.get("array_count") if row.get("array_count") is not None else "unresolved",
@@ -607,6 +663,7 @@ def render_retained(ledger):
              "Generated from the same source-bound ledger as [the inventory summary](CR1_FIELD_INVENTORY.md) and [all declaration rows](CR1_FIELDS.csv). Do not edit this table manually.", "",
              "Record members are listed independently of each instance's lifetime. Static-duration variables include extern declarations and read-only tables; duplicate declarations are not additional allocations. Required bits describe reviewed domains only. Declared-type allocation is not additive for bitfields, unions, arrays or repeated declarations; use target structure/map measurements for actual RAM.", "",
              "A preserved ABI or floating representation does not establish its synchronization. Unreviewed ranges, units and synchronization remain explicit. Direct address observations are positive evidence only; absence does not prove absence of aliases.", "",
+             "For reviewed public enum boundaries, the full compatible integer domain and required width are recorded for each clean, explicitly selected ABI. The single required/stored pair is the representative observation; the per-ABI detail preserves all supported widths. Named producer codes alone never establish the domain of caller-mutable storage.", "",
              f"{len(selected)} retained declaration/member rows.", "",
              "| Declaration | Range/domain; units; resolution | Required/stored bits; storage | Ownership and synchronization | Rationale/status |",
              "|---|---|---|---|---|"]
@@ -619,7 +676,9 @@ def render_retained(ledger):
                   f"{row['range_or_domain']}; units: {row['units']}; resolution: {row['resolution']}" +
                   (f"; initialized-only envelope: {row['initialized_producer_domain_only']}"
                    if row['initialized_producer_domain_only'] != "not separately established" else ""),
-                  f"{row['required_bits']} / {row['stored_bits_per_scalar_or_bitfield']}; {row['storage_duration']}",
+                  f"{row['required_bits']} / {row['stored_bits_per_scalar_or_bitfield']}; {row['storage_duration']}" +
+                  (f"; per-ABI domains/widths: {row['required_domains_and_bits_by_abi']}"
+                   if source.get("required_bits_by_abi") else ""),
                   f"{row['ownership']} Sync: {row['synchronization']}",
                   f"{row['rationale']} [{row['status']}; {row['policy']}]"]
         lines.append("| " + " | ".join(escape(value) for value in values) + " |")

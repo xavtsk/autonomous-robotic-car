@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "purpose": "Correct compiler observation ABI only; no production C/H or binary behavior changes.",
+  "source_checkpoint": "b66564e2621b73f819f050b2047fd37182231046",
+  "compiler_version": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623",
+  "compiler_default_query": {
+    "command": [
+      "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+      "-mcpu=cortex-m0plus",
+      "-mthumb",
+      "-Q",
+      "--help=c"
+    ],
+    "exit_code": 0,
+    "matched_output": [
+      "-fshort-enums               \t\t[enabled]"
+    ]
+  },
+  "compile_only_layout_probes": [
+    {
+      "name": "default",
+      "command": [
+        "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+        "-mcpu=cortex-m0plus",
+        "-mthumb",
+        "-std=c99",
+        "-O2",
+        "-IC:\\Code\\autonomous-robotic-car",
+        "-S",
+        "-x",
+        "c",
+        "-o",
+        "-",
+        "-"
+      ],
+      "stdin": "#include \"app_program/controller/s3_integration.h\"\nunsigned motion_state_bytes(void){ return sizeof(motion_state_t); }\nunsigned control_request_bytes(void){ return sizeof(s3_control_request_t); }\n",
+      "exit_code": 0,
+      "sizeof_bytes": {
+        "motion_state_bytes": 1,
+        "control_request_bytes": 28
+      },
+      "assembly_path": "build/compliance-inventory/enum-abi-proof/default.s",
+      "assembly_sha256": "94bd43a72276f042fe0117e3cfd397227f057cbd3be5c446d5d69fd3575c7eb3"
+    },
+    {
+      "name": "explicit-short",
+      "command": [
+        "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+        "-mcpu=cortex-m0plus",
+        "-mthumb",
+        "-std=c99",
+        "-O2",
+        "-IC:\\Code\\autonomous-robotic-car",
+        "-fshort-enums",
+        "-S",
+        "-x",
+        "c",
+        "-o",
+        "-",
+        "-"
+      ],
+      "stdin": "#include \"app_program/controller/s3_integration.h\"\nunsigned motion_state_bytes(void){ return sizeof(motion_state_t); }\nunsigned control_request_bytes(void){ return sizeof(s3_control_request_t); }\n",
+      "exit_code": 0,
+      "sizeof_bytes": {
+        "motion_state_bytes": 1,
+        "control_request_bytes": 28
+      },
+      "assembly_path": "build/compliance-inventory/enum-abi-proof/explicit-short.s",
+      "assembly_sha256": "94bd43a72276f042fe0117e3cfd397227f057cbd3be5c446d5d69fd3575c7eb3"
+    },
+    {
+      "name": "explicit-normal",
+      "command": [
+        "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+        "-mcpu=cortex-m0plus",
+        "-mthumb",
+        "-std=c99",
+        "-O2",
+        "-IC:\\Code\\autonomous-robotic-car",
+        "-fno-short-enums",
+        "-S",
+        "-x",
+        "c",
+        "-o",
+        "-",
+        "-"
+      ],
+      "stdin": "#include \"app_program/controller/s3_integration.h\"\nunsigned motion_state_bytes(void){ return sizeof(motion_state_t); }\nunsigned control_request_bytes(void){ return sizeof(s3_control_request_t); }\n",
+      "exit_code": 0,
+      "sizeof_bytes": {
+        "motion_state_bytes": 4,
+        "control_request_bytes": 112
+      },
+      "assembly_path": "build/compliance-inventory/enum-abi-proof/explicit-normal.s",
+      "assembly_sha256": "0dff09c1e8889ee602c7a309d54498664fb873f77119d43a5ed5e0aa133931e3"
+    }
+  ],
+  "libclang_enum_probes": [
+    {
+      "arguments": [
+        "-std=c99",
+        "--target=arm-none-eabi"
+      ],
+      "compatible_type": "unsigned int",
+      "compatible_kind": "UINT",
+      "enum_bytes": 4,
+      "diagnostics": []
+    },
+    {
+      "arguments": [
+        "-std=c99",
+        "--target=arm-none-eabi",
+        "-fshort-enums"
+      ],
+      "compatible_type": "unsigned char",
+      "compatible_kind": "UCHAR",
+      "enum_bytes": 1,
+      "diagnostics": []
+    },
+    {
+      "arguments": [
+        "-std=c99",
+        "--target=arm-none-eabi",
+        "-fno-short-enums"
+      ],
+      "compatible_type": "unsigned int",
+      "compatible_kind": "UINT",
+      "enum_bytes": 4,
+      "diagnostics": []
+    }
+  ],
+  "correction": "The supplied Arm GCC default is short enums. Bare Clang arm-none-eabi is not a faithful default and formerly overstated some enum/object widths. Propagate queried actual GCC defaults unless an original command explicitly selects its enum ABI. Existing actual GCC ELF/map/object and stack metrics are unaffected.",
+  "public_boundary_policy": "Exactly12 named motion/navigation enum fields retain each supported native compatible integer domain, not just named producer codes. Unknown ABI/type/width, missing range or recovery-only observations remain unresolved. Fifteen retained aggregate adapters remain separately open.",
+  "tests": {
+    "command": "CR1_REQUIRE_LIBCLANG=1 python -m unittest discover -s testing/compliance -p test_inventory.py -q",
+    "passed": 56,
+    "skipped": 0
+  },
+  "limits": [
+    "Assembly generation and Clang AST inspection only; no compiled program was executed.",
+    "Full compiler collection still includes explicitly partial/historical contexts; this correction does not claim official-profile completeness."
+  ]
+}

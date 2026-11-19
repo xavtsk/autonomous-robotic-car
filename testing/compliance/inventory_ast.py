@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 import json
 import os
 from pathlib import Path
@@ -51,6 +52,10 @@ def clean_arguments(arguments, directory):
             continue
         if arg in {"-c", "-MMD", "-MD", "-MP"} or re.match(r"^-Wl,|^-l|^-L", arg):
             index += 1
+            continue
+        if arg in {"-D", "-U"} and index + 1 < len(arguments):
+            output += arguments[index:index + 2]
+            index += 2
             continue
         if arg in path_flags and index + 1 < len(arguments):
             value = Path(arguments[index + 1])
@@ -102,10 +107,50 @@ def compiler_include_arguments(compiler, resource_directory=None):
     return result
 
 
+@lru_cache(maxsize=None)
+def gcc_short_enum_default(compiler, abi_arguments):
+    """Ask the selected GCC about its ABI default; never execute compiled code."""
+    result = subprocess.run([compiler, *abi_arguments, "-Q", "--help=c"],
+                            capture_output=True, text=True, check=False)
+    matches = re.findall(r"^\s*-fshort-enums\s+\[(enabled|disabled)\]\s*$",
+                         result.stdout, re.MULTILINE)
+    if result.returncode or len(matches) != 1:
+        raise ValueError(f"Cannot establish GCC enum ABI for {compiler}: "
+                         f"exit {result.returncode}; {result.stderr.strip()}")
+    return "-fshort-enums" if matches[0] == "enabled" else "-fno-short-enums"
+
+
+def compiler_default_abi_arguments(compiler, arguments):
+    """Make an actual GCC enum default explicit for Clang's ABI observations.
+
+    Clang's arm-none-eabi default differs from the supplied Arm GCC. An
+    explicit source command option always wins. Compiler names alone never
+    imply a short-enum ABI: query that executable and its target ABI options.
+    """
+    if any(arg in {"-fshort-enums", "-fno-short-enums"} for arg in arguments):
+        return []
+    executable = str(Path(shutil.which(compiler) or compiler))
+    if not re.fullmatch(r"(?:.*-)?(?:gcc|cc)(?:-\d+(?:\.\d+)*)?(?:\.exe)?",
+                        Path(executable).name):
+        return []
+    abi = tuple(arg for arg in arguments if arg in {"-mthumb", "-marm", "-m32", "-m64"}
+                or arg.startswith(("-mcpu=", "-march=", "-mabi=", "-mfloat-abi=", "-mfpu=")))
+    return [gcc_short_enum_default(executable, abi)]
+
+
 def profile_arguments(arguments, overrides):
     changed = set(overrides)
-    result = [arg for arg in arguments
-              if not (arg.startswith(("-D", "-U")) and arg[2:].split("=")[0] in changed)]
+    result, index = [], 0
+    while index < len(arguments):
+        arg = arguments[index]
+        if arg in {"-D", "-U"} and index + 1 < len(arguments):
+            if arguments[index + 1].split("=")[0] not in changed:
+                result += arguments[index:index + 2]
+            index += 2
+            continue
+        if not (arg.startswith(("-D", "-U")) and arg[2:].split("=")[0] in changed):
+            result.append(arg)
+        index += 1
     result += [f"-D{name}={value}" for name, value in overrides.items()]
     return result
 
@@ -217,6 +262,18 @@ def parse_one(job, root, owned, lexical_index):
             row["enumerators"] = {child.spelling: child.enum_value
                                   for child in scalar.get_declaration().get_children()
                                   if child.kind.name == "ENUM_CONSTANT_DECL"}
+            compatible = scalar.get_declaration().enum_type.get_canonical()
+            compatible_size = compatible.get_size()
+            row["enum_abi_observations"] = [{
+                "compiler_target": target,
+                "enum_option": next((arg for arg in reversed(arguments)
+                                     if arg in {"-fshort-enums", "-fno-short-enums"}), "compiler-default-unqueried"),
+                "compatible_type": compatible.spelling,
+                "compatible_kind": compatible.kind.name,
+                "compatible_bits": compatible_size * 8 if compatible_size >= 0 else None,
+                "stored_bits": row["stored_bits"],
+                "method": row["method"],
+                "source": source.relative_to(root).as_posix(), "profile": profile}]
         declarations.append(row)
     return {"source": source.relative_to(root).as_posix(), "profile": profile,
             "arguments": arguments, "compiler_target": target,
@@ -249,7 +306,8 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
                 arguments = shlex.split(arguments)
             if not arguments:
                 continue
-            clean = clean_arguments(arguments, directory) + compiler_include_arguments(arguments[0])
+            clean = (clean_arguments(arguments, directory) + compiler_include_arguments(arguments[0])
+                     + compiler_default_abi_arguments(arguments[0], arguments))
             if common is None:
                 common = clean
             sources = [entry["file"]] if "file" in entry else [arg for arg in arguments if arg.endswith(".c")]
@@ -301,12 +359,16 @@ def collect(root, databases, profiles, jobs_count=4, limit_paths=None):
                     merged_targets = sorted(set(saved.get("compiler_targets", [saved.get("compiler_target")]) + [row.get("compiler_target")]))
                     widths = sorted(set(saved.get("profile_width_variants", []) +
                         [v for v in (saved.get("stored_bits"), row.get("stored_bits")) if v is not None]))
+                    enum_observations = {json.dumps(item, sort_keys=True): item
+                                         for item in saved.get("enum_abi_observations", []) + row.get("enum_abi_observations", [])}
                     if saved["method"] == "libclang-recovery" and row["method"] == "libclang-ast":
                         saved.update({k: v for k, v in row.items() if k != "profiles"})
                     saved["profiles"] = merged_profiles
                     saved["compiler_targets"] = merged_targets
                     saved["address_evidence"] = merged_addresses
                     saved["address_taken"] = "observed-direct" if merged_addresses else "not-observed-in-recorded-TUs"
+                    if enum_observations:
+                        saved["enum_abi_observations"] = [enum_observations[key] for key in sorted(enum_observations)]
                     if len(widths) > 1:
                         saved["profile_width_variants"] = widths
             if index % 50 == 0:
