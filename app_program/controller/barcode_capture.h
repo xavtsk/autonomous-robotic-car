@@ -20,7 +20,10 @@
 #include "run_timing.h"
 #include "../subsystem3/barcode_decoder.h"
 
-#define BCAP_POOL (2400U)       /* samples, ~24 s at 100 Hz */
+#define BCAP_POOL (4000U)       /* ~20 s at 200 Hz; fits the 12-bit wire count */
+#if BCAP_POOL > 4095U
+#error BCAP_POOL must fit the binary capture count and cursor
+#endif
 #define BCAP_MAX_EPISODES (12U)
 #define BCAP_PRE (S3_REC_PRE_US / S3_SAMPLE_PERIOD_US) /* retain the decoder's history */
 #define BCAP_END_QUIET (400U / S3_SAMPLE_PERIOD_MS) /* keep 400 ms of white */
@@ -42,14 +45,14 @@ typedef struct
 {
     uint16_t first, count;  /* slice of the pool */
     uint32_t start_ms;      /* ms since the run started */
-    double origin_m;        /* odometry at the first stored sample */
+    int64_t origin_qmm;     /* first stored odometry, in 1/256 mm units */
 } bcap_episode_t;
 
 typedef struct
 {
     bcap_sample_t pool[BCAP_POOL];
     bcap_sample_t pre[BCAP_PRE];
-    double pre_m[BCAP_PRE];
+    int64_t pre_qmm[BCAP_PRE]; /* quantized once on arrival, not during trigger copy */
     bcap_episode_t episode[BCAP_MAX_EPISODES];
     uint32_t run_start_us, last_us;
     uint16_t used, pre_head, pre_count, quiet;
@@ -69,7 +72,7 @@ typedef struct
     uint8_t status;      /* s3_barcode_status_t */
     char letter;         /* valid when status == decoded */
     bool collecting, rearming;
-    double centre_m;     /* odometry; NaN-free, 0 when unavailable */
+    double centre_m;     /* odometry; non-finite values yield unavailable distance */
 } bcap_input_t;
 
 void bcap_begin_run(bcap_t *c, uint32_t now_us);
@@ -81,7 +84,7 @@ void bcap_end_run(bcap_t *c);
 #define BCAP_PER_LINE (6U)
 typedef struct {
     unsigned episode : 4; /* 0..12 */
-    unsigned sample : 12; /* 0..2400 */
+    unsigned sample : 12; /* 0..4000, including the full-buffer state */
     unsigned header_done : 1, summary_done : 1, end_done : 1;
 } bcap_cursor_t;
 bool bcap_format_next(const bcap_t *c, bcap_cursor_t *cur, char *out, unsigned int size);

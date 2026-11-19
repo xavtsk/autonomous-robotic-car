@@ -5,6 +5,7 @@
 #include "../integration/runtime_test.c"
 #undef main
 #include "../../app_program/subsystem1/subsystem1.h"
+#define LIVE_CYCLES (200U / S3_SAMPLE_PERIOD_MS)
 
 static terrain_result_t imu;
 static bool readable=true, reset_pending, reject_begin, event_pending, event_lost;
@@ -55,7 +56,7 @@ ER buddy1_invalidate(UB topic)
 { assert(topic==BUDDY1_TOPIC_HUMP); invalidations++; return E_OK; }
 static void fresh(void)
 {
-    imu=(terrain_result_t){.timestamp_us=clock_value+10000U,
+    imu=(terrain_result_t){.timestamp_us=clock_value+S3_SAMPLE_PERIOD_US,
         .flags=TERRAIN_CALIBRATED|TERRAIN_TILT_VALID,.state=TERRAIN_STATIONARY};
 }
 static void step(void) { fresh(); cycle(); terrain_control_report(); }
@@ -78,7 +79,7 @@ static void begin(void)
 static void ack(void)
 {
     reset_pending=false; count=0; step();
-    for(unsigned i=0;i<5 && fb_command_id==0;i++) { step(); }
+    for(unsigned i=0;i<50000U/S3_SAMPLE_PERIOD_US && fb_command_id==0;i++) { step(); }
     assert(g_drive.state==S3_DRIVE_FOLLOW && !g_drive.external_hold && fb_command_id==1);
 }
 static void peak_sample(uint16_t humps,float height)
@@ -182,7 +183,7 @@ int main(void)
     }
     for(unsigned i=0;i<3;i++) { assert(s3_navigation_apply_calibration(&g_drive.navigation,(s3_sensor_id_t)i,&cal)); }
     raw=1400; for(unsigned i=0;i<12;i++) { step(); }
-    imu.flags=0; imu.timestamp_us=clock_value+10000; cycle();
+    imu.flags=0; imu.timestamp_us=clock_value+S3_SAMPLE_PERIOD_US; cycle();
     assert(!execute(&(s3_control_request_t){.kind=S3_CONTROL_START},clock_value));
     assert(begins==0 && freeze_calls==0);
     assert(s3_integration_submit(&(s3_control_request_t){.kind=S3_CONTROL_START}));
@@ -215,53 +216,64 @@ int main(void)
     assert(faults==(BUDDY1_FAULT_WIFI|BUDDY1_FAULT_STALL|BUDDY1_FAULT_NO_ECHO));
     /* One missed nonblocking read uses a still-fresh cached sample. */
     readable=false; cycle(); assert(g_drive.state==S3_DRIVE_FOLLOW);
-    for(unsigned i=0;i<16;i++) { cycle(); }
+    for(unsigned i=0;i<160000U/S3_SAMPLE_PERIOD_US;i++) { cycle(); }
     assert(g_drive.state==S3_DRIVE_FAULT);
     readable=true; reset_fault(); begin(); ack();
     queued=(terrain_result_t){0}; event_pending=event_lost=true; step();
     assert(g_drive.state==S3_DRIVE_FAULT); event_lost=false;
     reset_fault(); begin();
-    for(unsigned i=0;i<51;i++) { step(); }
+    for(unsigned i=0;i<510000U/S3_SAMPLE_PERIOD_US;i++) { step(); }
     assert(g_drive.state==S3_DRIVE_FAULT); reset_pending=false;
     reset_fault(); begin(); command(S3_CONTROL_STOP);
     assert(g_drive.state==S3_DRIVE_OFF && !g_drive.external_hold && fb_command_id==0);
     reset_pending=false; step(); begin(); ack();
     run_id++; step(); assert(g_drive.state==S3_DRIVE_FAULT);
-    /* Live tilt: one report per 20 control cycles, run or no run; stale or
+    /* Live tilt: one report per 200 ms, run or no run; stale or
      * invalid IMU data is "unavailable", never 0 degrees. */
     { unsigned before=tilts;
       fresh(); imu.pitch_deg=12.34f; imu.roll_deg=-5.06f; imu.state=TERRAIN_CLIMBING;
-      cycle(); for(unsigned i=0;i<40;++i) terrain_control_report();
+      cycle(); for(unsigned i=0;i<2U*LIVE_CYCLES;++i) terrain_control_report();
       assert(tilts==before+2U && tilt_pitch==123 && tilt_roll==-51 && tilt_state==TERRAIN_CLIMBING);
       imu.flags&=~TERRAIN_TILT_VALID; cycle();
-      for(unsigned i=0;i<20;++i) terrain_control_report();
+      for(unsigned i=0;i<LIVE_CYCLES;++i) terrain_control_report();
       assert(tilts==before+3U && tilt_pitch==9999 && tilt_state==TERRAIN_CLIMBING);
       fresh(); imu.pitch_deg=95.0f; cycle();
-      for(unsigned i=0;i<20;++i) terrain_control_report();
+      for(unsigned i=0;i<LIVE_CYCLES;++i) terrain_control_report();
       assert(tilts==before+4U && tilt_pitch==9999);               /* out of range */
       fresh(); imu.pitch_deg=-90.0f; imu.roll_deg=90.0f; cycle();
-      for(unsigned i=0;i<20;++i) terrain_control_report();
+      for(unsigned i=0;i<LIVE_CYCLES;++i) terrain_control_report();
       assert(tilt_pitch==-900 && tilt_roll==900);
-      readable=false; for(unsigned i=0;i<20;++i) { cycle(); } readable=true;
-      for(unsigned i=0;i<20;++i) terrain_control_report();
+      readable=false; for(unsigned i=0;i<LIVE_CYCLES;++i) { cycle(); } readable=true;
+      for(unsigned i=0;i<LIVE_CYCLES;++i) terrain_control_report();
       assert(tilt_pitch==9999 && tilt_state==TERRAIN_UNKNOWN && !last_terrain.on_hump); /* stale */
       /* Live climb height and this run's highest hump, with or without a run. */
       fresh(); imu.hump_active=true; imu.hump_height_m=0.0234f;
       imu.flags|=TERRAIN_PEAK_VALID; imu.peak_m=0.0411f; cycle();
-      for(unsigned i=0;i<20;++i) terrain_control_report();
+      for(unsigned i=0;i<LIVE_CYCLES;++i) terrain_control_report();
       assert(last_terrain.on_hump && last_terrain.climb_mm==23U && last_terrain.peak_valid && last_terrain.peak_mm==41U);
-      fresh(); cycle(); for(unsigned i=0;i<20;++i) terrain_control_report();
+      fresh(); cycle(); for(unsigned i=0;i<LIVE_CYCLES;++i) terrain_control_report();
       assert(!last_terrain.on_hump && last_terrain.climb_mm==0U && !last_terrain.peak_valid);
       fresh(); imu.flags|=TERRAIN_PEAK_VALID; imu.peak_m=0.7f; cycle();   /* out of range */
-      for(unsigned i=0;i<20;++i) terrain_control_report();
+      for(unsigned i=0;i<LIVE_CYCLES;++i) terrain_control_report();
       assert(!last_terrain.peak_valid && last_terrain.peak_mm==0U);
       /* A one-sample impact between reports is still reported. */
       queued=(terrain_result_t){.impact=true}; event_pending=true; fresh(); cycle();
-      fresh(); cycle(); for(unsigned i=0;i<20;++i) terrain_control_report();
+      fresh(); cycle(); for(unsigned i=0;i<LIVE_CYCLES;++i) terrain_control_report();
       assert(tilt_state==TERRAIN_IMPACT);
-      for(unsigned i=0;i<20;++i) terrain_control_report();
+      for(unsigned i=0;i<LIVE_CYCLES;++i) terrain_control_report();
       assert(tilt_state==TERRAIN_STATIONARY); }
-    puts("PASS: live terrain every 20 cycles: tilt valid/invalid/out-of-range/stale, state, climb height, run peak, latched impact");
+    /* Align to a report, then advance the actual sampling clock: faster
+     * ADC sampling must not double the live terrain traffic to 10 Hz. */
+    { unsigned before=tilts;
+      for(unsigned i=0;i<LIVE_CYCLES && tilts==before;++i) { step(); }
+      assert(tilts==before+1U);
+      uint32_t started=clock_value;
+      for(unsigned i=0;i<LIVE_CYCLES/2U;++i) { step(); }
+      assert(tilts==before+1U && clock_value-started==100000U);
+      for(unsigned i=0;i<LIVE_CYCLES-LIVE_CYCLES/2U-1U;++i) { step(); }
+      assert(tilts==before+1U);
+      step();assert(tilts==before+2U && clock_value-started==200000U); }
+    puts("PASS: live terrain every 200 ms: tilt valid/invalid/out-of-range/stale, state, climb height, run peak, latched impact");
     puts("PASS: hump reports retry repeated timeouts with latest count/height, stop retrying on acceptance, survive STOP and discard pending prior-run data on START reset");
     puts("PASS: pickup and overturn brake before further velocity commands and require safe IMU data, RESET and START");
     puts("PASS: IMU START/reset acknowledgement and timeout, STOP priority, stale data, lost/impact events, latched reset, cumulative humps and owned fault bit");

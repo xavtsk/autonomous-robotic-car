@@ -11,7 +11,10 @@ s3_barcode_config_t s3_barcode_defaults(void)
 {
     /* At 0.04 m/s a 19 mm wide element lasts 475 ms. A 2:1 symbol can
      * require ~11.4 s including trailing quiet; allow bounded extra time. */
-    return (s3_barcode_config_t){30000U,30000U,1000000U,15000000U,10U};
+    /* At 0.10 m/s the small F's measured narrow means are about 29..35 ms.
+     * Permit 25 ms modules, retaining character()'s independent requirement
+     * of at least three observed sample intervals per narrow mean. */
+    return (s3_barcode_config_t){30000U,25000U,1000000U,15000000U,10U};
 }
 static bool config_valid(const s3_barcode_config_t *config)
 {
@@ -760,11 +763,12 @@ static void work_path_begin(s3_barcode_record_t *r,bool faint)
     w->phase=faint ? RW_FAINT_WHITE : RW_PRIMARY;
     if (!faint) { work_next(r); }
 }
-static void work_begin(s3_barcode_record_t *r,bool provisional)
+static void work_begin(s3_barcode_record_t *r,bool provisional,bool early)
 {
     r->work=(s3_barcode_work_t){0};
     r->work.frozen_count=r->count;
     r->work.provisional=provisional;
+    r->work.early=early;
     work_path_begin(r,false);
     r->state=S3_REC_PROCESSING;
 }
@@ -1123,6 +1127,7 @@ s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
         }
         r->white_us=0U; r->frame_us=r->prefix_us; r->required_us=0U;
         s3_barcode_quiet_reset(&r->quiet);r->retry_blocked=false;r->quiet_tolerant=false;
+        r->early_tried=false;r->early_candidate=false;
         r->count=r->pre_count;
         for (unsigned int i=0U;i<r->pre_count;i++) {
             r->sample[i]=r->pre[((unsigned int)r->pre_head+i)%S3_REC_PRE_MAX];
@@ -1150,34 +1155,51 @@ s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
     const unsigned int quiet=s3_barcode_quiet_update(&r->quiet,
         (uint32_t)step*S3_REC_STEP_US,dark,r->paper,rec_white_band(r),rec_faint_eligible(r));
     r->white_us=r->quiet.strict_us;
-    if (quiet&S3_QUIET_BREAK) { r->retry_blocked=false; }
+    if (quiet&S3_QUIET_BREAK) { r->retry_blocked=false;r->early_tried=false; }
     if (r->state==S3_REC_PROCESSING) {
         if (!(quiet&S3_QUIET_LOW)) { r->work.strict_broken=true; }
         if (quiet&S3_QUIET_BREAK) {
-            /* A tentative quiet interval may have crossed faint real ink.
+            /* A tentative or early interval may be an internal white gap.
              * Keep those real samples for a later complete interpretation. */
-            if (r->work.provisional) { r->work=(s3_barcode_work_t){0};r->state=S3_REC_RECORDING; }
+            if (r->work.provisional || r->work.early) {
+                r->work=(s3_barcode_work_t){0};r->state=S3_REC_RECORDING;
+            }
             else { return rec_finish(r,S3_BARCODE_REJECTED); }
         }
     }
     if (r->state==S3_REC_QUIET && !(quiet&S3_QUIET_LOW)) {
-        if (!r->quiet_tolerant || (quiet&S3_QUIET_BREAK)) { return rec_finish(r,S3_BARCODE_REJECTED); }
+        if (!r->quiet_tolerant || (quiet&S3_QUIET_BREAK)) {
+            if (!r->early_candidate) { return rec_finish(r,S3_BARCODE_REJECTED); }
+            /* The early fit still lacked its full measured quiet margin.
+             * Continuing ink cancels it without discarding this recording. */
+            r->candidate=(s3_barcode_stored_result_t){0};
+            r->work=(s3_barcode_work_t){0};r->early_candidate=false;
+            r->required_us=0U;r->quiet_required_us=0U;r->quiet_tolerant=false;
+            r->state=S3_REC_RECORDING;
+        }
         return S3_BARCODE_NONE; /* never release during an unresolved pulse */
     }
     if (r->state==S3_REC_RECORDING) {
         const bool strict=r->quiet.strict_us>=config->max_run_us;
         const bool tentative=r->quiet.tolerant_us>=config->max_run_us;
-        if (!(quiet&S3_QUIET_LOW) || (!strict && (!tentative || r->retry_blocked))) { return S3_BARCODE_NONE; }
-        work_begin(r,!strict);
+        const uint32_t earliest=config->quiet_modules*config->min_narrow_us;
+        const bool early=!r->early_tried && r->quiet.strict_us>=earliest;
+        if (!(quiet&S3_QUIET_LOW)) { return S3_BARCODE_NONE; }
+        if (strict) { work_begin(r,false,false); }
+        else if (tentative && !r->retry_blocked) { work_begin(r,true,false); }
+        else if (early) {
+            /* One bounded early attempt per real-ink/quiet interval. Failed
+             * partial frames still get the original final max_run_us try. */
+            r->early_tried=true;work_begin(r,false,true);
+        } else { return S3_BARCODE_NONE; }
     }
     if (r->state==S3_REC_PROCESSING) {
         work_advance(r,config);
         if (r->work.phase!=RW_DONE) { return S3_BARCODE_NONE; }
-        if (r->work.ambiguous) { return rec_finish(r,S3_BARCODE_REJECTED); }
         const bool usable=r->work.good && (r->work.allow_noise ||
             (!r->work.provisional && !r->work.strict_broken));
-        if (!usable) {
-            if (r->work.provisional || r->work.strict_broken) {
+        if (r->work.ambiguous || !usable) {
+            if (r->work.early || r->work.provisional || r->work.strict_broken) {
                 r->retry_blocked=true;r->state=S3_REC_RECORDING;
                 return S3_BARCODE_NONE;
             }
@@ -1185,6 +1207,7 @@ s3_barcode_status_t s3_barcode_record_update(s3_barcode_record_t *r,
         }
         r->candidate=r->work.candidate;r->required_us=r->work.required_us;
         r->quiet_required_us=r->work.quiet_required_us;
+        r->early_candidate=r->work.early;
         r->quiet_tolerant=r->work.allow_noise;r->state=S3_REC_QUIET;
     }
     const uint32_t qualified=r->quiet_tolerant ? r->quiet.tolerant_us : r->quiet.strict_us;

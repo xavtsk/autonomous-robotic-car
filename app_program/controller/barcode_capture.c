@@ -1,6 +1,9 @@
 #include "barcode_capture.h"
+#include <math.h>
 
 #define BCAP_GAP_FLAG_US (30000U)
+#define BCAP_POSITION_FRAC_BITS 8U
+#define BCAP_POSITION_INVALID INT64_MIN
 
 static void put(char *out, unsigned int size, unsigned int *n, const char *s)
 {
@@ -48,14 +51,30 @@ static bcap_sample_t make_sample(bcap_t *c, const bcap_input_t *in)
     c->have_last = true;
     return s;
 }
-static uint16_t rel_mm(double origin, double now)
+static int64_t position_qmm(double metres)
 {
-    const double d = (now - origin) * 1000.0;
-    if (!(d > 0.0))
-    {
+    /* One soft-float conversion per arriving sample. In particular, copying
+     * the 300-sample history at a 200 Hz trigger must not repeat that work.
+     * Q8 millimetres retain sub-0.008 mm relative precision before the wire's
+     * existing whole-millimetre rounding, over practical absolute odometry.
+     * Clamp before the cast: 2^63 is exactly representable as a double, while
+     * INT64_MAX is not. Reserve INT64_MIN for unavailable/non-finite input. */
+    if (!isfinite(metres)) { return BCAP_POSITION_INVALID; }
+    const double units = metres * 256000.0;
+    if (units >= 0x1p63) { return INT64_MAX; }
+    if (units <= -0x1p63) { return INT64_MIN + 1; }
+    return (int64_t)units;
+}
+static uint16_t rel_mm(int64_t origin, int64_t now)
+{
+    if (origin == BCAP_POSITION_INVALID || now == BCAP_POSITION_INVALID || now <= origin)
         return 0U;
-    }
-    return (uint16_t)(d > 65535.0 ? 65535.0 : d + 0.5);
+    /* Unsigned subtraction avoids signed overflow for widely separated
+     * finite/clamped positions. Narrow only after the wire-limit check. */
+    const uint64_t delta = (uint64_t)now - (uint64_t)origin;
+    if (delta >= ((uint32_t)UINT16_MAX << BCAP_POSITION_FRAC_BITS))
+        return UINT16_MAX;
+    return (uint16_t)(((uint32_t)delta + 128U) >> BCAP_POSITION_FRAC_BITS);
 }
 static void close_episode(bcap_t *c)
 {
@@ -69,6 +88,7 @@ static void close_episode(bcap_t *c)
 void bcap_record(bcap_t *c, const bcap_input_t *in)
 {
     bcap_sample_t s = make_sample(c, in);
+    const int64_t position = position_qmm(in->centre_m);
     if (in->status == 1U)
     {
         c->decoded++;
@@ -94,24 +114,24 @@ void bcap_record(bcap_t *c, const bcap_input_t *in)
         else
         {
             bcap_episode_t *e = &c->episode[c->episodes];
-            unsigned int i;
+            unsigned int i, k;
             const unsigned int oldest =
                 (c->pre_head + BCAP_PRE - c->pre_count) % BCAP_PRE;
             e->first = c->used;
             e->count = 0U;
-            e->origin_m = (c->pre_count != 0U) ? c->pre_m[oldest] : in->centre_m;
+            e->origin_qmm = (c->pre_count != 0U) ? c->pre_qmm[oldest] : position;
             {
                 const uint32_t now_ms = (in->t_us - c->run_start_us) / 1000U;
                 const uint32_t back_ms = (uint32_t)c->pre_count * S3_SAMPLE_PERIOD_MS;
                 e->start_ms = now_ms > back_ms ? now_ms - back_ms : 0U;
             }
-            for (i = 0U; i < c->pre_count; i++)
+            for (i = 0U, k = oldest; i < c->pre_count; i++)
             {
-                const unsigned int k = (oldest + i) % BCAP_PRE;
                 bcap_sample_t p = c->pre[k];
-                p.mm = rel_mm(e->origin_m, c->pre_m[k]);
+                p.mm = rel_mm(e->origin_qmm, c->pre_qmm[k]);
                 c->pool[c->used++] = p;
                 e->count++;
+                if (++k == BCAP_PRE) { k = 0U; }
             }
             c->active = true;
             c->quiet = 0U;
@@ -122,7 +142,7 @@ void bcap_record(bcap_t *c, const bcap_input_t *in)
         bcap_episode_t *e = &c->episode[c->episodes];
         if (c->used < BCAP_POOL)
         {
-            s.mm = rel_mm(e->origin_m, in->centre_m);
+            s.mm = rel_mm(e->origin_qmm, position);
             c->pool[c->used++] = s;
             e->count++;
         }
@@ -136,7 +156,7 @@ void bcap_record(bcap_t *c, const bcap_input_t *in)
         return;
     }
     c->pre[c->pre_head] = s;
-    c->pre_m[c->pre_head] = in->centre_m;
+    c->pre_qmm[c->pre_head] = position;
     c->pre_head = (uint16_t)((c->pre_head + 1U) % BCAP_PRE);
     if (c->pre_count < BCAP_PRE) { c->pre_count++; }
 }

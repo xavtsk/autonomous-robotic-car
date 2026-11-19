@@ -1,4 +1,6 @@
 #include "../../app_program/controller/vehicle_controller.h"
+#include "../../app_program/controller/run_timing.h"
+#define LIVE_CYCLES (200U / S3_SAMPLE_PERIOD_MS)
 #include "../../app_program/subsystem1/subsystem1.h"
 #include "../../app_program/subsystem2/motion_pack.h"
 #include "../../app_program/subsystem5/s5_api.h"
@@ -48,10 +50,10 @@ ER buddy1_apply_barcode_map(const BUDDY1_BARCODE_MAP *map)
 }
 bool s3_navigation_set_mapping(s3_navigation_t *nav,const s3_nav_action_t map[26])
 {memcpy(nav->config.map,map,sizeof(nav->config.map));return true;}
-/* One controller observation per 10 ms sample, as on the car: motion
+/* One controller observation per configured sample, as on the car: motion
  * telemetry is paced by the sample clock (200 ms moving, 1 s stopped). */
 static void cycles(unsigned count)
-{for(unsigned i=0;i<count;i++){runtime.navigation.timestamp_us+=10000U;vehicle_controller_observe(&runtime);}}
+{for(unsigned i=0;i<count;i++){runtime.navigation.timestamp_us+=S3_SAMPLE_PERIOD_US;vehicle_controller_observe(&runtime);}}
 int baseline(void)
 {
     assert(vehicle_controller_init()==E_OK&&vehicle_controller_start()==E_OK);
@@ -60,7 +62,7 @@ int baseline(void)
     queue_ok=false;assert(vehicle_controller_begin()==E_OBJ);queue_ok=true;
     runtime.state=S3_DRIVE_FOLLOW;status.b_valid=true;
     status.speed_left_mps=0.12f;status.speed_right_mps=-0.12f;
-    cycles(20);assert(reports==1&&left_report==120&&right_report==-120);
+    cycles(LIVE_CYCLES);assert(reports==1&&left_report==120&&right_report==-120);
     assert(last_state==BUDDY1_STATE_LINE_FOLLOWING&&mask==BUDDY1_FAULT_WIFI);
     status.fault_bits=MOTION_FAULT_BIT(MOTION_FAULT_STALL)|MOTION_FAULT_BIT(MOTION_FAULT_ENCODER);
     runtime.navigation.fault_mask=2;cycles(1);
@@ -74,9 +76,9 @@ int baseline(void)
     runtime.navigation.events=0;runtime.state=S3_DRIVE_MANOEUVRE;cycles(1);
     assert(last_state==BUDDY1_STATE_TURNING_LEFT);
     runtime.state=S3_DRIVE_FAULT;cycles(1);assert(last_state==BUDDY1_STATE_ERROR);
-    status.speed_left_mps=0.884f;before=invalidations;{unsigned sent=reports;cycles(20);
+    status.speed_left_mps=0.884f;before=invalidations;{unsigned sent=reports;cycles(LIVE_CYCLES);
     assert(invalidations>before&&reports==sent);} /* Never clip into a valid 510. */
-    status.b_valid=false;before=invalidations;cycles(20);assert(invalidations>before);
+    status.b_valid=false;before=invalidations;cycles(LIVE_CYCLES);assert(invalidations>before);
     runtime.navigation.fault_mask=1;mirror_result=E_OBJ;before=updates;cycles(2);assert(updates==before+2);
     mirror_result=E_TMOUT;cycles(1);before=updates;cycles(1);assert(updates==before);
     s3_nav_action_t map[26]={S3_NAV_STRAIGHT,S3_NAV_LEFT,S3_NAV_RIGHT,S3_NAV_UTURN};
@@ -136,17 +138,17 @@ int main(void)
     { unsigned before=obstacle_invalidations;
       cycles(100);assert(obstacle_invalidations==before+1); }
     runtime.state=S3_DRIVE_FAULT;cycles(1);assert(last_state==BUDDY1_STATE_ERROR);
-    /* Live Buddy 5 status: every 20 cycles, all controller fields unpacked. */
+    /* Live Buddy 5 status: every 200 ms, all controller fields unpacked. */
     { unsigned before=avoidance_reports;
       control=(uint16_t)(S5_MOVING|(S5_OK<<3)|(S5_ROUTE_RIGHT<<6)|(3U<<8)|(S5_PASS_STEP<<12)|(1U<<15));
       obstacle.range_valid=true;obstacle.no_echo=false;obstacle.range_mm=412;servo=150;
-      cycles(40);assert(avoidance_reports==before+2U);
+      cycles(2U*LIVE_CYCLES);assert(avoidance_reports==before+2U);
       assert(last_avoidance.range_valid && last_avoidance.range_mm==412U && last_avoidance.servo_deg==150U);
       assert(last_avoidance.state==S5_MOVING && last_avoidance.route==BUDDY1_ROUTE_RIGHT &&
              last_avoidance.leg==3U && last_avoidance.pass==S5_PASS_STEP && last_avoidance.swapped);
-      obstacle.range_valid=false;obstacle.range_mm=0;obstacle.no_echo=true;cycles(20);
+      obstacle.range_valid=false;obstacle.range_mm=0;obstacle.no_echo=true;cycles(LIVE_CYCLES);
       assert(!last_avoidance.range_valid && last_avoidance.range_mm==0U && last_avoidance.no_echo);
-      available=false;cycles(20);assert(!last_avoidance.range_valid && !last_avoidance.no_echo);
+      available=false;cycles(LIVE_CYCLES);assert(!last_avoidance.range_valid && !last_avoidance.no_echo);
       available=true;obstacle.no_echo=false; }
     /* Full FR6 profile once per finished scan / side peek, incl. a failed one. */
     { unsigned before=scan_reports;
@@ -159,6 +161,19 @@ int main(void)
              last_scan.right_edge_mm==-250 && last_scan.forward_mm==380U);
       obstacle.scan_id=8;obstacle.profile.valid=false;cycles(1);
       assert(scan_reports==before+2U && !last_scan.valid && last_scan.scan_id==8U && last_scan.closest_mm==0U); }
+    /* Quarter-period initial phase, then exactly 200 ms between reports. */
+    assert(vehicle_controller_init()==E_OK);
+    { unsigned before=avoidance_reports;
+      uint32_t started=runtime.navigation.timestamp_us;
+      cycles(LIVE_CYCLES-LIVE_CYCLES/4U-1U);assert(avoidance_reports==before);
+      cycles(1);assert(avoidance_reports==before+1U);
+      assert(runtime.navigation.timestamp_us-started==150000U);
+      started=runtime.navigation.timestamp_us;
+      cycles(LIVE_CYCLES/2U);assert(avoidance_reports==before+1U);
+      assert(runtime.navigation.timestamp_us-started==100000U);
+      cycles(LIVE_CYCLES-LIVE_CYCLES/2U-1U);assert(avoidance_reports==before+1U);
+      cycles(1);assert(avoidance_reports==before+2U);
+      assert(runtime.navigation.timestamp_us-started==200000U); }
     puts("PASS: production telemetry adapter preserves Wi-Fi/motor faults, owns only no-echo, publishes obstacle profile and avoidance/error state");
     puts("PASS: Buddy 5 live avoidance (range, no-echo, servo angle, state/fault/route/leg/pass/swap at 5 Hz) and full FR6 scan profile per scan");
 }

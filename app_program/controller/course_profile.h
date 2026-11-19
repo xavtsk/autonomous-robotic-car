@@ -47,11 +47,10 @@
 #ifndef S3_COURSE_STEERING_KP
 #define S3_COURSE_STEERING_KP (0.10f)
 #endif
-/* 3 Nov: normal 0.04 m/s cruise with 100 Hz barcode sampling.
- * Keep prominence floor 15; start rise 50 plus real pre-trigger history.
- * Verify motor startup and barcode reliability in the next hardware runs. */
+/* 19 Nov: requested 0.10 m/s cruise, paired with 200 Hz barcode sampling
+ * and a 25 ms minimum narrow width for small-barcode tests. */
 #ifndef S3_COURSE_BASE_MPS
-#define S3_COURSE_BASE_MPS (0.04f)
+#define S3_COURSE_BASE_MPS (0.10f)
 #endif
 /* The junction is reported a few mm after the sensors reach the crossing tape;
  * the crossing centre is about this much further on. */

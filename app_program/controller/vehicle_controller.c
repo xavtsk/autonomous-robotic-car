@@ -3,6 +3,7 @@
 #include "vehicle_controller.h"
 #include "s3_integration.h"
 #include "terrain_integration.h"
+#include "run_timing.h"
 #include "../subsystem1/subsystem1.h"
 #include "../subsystem2/motion_pack.h"
 #if APP_S5
@@ -12,6 +13,10 @@
 
 #define MOTION_PERIOD_US 200000U
 #define STOPPED_MOTION_PERIOD_US 1000000U
+#define LIVE_PERIOD_CYCLES (200U / S3_SAMPLE_PERIOD_MS)
+#if (200U % S3_SAMPLE_PERIOD_MS) != 0U || LIVE_PERIOD_CYCLES == 0U || LIVE_PERIOD_CYCLES > 63U
+#error "200 ms telemetry cadence must fit the six-bit cycle dividers"
+#endif
 static struct {
     uint32_t last_us;
     s3_drive_state_t state;
@@ -19,10 +24,10 @@ static struct {
 } telemetry;
 /* Route pose (car/telemetry/pose): Buddy 2's encoder distance/heading relative
  * to the start of the current run. Only the sampling owner touches it. */
-#define POSE_PERIOD_CYCLES 20U /* 10 ms cycles -> 5 Hz, same as motion */
+#define POSE_PERIOD_CYCLES LIVE_PERIOD_CYCLES
 static struct {
     unsigned running : 1;
-    unsigned divider : 5;
+    unsigned divider : 6;
     float start_distance_m, start_heading_deg;
 } pose;
 static BUDDY1_ROBOT_STATE last_state;
@@ -36,14 +41,14 @@ static struct {
     signed echo:2; /* -1 unknown, 0 healthy, 1 no echo */
     uint16_t profile_scan;       /* last scan id sent on car/telemetry/scan */
     unsigned profile_sent:1;
-    unsigned divider:5;          /* car/telemetry/avoidance every 20 cycles */
+    unsigned divider:6;          /* car/telemetry/avoidance every 200 ms */
 } obstacle_report;
 /* Everything Buddy 5 knows, for the laptop: live range, servo angle and
  * bypass progress at 5 Hz (phase-shifted from the other 200 ms reports so the
  * four-message outbox is not filled in one cycle), and the full FR6 profile
  * once per finished scan or side peek. Unusable values are sent as zero with
  * their validity cleared, never as a plausible number. */
-#define S5_LIVE_PERIOD 20U
+#define S5_LIVE_PERIOD LIVE_PERIOD_CYCLES
 static void obstacle_live_report(const s5_observation_t *o, bool have, unsigned control)
 {
     BUDDY1_AVOIDANCE a = {0};

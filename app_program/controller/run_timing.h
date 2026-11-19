@@ -4,11 +4,11 @@
 #define S3_RUN_TIMING_H
 #include <stdint.h>
 
-#define S3_SAMPLE_PERIOD_MS (10U) /* 100 Hz; preserve telemetry's 200 ms cadence */
+#define S3_SAMPLE_PERIOD_MS (5U) /* 200 Hz for ~30 ms modules at 0.10 m/s */
 #define S3_SAMPLE_PERIOD_US (S3_SAMPLE_PERIOD_MS * 1000U)
 
 /* Monotonic hardware timestamps wrap modulo 2^32. Counters saturate rather
- * than wrap; 32 bits retain microsecond gaps and >1 year of 100 Hz samples.
+ * than wrap; 32 bits retain microsecond gaps and >248 days of 200 Hz samples.
  * All six fields are encoded explicitly in the internal status packet. */
 typedef struct
 {

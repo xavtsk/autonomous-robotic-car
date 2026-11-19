@@ -820,7 +820,7 @@ static void report(INT code, void *unused)
 #endif
         tm_printf(
             (UB *)"[S3+S2] state=%u reason=%u ready=0x%x cal=0x%x motion=%s "
-                  "odom_valid=%u adc=%d gap=%u boot_max=%u above10ms=%u "
+                  "odom_valid=%u adc=%d gap=%u boot_max=%u above_target=%u "
                   "target_ms=%u\n",
             (unsigned)s.state, (unsigned)s.reason,
             (unsigned)s.navigation.readiness_blockers,
@@ -830,7 +830,7 @@ static void report(INT code, void *unused)
             (unsigned)s.max_gap_us, (unsigned)s.above_target,
             (unsigned)S3_SAMPLE_PERIOD_MS);
         tm_printf((UB *)"  RUN timing: start_us=%u active=%u samples=%u "
-                        "max_gap_us=%u above10ms=%u over30ms=%u "
+                        "max_gap_us=%u above_target=%u over30ms=%u "
                         "last_over30_us=%u\n",
                   (unsigned)s.run_timing.started_us,
                   (unsigned)drive_running(s.state),

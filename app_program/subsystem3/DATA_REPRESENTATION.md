@@ -1,5 +1,13 @@
 # Buddy 3: Tribunal 1 data representation
 
+## 19 November faster-sampling capacity
+
+The integration build samples every 5 ms. The current record buffer contains
+4096 packed 16-bit readings (8192 bytes); its count uses 13 bits so the full
+4096-entry state is representable before overflow is reported. The 320-entry
+pre-trigger ring still covers 1.5 s at 200 Hz. The work below documents earlier
+revisions; its old whole-structure sizes are not current measurements.
+
 ## 3 November record-then-decide barcode reader
 
 Problem: the small barcode (Y) blurs, so thin bars read about 500 and grey
