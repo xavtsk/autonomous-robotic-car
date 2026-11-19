@@ -94,23 +94,104 @@ typedef struct
     uint32_t b_report_lost : 1; /* a report was dropped            */
     uint32_t report_queued : REPORT_COUNT_BITS;
     uint32_t report_peak : REPORT_COUNT_BITS;
+    uint32_t b_feedback_valid : 1;
+    uint32_t b_feedback_ready : 1;
+    uint32_t b_navigation_lease : 1;
 } motion_flags_t;
+
+/* Retain the six unchanged floating-point values and nine Boolean results.
+ * The public calibration view stays addressable and keeps its existing ABI.
+ * Natural float alignment is retained; no unaligned float accesses are used. */
+typedef struct
+{
+    float32_t counts_per_rev;
+    float32_t max_speed_mps;
+    float32_t counts_per_rev_l;
+    float32_t counts_per_rev_r;
+    float32_t top_speed_l_mps;
+    float32_t top_speed_r_mps;
+    uint16_t b_valid : 1;
+    uint16_t b_m1_inverted : 1;
+    uint16_t b_m2_inverted : 1;
+    uint16_t b_enc_l_inverted : 1;
+    uint16_t b_enc_r_inverted : 1;
+    uint16_t b_enc_l_ok : 1;
+    uint16_t b_enc_r_ok : 1;
+    uint16_t b_encoders_swapped : 1;
+    uint16_t b_aborted : 1;
+} motion_stored_calibration_t;
+
+/* Other public feedback fields are derived under the mutex at read time. */
+typedef struct
+{
+    float64_t centre_m;
+    uint32_t timestamp_us;
+    uint32_t epoch;
+} motion_stored_feedback_t;
+
+BUILD_ASSERT(sizeof(motion_stored_calibration_t) == 28U,
+             motion_store_cal_size_t);
+BUILD_ASSERT(sizeof(motion_stored_feedback_t) == 16U,
+             motion_store_feedback_size_t);
+BUILD_ASSERT(sizeof(motion_flags_t) == 4U, motion_store_flags_size_t);
 
 static ID g_mutex_id = 0;
 static ID g_task_id = 0;
 static uint32_t g_last_step_us = 0U;
-static motion_flags_t g_flags = {0U, 0U, 0U, 0U, 0U, 0U, 0U};
-static motion_calibration_t g_cal_result;
+static motion_flags_t g_flags = {0};
+static motion_stored_calibration_t g_cal_result;
 static ID g_report_mbf_id = 0;
 
-static motion_feedback_t g_feedback;
-static bool g_feedback_ready;
+static motion_stored_feedback_t g_feedback;
 static uint32_t g_feedback_count[WHEEL_COUNT];
 static uint32_t g_report_loss_count;
-static bool g_navigation_lease;
 static uint32_t g_navigation_refresh_us;
 
 /* ---- Helpers ------------------------------------------------------------ */
+
+/* Both converters run with the motion mutex held. They only copy values;
+ * floating-point precision and the wide caller-visible fields are unchanged. */
+static void motion_calibration_store (
+    motion_stored_calibration_t * p_stored,
+    const motion_calibration_t * p_value)
+{
+    p_stored->counts_per_rev = p_value->counts_per_rev;
+    p_stored->max_speed_mps = p_value->max_speed_mps;
+    p_stored->counts_per_rev_l = p_value->counts_per_rev_l;
+    p_stored->counts_per_rev_r = p_value->counts_per_rev_r;
+    p_stored->top_speed_l_mps = p_value->top_speed_l_mps;
+    p_stored->top_speed_r_mps = p_value->top_speed_r_mps;
+    p_stored->b_valid = p_value->b_valid;
+    p_stored->b_m1_inverted = p_value->b_m1_inverted;
+    p_stored->b_m2_inverted = p_value->b_m2_inverted;
+    p_stored->b_enc_l_inverted = p_value->b_enc_l_inverted;
+    p_stored->b_enc_r_inverted = p_value->b_enc_r_inverted;
+    p_stored->b_enc_l_ok = p_value->b_enc_l_ok;
+    p_stored->b_enc_r_ok = p_value->b_enc_r_ok;
+    p_stored->b_encoders_swapped = p_value->b_encoders_swapped;
+    p_stored->b_aborted = p_value->b_aborted;
+}
+
+static void motion_calibration_expand (
+    const motion_stored_calibration_t * p_stored,
+    motion_calibration_t * p_value)
+{
+    p_value->b_valid = p_stored->b_valid;
+    p_value->counts_per_rev = p_stored->counts_per_rev;
+    p_value->max_speed_mps = p_stored->max_speed_mps;
+    p_value->b_m1_inverted = p_stored->b_m1_inverted;
+    p_value->b_m2_inverted = p_stored->b_m2_inverted;
+    p_value->b_enc_l_inverted = p_stored->b_enc_l_inverted;
+    p_value->b_enc_r_inverted = p_stored->b_enc_r_inverted;
+    p_value->counts_per_rev_l = p_stored->counts_per_rev_l;
+    p_value->counts_per_rev_r = p_stored->counts_per_rev_r;
+    p_value->top_speed_l_mps = p_stored->top_speed_l_mps;
+    p_value->top_speed_r_mps = p_stored->top_speed_r_mps;
+    p_value->b_enc_l_ok = p_stored->b_enc_l_ok;
+    p_value->b_enc_r_ok = p_stored->b_enc_r_ok;
+    p_value->b_encoders_swapped = p_stored->b_encoders_swapped;
+    p_value->b_aborted = p_stored->b_aborted;
+}
 
 static uint32_t time_now_us (void)
 {
@@ -246,9 +327,9 @@ void motion_init (void)
     g_feedback.centre_m = 0.0;
     g_feedback_count[0] = wheel_encoder_bits(WHEEL_LEFT);
     g_feedback_count[1] = wheel_encoder_bits(WHEEL_RIGHT);
-    g_feedback.valid = false;
-    g_feedback_ready = value_er >= (int32_t)E_OK;
-    g_navigation_lease = false;
+    g_flags.b_feedback_valid = false;
+    g_flags.b_feedback_ready = value_er >= (int32_t)E_OK;
+    g_flags.b_navigation_lease = false;
     motion_controller_init(MOTOR_MAX_SPEED_MPS, STOP_LEAD_DRIVE_M,
                            STOP_LEAD_TURN_M, report_post);
     if (value_er < (int32_t)E_OK)
@@ -276,7 +357,7 @@ void motion_process (void)
     {
         g_flags.b_cal_request = 0U;
         g_flags.b_cal_running = 1U;
-        g_feedback.valid = false;
+        g_flags.b_feedback_valid = false;
         motion_controller_set_busy(true);
     }
     motion_unlock();
@@ -295,8 +376,8 @@ void motion_process (void)
         g_feedback.centre_m = 0.0;
         g_feedback_count[0] = wheel_encoder_bits(WHEEL_LEFT);
         g_feedback_count[1] = wheel_encoder_bits(WHEEL_RIGHT);
-        g_feedback.valid = false;
-        g_cal_result = result;
+        g_flags.b_feedback_valid = false;
+        motion_calibration_store(&g_cal_result, &result);
         g_flags.b_cal_done = 1U;
         g_flags.b_cal_running = 0U;
         g_flags.b_cal_abort = 0U;
@@ -332,10 +413,11 @@ void motion_process (void)
     motion_lock();
     wheel_encoder_sample(); /* the one PIO read this period */
     motion_estimation_update(dt_s);
-    if (motion_lease_expired(g_navigation_lease, now, g_navigation_refresh_us))
+    if (motion_lease_expired(g_flags.b_navigation_lease, now,
+                             g_navigation_refresh_us))
     {
         motion_controller_nav_timeout();
-        g_navigation_lease = false;
+        g_flags.b_navigation_lease = false;
     }
     motion_controller_step(dt_s, now);
     /* Accumulate modular encoder deltas: the packed 20-bit counters can wrap.
@@ -349,9 +431,10 @@ void motion_process (void)
         g_feedback_count[wheel] = bits;
     }
     g_feedback.timestamp_us = now;
-    g_feedback.valid = g_feedback_ready && wheel_encoder_is_running() &&
-                       motion_is_calibrated() && !g_flags.b_cal_running &&
-                       !g_flags.b_cal_request;
+    g_flags.b_feedback_valid =
+        g_flags.b_feedback_ready && wheel_encoder_is_running() &&
+        motion_is_calibrated() && !g_flags.b_cal_running &&
+        !g_flags.b_cal_request;
     motion_unlock();
 }
 
@@ -681,7 +764,8 @@ bool motion_try_debug_snapshot (motion_debug_snapshot_t * p_out)
     p_out->state = motion_controller_state();
     p_out->fault = motion_controller_fault();
     p_out->busy = motion_controller_is_busy();
-    p_out->valid = g_feedback_ready && g_feedback.valid && !p_out->busy;
+    p_out->valid = g_flags.b_feedback_ready && g_flags.b_feedback_valid &&
+                   !p_out->busy;
     p_out->braked = motion_controller_is_stopped();
     for (unsigned int value_i = 0U; value_i < 2U; ++value_i)
     {
@@ -869,7 +953,10 @@ bool motion_get_feedback (motion_feedback_t * p_feedback)
     {
         return false;
     }
-    *p_feedback = g_feedback;
+    p_feedback->centre_m = g_feedback.centre_m;
+    p_feedback->timestamp_us = g_feedback.timestamp_us;
+    p_feedback->epoch = g_feedback.epoch;
+    p_feedback->valid = g_flags.b_feedback_valid;
     p_feedback->state = motion_controller_state();
     p_feedback->fault = motion_controller_fault();
     p_feedback->command_id = motion_controller_command_id();
@@ -885,7 +972,7 @@ bool motion_get_feedback (motion_feedback_t * p_feedback)
 void motion_navigation_heartbeat (bool enabled)
 {
     motion_lock();
-    g_navigation_lease = enabled;
+    g_flags.b_navigation_lease = enabled;
     if (enabled)
     {
         g_navigation_refresh_us = time_now_us();
@@ -903,7 +990,7 @@ motion_result_t motion_request_calibration (void)
     motion_result_t res = MOTION_OK;
 
     motion_lock();
-    if (g_navigation_lease)
+    if (g_flags.b_navigation_lease)
     {
         res = MOTION_ERR_BUSY;
     }
@@ -945,7 +1032,7 @@ bool motion_get_calibration (motion_calibration_t * p_out)
     b_done = (g_flags.b_cal_done != 0U);
     if (b_done)
     {
-        *p_out = g_cal_result;
+        motion_calibration_expand(&g_cal_result, p_out);
     }
     motion_unlock();
 

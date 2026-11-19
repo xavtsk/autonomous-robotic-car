@@ -1,0 +1,74 @@
+{
+  "batch": "Private retained motion storage",
+  "status": "candidate compiled; candidate execution pending",
+  "changed_production_files": ["app_program/subsystem2/motion.c"],
+  "prior_motion_git_blob": "fe5b9a0b517cfeab12d2ecef1fa0dc13ef484225",
+  "candidate_motion_lf_sha256": "ee236789df711185907265d07ed987c1cfc646dc9af8d3687d7642136aa189e5",
+  "characterization_before_change": {
+    "run_id": 44576169147,
+    "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44576169147",
+    "baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+    "candidate_revision": "2bd711d2f0a9385db345e4988f23d9403b24aa0e",
+    "host_artifacts": {
+      "baseline_gcc": 14556352916,
+      "baseline_clang": 14555629504,
+      "baseline_sanitizers": 14556732199,
+      "candidate_gcc": 14557615902,
+      "candidate_clang": 14556338638,
+      "candidate_sanitizers": 14556981927
+    },
+    "all_six_host_executions": {
+      "returncode": 0,
+      "characterization_cases": 802,
+      "skipped": [],
+      "sanitizer_errors": false
+    },
+    "differential_artifact": 14556213899,
+    "differential_semantic_rows": 802,
+    "baseline_and_candidate_trace_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336",
+    "case_coverage": {
+      "calibration_flag_combinations": 512,
+      "calibration_float_patterns": "Six rotating binary32 patterns, including negative zero, subnormal, finite extremes and quiet NaN payload",
+      "failure_output_case": "Unavailable mutex, failed mutex acquisition and calibration-not-complete preserve output bytes; lock/unlock balance checked",
+      "feedback_cases": 288,
+      "feedback_ranges": "Full uint32 timestamp, epoch and loss boundaries; binary64 distance patterns; all three retained flag combinations",
+      "wrap_case": "Clock, epoch and report-loss wrap; navigation lease excludes calibration",
+      "existing_suite": "Unchanged production motion feedback/report assertions also execute"
+    },
+    "overall_run_limit": "This motion proof does not turn the two existing barcode replay expectation failures into passes."
+  },
+  "candidate_compile_checks": {
+    "host": "C99, -pedantic-errors -Wall -Wextra -Werror -O2; fixture compiled and linked with MOTION_COMPACT_RETAINED=1; not executed",
+    "target": "Arm GNU 14.3.1; motion.c compiled with the recorded production-profile arguments and -fstack-usage; no target link or execution performed for this candidate",
+    "imported_sources_changed": false,
+    "public_structure_layouts_changed": false,
+    "retained_symbol_bytes": {
+      "g_cal_result": [36, 28],
+      "g_feedback": [32, 16],
+      "g_flags": [4, 4],
+      "g_feedback_ready": [1, 0],
+      "g_navigation_lease": [1, 0]
+    },
+    "summed_retained_symbol_reduction_bytes": 26,
+    "static_stack_bytes": {
+      "motion_process": [152, 112],
+      "motion_get_calibration": [24, 16],
+      "motion_get_feedback": [16, 16],
+      "motion_try_debug_snapshot": [24, 24]
+    },
+    "local_artifacts": "build/motion-storage-compile/{before,candidate}/{command.json,motion.o,motion.su,symbols.txt} and comparison.json"
+  },
+  "self_review": [
+    "Six calibration floating-point fields and all nine flags pass through private store/expand helpers under the existing motion mutex.",
+    "Public calibration, feedback and debug structures remain wide and addressable. Every named successful output field is assigned.",
+    "Getter early-return conditions and failure output mutation remain unchanged. Existing invalid-pointer preconditions are unchanged.",
+    "Retained timestamp and epoch, encoder counts, report-loss count and floating-point precision are unchanged.",
+    "Existing report/calibration flag positions and mutex acquisition/release boundaries are preserved. Three retained Boolean values now occupy unused bits of the same protected word."
+  ],
+  "pending_evidence": [
+    "Execute the compact candidate's 802 cases under Linux GCC, Clang and ASan/UBSan.",
+    "Compare compact candidate semantic traces against the fixed baseline, including actual motion, runtime and MQTT observations.",
+    "Link every target profile and measure actual linked static RAM, flash and stack reports; symbol sums exclude linker alignment.",
+    "Static .su reports are per-function compiler estimates, not full call-chain or physical task high-water measurements."
+  ]
+}
