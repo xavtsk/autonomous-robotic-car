@@ -1,0 +1,868 @@
+{
+  "schema_version": 1,
+  "run": 44604115125,
+  "url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44604115125",
+  "revision": "55af85ce084fa0fe1fe4f8fe6444cd78e5acf007",
+  "fixed_baseline": "4ad2cc42595722cedb47102e4343298339040d40",
+  "source_hashes_lf": {
+    "app_program/controller/s3_integration.c": "b89c55d27d0a13bba90777fb6b7c24bec453fbd298921e7f141a273f50c6cfbb",
+    "testing/integration/runtime_test.c": "a6ca0553ca21ad8742b284b48a203ac7029f347e28cbe435585a9f843968e4e9",
+    "testing/integration/integration_storage_compat.h": "3bb74e22fc58a1debe2c18a01aed0c9c2650450618ca253ab9567eb6a242233a",
+    "tools/compliance/traces/runtime_observer.h": "1c5c0982c0828543d08045e848dc6f69b189d23d9ff2884d3df9350bb53efce9",
+    "app_program/subsystem3/bc_decoder.c": "59b1abc96b589646a373f82723aa5350e5b40b28b0bfda6e711c26c8cbad0b95",
+    "testing/compliance/barcode_work_test.c": "2ca4bbe70caadb1ac9976dcada0e12665c82d49c773d8cf5b6d65f1c690b0714"
+  },
+  "hosts": [
+    {
+      "artifact_id": 14567979429,
+      "artifact_zip_sha256": "bc4320a258f70786d098dd10b4b70eb9ddfc90295c61ef09a5dcfafe05dd2145",
+      "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+      "mode": "gcc",
+      "runner_image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.127.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "checks": {
+        "integration": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "operator_observed": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_work": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "motion_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "bcap_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "mqtt_receive": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_fit_error": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_incremental": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_bench": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem1_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem2_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem3_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "course_zero_axle": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        }
+      },
+      "build_returncodes": {
+        "barcode_fit_error": 0,
+        "barcode_incremental": 0,
+        "barcode_bench": 0,
+        "subsystem1_sizes": 0,
+        "subsystem2_sizes": 0,
+        "subsystem3_sizes": 0,
+        "course_zero_axle": 0,
+        "operator_observed": 0,
+        "barcode_work": 0
+      },
+      "remaining_failed_steps": [
+        "subsystem3"
+      ]
+    },
+    {
+      "artifact_id": 14568313982,
+      "artifact_zip_sha256": "aee5059cffc36d794cc1ccfe030a1d64e399d94857ff870e09c4ca8155e482e7",
+      "revision": "55af85ce084fa0fe1fe4f8fe6444cd78e5acf007",
+      "mode": "clang",
+      "runner_image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.376.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "checks": {
+        "integration": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "operator_observed": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_work": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "motion_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "bcap_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "mqtt_receive": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_fit_error": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_incremental": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_bench": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem1_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem2_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem3_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "course_zero_axle": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        }
+      },
+      "build_returncodes": {
+        "barcode_fit_error": 0,
+        "barcode_incremental": 0,
+        "barcode_bench": 0,
+        "subsystem1_sizes": 0,
+        "subsystem2_sizes": 0,
+        "subsystem3_sizes": 0,
+        "course_zero_axle": 0,
+        "operator_observed": 0,
+        "barcode_work": 0
+      },
+      "remaining_failed_steps": [
+        "subsystem3"
+      ]
+    },
+    {
+      "artifact_id": 14569421712,
+      "artifact_zip_sha256": "3b6ab72a639cf70df5d3c62237ff21f056c2d958d077f067c38bec5b591c4668",
+      "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+      "mode": "clang",
+      "runner_image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.376.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "checks": {
+        "integration": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "operator_observed": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_work": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "motion_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "bcap_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "mqtt_receive": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_fit_error": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_incremental": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_bench": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem1_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem2_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem3_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "course_zero_axle": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        }
+      },
+      "build_returncodes": {
+        "barcode_fit_error": 0,
+        "barcode_incremental": 0,
+        "barcode_bench": 0,
+        "subsystem1_sizes": 0,
+        "subsystem2_sizes": 0,
+        "subsystem3_sizes": 0,
+        "course_zero_axle": 0,
+        "operator_observed": 0,
+        "barcode_work": 0
+      },
+      "remaining_failed_steps": [
+        "subsystem3"
+      ]
+    },
+    {
+      "artifact_id": 14569611633,
+      "artifact_zip_sha256": "6ade0dd487288b0a2011a6d079dae4e60de255d666873616b2acdd08bd75b7e1",
+      "revision": "55af85ce084fa0fe1fe4f8fe6444cd78e5acf007",
+      "mode": "sanitize",
+      "runner_image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.370.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "checks": {
+        "integration": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "operator_observed": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_work": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "motion_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "bcap_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "mqtt_receive": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_fit_error": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_incremental": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_bench": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem1_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem2_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem3_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "course_zero_axle": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        }
+      },
+      "build_returncodes": {
+        "barcode_fit_error": 0,
+        "barcode_incremental": 0,
+        "barcode_bench": 0,
+        "subsystem1_sizes": 0,
+        "subsystem2_sizes": 0,
+        "subsystem3_sizes": 0,
+        "course_zero_axle": 0,
+        "operator_observed": 0,
+        "barcode_work": 0
+      },
+      "remaining_failed_steps": [
+        "subsystem3"
+      ]
+    },
+    {
+      "artifact_id": 14570426515,
+      "artifact_zip_sha256": "740b59513519e0da7f2f9f84674f4e5c7cb21148375a16ea896cb45e75c07e6b",
+      "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+      "mode": "sanitize",
+      "runner_image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.370.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "checks": {
+        "integration": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "operator_observed": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_work": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "motion_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "bcap_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "mqtt_receive": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_fit_error": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_incremental": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_bench": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem1_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem2_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem3_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "course_zero_axle": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        }
+      },
+      "build_returncodes": {
+        "barcode_fit_error": 0,
+        "barcode_incremental": 0,
+        "barcode_bench": 0,
+        "subsystem1_sizes": 0,
+        "subsystem2_sizes": 0,
+        "subsystem3_sizes": 0,
+        "course_zero_axle": 0,
+        "operator_observed": 0,
+        "barcode_work": 0
+      },
+      "remaining_failed_steps": [
+        "subsystem3"
+      ]
+    },
+    {
+      "artifact_id": 14570431891,
+      "artifact_zip_sha256": "5c2370534dc6f3e92b9e1210c77b29555630089c3f7259e7c051e5a40930da73",
+      "revision": "55af85ce084fa0fe1fe4f8fe6444cd78e5acf007",
+      "mode": "gcc",
+      "runner_image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.133.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "checks": {
+        "integration": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "operator_observed": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_work": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "motion_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "bcap_storage": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "mqtt_receive": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_fit_error": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_incremental": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "barcode_bench": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem1_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem2_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "subsystem3_sizes": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        },
+        "course_zero_axle": {
+          "status": "PASS",
+          "returncode": 0,
+          "sanitizer_error": false
+        }
+      },
+      "build_returncodes": {
+        "barcode_fit_error": 0,
+        "barcode_incremental": 0,
+        "barcode_bench": 0,
+        "subsystem1_sizes": 0,
+        "subsystem2_sizes": 0,
+        "subsystem3_sizes": 0,
+        "course_zero_axle": 0,
+        "operator_observed": 0,
+        "barcode_work": 0
+      },
+      "remaining_failed_steps": [
+        "subsystem3"
+      ]
+    }
+  ],
+  "differential_artifact": 14569396782,
+  "differential_checks": [
+    {
+      "name": "motion_semantic_trace",
+      "matched": true,
+      "semantic_rows": 74,
+      "baseline_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071",
+      "candidate_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "terrain_semantic_trace",
+      "matched": true,
+      "semantic_rows": 1916,
+      "baseline_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8",
+      "candidate_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "terrain_production_semantic_trace",
+      "matched": true,
+      "semantic_rows": 1782,
+      "baseline_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a",
+      "candidate_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "obstacle_semantic_trace",
+      "matched": true,
+      "semantic_rows": 969,
+      "baseline_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5",
+      "candidate_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "runtime_semantic_trace",
+      "matched": true,
+      "semantic_rows": 2398,
+      "baseline_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907",
+      "candidate_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "mqtt_semantic_trace",
+      "matched": true,
+      "semantic_rows": 269,
+      "baseline_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665",
+      "candidate_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "mqtt_plain_semantic_trace",
+      "matched": true,
+      "semantic_rows": 99,
+      "baseline_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad",
+      "candidate_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "mqtt_production_semantic_trace",
+      "matched": true,
+      "semantic_rows": 251,
+      "baseline_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6",
+      "candidate_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "mqtt_imu_semantic_trace",
+      "matched": true,
+      "semantic_rows": 116,
+      "baseline_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643",
+      "candidate_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "mqtt_receive_semantic_trace",
+      "matched": true,
+      "semantic_rows": 2093,
+      "baseline_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e",
+      "candidate_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "motion_storage_semantic_trace",
+      "matched": true,
+      "semantic_rows": 802,
+      "baseline_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336",
+      "candidate_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "barcode_work_semantic_trace",
+      "matched": true,
+      "semantic_rows": 854,
+      "baseline_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+      "candidate_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "bcap_storage_semantic_trace",
+      "matched": true,
+      "semantic_rows": 776,
+      "baseline_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2",
+      "candidate_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "operator_semantic_trace",
+      "matched": true,
+      "semantic_rows": 8066,
+      "baseline_sha256": "5a759cfcded604288fab493d7361673ae767bf5868f163a115a0ff36a92c2a1f",
+      "candidate_sha256": "5a759cfcded604288fab493d7361673ae767bf5868f163a115a0ff36a92c2a1f",
+      "downloaded_trace_hashes_verified": true
+    },
+    {
+      "name": "navigation_semantic_trace",
+      "matched": true,
+      "semantic_rows": 60007,
+      "baseline_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143",
+      "candidate_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143",
+      "downloaded_trace_hashes_verified": true
+    }
+  ],
+  "recorded_replay": {
+    "name": "recorded_replay",
+    "cases": 1008,
+    "mismatches": 0,
+    "expectation_failures": 2,
+    "matched": true
+  },
+  "all_target_jobs": [
+    {
+      "id": 135843119605,
+      "name": "target (production)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843119767,
+      "name": "target (offline_motion)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843119795,
+      "name": "target (diagnostics)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843119857,
+      "name": "target (s4_bench)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843119935,
+      "name": "target (s5_unconfirmed)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843120108,
+      "name": "target (stationary_3)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843120133,
+      "name": "target (straight_test)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843120182,
+      "name": "target (stationary_1)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843120308,
+      "name": "target (motion_smoke)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843120371,
+      "name": "target (single_core)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843120527,
+      "name": "target (imu_debug)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135843121138,
+      "name": "target (self_tests)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "production": {
+    "artifact_id": 14570590232,
+    "runner_image": {
+      "ImageOS": "ubuntu24",
+      "ImageVersion": "20261111.370.1"
+    },
+    "sizes": {
+      "text": 465884,
+      "data": 696,
+      "bss": 128800,
+      "static_ram": 129496
+    },
+    "comparison_revision": "b4ad5d09a9953cfd308bf4e2d19cd9ffcd4d0c60",
+    "delta": {
+      "text": 32,
+      "data": 0,
+      "bss": -8,
+      "static_ram": -8
+    },
+    "flash_sha256": "37a68de18dbbe440935264d845a6acf03b253c43c8501bb598ee5f2ba9cbd392",
+    "artifacts": {
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": "3d4f6f7b7610cb49a49220254c7b5fc4c1822c124f86c4e3cdd9363fcf25a8bb",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": "49e430b8453854fc7d3b85bc6093eaef8eb4f2ff77bacab5f56d7625870add2a",
+      "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": "7c33c6374a7a5acfed64980881285d7cb58e90cad514d0dd77443c31c07d0b8b"
+    },
+    "downloaded_hashes_verified": true,
+    "stack": {
+      "sizes": {
+        "text": 465884,
+        "data": 696,
+        "bss": 128800,
+        "static_ram": 129496
+      },
+      "flash": "37a68de18dbbe440935264d845a6acf03b253c43c8501bb598ee5f2ba9cbd392",
+      "artifact_hashes_verified": {
+        "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": true,
+        "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": true,
+        "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": true
+      },
+      "stack_changes": [
+        {
+          "file": "stack-usage/mtkernel_3/app_program/controller/s3_integration.su",
+          "function": "sensor_sample_task",
+          "before": [
+            "488",
+            "static"
+          ],
+          "after": [
+            "456",
+            "static"
+          ]
+        }
+      ],
+      "stack_rows_before": 1441,
+      "stack_rows_after": 1441
+    }
+  },
+  "conditional_union": {
+    "artifact_id": 14569062961,
+    "observed": 398,
+    "total": 440,
+    "unobserved": 42,
+    "receipt_errors": [],
+    "missing_profiles": [],
+    "status": "INCOMPLETE"
+  },
+  "documentation": {
+    "artifact_id": 14569583700,
+    "status": "INCOMPLETE",
+    "version": "1.9.8",
+    "generation_returncode": 0,
+    "warning_lines": 4101,
+    "compiler_definition_variants": 1708,
+    "compiler_recovery_variants": 980,
+    "compiler_undocumented_variants": 1512,
+    "doxygen_definition_sites": 1693,
+    "source_unchanged": true,
+    "errors": [],
+    "missing_observed_definitions": 27,
+    "additional_generation_diagnostics": [
+      "HTML_TIMESTAMP obsolete-tag warning in generation.log; not included in warning_lines."
+    ]
+  },
+  "limitations": [
+    "Known two unchanged replay expectations remain failed; the complete workflow is not green.",
+    "Compiler .su estimates are not task high-water, call-chain maxima, scheduling or timing measurements.",
+    "No cleanup image was flashed or physically exercised.",
+    "This receipt applies only to 55af85c. Subsequent tilt rename 99b07b7 and later changes require separate execution/target evidence."
+  ]
+}

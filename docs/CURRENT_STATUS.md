@@ -45,9 +45,10 @@ Local Windows compile/link checks must remain distinct because Application
 Control has blocked generated native test programs in this workspace.
 
 The most recently examined complete production image is cleanup revision
-`b4ad5d09a9953cfd308bf4e2d19cd9ffcd4d0c60`, built with public example network
-settings in [Linux run 44597427198](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44597427198).
-Its flash payload is identical to the preceding `302100e` image.
+`55af85ce084fa0fe1fe4f8fe6444cd78e5acf007`, built with public example network
+settings in [Linux run 44604115125](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44604115125).
+The [checkpoint receipt](compliance/evidence/checkpoint-55af85c-linux.json)
+records all six host modes, twelve target profiles and downloaded trace hashes.
 It has not been flashed. The physical baseline above remains the rollback image.
 
 | Work or evidence | Current result |
@@ -64,14 +65,15 @@ It has not been flashed. The physical baseline above remains the rollback image.
 | Motion private storage | Six Linux host modes pass, exact 802-row traces match; linked production static RAM decreases by 32 bytes versus the preceding image. [Evidence](compliance/evidence/motion-storage-candidate.json). Physical timing remains pending. |
 | Estimator module rename | Production flash payload and UF2 are byte-identical to the motion candidate, with link order preserved. [Evidence](compliance/evidence/estimator-rename-linux.json). |
 | MQTT private storage | All six Linux host modes and four MQTT profiles pass; linked static RAM decreases by 24 bytes while text increases by 40 bytes. Packet bytes and retry/receive traces match. [Evidence](compliance/evidence/mqtt-state-linux.json). |
-| Conditional-compilation collector | At `b4ad5d0`, all 14 host/target receipts pass with zero collector/receipt errors and no missing profiles. The official union is **incomplete: 376/421 explicit arms observed, 45 unobserved** (artifact `14565159154`). Candidate fixture-path binding and seven additional host recipes are implemented for the next run; coverage gains await executed evidence. |
+| Conditional-compilation collector | At `55af85c`, all 14 host/target receipts pass with zero collector/receipt errors and no missing profiles. The official union is **incomplete: 398/440 explicit arms observed, 42 unobserved** (artifact `14569062961`). Fixture-path binding and all seven added host recipes are now exercised; additional fixture/baseline profiles remain work in progress. |
 | Header pairs and function contracts | Twenty standalone test pairs, controller-debug and motion/IR contracts, fake guards and the shared navigation header pass their bounded Linux audit gates at `302100e`; 177 tooling tests pass without skips. Project-wide naming and documentation remain open. |
-| Barcode phase extraction | First four helpers and three later pruning helpers pass six host modes, all 854 detailed work rows and all 12 target builds. The pruning candidate retains the 8324-byte record-update symbol and its 376-byte compiler stack estimate; every normalized production stack row is unchanged. [Pruning evidence](compliance/evidence/barcode-prune-extraction.json) retains the differing instruction/table bytes and separate timing limit. |
+| Barcode phase extraction | First four helpers, three pruning helpers and three edge helpers pass six host modes, all 854 detailed work rows and all 12 target builds. At `55af85c`, all 1008 replay outputs still match with two original expectations failing. [Edge evidence](compliance/evidence/barcode-edge-extraction.json) preserves the differing instruction/table bytes and separate timing limit; barcode compiler stack estimates remain unchanged. |
 | Capture private storage | Five recorder-owned fields compacted without changing serializers or function bodies. All six Linux host modes and the exact 776-row differential trace pass. Linked `g_bcap` decreases from 32736 to 32728 bytes; production static RAM decreases by 8 bytes versus `3fda4d5`, with all compiler stack rows unchanged. [Evidence](compliance/evidence/bcap-storage-candidate.json). |
 | Imported template preservation | Fifteen unchanged imported files restored to fixed-baseline text; [provenance correction](compliance/TEMPLATE_BOUNDARY_CORRECTION.md). Actual team network modifications remain in scope. |
-| Generated documentation | Pinned HTML/XML generation and full-source-text/compiler comparison are implemented; first Linux generation remains pending. Missing comments, warnings and unobserved definitions remain incomplete evidence. |
+| Generated documentation | Doxygen 1.9.8 actually generated HTML/XML at `55af85c`, with source preservation verified. **Incomplete:** 4101 warning-log lines, 980 compiler recovery variants, 1512 undocumented variants and 27 missing observed definitions. An additional obsolete `HTML_TIMESTAMP` configuration warning is retained in the generation log. Artifact `14569583700` contains the reference and diagnostics. |
 | Data inventory binding | 270 owned/mixed files and 9,250 declarations recorded, with consumer/header dependencies checked. Integrity passes; 192 representation items (162 gaps and 30 unresolved) and the same three historical fixtures remain open. Part of the count reduction corrects exposed-workspace domain assumptions; it is not claimed as RAM savings. |
-| Latest private integration batch | Implemented at `95a2861`, with the terrain fixture adapter added at `e22bd16`. Local matched Arm object measurements save 10 static-symbol bytes with IR debug or 7 without; text increases by 32/36 bytes and the sampling function's stack estimate falls by 32/16 bytes. These are object measurements, not yet linked-image or Linux execution proof. [Bounded evidence](compliance/evidence/integration-private-storage.json). |
+| Latest private integration batch | Executed at `55af85c`: all six host integration/operator modes pass; 2398 runtime rows and 8066 operator rows match exactly. Linked production static RAM decreases by 8 bytes and text increases by 32 bytes versus `b4ad5d0`; `sensor_sample_task` compiler stack estimate decreases from 488 to 456 bytes, the sole change among 1441 matched rows. [Bounded evidence](compliance/evidence/integration-private-storage.json) preserves earlier object-only measurements separately. |
+| Added host recipes | Fit-error, incremental decoder, bench lifecycle, three size reports and zero-axle course simulation pass all 84 build/execution checks across the six host modes. Existing assertions remain unchanged; no new baseline failures appeared. |
 | Complete BARR / CR1 closure | **Incomplete:** remaining field gaps, function contracts, statement/naming rules, profile coverage and pending exceptions remain in their ledgers. |
 | New candidate physical behavior | **Not verified:** no cleanup image has been flashed or driven in this implementation session. |
 
@@ -79,14 +81,15 @@ The [alias/assertion batch record](compliance/ALIAS_ASSERT_BATCH.md) and
 [compiler investigation](compliance/evidence/ALIAS_TARGET_INVESTIGATION.md)
 distinguish source equivalence, executed traces and target-byte evidence.
 The later branch commits and working tree are implementation work in progress;
-they do not inherit the exact-image or execution result of `b4ad5d0`.
+they do not inherit the exact-image or execution result of `55af85c`. In
+particular, the later tilt filename batch `99b07b7` awaits its own Linux gate.
 
-The inspected `b4ad5d0` production image has 465,852 text bytes, 696 data bytes
-and 128,808 BSS bytes (129,504 bytes of static RAM). Relative to the preceding
-`3fda4d5` production image, text decreases by 160 bytes and static RAM by 8 bytes.
-Relative to the fixed baseline's matched CI profile, text decreases by 424 bytes
-and static RAM by 192 bytes. Production artifact `14565678331` has flash SHA-256
-`d4a0bb724368d25dad8c3dd9d44e548354ffc15b19cd57aec07a01bf9dc433c9`;
+The inspected `55af85c` production image has 465,884 text bytes, 696 data bytes
+and 128,800 BSS bytes (129,496 bytes of static RAM). Relative to the preceding
+`b4ad5d0` production image, text increases by 32 bytes and static RAM decreases
+by 8 bytes. Relative to the fixed baseline's matched CI profile, text decreases
+by 392 bytes and static RAM by 200 bytes. Production artifact `14570590232` has
+flash SHA-256 `37a68de18dbbe440935264d845a6acf03b253c43c8501bb598ee5f2ba9cbd392`;
 the downloaded ELF, UF2, map and flash hashes were independently verified.
 These are actual linker allocations, not a sum of information bits.
 Compiler stack estimates and any increases remain in the target manifests;

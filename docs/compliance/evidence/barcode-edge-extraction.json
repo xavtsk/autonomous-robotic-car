@@ -22,7 +22,7 @@
   ],
   "inverse_token_equal": true,
   "before_token_count": 12766,
-  "status": "Bounded source inversion and unchanged emitted symbol sizes/stack verified. Allocated instructions or relocations differ; Linux semantic/replay and full target-profile gates pending.",
+  "status": "Bounded source inversion, six host modes, 854 complete-scratch rows and all 12 target builds verified at 55af85c; all 1008 replay outputs match with two retained original expectation failures. Instructions differ; no physical timing claim.",
   "unmodified": [
     "work-unit and fit-tick budgets",
     "state and arithmetic types",
@@ -43,6 +43,109 @@
     "differing_sections": [
       ".rodata.s3_barcode_record_update",
       ".text.s3_barcode_record_update"
+    ]
+  },
+  "linux_execution_55af85c": {
+    "summary": "checkpoint-55af85c-linux.json",
+    "run": 44604115125,
+    "revision": "55af85ce084fa0fe1fe4f8fe6444cd78e5acf007",
+    "source_hashes_lf": {
+      "app_program/controller/s3_integration.c": "b89c55d27d0a13bba90777fb6b7c24bec453fbd298921e7f141a273f50c6cfbb",
+      "testing/integration/runtime_test.c": "a6ca0553ca21ad8742b284b48a203ac7029f347e28cbe435585a9f843968e4e9",
+      "testing/integration/integration_storage_compat.h": "3bb74e22fc58a1debe2c18a01aed0c9c2650450618ca253ab9567eb6a242233a",
+      "tools/compliance/traces/runtime_observer.h": "1c5c0982c0828543d08045e848dc6f69b189d23d9ff2884d3df9350bb53efce9",
+      "app_program/subsystem3/bc_decoder.c": "59b1abc96b589646a373f82723aa5350e5b40b28b0bfda6e711c26c8cbad0b95",
+      "testing/compliance/barcode_work_test.c": "2ca4bbe70caadb1ac9976dcada0e12665c82d49c773d8cf5b6d65f1c690b0714"
+    },
+    "host_artifacts": [
+      14567979429,
+      14568313982,
+      14569421712,
+      14569611633,
+      14570426515,
+      14570431891
+    ],
+    "all_six_host_modes_pass": true,
+    "differential_checks": [
+      {
+        "name": "barcode_work_semantic_trace",
+        "matched": true,
+        "semantic_rows": 854,
+        "baseline_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+        "candidate_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+        "downloaded_trace_hashes_verified": true
+      }
+    ],
+    "recorded_replay": {
+      "name": "recorded_replay",
+      "cases": 1008,
+      "mismatches": 0,
+      "expectation_failures": 2,
+      "matched": true
+    },
+    "all_twelve_target_profiles_built": true,
+    "production": {
+      "artifact_id": 14570590232,
+      "runner_image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.370.1"
+      },
+      "sizes": {
+        "text": 465884,
+        "data": 696,
+        "bss": 128800,
+        "static_ram": 129496
+      },
+      "comparison_revision": "b4ad5d09a9953cfd308bf4e2d19cd9ffcd4d0c60",
+      "delta": {
+        "text": 32,
+        "data": 0,
+        "bss": -8,
+        "static_ram": -8
+      },
+      "flash_sha256": "37a68de18dbbe440935264d845a6acf03b253c43c8501bb598ee5f2ba9cbd392",
+      "artifacts": {
+        "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": "3d4f6f7b7610cb49a49220254c7b5fc4c1822c124f86c4e3cdd9363fcf25a8bb",
+        "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": "49e430b8453854fc7d3b85bc6093eaef8eb4f2ff77bacab5f56d7625870add2a",
+        "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": "7c33c6374a7a5acfed64980881285d7cb58e90cad514d0dd77443c31c07d0b8b"
+      },
+      "downloaded_hashes_verified": true,
+      "stack": {
+        "sizes": {
+          "text": 465884,
+          "data": 696,
+          "bss": 128800,
+          "static_ram": 129496
+        },
+        "flash": "37a68de18dbbe440935264d845a6acf03b253c43c8501bb598ee5f2ba9cbd392",
+        "artifact_hashes_verified": {
+          "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": true,
+          "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": true,
+          "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": true
+        },
+        "stack_changes": [
+          {
+            "file": "stack-usage/mtkernel_3/app_program/controller/s3_integration.su",
+            "function": "sensor_sample_task",
+            "before": [
+              "488",
+              "static"
+            ],
+            "after": [
+              "456",
+              "static"
+            ]
+          }
+        ],
+        "stack_rows_before": 1441,
+        "stack_rows_after": 1441
+      }
+    },
+    "limits": [
+      "Known two unchanged replay expectations remain failed; the complete workflow is not green.",
+      "Compiler .su estimates are not task high-water, call-chain maxima, scheduling or timing measurements.",
+      "No cleanup image was flashed or physically exercised.",
+      "This receipt applies only to 55af85c. Subsequent tilt rename 99b07b7 and later changes require separate execution/target evidence."
     ]
   }
 }
