@@ -12,7 +12,7 @@ SOURCES = host_test.c $(APP)/telemetry_codec.c $(APP)/buddy1.c \
 .PHONY: test sanitize sizes ir-debug
 test: $(BUILD)/host_test
 	$(BUILD)/host_test
-	$(PYTHON) test_laptop_codec.py
+	BUDDY1_HOST_TEST=$(abspath $(BUILD)/host_test) $(PYTHON) test_laptop_codec.py
 	$(MAKE) ir-debug
 
 ir-debug:

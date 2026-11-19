@@ -12,7 +12,7 @@
 Needs: the Arm toolchain on PATH, PICO_SDK_PATH, config/wifi_secrets.h
 (as for a normal build). Run from the repository root:
     python3 testing/change_requirement_1/measure.py
-Prints Markdown tables; nothing in the source tree is changed.
+Prints Markdown tables. Build artifacts are generated; source files are not touched.
 """
 import os
 import re
@@ -57,10 +57,13 @@ def object_ram(folder):
 
 
 def compile_flags():
-    """The firmware's own compile command for one app file, from `make -n`."""
-    src = ROOT / "app_program" / "subsystem5" / "avoid_obstacle.c"
-    src.touch()
-    out = run(["make", "-n", "-C", str(BUILD), *FLAGS, "IR_DEBUG=1"])
+    """Force the compile command without touching its source.
+
+    The target profile was built above. Make has parse-time profile side
+    effects, so this is not a read-only repository audit.
+    """
+    out = run(["make", "-n", "-B", "-C", str(BUILD), *FLAGS, "IR_DEBUG=1",
+               "mtkernel_3/app_program/subsystem5/avoid_obstacle.o"])
     line = next(l for l in out.splitlines() if "arm-none-eabi-gcc" in l and "avoid_obstacle.c" in l)
     args = shlex.split(line)
     keep, skip = [], False

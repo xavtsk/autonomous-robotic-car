@@ -63,6 +63,12 @@ def main():
                     sdk_revision=sdk_revision, compiler=output_of(['arm-none-eabi-gcc', '--version']),
                     configurations='Identical checked-in public example; no real credentials.',
                     hardware_executed=False, builds={})
+    # Append a compile-only reporting flag without overriding the Makefile's
+    # CPU, feature and profile flags. Both revisions use the identical wrapper.
+    wrapper = output / 'arm-stack-gcc'
+    wrapper.write_text('#!/bin/sh\nexec arm-none-eabi-gcc -fstack-usage "$@"\n', encoding='utf-8')
+    wrapper.chmod(0o755)
+    manifest['stack_usage'] = 'Compiler .su reports only; not call-chain maxima, measured task high-water or free heap.'
     failed = False
     for label in ('baseline', 'candidate'):
         root = getattr(args, label).resolve()
@@ -76,7 +82,7 @@ def main():
             raise RuntimeError(f'Refusing to overwrite an existing local configuration in {root}')
         shutil.copyfile(root / 'config/wifi_secrets.example.h', config)
         record['example_configuration_sha256'] = digest(config)
-        command = ['make', '-C', str(root / 'build_make'), 'PICO_SDK_PATH=' + str(sdk),
+        command = ['make', '-C', str(root / 'build_make'), 'PICO_SDK_PATH=' + str(sdk), 'GCC=' + str(wrapper),
                    *[f'{key}={value}' for key, value in profile.items()],
                    '-j' + str(min(os.cpu_count() or 2, 4))]
         record['command'] = command
@@ -103,12 +109,23 @@ def main():
                 record['artifacts'][source.name] = digest(source)
             subprocess.run(['arm-none-eabi-objcopy', '-O', 'binary', str(elf), str(dest / 'flash.bin')], check=True)
             record['flash_sha256'] = digest(dest / 'flash.bin')
+            stack_files = sorted((root / 'build_make').rglob('*.su'))
+            for source in stack_files:
+                target = dest / 'stack-usage' / source.relative_to(root / 'build_make')
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+            record['stack_usage_files'] = len(stack_files)
+            if not stack_files:
+                raise RuntimeError('Compiler produced no stack-usage reports')
             # Capture the commands that actually built the image, never make -n:
             # this project's parse-time profile guard can mutate even a dry run.
             commands = []
             for line in (dest / 'build.log').read_text(errors='replace').splitlines():
-                if line.startswith('arm-none-eabi-gcc ') and ' -c ' in line:
+                if (line.startswith('arm-none-eabi-gcc ') or line.startswith(str(wrapper) + ' ')) and ' -c ' in line:
                     argv = shlex.split(line)
+                    if argv[0] == str(wrapper):
+                        argv[0] = 'arm-none-eabi-gcc'
+                        argv.insert(1, '-fstack-usage')
                     if '-o' not in argv:
                         continue
                     source = next((part for part in reversed(argv) if part.endswith('.c')), None)

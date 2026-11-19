@@ -50,7 +50,7 @@ compare:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -DS3_BASELINE_TRACE host_trace.c $(SOURCES) -o $(BUILD)/after_trace
 	$(BUILD)/after_trace > $(BUILD)/after.trace
 	cmp $(BUILD)/before.trace $(BUILD)/after.trace
-	shasum -a 256 $(BUILD)/before.trace $(BUILD)/after.trace
+	$(PYTHON) -c 'import hashlib,sys; [print(hashlib.sha256(open(p,"rb").read()).hexdigest(), p) for p in sys.argv[1:]]' $(BUILD)/before.trace $(BUILD)/after.trace
 
 bench:
 	mkdir -p $(BUILD)
@@ -60,10 +60,10 @@ bench:
 
 bench-compare: bench
 	mkdir -p $(BUILD)
-	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) $(BASELINE_CPPFLAGS) bench_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) -o $(BUILD)/before_bench
+	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) $(BASELINE_CPPFLAGS) bench_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) $(wildcard $(BASELINE_DIR)/navigation_codec.c) -o $(BUILD)/before_bench
 	$(BUILD)/before_bench > $(BUILD)/before-bench.trace
 	cmp $(BUILD)/before-bench.trace $(BUILD)/after-bench.trace
-	shasum -a 256 $(BUILD)/before-bench.trace $(BUILD)/after-bench.trace
+	$(PYTHON) -c 'import hashlib,sys; [print(hashlib.sha256(open(p,"rb").read()).hexdigest(), p) for p in sys.argv[1:]]' $(BUILD)/before-bench.trace $(BUILD)/after-bench.trace
 
 codec:
 	mkdir -p $(BUILD)

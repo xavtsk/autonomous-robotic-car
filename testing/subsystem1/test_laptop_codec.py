@@ -1,5 +1,6 @@
 """Independent laptop decoder checks against packets emitted by the real C codec."""
 import importlib.util
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -14,7 +15,8 @@ spec.loader.exec_module(codec)
 class LaptopCodecTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        output = subprocess.check_output([str(ROOT / "build/buddy1/host_test")], text=True)
+        binary = Path(os.environ.get("BUDDY1_HOST_TEST", str(ROOT / "build/buddy1/host_test")))
+        output = subprocess.check_output([str(binary.resolve())], text=True)
         print(output, end="")
         cls.vectors = {line.split()[1]: bytes.fromhex(line.split()[2])
                        for line in output.splitlines() if line.startswith("VECTOR ")}

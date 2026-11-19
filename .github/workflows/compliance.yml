@@ -37,9 +37,7 @@ jobs:
           path: subject
           persist-credentials: false
       - name: Install host dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential gcc-13 g++-13 clang-18 python3 nodejs mosquitto mosquitto-clients
+        run: python3 tooling/tools/compliance/install_host.py
       - name: Execute host suites
         run: python3 tooling/tools/compliance/run_host.py --root subject --output evidence --mode '${{ matrix.mode }}'
       - name: Save execution evidence
@@ -63,7 +61,7 @@ jobs:
           ref: ${{ env.BASELINE_SHA }}
           path: baseline
           persist-credentials: false
-      - run: sudo apt-get update && sudo apt-get install -y build-essential python3
+      - run: python3 candidate/tools/compliance/install_host.py
       - name: Compare actual semantic outputs
         run: python3 candidate/tools/compliance/differential.py --baseline baseline --candidate candidate --output evidence
       - if: always()
@@ -98,7 +96,9 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Install pinned Arm compiler
-        run: bash candidate/tools/compliance/install_arm.sh "$RUNNER_TEMP/arm"
+        run: |
+          python3 candidate/tools/compliance/install_host.py
+          bash candidate/tools/compliance/install_arm.sh "$RUNNER_TEMP/arm"
       - name: Build identical baseline and candidate profiles
         run: python3 candidate/tools/compliance/build_targets.py --baseline baseline --candidate candidate --sdk pico-sdk --profile '${{ matrix.profile }}' --output evidence
       - if: always()

@@ -1,0 +1,25 @@
+{
+  "baseline_commit": "4ad2cc42595722cedb47102e4343298339040d40",
+  "receipt_source": "build/compliance-review-20261119/flash-receipt.json",
+  "copy_completed_at_utc": "2026-11-19T14:30:00.5873675Z",
+  "telemetry_verified_at_utc": "2026-11-19T14:31:47.192477+00:00",
+  "uf2_sha256": "690d145ba1a5c3b9771e0af191f01632697306d41274cc9a113a8d00fb1cbffa",
+  "rollback_artifact_local": "build/compliance-baseline-4ad2cc4/baseline-4ad2cc4.uf2",
+  "boot_verified": true,
+  "telemetry": {
+    "received_packets": 818,
+    "malformed_packets": 0,
+    "bytes_received": 22643,
+    "stopped": true,
+    "running": false,
+    "state": "off",
+    "reason": "OK"
+  },
+  "map_acknowledged": {"forward": "A", "left": "F", "right": "Y", "uturn": "Z"},
+  "limitations": [
+    "This is preserved deployment evidence, not a new hardware test.",
+    "The map protocol has no request ID or map readback; an OK acknowledgment was observed.",
+    "No complete track, timing-interruption, hump, avoidance or barcode acceptance is established by this receipt.",
+    "The local image includes private network settings and is deliberately not published in CI artifacts."
+  ]
+}

@@ -7,9 +7,27 @@ import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
+
+
+def classify_output(status, contents):
+    """Fail closed on sanitizer errors, required skips, and empty discovery."""
+    sanitizer_error = bool(re.search(
+        r'ERROR: (AddressSanitizer|LeakSanitizer)|runtime error:|UndefinedBehaviorSanitizer:|AddressSanitizer:DEADLYSIGNAL', contents))
+    skipped = [line for line in contents.splitlines() if ' ... skipped ' in line]
+    optional_name = "test_real_successful_session_trace (test_traces.TraceTests.test_real_successful_session_trace) ... skipped 'Optional local hardware capture is unavailable'"
+    allowed_skips = [line for line in skipped if line == optional_name]
+    unexpected_skips = [line for line in skipped if line not in allowed_skips]
+    reported_skips = sum(map(int, re.findall(r'OK \(skipped=(\d+)\)', contents)))
+    empty_discovery = bool(re.search(r'^Ran 0 tests\b', contents, re.MULTILINE))
+    passed = (status == 0 and not sanitizer_error and not unexpected_skips
+              and reported_skips == len(allowed_skips) and not empty_discovery)
+    return dict(status='PASS' if passed else 'FAIL', skipped=skipped,
+                optional_unavailable=allowed_skips, sanitizer_error=sanitizer_error,
+                empty_discovery=empty_discovery)
 
 
 def main():
@@ -30,6 +48,13 @@ def main():
         flags += ' -Wno-bitwise-instead-of-logical'
     env = dict(os.environ, ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',
                UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1')
+    compiler_path = shutil.which(compiler)
+    if compiler_path is None:
+        parser.error('Missing pinned compiler: ' + compiler)
+    tool_bin = output / 'tool-bin'
+    tool_bin.mkdir()
+    (tool_bin / 'cc').symlink_to(compiler_path)
+    env['PATH'] = str(tool_bin) + os.pathsep + env['PATH']
     results = []
 
     def run(name, command):
@@ -48,15 +73,12 @@ def main():
         contents = log.read_text(encoding='utf-8', errors='replace')
         # The old S5 recipe tolerates one geometric simulation miss. It must
         # never hide a sanitizer report from that intentionally non-gating case.
-        sanitizer_error = bool(re.search(r'ERROR: (AddressSanitizer|LeakSanitizer)|runtime error:|UndefinedBehaviorSanitizer:|AddressSanitizer:DEADLYSIGNAL', contents))
-        skipped = re.findall(r'OK \(skipped=(\d+)\)', contents)
-        passed = status == 0 and not sanitizer_error and not skipped
+        outcome = classify_output(status, contents)
         results.append(dict(name=name, command=command, returncode=status,
-                            status='PASS' if passed else 'FAIL', skipped=skipped,
-                            sanitizer_error=sanitizer_error,
+                            **outcome,
                             duration_s=round(time.monotonic()-started, 3), log=log.name))
         print(f'{results[-1]["status"]}: {name}', flush=True)
-        if not passed:
+        if outcome['status'] != 'PASS':
             print(contents[-5000:], flush=True)
 
     def make(name, folder, targets, makefile=None):
@@ -74,6 +96,13 @@ def main():
     run('compiler', [compiler, '--version'])
     run('packages', ['dpkg-query', '-W', 'gcc-13', 'g++-13', 'clang-18', 'libc6',
                      'make', 'python3', 'nodejs', 'mosquitto', 'mosquitto-clients'])
+    # The fixed baseline's Python codec test uses this historical path even
+    # when Make's BUILD is overridden. An isolated link preserves that test
+    # unchanged and directs it at this run's exact binary.
+    legacy_build = root / 'build/buddy1'
+    legacy_build.parent.mkdir(parents=True, exist_ok=True)
+    legacy_build.symlink_to(output / 'bin/subsystem1', target_is_directory=True)
+    env['BUDDY1_HOST_TEST'] = str(output / 'bin/subsystem1/host_test')
     for number in range(1, 6):
         targets = ['test']
         if number == 3:
