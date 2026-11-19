@@ -4,7 +4,7 @@
   "source": "BARR-C 2018 original PDF, chapters 1-8; cached extraction build/compliance-review-20261119/barr-c-2018.txt",
   "baseline_commit": "4ad2cc42595722cedb47102e4343298339040d40",
   "scope_manifest": "testing/compliance/inventory_scope.json",
-  "status_policy": "Coverage is not compliance. All initial rows remain unreviewed. Automated diagnostics do not waive review, and pending exceptions are not approved.",
+  "status_policy": "Coverage is not compliance. Verified rows require exact revision/scope evidence; automated diagnostics do not waive review, and pending exceptions are not approved.",
   "rules": [
     {
       "id": "1.1.a",
@@ -107,16 +107,20 @@
       "strength": "mandatory",
       "enforcement": "lexical",
       "requirement": "Do not use auto.",
-      "status": "unreviewed",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        "docs/compliance/BARR_LEXICAL_REVIEW.json; exact source review at 6326fcbecc1519f1332cda7f1ffb24d7a498e046"
+      ]
     },
     {
       "id": "1.7.b",
       "strength": "mandatory",
       "enforcement": "lexical",
       "requirement": "Do not use register.",
-      "status": "unreviewed",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        "docs/compliance/BARR_LEXICAL_REVIEW.json; exact source review at 6326fcbecc1519f1332cda7f1ffb24d7a498e046"
+      ]
     },
     {
       "id": "1.7.c",
@@ -587,8 +591,10 @@
       "strength": "mandatory",
       "enforcement": "lexical",
       "requirement": "Do not reuse a C or C++ standard-library header filename.",
-      "status": "unreviewed",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        "docs/compliance/BARR_LEXICAL_REVIEW.json; exact source review at 6326fcbecc1519f1332cda7f1ffb24d7a498e046"
+      ]
     },
     {
       "id": "4.1.d",
@@ -675,8 +681,10 @@
       "strength": "mandatory",
       "enforcement": "lexical",
       "requirement": "Do not use absolute include paths.",
-      "status": "unreviewed",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        "docs/compliance/BARR_LEXICAL_REVIEW.json; exact source review at 6326fcbecc1519f1332cda7f1ffb24d7a498e046"
+      ]
     },
     {
       "id": "4.3.e",

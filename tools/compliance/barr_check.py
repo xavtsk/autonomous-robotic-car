@@ -87,8 +87,8 @@ def without_comments(text: str) -> str:
 
 def owned_files(root: Path, scope: dict) -> list[Path]:
     """Enumerate manifest includes, including untracked files; never guess scope."""
-    if scope.get("schema_version") != 1 or not scope.get("include_globs"):
-        raise ValueError("Scope must have schema_version 1 and include_globs")
+    if scope.get("schema_version") not in {1, 2} or not scope.get("include_globs"):
+        raise ValueError("Scope must have schema_version 1/2 and include_globs")
     # Reuse the representation inventory's enumerator so the two audits cannot
     # silently disagree about newly added files or explicit exclusions.
     if str(ROOT) not in sys.path:
@@ -200,8 +200,9 @@ def ast_checks(tree: dict, source: Path, root: Path, owned: set[Path], allowed_l
         kind = node.get("kind")
         loc = node.get("loc", node.get("range", {}).get("begin", {}))
         ambiguous = "includedFrom" in loc and "file" not in loc
-        line_range = (allowed_lines or {}).get(path)
-        relevant = path in owned and not ambiguous and (line_range is None or line_range[0] <= number <= line_range[1])
+        line_ranges = (allowed_lines or {}).get(path)
+        relevant = path in owned and not ambiguous and (line_ranges is None or
+                    any(start <= number <= end for start, end in line_ranges))
         if ambiguous and kind in {"FunctionDecl", "VarDecl", "ParmVarDecl", "FieldDecl"}:
             unknown_locations += 1
 
@@ -285,17 +286,18 @@ def audit(root: Path, scope: dict, ledger: dict, ast_manifest: Path | None = Non
     findings = []
     allowed_lines = {}
     mixed = scope.get("mixed_files", {})
+    from testing.compliance.inventory import mixed_owned_text, mixed_region_spans
     for path in paths:
         region = mixed.get(relative(path, root))
         if region:
             text = path.read_text(encoding="utf-8")
-            pattern = r"^[ \t]*" + re.escape(region["project_region_start"]) + r"\b.*?^[ \t]*" + re.escape(region["project_region_end"]) + r"[^\n]*"
-            matches = list(re.finditer(pattern, text, re.MULTILINE | re.DOTALL))
-            if len(matches) != 1:
-                raise ValueError(f"Ambiguous mixed-ownership region: {relative(path, root)}")
-            match = matches[0]
-            masked = re.sub(r"[^\n]", "", text[:match.start()]) + match[0] + re.sub(r"[^\n]", "", text[match.end():])
-            allowed_lines[path] = (line_at(text, match.start()), line_at(text, match.end()))
+            spans = mixed_region_spans(text, region)
+            masked = mixed_owned_text(text, region)
+            # The shared mask preserves offsets with spaces. Those spaces are
+            # imported text, so they must not create false line-width findings.
+            masked = re.sub(r"(?m)^[ \t]+(?=\n|$)", "", masked)
+            allowed_lines[path] = [(line_at(text, start), line_at(text, end - 1))
+                                   for start, end in spans]
             findings.extend(lexical_checks(path, root, masked, file_level=False))
         else:
             findings.extend(lexical_checks(path, root))

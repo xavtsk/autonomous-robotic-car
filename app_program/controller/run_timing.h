@@ -20,6 +20,10 @@ typedef struct
     uint32_t above_target, above_safety, last_safety_us;
 } s3_run_timing_t;
 
+/** @brief Increment an observation counter without wrapping at UINT32_MAX.
+ * @param p_value Nonnull counter owned exclusively by the caller.
+ * @note Leaves an already saturated counter unchanged; takes no lock.
+ */
 static inline void s3_timing_increment (uint32_t * p_value)
 {
     if (*p_value != UINT32_MAX)
@@ -28,12 +32,28 @@ static inline void s3_timing_increment (uint32_t * p_value)
     }
 }
 
+/** @brief Start a timing record and clear all previous observations.
+ * @param p_timing Nonnull record owned by the sampling task.
+ * @param now Wrapping hardware timestamp in microseconds for accepted START.
+ * @note Overwrites the whole record, sets started_us, and leaves counters and
+ * gap/safety observations zero. The caller provides exclusive access.
+ */
 static inline void s3_run_timing_begin (s3_run_timing_t * p_timing,
                                         uint32_t now)
 {
     *p_timing = (s3_run_timing_t){.started_us = now};
 }
 
+/** @brief Add one sample interval to an existing observation record.
+ * @param p_timing Nonnull record owned exclusively by the sampling task.
+ * @param gap_us Already-computed elapsed sample interval in microseconds.
+ * @param stamp_us Wrapping microsecond timestamp associated with this sample.
+ * @param safety_limit_us Existing navigation safety limit in microseconds.
+ * @note Saturates sample/threshold counters, retains the largest gap, and
+ * records stamp_us only when gap_us strictly exceeds safety_limit_us. The
+ * target counter also uses a strict comparison with S3_SAMPLE_PERIOD_US.
+ * No deadline policy, scheduling or controller state is changed here.
+ */
 static inline void s3_run_timing_record (s3_run_timing_t * p_timing,
                                          uint32_t gap_us, uint32_t stamp_us,
                                          uint32_t safety_limit_us)

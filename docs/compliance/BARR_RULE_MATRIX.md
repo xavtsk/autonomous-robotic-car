@@ -96,8 +96,8 @@ and [ABBREVIATIONS.md](ABBREVIATIONS.md). Generate this matrix with
 | 1.5.a | preferred | manual | Avoid abbreviations whose meanings are not broadly understood. | unreviewed |
 | 1.5.b | mandatory | manual | Maintain a version-controlled project abbreviation table. | unreviewed |
 | 1.6.a | mandatory | ast-review | Associate every cast with a comment explaining its valid input range and behavior. | unreviewed |
-| 1.7.a | mandatory | lexical | Do not use auto. | unreviewed |
-| 1.7.b | mandatory | lexical | Do not use register. | unreviewed |
+| 1.7.a | mandatory | lexical | Do not use auto. | verified |
+| 1.7.b | mandatory | lexical | Do not use register. | verified |
 | 1.7.c | mixed | ast-review | Prefer no goto; any goto must target a later label in the same or enclosing block. | unreviewed |
 | 1.7.d | preferred | lexical-review | Prefer avoiding continue. | unreviewed |
 | 1.8.a | mandatory | ast-review | Make functions and objects static unless external visibility is necessary. | unreviewed |
@@ -156,7 +156,7 @@ and [ABBREVIATIONS.md](ABBREVIATIONS.md). Generate this matrix with
 | 3.6.b | mandatory | lexical | Permit no other control character except form feed. | unreviewed |
 | 4.1.a | mandatory | lexical | Use lowercase letters, digits and underscores in module filenames. | unreviewed |
 | 4.1.b | mandatory | lexical | Make module basenames unique in their first eight characters and use .c/.h suffixes. | unreviewed |
-| 4.1.c | mandatory | lexical | Do not reuse a C or C++ standard-library header filename. | unreviewed |
+| 4.1.c | mandatory | lexical | Do not reuse a C or C++ standard-library header filename. | verified |
 | 4.1.d | mandatory | ast-review | Include main in the filename of a module defining main. | unreviewed |
 | 4.2.a | mandatory | lexical | Give each C source exactly one same-basename header. | unreviewed |
 | 4.2.b | mandatory | lexical-review | Protect every header from repeated inclusion. | unreviewed |
@@ -167,7 +167,7 @@ and [ABBREVIATIONS.md](ABBREVIATIONS.md). Generate this matrix with
 | 4.3.a | mandatory | manual | Limit each module to behaviors belonging to one entity. | unreviewed |
 | 4.3.b | mandatory | ast-review | Order source sections: comment, includes, types/constants/macros, static data, private prototypes, public bodies, private bodies. | unreviewed |
 | 4.3.c | mandatory | lexical | Include the corresponding same-basename header in each C source. | unreviewed |
-| 4.3.d | mandatory | lexical | Do not use absolute include paths. | unreviewed |
+| 4.3.d | mandatory | lexical | Do not use absolute include paths. | verified |
 | 4.3.e | mandatory | compiler-review | Remove unused includes after checking every supported profile. | unreviewed |
 | 4.3.f | mandatory | lexical | Do not include C source files. | unreviewed |
 | 4.4.a | mandatory | manual | Maintain project source and header templates. | unreviewed |

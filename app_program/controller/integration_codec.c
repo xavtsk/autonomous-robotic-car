@@ -14,6 +14,14 @@ BUILD_ASSERT(sizeof(s3_status_packet_t) == 146 &&
                  sizeof(s3_control_packet_t) == 11,
              integration_codec_c_check_b_t);
 
+/** @brief Append the low width bits of value, least-significant bit first.
+ * @param p_p Writable packet containing zeroed destination bits.
+ * @param p_bit Nonnull bit cursor, advanced by width.
+ * @param value Unsigned value; bits above width are ignored.
+ * @param width Number of bits, at most 32.
+ * @pre The packet has space for the full range. Only one bits are written;
+ * zero bits remain unchanged. The caller provides ownership and bounds.
+ */
 static void put (uint8_t * p_p, unsigned * p_bit, uint32_t value,
                  unsigned width)
 {
@@ -26,6 +34,13 @@ static void put (uint8_t * p_p, unsigned * p_bit, uint32_t value,
     }
 }
 
+/** @brief Read width packet bits, least-significant bit first.
+ * @param p_p Readable packet containing the entire requested range.
+ * @param p_bit Nonnull bit cursor, advanced by width.
+ * @param width Number of bits, at most 32.
+ * @return The extracted unsigned value with higher bits zero.
+ * @pre Pointers and packet bounds are valid; this helper performs no checks.
+ */
 static uint32_t get (const uint8_t * p_p, unsigned * p_bit, unsigned width)
 {
     uint32_t value_v = 0;
@@ -39,6 +54,12 @@ static uint32_t get (const uint8_t * p_p, unsigned * p_bit, unsigned width)
     return value_v;
 }
 
+/** @brief Append the existing binary64 representation in low-word-first order.
+ * @param p_p Writable packet with 64 zeroed bits available at the cursor.
+ * @param p_bit Nonnull bit cursor, advanced by 64.
+ * @param value Value whose representation is copied without validation.
+ * @pre The caller provides valid pointers, bounds and exclusive output access.
+ */
 static void put_double (uint8_t * p_p, unsigned * p_bit, float64_t value)
 {
     union
@@ -52,6 +73,12 @@ static void put_double (uint8_t * p_p, unsigned * p_bit, float64_t value)
     put(p_p, p_bit, (uint32_t)(value_v.u >> 32), 32);
 }
 
+/** @brief Reconstruct binary64 from two low-word-first packet words.
+ * @param p_p Readable packet with 64 bits available at the cursor.
+ * @param p_bit Nonnull bit cursor, advanced by 64.
+ * @return The stored floating representation, including nonfinite values.
+ * @pre The caller provides valid pointers and packet bounds.
+ */
 static float64_t get_double (const uint8_t * p_p, unsigned * p_bit)
 {
     union
@@ -65,6 +92,12 @@ static float64_t get_double (const uint8_t * p_p, unsigned * p_bit)
     return value_v.f;
 }
 
+/** @brief Append a binary32 representation without numeric conversion.
+ * @param p_p Writable packet with 32 zeroed bits available at the cursor.
+ * @param p_bit Nonnull bit cursor, advanced by 32.
+ * @param value Value whose representation is copied without validation.
+ * @pre The caller provides valid pointers, bounds and exclusive output access.
+ */
 static void put_float (uint8_t * p_p, unsigned * p_bit, float32_t value)
 {
     union
@@ -77,6 +110,12 @@ static void put_float (uint8_t * p_p, unsigned * p_bit, float32_t value)
     put(p_p, p_bit, value_v.u, 32);
 }
 
+/** @brief Reconstruct binary32 from the next 32 packet bits.
+ * @param p_p Readable packet with 32 bits available at the cursor.
+ * @param p_bit Nonnull bit cursor, advanced by 32.
+ * @return The stored floating representation, including nonfinite values.
+ * @pre The caller provides valid pointers and packet bounds.
+ */
 static float32_t get_float (const uint8_t * p_p, unsigned * p_bit)
 {
     union
@@ -89,6 +128,12 @@ static float32_t get_float (const uint8_t * p_p, unsigned * p_bit)
     return value_v.f;
 }
 
+/** @brief Publish a canonical control packet only after validation succeeds.
+ * @param p_v Request source; follows p_value in the header contract.
+ * @param p_out Packet destination, unchanged on rejection.
+ * @return Whether the entire packet was encoded and assigned.
+ * @see integration_codec.h for field applicability and null-pointer behavior.
+ */
 bool s3_control_pack (const s3_control_request_t * p_v,
                       s3_control_packet_t * p_out)
 {
@@ -121,6 +166,12 @@ bool s3_control_pack (const s3_control_request_t * p_v,
     return true;
 }
 
+/** @brief Decode a request and reject any noncanonical byte representation.
+ * @param p_p Packet source; follows p_packet in the header contract.
+ * @param p_out Request destination, unchanged on rejection.
+ * @return Whether the decoded request was assigned after a repack comparison.
+ * @see integration_codec.h for reserved fields and null-pointer behavior.
+ */
 bool s3_control_unpack (const s3_control_packet_t * p_p,
                         s3_control_request_t * p_out)
 {
@@ -152,12 +203,23 @@ bool s3_control_unpack (const s3_control_packet_t * p_p,
     return true;
 }
 
+/** @brief Check that a calibration summary's integer fields fit the packet.
+ * @param p_v Nonnull summary to read.
+ * @return True for count at most 65535 and both extrema at most 4095.
+ * @note Does not check extrema ordering, availability or the floating average.
+ */
 static bool summary_valid (const s3_calibration_summary_t * p_v)
 {
     return p_v->count <= 65535U && p_v->minimum <= 4095U &&
            p_v->maximum <= 4095U;
 }
 
+/** @brief Append a calibration summary's 73-bit stored representation.
+ * @param p_p Writable packet with 73 zeroed bits available at the cursor.
+ * @param p_bit Nonnull bit cursor, advanced by 73.
+ * @param p_v Nonnull summary already accepted by summary_valid.
+ * @pre The caller owns the output and has checked packet bounds.
+ */
 static void put_summary (uint8_t * p_p, unsigned * p_bit,
                          const s3_calibration_summary_t * p_v)
 {
@@ -168,6 +230,12 @@ static void put_summary (uint8_t * p_p, unsigned * p_bit,
     put(p_p, p_bit, p_v->available, 1);
 }
 
+/** @brief Extract a calibration summary from 73 stored bits.
+ * @param p_p Readable packet with 73 bits available at the cursor.
+ * @param p_bit Nonnull bit cursor, advanced by 73.
+ * @param p_v Nonnull destination; all five summary fields are overwritten.
+ * @pre The caller owns the destination and has checked packet bounds.
+ */
 static void get_summary (const uint8_t * p_p, unsigned * p_bit,
                          s3_calibration_summary_t * p_v)
 {
@@ -178,6 +246,12 @@ static void get_summary (const uint8_t * p_p, unsigned * p_bit,
     p_v->available = get(p_p, p_bit, 1) != 0;
 }
 
+/** @brief Encode and publish a complete copied runtime status packet.
+ * @param p_v Stable status source; follows p_value in the header contract.
+ * @param p_out Packet destination, unchanged on rejection.
+ * @return Whether all range/navigation checks passed and output was assigned.
+ * @see integration_codec.h for exact representation and validation limits.
+ */
 bool s3_status_pack (const s3_integration_status_t * p_v,
                      s3_status_packet_t * p_out)
 {
@@ -225,6 +299,12 @@ bool s3_status_pack (const s3_integration_status_t * p_v,
     return true;
 }
 
+/** @brief Validate packet structure and publish a decoded status copy.
+ * @param p_p Packet source; follows p_packet in the header contract.
+ * @param p_out Status destination, unchanged on rejection.
+ * @return Whether all structural checks passed and output was assigned.
+ * @see integration_codec.h for enum, reserved-bit and floating-value behavior.
+ */
 bool s3_status_unpack (const s3_status_packet_t * p_p,
                        s3_integration_status_t * p_out)
 {

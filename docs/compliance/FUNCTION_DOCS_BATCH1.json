@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "mode": "apply",
+  "batch_kind": "manually reviewed function documentation only",
+  "before_commit": "133115478bb204df3e8e346810959a691eb245e2",
+  "formatter_executed": false,
+  "files": [
+    {
+      "path": "app_program/subsystem2/estimate_motion.c",
+      "before_sha256": "d5b751031b0676305fcc0cebb4e6660466fe484a2307d3bc099e4b574382dbf9",
+      "after_sha256": "038b9574b6a10586206aec31cf3889e34b62363aece35e9e35b38a16484fa69e",
+      "before_lf_sha256": "d5b751031b0676305fcc0cebb4e6660466fe484a2307d3bc099e4b574382dbf9",
+      "after_lf_sha256": "038b9574b6a10586206aec31cf3889e34b62363aece35e9e35b38a16484fa69e",
+      "token_sha256": "16602f7253c282e5ea6d1c9d7832bc62af4dc151c50093a99401b9389c7b2085",
+      "tokens_identical": true,
+      "module_documented": true
+    },
+    {
+      "path": "app_program/subsystem2/estimate_motion.h",
+      "before_sha256": "0b80972e336a11fa7d904b0021f3924470d8c0e6d89ca237998fe34b847add43",
+      "after_sha256": "555e7fe79f78c11b07a6ba1cbe048ec540a4941e19e6abf01b8be39af991445e",
+      "before_lf_sha256": "0b80972e336a11fa7d904b0021f3924470d8c0e6d89ca237998fe34b847add43",
+      "after_lf_sha256": "555e7fe79f78c11b07a6ba1cbe048ec540a4941e19e6abf01b8be39af991445e",
+      "token_sha256": "7316ae232035ed924ae3e703461acff1306e3de65ff94ddb21e469bb378fcb0a",
+      "tokens_identical": true,
+      "module_documented": true
+    },
+    {
+      "path": "app_program/controller/integration_codec.c",
+      "before_sha256": "f9ba967120951520c3832c6b441754b362de2a12aea1273d9df1e19455eedb68",
+      "after_sha256": "497075a02d2374a9eb5e5417d98e4799956bf8e4597f5cac8081614d78b71a94",
+      "before_lf_sha256": "f9ba967120951520c3832c6b441754b362de2a12aea1273d9df1e19455eedb68",
+      "after_lf_sha256": "497075a02d2374a9eb5e5417d98e4799956bf8e4597f5cac8081614d78b71a94",
+      "token_sha256": "74fa083fab86b5609a3a3f6f2e1e54e11cfc506f6a799447cb3bbfd918a4cf31",
+      "tokens_identical": true,
+      "module_documented": true
+    },
+    {
+      "path": "app_program/controller/integration_codec.h",
+      "before_sha256": "1f137c4ff03ec03c273fe680699b4399b51343ca5830b0567b6d8639109b6d67",
+      "after_sha256": "bd470802fde8534bfb98ff3b3208625f527552f7ee5d9fe08cb47c439c136667",
+      "before_lf_sha256": "1f137c4ff03ec03c273fe680699b4399b51343ca5830b0567b6d8639109b6d67",
+      "after_lf_sha256": "bd470802fde8534bfb98ff3b3208625f527552f7ee5d9fe08cb47c439c136667",
+      "token_sha256": "e54bb5ec61de8119df1eaa7838f53a9bc3d51a75ea244e1907a32096da141eff",
+      "tokens_identical": true,
+      "module_documented": true
+    },
+    {
+      "path": "app_program/subsystem3/line_controller.c",
+      "before_sha256": "a5866d14772db2959dd576beddbf93bf0db6ba8787348a67c384366be5262dc2",
+      "after_sha256": "7f1b463ee719c4384a5d8beeac80d66056ca4491350364ca16427e2272222f7c",
+      "before_lf_sha256": "a5866d14772db2959dd576beddbf93bf0db6ba8787348a67c384366be5262dc2",
+      "after_lf_sha256": "7f1b463ee719c4384a5d8beeac80d66056ca4491350364ca16427e2272222f7c",
+      "token_sha256": "780275b885f9deb48fafa5b96145a0e8f176e18884f4545d0d98f44897fe631a",
+      "tokens_identical": true,
+      "module_documented": true
+    },
+    {
+      "path": "app_program/subsystem3/line_controller.h",
+      "before_sha256": "b0788dbcd9a2d0ed684d6e034aa94ae1fc66702602e255e262a416ff2c9cd69e",
+      "after_sha256": "830e5492bb66cf454b9d7cab83e84656259523690fc53ca181841a5e24964bcd",
+      "before_lf_sha256": "b0788dbcd9a2d0ed684d6e034aa94ae1fc66702602e255e262a416ff2c9cd69e",
+      "after_lf_sha256": "830e5492bb66cf454b9d7cab83e84656259523690fc53ca181841a5e24964bcd",
+      "token_sha256": "b50722ee528f5052ad3e687dc1755cb39058023ae8b1cc0fe1936e2646d007c7",
+      "tokens_identical": true,
+      "module_documented": true
+    },
+    {
+      "path": "app_program/controller/run_timing.h",
+      "before_sha256": "45ddd17b364120aac284eb176d88206bf195a2b011fb95cfbaa956c341a3186d",
+      "after_sha256": "ff9b0cc37b9503ed7587e8e417ca26945bd7036dcf2c26416d0b784d755c1216",
+      "before_lf_sha256": "45ddd17b364120aac284eb176d88206bf195a2b011fb95cfbaa956c341a3186d",
+      "after_lf_sha256": "ff9b0cc37b9503ed7587e8e417ca26945bd7036dcf2c26416d0b784d755c1216",
+      "token_sha256": "99aa1bc76166aa8ccbf723bd1428fbc56b353b8575a760fd6e67dc92c3f95679",
+      "tokens_identical": true,
+      "module_documented": true
+    }
+  ],
+  "changed_files": 7,
+  "review_gaps": [],
+  "runtime_equivalence_certified": false,
+  "production_source_written": true,
+  "coverage": {
+    "definition_count": 31,
+    "public_prototype_count": 17,
+    "clang_recognized_comments": 48,
+    "diagnostics": 0,
+    "parser": "libclang18.1.1, configured target arguments with -Wdocumentation and -Wdocumentation-unknown-command",
+    "all_owned_functions_covered": false,
+    "doxygen_generation_executed": false
+  }
+}

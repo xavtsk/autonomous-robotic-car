@@ -56,6 +56,18 @@ class LexicalTests(unittest.TestCase):
             findings = barr.lexical_checks(path, root, masked, file_level=False)
             self.assertEqual([(row.rule, row.line) for row in findings], [("5.2.b", 3)])
 
+    def test_ast_respects_separate_owned_ranges(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = (root / "mixed.c").resolve()
+            tree = {"kind": "TranslationUnitDecl", "inner": [
+                {"kind": "VarDecl", "name": "x", "loc": {"line": number}}
+                for number in (2, 4, 6)]}
+            findings, _, _, _ = barr.ast_checks(tree, path, root, {path},
+                                                {path: [(2, 2), (6, 6)]})
+            self.assertEqual([(row.rule, row.line) for row in findings],
+                             [("7.1.e", 2), ("7.1.e", 6)])
+
 
 class AstTests(unittest.TestCase):
     def inspect(self, node):
