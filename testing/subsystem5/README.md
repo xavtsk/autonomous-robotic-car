@@ -1,5 +1,7 @@
 # Buddy 5 testing
 
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+
 Run `make -C testing/subsystem5 test sanitize` from the repository root.
 Tests use C11 warnings-as-errors; sanitizer runs use AddressSanitizer and UBSan.
 They do not access a sensor, serial port, broker or robot.

@@ -1,5 +1,7 @@
 # micro T-Kernel 3.0 project for Raspberry Pi Pico W
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 A starting point for your project: micro T-Kernel 3.0 running on **both cores**
 of the Pico W's RP2040, with a USB serial console and the WiFi driver built in.
 

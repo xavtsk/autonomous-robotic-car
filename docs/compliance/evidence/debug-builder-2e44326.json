@@ -1,0 +1,101 @@
+{
+  "revision": "2e44326dabcb862d4028aa52676cbc507bf0924e",
+  "baseline_commit": "4ad2cc42595722cedb47102e4343298339040d40",
+  "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44572895123",
+  "hardware_executed": false,
+  "semantic_checks": [
+    {
+      "name": "motion_semantic_trace",
+      "matched": true,
+      "semantic_rows": 74,
+      "baseline_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071",
+      "candidate_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071"
+    },
+    {
+      "name": "terrain_semantic_trace",
+      "matched": true,
+      "semantic_rows": 1916,
+      "baseline_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8",
+      "candidate_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8"
+    },
+    {
+      "name": "obstacle_semantic_trace",
+      "matched": true,
+      "semantic_rows": 969,
+      "baseline_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5",
+      "candidate_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5"
+    },
+    {
+      "name": "runtime_semantic_trace",
+      "matched": true,
+      "semantic_rows": 2398,
+      "baseline_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907",
+      "candidate_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907"
+    },
+    {
+      "name": "mqtt_semantic_trace",
+      "matched": true,
+      "semantic_rows": 269,
+      "baseline_sha256": "a2162e41f4964fff622c90f24f9b462c36295c0f5e269511998e5cd73dfa6cb3",
+      "candidate_sha256": "a2162e41f4964fff622c90f24f9b462c36295c0f5e269511998e5cd73dfa6cb3"
+    },
+    {
+      "name": "control_debug_wire_and_mutation_trace",
+      "matched": true,
+      "rows": 487,
+      "baseline_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2",
+      "candidate_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2"
+    },
+    {
+      "name": "navigation_semantic_trace",
+      "matched": true,
+      "semantic_rows": 60007,
+      "baseline_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143",
+      "candidate_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143"
+    },
+    {
+      "name": "recorded_replay",
+      "cases": 1008,
+      "mismatches": 0,
+      "expectation_failures": 2,
+      "matched": true
+    }
+  ],
+  "whole_workflow_passed": false,
+  "production": {
+    "baseline": {
+      "text": 466276,
+      "data": 688,
+      "bss": 129008,
+      "static_ram": 129696
+    },
+    "candidate": {
+      "text": 465980,
+      "data": 688,
+      "bss": 128880,
+      "static_ram": 129568
+    },
+    "delta": {
+      "static_ram_delta": -128,
+      "flash_identical": false,
+      "note": "Binary equality is reported, not assumed for representation changes."
+    },
+    "baseline_flash_sha256": "d3acb183b72825419eea84c0d09c6d86a78322d9e34fb0c3e9da2d1571704e2b",
+    "candidate_flash_sha256": "f09ff492fe30fdfb14a8bc259b0f7fbc386fee81290cbff707580422040ac2f8",
+    "sample_task_static_stack_baseline_bytes": 488,
+    "sample_task_static_stack_candidate_bytes": 488,
+    "stack_note": "Compiler function frame estimate; not call-chain maximum or live high-water measurement."
+  },
+  "builder_boundaries": {
+    "cases": 1141,
+    "scratch_bytes": 71,
+    "wide_sample_bytes": 200,
+    "gcc_clang_and_asan_ubsan_executed": true
+  },
+  "remaining_gates": [
+    "Two unchanged recorded replay expectation failures",
+    "Sanitizer-instrumented empty-object infrastructure check needs noninstrumented invocation",
+    "Manual BARR and complete representation audit",
+    "Physical timing and reconnection verification"
+  ]
+}

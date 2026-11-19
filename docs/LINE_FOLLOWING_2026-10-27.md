@@ -1,5 +1,7 @@
 # Line following: "tape between the sensors" profile — 27 Oct 2026
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 For Buddy 3 (and the team). Not yet run on the car.
 
 ## Why

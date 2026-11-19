@@ -30,6 +30,35 @@ reported separately from passing fixture expectations. Additional per-update
 trace evidence will locate the unfulfilled condition and enumerate all failures.
 Barcode algorithm changes remain outside this behavior-preserving cleanup.
 
+The expanded run [44572895123](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44572895123)
+executed all 1,008 cases and 3,110 original predicates, with zero differences
+between baseline and candidate per-update traces. It found exactly two original
+expectation failures:
+
+| Case | Original expectation | Actual baseline and candidate |
+| --- | --- | --- |
+| Z fixture above, midpoint, leading 2000 ms, trailing 0 ms | Z or explicitly permitted PROCESSING at EOF | QUIET; candidate Z retained, not published |
+| `20261103-171918-normal-speed.txt`, same padding/timing | No letter without the added trailing margin | A published at 6,703,000 us |
+
+For Z, the last recorded update has frame time 10,107,500 us versus required
+10,096,703 us, so the frame-time condition is satisfied. Strict quiet is
+1,396,500 us and tolerant quiet is 1,457,500 us; both are shorter than the
+1,490,510 us required quiet. The final refusal therefore follows the existing
+quiet requirement. No extra samples were inserted to make the unpadded case
+pass. For A, the trace records the existing publication timestamp; the older
+test expectation does not match that behavior. The test remains unchanged and
+the workflow continues to fail those expectations visibly.
+
+## Sanitizer-only disabled-object check
+
+The instrumented diagnostics tests execute successfully, but the original
+disabled-object test also passed sanitizer flags to an intentionally empty
+translation unit. Sanitizer-generated registration symbols make that object
+nonempty. This is not a diagnostic implementation or sanitizer finding. Keep
+the empty-object assertion intact and compile that specific absence-of-code
+check without instrumentation; execute diagnostic behavior tests with ASan and
+UBSan normally. Report these as separate checks.
+
 ## Test-runner infrastructure
 
 The original laptop codec test assumes `build/buddy1/host_test`, while the new

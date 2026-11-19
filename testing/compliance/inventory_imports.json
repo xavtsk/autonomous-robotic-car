@@ -1,0 +1,3339 @@
+{
+  "schema_version": 1,
+  "template_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+  "upstream_revision": "c3b09544cb1fd6dac6ad4b8f523be0af59b44482",
+  "baseline_commit": "4ad2cc42595722cedb47102e4343298339040d40",
+  "evidence": [
+    "docs/TEMPLATE_MIGRATION.md",
+    "git ls-tree -r 437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+    "git diff --name-status 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 4ad2cc42595722cedb47102e4343298339040d40 -- config device include kernel lib tools"
+  ],
+  "files": {
+    "device/adc/adc.c": {
+      "classification": "imported",
+      "template_blob": "339f9d6932049b61bfddc658080c02fd9b3c6a96",
+      "baseline_blob": "339f9d6932049b61bfddc658080c02fd9b3c6a96",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6344104b7a9cc52154d2af2ecdba9b37d33b94d1aaee5db4e7cb4769f1ecc508"
+    },
+    "device/adc/adc.h": {
+      "classification": "imported",
+      "template_blob": "816096c64fe1d9e6dc2fc2310dbbdef171efe7a9",
+      "baseline_blob": "816096c64fe1d9e6dc2fc2310dbbdef171efe7a9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "80f692f879663f4446b871c69f425accdde6f980c8580247c815b084ffc34667"
+    },
+    "device/adc/adc_cnf.h": {
+      "classification": "imported",
+      "template_blob": "8074deeb9ea28e6a12968815baf4c1772fd8a0a0",
+      "baseline_blob": "8074deeb9ea28e6a12968815baf4c1772fd8a0a0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "20fc914c2082a72fc5e42b33ae5c21f81fd4ba6a47d245839dba8c75642e4931"
+    },
+    "device/adc/sysdepend/rx231/adc_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "24823f3d56aa9cad60010566eab2098d4799462b",
+      "baseline_blob": "24823f3d56aa9cad60010566eab2098d4799462b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8b588a342e11e695fd859ecde7bd4e1c7d823ca72f3088c32e2abcbe1c3df062"
+    },
+    "device/adc/sysdepend/rx231/adc_rx231.c": {
+      "classification": "imported",
+      "template_blob": "618afc9a46a83e3296c57601afbc9f7fb4bf0ba3",
+      "baseline_blob": "618afc9a46a83e3296c57601afbc9f7fb4bf0ba3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "80046c2cb30996d739c49b64076d12f91d2e3a94a1e8a22d6144d8727d6fccaf"
+    },
+    "device/adc/sysdepend/rx231/adc_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "9e5cbc97bfdf543f860383197b9cb17699dfb1c0",
+      "baseline_blob": "9e5cbc97bfdf543f860383197b9cb17699dfb1c0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d2cfee413c4b5a6d9396b50801ec0f213f1823c3bae93065201e42cb93578ece"
+    },
+    "device/adc/sysdepend/rx65n/adc_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "a023df7b3dac6f98ade0deba3fe7d40b4d35e132",
+      "baseline_blob": "a023df7b3dac6f98ade0deba3fe7d40b4d35e132",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e02837873d7c1eacfca0fcdcc5dd42f31d4d4cb61a03991764a8a0fc6c7c93b6"
+    },
+    "device/adc/sysdepend/rx65n/adc_rx65n.c": {
+      "classification": "imported",
+      "template_blob": "2732beb5645166891c05ba5273fd5e0fcd6e1bb0",
+      "baseline_blob": "2732beb5645166891c05ba5273fd5e0fcd6e1bb0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5359d0a7aa625efc071f4b062d96a246d83fd9724ced311d3285bebb78ac218c"
+    },
+    "device/adc/sysdepend/rx65n/adc_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "fef86643d38da8b63c31d44b23a507e5871f3538",
+      "baseline_blob": "fef86643d38da8b63c31d44b23a507e5871f3538",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5d45308da0edfaacc3ee348b6f4e179a56e4d64d6c1d6373c5510e12effd0f05"
+    },
+    "device/adc/sysdepend/rza2m/adc_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "ca9b66d5d7b3d11f1466d5fce90ab5ed0cf8bdfe",
+      "baseline_blob": "ca9b66d5d7b3d11f1466d5fce90ab5ed0cf8bdfe",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0277d8c1e30727d3a4258292892a8c35b3bf95fe6ac9890e822871c2d288fcd5"
+    },
+    "device/adc/sysdepend/rza2m/adc_rza2m.c": {
+      "classification": "imported",
+      "template_blob": "30ab2caa7a568a9d213f4d24a19590cdd701b659",
+      "baseline_blob": "30ab2caa7a568a9d213f4d24a19590cdd701b659",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0209888fd02daa57215a393866c8f3846f0d9e2626bc4d5a5aea56b43de87fef"
+    },
+    "device/adc/sysdepend/rza2m/adc_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "ead79245f4579672453145aa4567694805f7c4ab",
+      "baseline_blob": "ead79245f4579672453145aa4567694805f7c4ab",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0899675e9836eb21b3e6c66f71a25d1ac09ca58354c2b082d44b11c393e7f4cd"
+    },
+    "device/adc/sysdepend/stm32h7/adc_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "ca9108e6f85ae17ff9a48503ec542119e8cd7106",
+      "baseline_blob": "ca9108e6f85ae17ff9a48503ec542119e8cd7106",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8e8c2a2a58ba5f53344375f4661eae1bae549b0d879bd96cad4db0dae4b746aa"
+    },
+    "device/adc/sysdepend/stm32h7/adc_stm32h7.c": {
+      "classification": "imported",
+      "template_blob": "14127cd4eb147eab2d5198a47f201137d52f231e",
+      "baseline_blob": "14127cd4eb147eab2d5198a47f201137d52f231e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "dd7c31ad8ab5b26cc0caeac21ef20136fc215c93de175504e65f8f8e512d18b1"
+    },
+    "device/adc/sysdepend/stm32h7/adc_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "94c55835ec8a70c7a9f759901a9b9497fe34a12f",
+      "baseline_blob": "94c55835ec8a70c7a9f759901a9b9497fe34a12f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "06c32f5f4fb032af8cd4a0bce7fdcf3e5ab4e4c77300258b303789aa9c4920a7"
+    },
+    "device/adc/sysdepend/stm32l4/adc_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "9e2d0bfc005ba3157e621bd6e334c8d3c8ebfce1",
+      "baseline_blob": "9e2d0bfc005ba3157e621bd6e334c8d3c8ebfce1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3ed112eaf1c6ddd3344279676470d9cff7eca2be38b9bad3ec561c6fa2ce8be8"
+    },
+    "device/adc/sysdepend/stm32l4/adc_stm32l4.c": {
+      "classification": "imported",
+      "template_blob": "972701f9b31a8573b5374b9a24d32ad9943b7795",
+      "baseline_blob": "972701f9b31a8573b5374b9a24d32ad9943b7795",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "16f47b566ed1a88d885c3e2f75d540c741231feb6f5985556d55dd74ec0690c1"
+    },
+    "device/adc/sysdepend/stm32l4/adc_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "492947f4f9e36eb5e3991ceb203db3a86ccb8469",
+      "baseline_blob": "492947f4f9e36eb5e3991ceb203db3a86ccb8469",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2c4cbc686634e42b245882601414d69a4179421ea82e1425b9659beb95842236"
+    },
+    "device/adc/sysdepend/tx03_m367/adc_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "2ad4949c50553258271851c524697b9b42a5dacf",
+      "baseline_blob": "2ad4949c50553258271851c524697b9b42a5dacf",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8a833f9092b9d02a8ca8e2458ea336930ba1674b683b8bd08fe52ffc32d4473b"
+    },
+    "device/adc/sysdepend/tx03_m367/adc_m367.c": {
+      "classification": "imported",
+      "template_blob": "e68a34d9329f92262b3ed9bb23fe43d042bb3bc5",
+      "baseline_blob": "e68a34d9329f92262b3ed9bb23fe43d042bb3bc5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "02838d0ed57ae3a99bdf831f08cc48f21c3e05266d85f866b8ec27781b99a238"
+    },
+    "device/adc/sysdepend/tx03_m367/adc_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "21baf007c69c992bcd00e217e7d8207f6fa0c231",
+      "baseline_blob": "21baf007c69c992bcd00e217e7d8207f6fa0c231",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b4416df8c3f529c744b18c1fc234b643bb07151d8f6940a0f34528438843ce8b"
+    },
+    "device/common/drvif/msdrvif.c": {
+      "classification": "imported",
+      "template_blob": "656824c43573d2f7ac63273c6a617e1fcd815cd7",
+      "baseline_blob": "656824c43573d2f7ac63273c6a617e1fcd815cd7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c15aa512011f4dbbc7b60cfebe67a65a2cc836eb99772e1a5194ef933aa548f0"
+    },
+    "device/common/drvif/msdrvif.h": {
+      "classification": "imported",
+      "template_blob": "431cb5836451ca93e0ec3c471e9cd890eeb8dcc7",
+      "baseline_blob": "431cb5836451ca93e0ec3c471e9cd890eeb8dcc7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "34066d35faa1b505681fcd981c1eec03d26e9a8c91ac8a20495e44d889548546"
+    },
+    "device/i2c/i2c.c": {
+      "classification": "imported",
+      "template_blob": "52ec8052614c7537f9bff975e9949322eabd7dc8",
+      "baseline_blob": "52ec8052614c7537f9bff975e9949322eabd7dc8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "14c6d16fc9f7e89439e55cef7a356746d082777c246fae0f1feef6ae07c488d3"
+    },
+    "device/i2c/i2c.h": {
+      "classification": "imported",
+      "template_blob": "a9169b6bba5e5b97a1d6435054a32bff564bd0d5",
+      "baseline_blob": "a9169b6bba5e5b97a1d6435054a32bff564bd0d5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b219eed39cb220a50f767c0382a83eea75bef6fa56536058f1f371c19534cc7c"
+    },
+    "device/i2c/i2c_cnf.h": {
+      "classification": "imported",
+      "template_blob": "ab9f9c9208566c423ee8a84919bb0ba12248ca80",
+      "baseline_blob": "ab9f9c9208566c423ee8a84919bb0ba12248ca80",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d59fe4277100517e1585fa574c5654e7fc323cabb1996abac63634838960540a"
+    },
+    "device/i2c/sysdepend/rp2040/i2c_rp2040.c": {
+      "classification": "imported",
+      "template_blob": "4b5cd7e67030da5f8180cb7328ac5bb57c7af366",
+      "baseline_blob": "4b5cd7e67030da5f8180cb7328ac5bb57c7af366",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c8397d5af065cc68204e5e92d65543be760ae539d55bc9293c06dbcad3155eb5"
+    },
+    "device/i2c/sysdepend/rp2040/i2c_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "8433bd48d498bd6c94000daca829d2e78c5cc0c2",
+      "baseline_blob": "8433bd48d498bd6c94000daca829d2e78c5cc0c2",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2dbc2501f81055f25996863b9df89a83891facf9763c9ea9750a07314a705a15"
+    },
+    "device/i2c/sysdepend/rx231/i2c_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "8333fb7d51adb056927c6a2fa1f792c571cf10e1",
+      "baseline_blob": "8333fb7d51adb056927c6a2fa1f792c571cf10e1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3b7584a0e1104eb57448ea2794fc542c3a626836f5e57a2088cfdc94ce651ea1"
+    },
+    "device/i2c/sysdepend/rx231/i2c_rx231.c": {
+      "classification": "imported",
+      "template_blob": "034df2fe20a30a312e84dfe2f62a49674443da9d",
+      "baseline_blob": "034df2fe20a30a312e84dfe2f62a49674443da9d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5163f9be5e84a4fc2b1dcaf571fa6ff184cd8f6047e5472bc7e569bbad35bb3c"
+    },
+    "device/i2c/sysdepend/rx231/i2c_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "07368ee9fad1835133d506bc479b6e5ce35f2910",
+      "baseline_blob": "07368ee9fad1835133d506bc479b6e5ce35f2910",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "452999559e0d8b1c449a2b42c4db137a9255b0378c7bf2893bfd3ae1865f195a"
+    },
+    "device/i2c/sysdepend/rx65n/i2c_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "dca85c2973f798ae1239804278de4c94bae48ed0",
+      "baseline_blob": "dca85c2973f798ae1239804278de4c94bae48ed0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "99489455bee6f70ce02aa3677eddd709a5d8b21c34a4fd208a0133814e36590b"
+    },
+    "device/i2c/sysdepend/rx65n/i2c_rx65n.c": {
+      "classification": "imported",
+      "template_blob": "f5dd229b32427512eed7b03db52cfb08d5a28400",
+      "baseline_blob": "f5dd229b32427512eed7b03db52cfb08d5a28400",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1c2a908bd377f71282ab902e8f662a1a0c36e1fad8648ddac85139cb251430b9"
+    },
+    "device/i2c/sysdepend/rx65n/i2c_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "8533622dd3cfdde8daa42a77ce68471b1dadf202",
+      "baseline_blob": "8533622dd3cfdde8daa42a77ce68471b1dadf202",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1b3bdeaa2f80da11df3a5ba5bdf3de29186540b31caff9221465459b87574237"
+    },
+    "device/i2c/sysdepend/rza2m/i2c_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "fc982b3f06a7d9980f73734def90c8d6fdb26c92",
+      "baseline_blob": "fc982b3f06a7d9980f73734def90c8d6fdb26c92",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "819ae37d4553d00e1739c567b0b18f3237605aee9be77e71e2cd02d4c6dec4ff"
+    },
+    "device/i2c/sysdepend/rza2m/i2c_rza2m.c": {
+      "classification": "imported",
+      "template_blob": "39b0a7f3705b8b1cafd6403725611eb93f82a33d",
+      "baseline_blob": "39b0a7f3705b8b1cafd6403725611eb93f82a33d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d38b565c6386f09c762df124e2c1ba2485f674e78546a1a5532e9177c51545e4"
+    },
+    "device/i2c/sysdepend/rza2m/i2c_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "09eb7fda2e3ef8b0614856e8102d90d4b6563286",
+      "baseline_blob": "09eb7fda2e3ef8b0614856e8102d90d4b6563286",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "125ffd62c8b5b92aaa4f2dc782ba17694c618e760a9dcef2036a4bcf82796b2b"
+    },
+    "device/i2c/sysdepend/stm32h7/i2c_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "0cb5db3278b97bd53d9830a94a7fc7890d511cbf",
+      "baseline_blob": "0cb5db3278b97bd53d9830a94a7fc7890d511cbf",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "70fc4cfed8b76e3e4136d693ca8f127ee7676ca11122b7f8c0c4fcff8f603c23"
+    },
+    "device/i2c/sysdepend/stm32h7/i2c_stm32h7.c": {
+      "classification": "imported",
+      "template_blob": "3025434df061543f79fb48f3dbbf8aeb4a87eb0b",
+      "baseline_blob": "3025434df061543f79fb48f3dbbf8aeb4a87eb0b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3aba091653f974d190ee14afba0ea731efd1c7dc50f3b8051c2bbdc7e44c3bfb"
+    },
+    "device/i2c/sysdepend/stm32h7/i2c_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "4cf066f16e183a340ae85c02684aa0029d9dca13",
+      "baseline_blob": "4cf066f16e183a340ae85c02684aa0029d9dca13",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8a1672f50712ed08b310abcbcb72673f43fd7323babc1c8baabb1da5021faac3"
+    },
+    "device/i2c/sysdepend/stm32l4/i2c_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "f5bf79462f21de60c803b6813c848145a822c8ac",
+      "baseline_blob": "f5bf79462f21de60c803b6813c848145a822c8ac",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "879a1f233dfaca95ce24739b1ecc7f9642a8855c0b0b43b42943f35086f946b7"
+    },
+    "device/i2c/sysdepend/stm32l4/i2c_stm32l4.c": {
+      "classification": "imported",
+      "template_blob": "8ce5a836043968448261c85d5584abf89822c889",
+      "baseline_blob": "8ce5a836043968448261c85d5584abf89822c889",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ef65e0d43c2005c53a894e46ffcb3d4b67ef55f1e75ce553755c5a9a7623b6bb"
+    },
+    "device/i2c/sysdepend/stm32l4/i2c_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "83de90ddd4fcbfdd03499eb110743df4db0787a7",
+      "baseline_blob": "83de90ddd4fcbfdd03499eb110743df4db0787a7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3800a06d58d628e41f91b296c302940806f7cbb1fc552af8dc13d6b037cf8244"
+    },
+    "device/i2c/sysdepend/tx03_m367/i2c_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "fab9ab48deaa545b4c0767931914e86657db1cd5",
+      "baseline_blob": "fab9ab48deaa545b4c0767931914e86657db1cd5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a9e50870d4e8f9820b3c15a6b367bf9b22001a8d09c983b9518843692ab9dad1"
+    },
+    "device/i2c/sysdepend/tx03_m367/i2c_m367.c": {
+      "classification": "imported",
+      "template_blob": "9ce1f01db33e627b674750542da007fe84bbf5f8",
+      "baseline_blob": "9ce1f01db33e627b674750542da007fe84bbf5f8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "381ca27dae0a466182aee6ff2b15d37c7522e489eafe5aa1091dda05303fe50f"
+    },
+    "device/i2c/sysdepend/tx03_m367/i2c_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "e48c4edbdd88652d70c0fd7f540691dd23cf1fda",
+      "baseline_blob": "e48c4edbdd88652d70c0fd7f540691dd23cf1fda",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9cb270f34175d3a8e32541e0c59419aead5b2fae83656825c0694f99943efeef"
+    },
+    "device/include/dev_adc.h": {
+      "classification": "imported",
+      "template_blob": "4b5096a1df1606cf24d5b3c29787ea0ea44cba29",
+      "baseline_blob": "4b5096a1df1606cf24d5b3c29787ea0ea44cba29",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3c4140aa7d12f468e17b469f2cfc2fc8c2d0ea71da2da842c2ffb9b842893168"
+    },
+    "device/include/dev_def.h": {
+      "classification": "imported",
+      "template_blob": "d72c4fa2ff71c416df1cc4ca5c3242d2f569bca1",
+      "baseline_blob": "d72c4fa2ff71c416df1cc4ca5c3242d2f569bca1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7f44fdb3bf5c0dcaad9f65afefc512920ad97ae9e8b1d62d933f9947a93b3162"
+    },
+    "device/include/dev_i2c.h": {
+      "classification": "imported",
+      "template_blob": "cdd77c5136a9f180af5101f080e564acadd531ad",
+      "baseline_blob": "cdd77c5136a9f180af5101f080e564acadd531ad",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f63469e4af153aeda2b76815d8ee4766ef6d4033f28c13eedab0f973bff22ea8"
+    },
+    "device/include/dev_ser.h": {
+      "classification": "imported",
+      "template_blob": "03199bbfae01842b7bbcd041fc482527051b0b82",
+      "baseline_blob": "03199bbfae01842b7bbcd041fc482527051b0b82",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "250107ba97ff6c86b94617f2e28b4c97a5130b7e788f5568463ccc66ee8e7878"
+    },
+    "device/include/device.h": {
+      "classification": "imported",
+      "template_blob": "c9c0cb727ffb16f9bd860978efb26f3a056a1dd6",
+      "baseline_blob": "c9c0cb727ffb16f9bd860978efb26f3a056a1dd6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "52b9cff20a0f03d8c7a0269d0adddb6220d66056305123682211e8727cf61b5e"
+    },
+    "device/ser/ser.c": {
+      "classification": "imported",
+      "template_blob": "c0de4e50b37efdd9b69431689affeb316add2cec",
+      "baseline_blob": "c0de4e50b37efdd9b69431689affeb316add2cec",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4df7879621be0b5029f4ab8649794b1281123b9f99edb4034d69d7f57d48f3c5"
+    },
+    "device/ser/ser.h": {
+      "classification": "imported",
+      "template_blob": "fd0d6b03c65d156dfb7a7944231632dde1075b6c",
+      "baseline_blob": "fd0d6b03c65d156dfb7a7944231632dde1075b6c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "207b7d2376d874ac8e17274ecedb0f0044ff420eb8f6da9db72c96653240593e"
+    },
+    "device/ser/ser_cnf.h": {
+      "classification": "imported",
+      "template_blob": "fe3015cd2bf2c9b329d5271d166681ea7831fb99",
+      "baseline_blob": "fe3015cd2bf2c9b329d5271d166681ea7831fb99",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "55b959e0899c5f27e4ee684695b51a81b93ca49f96f31f1c040700d6134ab16c"
+    },
+    "device/ser/sysdepend/rp2040/ser_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "4c7f442a257e3d7ae554696bb1e2e22a0ebc482b",
+      "baseline_blob": "4c7f442a257e3d7ae554696bb1e2e22a0ebc482b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b808e2f4d737e45682ebf92f6b00bea0bc0479732b38c76b0818dfd25ff52561"
+    },
+    "device/ser/sysdepend/rp2040/ser_mode_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "3e9e7e8a790e0386942499568af131b8f172f011",
+      "baseline_blob": "3e9e7e8a790e0386942499568af131b8f172f011",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bc110b0411289cdd2a00317f3434f89309613e1374ac8cebe8697c1c053ae28c"
+    },
+    "device/ser/sysdepend/rp2040/ser_rp2040.c": {
+      "classification": "imported",
+      "template_blob": "6a62def6eb1cb90958fcd3117c304fa1bfe2b924",
+      "baseline_blob": "6a62def6eb1cb90958fcd3117c304fa1bfe2b924",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ab1124284bed696bf99cc6a88c8b56f39d069eb47a228159d4885c2193d41ce2"
+    },
+    "device/ser/sysdepend/rp2040/ser_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "efd0783f80e870e6e7d8109451e4043c216dcd6e",
+      "baseline_blob": "efd0783f80e870e6e7d8109451e4043c216dcd6e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fdb1e9b866e2c7220a2ba659a20ea28d8f7b3b63deaaa86662209f5aeac4c37c"
+    },
+    "device/ser/sysdepend/rx231/ser_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "ae4b1b01ffd50fa25abcb11f856aef9432958798",
+      "baseline_blob": "ae4b1b01ffd50fa25abcb11f856aef9432958798",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b037b1d135aae7b44fca1e5aa8cdc20b70637183cf5fbecbbea51d6955eabeab"
+    },
+    "device/ser/sysdepend/rx231/ser_mode_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "f758864bd192dd122b20359291ed360d59ca4672",
+      "baseline_blob": "f758864bd192dd122b20359291ed360d59ca4672",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c2b08c36f2499c972c736b28c941436a7590133fab6c70cbfbf1d3e140788f27"
+    },
+    "device/ser/sysdepend/rx231/ser_rx231.c": {
+      "classification": "imported",
+      "template_blob": "790a61ac9b7b54c8532bf72dd3b068be389c0411",
+      "baseline_blob": "790a61ac9b7b54c8532bf72dd3b068be389c0411",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b8a6cfc23266ec7f96f745f5c4a31a0f540a29df5320d011aa22c202c5cdf000"
+    },
+    "device/ser/sysdepend/rx231/ser_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "9160c95524b03665bc0b0c9f19d7beff28c0cbc0",
+      "baseline_blob": "9160c95524b03665bc0b0c9f19d7beff28c0cbc0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0fd915efaf834a212e4c6f57e6df89d05eb733f6914f087979cac15678bd581d"
+    },
+    "device/ser/sysdepend/rx65n/ser_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "6abcfd6578ab95b3a6c1ef7d5824d5fcb273477b",
+      "baseline_blob": "6abcfd6578ab95b3a6c1ef7d5824d5fcb273477b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e2f45f837311fe5fee3cb3207de8e9ff547d79993753e636c1fa6a2e5c0d5691"
+    },
+    "device/ser/sysdepend/rx65n/ser_mode_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "9ab90bfd48827f4da862679d3890fe2fe01fcc14",
+      "baseline_blob": "9ab90bfd48827f4da862679d3890fe2fe01fcc14",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0f801df2595e9f0eac681615e877ae9b42e8c367dfac8e352beac3f8cbc11bea"
+    },
+    "device/ser/sysdepend/rx65n/ser_rx65n.c": {
+      "classification": "imported",
+      "template_blob": "59cf1407241a602c26111851153538d7fcded7d9",
+      "baseline_blob": "59cf1407241a602c26111851153538d7fcded7d9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "03fcda3b8c78c70ac31c103eb76a149c99586f012196bdefc0f5a75554b257f8"
+    },
+    "device/ser/sysdepend/rx65n/ser_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "cbccc772f765434bcf0cc396cec5d7fa6d078d7a",
+      "baseline_blob": "cbccc772f765434bcf0cc396cec5d7fa6d078d7a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bc83aa2cec6f378b2a02190eb2b13392e6b25a57f075f2994615cf1c1560f3e1"
+    },
+    "device/ser/sysdepend/rza2m/ser_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "1530a4eb55b65c003747867cda70b1f64e798f1d",
+      "baseline_blob": "1530a4eb55b65c003747867cda70b1f64e798f1d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9eecffe6ffff18ae809f6d2e4fea12bd05e7cf63292f3670d512b3da386cd4a5"
+    },
+    "device/ser/sysdepend/rza2m/ser_mode_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "6917454d8f0c53cd6a62bd4aa277ef313d7169a0",
+      "baseline_blob": "6917454d8f0c53cd6a62bd4aa277ef313d7169a0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f0eba15eab896e9d579d7721107cdbbe48c42857bc6a8ad6f3818fe2440f94d1"
+    },
+    "device/ser/sysdepend/rza2m/ser_rza2m.c": {
+      "classification": "imported",
+      "template_blob": "1e57aca40e25a20b3e6f2ef456ffeff4355f7850",
+      "baseline_blob": "1e57aca40e25a20b3e6f2ef456ffeff4355f7850",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5ad0498c3a32e58710fbd145bc739c07049ce27b041d7951b1de7c4cc4f7df99"
+    },
+    "device/ser/sysdepend/rza2m/ser_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "bdf6292a2135af84973ad936b087606ce2cc1120",
+      "baseline_blob": "bdf6292a2135af84973ad936b087606ce2cc1120",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "58cc9ec750a686afce7752238d57d2332c0dd7d39602d35c584ee58d33af28ba"
+    },
+    "device/ser/sysdepend/stm32h7/ser_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "d3df31f671652f53424fdb335e83f38b34561d82",
+      "baseline_blob": "d3df31f671652f53424fdb335e83f38b34561d82",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a31eecd49e62a8ecc7acd22b8eeea911a0ee50262bd78da292814da6448329b3"
+    },
+    "device/ser/sysdepend/stm32h7/ser_mode_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "e6bf7321fae2f200adb991ea8f4d69c381ed5b4c",
+      "baseline_blob": "e6bf7321fae2f200adb991ea8f4d69c381ed5b4c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5467e52839e593389906ffd08c43a448bd4469b4eda2de7c21e7fd0329f3ea88"
+    },
+    "device/ser/sysdepend/stm32h7/ser_stm32h7.c": {
+      "classification": "imported",
+      "template_blob": "788bd32b033392f4e7a3446e4725569eea505699",
+      "baseline_blob": "788bd32b033392f4e7a3446e4725569eea505699",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2bd70fe9ff68ebabcb6e99a7621b636edbcb3c8c7cbbc86daa5101be5ef4ebc6"
+    },
+    "device/ser/sysdepend/stm32h7/ser_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "56b3e8418ae880cb357282ee05a829e834eeae90",
+      "baseline_blob": "56b3e8418ae880cb357282ee05a829e834eeae90",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "10fc0338e9f42e038739a742c373a4547c74685aa6d6832c7edee6fc47d7ca86"
+    },
+    "device/ser/sysdepend/stm32l4/ser_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "2d011a83a0996ac29f9b1a6c8e69c0e2c48434b3",
+      "baseline_blob": "2d011a83a0996ac29f9b1a6c8e69c0e2c48434b3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "82a720bc28f7725bf64658c75f7293baf8522f99061c5daf6f81266eb1f080f5"
+    },
+    "device/ser/sysdepend/stm32l4/ser_mode_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "3aca0c97ac64768c9fdccb9bf93ee323e94e8380",
+      "baseline_blob": "3aca0c97ac64768c9fdccb9bf93ee323e94e8380",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c471f91c9c9a69293380d8bfc7629cd4f9322e7c7ba4368a37c5c750a446dbea"
+    },
+    "device/ser/sysdepend/stm32l4/ser_stm32l4.c": {
+      "classification": "imported",
+      "template_blob": "a9da4edd103c6879d859fc7a058f5985f8a1b21e",
+      "baseline_blob": "a9da4edd103c6879d859fc7a058f5985f8a1b21e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ca01f3d8c4d5d7b2e41e898d7776d17fff315c90304eb22a0529320b9472074c"
+    },
+    "device/ser/sysdepend/stm32l4/ser_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "7eb3a321c5d8a09664018f2136b966aec25da737",
+      "baseline_blob": "7eb3a321c5d8a09664018f2136b966aec25da737",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3c73a2af06c1d99986af01768cd540e0c6fe63659c96f3dfe813b65b8d7b8535"
+    },
+    "device/ser/sysdepend/tx03_m367/ser_cnf_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "93dcad9d0ce720e768efabe794a553fe47ff5df4",
+      "baseline_blob": "93dcad9d0ce720e768efabe794a553fe47ff5df4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "67e5611d34ad9948d6e39b9a576d1e58bf395e677b2cc16a3451707079e6a6f8"
+    },
+    "device/ser/sysdepend/tx03_m367/ser_m367.c": {
+      "classification": "imported",
+      "template_blob": "fa6ae108584df409270a967da7e36fd66b707635",
+      "baseline_blob": "fa6ae108584df409270a967da7e36fd66b707635",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5b005c815b3bf79b1df03ae0d820f171ca8e8660b6821782cad62c17b8e7d514"
+    },
+    "device/ser/sysdepend/tx03_m367/ser_mode_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "ab59c14b74ca2bc69e354952bdd50b895e8c198e",
+      "baseline_blob": "ab59c14b74ca2bc69e354952bdd50b895e8c198e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "114808ad1019cd5d7fc348204de939d4898f37a2d01636eb87cde038f66258f6"
+    },
+    "device/ser/sysdepend/tx03_m367/ser_sysdep.h": {
+      "classification": "imported",
+      "template_blob": "30a209d8fd4077af728698ba8fcbbd6ca03ed417",
+      "baseline_blob": "30a209d8fd4077af728698ba8fcbbd6ca03ed417",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f9fe3ba2892280842057b041281d47c72dd70f4b287acf80d470ef666feb9957"
+    },
+    "include/bsp/libbsp.h": {
+      "classification": "imported",
+      "template_blob": "8eda1763c7ac3339e3efe7c5aaf420105d4d82c8",
+      "baseline_blob": "8eda1763c7ac3339e3efe7c5aaf420105d4d82c8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "718ebc378bc866a0357bffa6559541bdddf5799c383908563bfc55b50028c7f6"
+    },
+    "include/bsp/sysdepend/cpu/rp2040/libbsp.h": {
+      "classification": "imported",
+      "template_blob": "32fea9f1b833a1c3fb1d59faeeb2519f1849701b",
+      "baseline_blob": "32fea9f1b833a1c3fb1d59faeeb2519f1849701b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "caded6e6d8bcc24e4516a3e45fa8a1e114c913870342d4f17f52984ad3836bac"
+    },
+    "include/bsp/sysdepend/pico_rp2040/libbsp.h": {
+      "classification": "imported",
+      "template_blob": "138958cf2c8396c7df66bd0bcfa57b0210c93e5d",
+      "baseline_blob": "138958cf2c8396c7df66bd0bcfa57b0210c93e5d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ffcd45fd32c1d127a6e77484cbb6519767411516dd03ae69ed10da77238f3492"
+    },
+    "include/sys/inittask.h": {
+      "classification": "imported",
+      "template_blob": "3f8e0c0eb612d7a575cf01d388ab5503df71b795",
+      "baseline_blob": "3f8e0c0eb612d7a575cf01d388ab5503df71b795",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3dc216fe33023f18331af8b2d78d544de9d5e238ab4af6d804c82e4a75b1706d"
+    },
+    "include/sys/knldef.h": {
+      "classification": "imported",
+      "template_blob": "76b64c9c0b8bc04524287ec6f3b39b16bdfd5aab",
+      "baseline_blob": "76b64c9c0b8bc04524287ec6f3b39b16bdfd5aab",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9a2f035d92a43d4afae9e7fe8b71c9ee0263035c13504824709f1c061dd7a36b"
+    },
+    "include/sys/machine.h": {
+      "classification": "imported",
+      "template_blob": "5fdc79b36b26d6d95c717c5340d8a383e8e81080",
+      "baseline_blob": "5fdc79b36b26d6d95c717c5340d8a383e8e81080",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "138c9e7ea7072968e6261b2dc7b3a7f43360799d7b7231ac8b33bc32bd654333"
+    },
+    "include/sys/profile.h": {
+      "classification": "imported",
+      "template_blob": "15d9f89f512dbbae0f29d5b52a7a817ca73858bb",
+      "baseline_blob": "15d9f89f512dbbae0f29d5b52a7a817ca73858bb",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "860a65fbe08c3987b3585f37b3989c2c69b3dba50442edecc686768aa3d890d7"
+    },
+    "include/sys/queue.h": {
+      "classification": "imported",
+      "template_blob": "76f0500d4de0cddccfbd7d66dafa09f3e3e50a7d",
+      "baseline_blob": "76f0500d4de0cddccfbd7d66dafa09f3e3e50a7d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b4ed77c6140e71e4553b96a0e856fb79bf281f7d213168b11f1e840104be4267"
+    },
+    "include/sys/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "6a2cadad5c984077dd7e19d7f377eb342f6fa015",
+      "baseline_blob": "6a2cadad5c984077dd7e19d7f377eb342f6fa015",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0f87a2546f38359d6c9f9872e4139ac5413265d157bcb7608aa2747836cec153"
+    },
+    "include/sys/sysdepend/cpu/core/armv6m/machine.h": {
+      "classification": "imported",
+      "template_blob": "b442730e5dce826f631a4c46810deb80d2cc4db7",
+      "baseline_blob": "b442730e5dce826f631a4c46810deb80d2cc4db7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "81c8a97e33d15c3ae3cc87c11a465f6ddf782dc6367bc2ab354fe2160b28e989"
+    },
+    "include/sys/sysdepend/cpu/core/armv6m/profile.h": {
+      "classification": "imported",
+      "template_blob": "6799f554eed7e659dea488f90af0754009bf9aae",
+      "baseline_blob": "6799f554eed7e659dea488f90af0754009bf9aae",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "13e48aa34a856a0e686ed95f64915ec069ba12e8ccd40204348fdabd317abcb5"
+    },
+    "include/sys/sysdepend/cpu/core/armv6m/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "ac51d11d0ee5019d9feea0da065ab0867de88f56",
+      "baseline_blob": "ac51d11d0ee5019d9feea0da065ab0867de88f56",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8b8bdd6d9e70d6b7fa3f641db9acd59ad74fff21682e20a56f988d6ca0b94b1a"
+    },
+    "include/sys/sysdepend/cpu/core/armv7a/machine.h": {
+      "classification": "imported",
+      "template_blob": "7461adeebb23c4e59047de3cb34e79ddcd0af2c9",
+      "baseline_blob": "7461adeebb23c4e59047de3cb34e79ddcd0af2c9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "91a80142e50c097213de95ff797f95095a09f10abf7b6bfd8b9bce8f91b2b8bd"
+    },
+    "include/sys/sysdepend/cpu/core/armv7a/profile.h": {
+      "classification": "imported",
+      "template_blob": "53e8b9a19251f21cd2be2c18fb7677365acd3969",
+      "baseline_blob": "53e8b9a19251f21cd2be2c18fb7677365acd3969",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7f42571a49c5080f918fb8aa5737131b655745bccd10de81a0ae204b6a2d9998"
+    },
+    "include/sys/sysdepend/cpu/core/armv7a/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "0ed3d8edc537e4f198907a3ad346d0bd6fb1a2d9",
+      "baseline_blob": "0ed3d8edc537e4f198907a3ad346d0bd6fb1a2d9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2a2a62deb16331887e2a32fab93e69b8ddcd1e5f273b8dae6988ab3bed9c6194"
+    },
+    "include/sys/sysdepend/cpu/core/armv7m/machine.h": {
+      "classification": "imported",
+      "template_blob": "16708f5fb5e324514826fa0053ad8c63cc2357ae",
+      "baseline_blob": "16708f5fb5e324514826fa0053ad8c63cc2357ae",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "48e4f4fc0ab3e21b827c952fd562abf0d4ae274b86f3f89234f1bcf30c68affd"
+    },
+    "include/sys/sysdepend/cpu/core/armv7m/profile.h": {
+      "classification": "imported",
+      "template_blob": "e7347940bdb28f90690ec1933eb694002e22ebe8",
+      "baseline_blob": "e7347940bdb28f90690ec1933eb694002e22ebe8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f4d3a3eca9da66420142b0086aa5e5ec5072d0196122ae88d67e367239471774"
+    },
+    "include/sys/sysdepend/cpu/core/armv7m/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "efcffeb30915d78b5b75968dea219d9a0aa6e797",
+      "baseline_blob": "efcffeb30915d78b5b75968dea219d9a0aa6e797",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "54e3f9f25a347234013200afba00ce0ae9ef4dafb367122724faf020143e6838"
+    },
+    "include/sys/sysdepend/cpu/core/rxv2/machine.h": {
+      "classification": "imported",
+      "template_blob": "2975d49ad3ebacaa974fbbda580d10c3d9982d3a",
+      "baseline_blob": "2975d49ad3ebacaa974fbbda580d10c3d9982d3a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "86d142e537c7e83fe8576b01052268e371bac21e4ce172c4db87a474651718fd"
+    },
+    "include/sys/sysdepend/cpu/core/rxv2/profile.h": {
+      "classification": "imported",
+      "template_blob": "cfb9f5f8a199de84bc708e654bc5ae008d0ab228",
+      "baseline_blob": "cfb9f5f8a199de84bc708e654bc5ae008d0ab228",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6d996da45753016d3ad75cf702e367e8bfae87e8efdf4646ed82415b035a01ba"
+    },
+    "include/sys/sysdepend/cpu/core/rxv2/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "b8701e009045647a827d7917c89a35440f53f2c1",
+      "baseline_blob": "b8701e009045647a827d7917c89a35440f53f2c1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e452f5eb7eee382eedff6d6794b82b805686df38884d307bcbd5d5ef907c93d3"
+    },
+    "include/sys/sysdepend/cpu/rp2040/machine.h": {
+      "classification": "imported",
+      "template_blob": "5348ddfe6ad2e2eb0d89e3b247212dde137e6124",
+      "baseline_blob": "5348ddfe6ad2e2eb0d89e3b247212dde137e6124",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ec0e1ba89f5688eddacd0e59525eddfdbb50c08d6a814a203fe4711501721b16"
+    },
+    "include/sys/sysdepend/cpu/rp2040/profile.h": {
+      "classification": "imported",
+      "template_blob": "c7a7f1089d93e93a29c19ac27022c173d3e663ea",
+      "baseline_blob": "c7a7f1089d93e93a29c19ac27022c173d3e663ea",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d72f3e0452fb771b3cabee97a6e94fd26182a4547cfab18e47d1ebef24e58691"
+    },
+    "include/sys/sysdepend/cpu/rp2040/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "83c240b5f2e2d9705400d03507c5c862d47b4e30",
+      "baseline_blob": "83c240b5f2e2d9705400d03507c5c862d47b4e30",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "709c67a5b8950ad84df8256c3f0c06ecb0c3c8c8e802cb77504d15c1ebada16c"
+    },
+    "include/sys/sysdepend/cpu/rx231/machine.h": {
+      "classification": "imported",
+      "template_blob": "6595ac6d12e3e384a6575d726da7081c18f2f890",
+      "baseline_blob": "6595ac6d12e3e384a6575d726da7081c18f2f890",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6fc0557a9d3f6677a9c32648670f37f930d51290bb413267609d6de67dbaa784"
+    },
+    "include/sys/sysdepend/cpu/rx231/profile.h": {
+      "classification": "imported",
+      "template_blob": "508e8ec13048dc28dee30f3912167b3aadda7dff",
+      "baseline_blob": "508e8ec13048dc28dee30f3912167b3aadda7dff",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5eea7487433fb5cb7f3de7ef84abc446f4804d39c4d9ea92aaa2633fb0516ef8"
+    },
+    "include/sys/sysdepend/cpu/rx231/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "c58d23443817cf0a3af0c1d4de2cce6cdd38d284",
+      "baseline_blob": "c58d23443817cf0a3af0c1d4de2cce6cdd38d284",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d07feb219de1c046fde11a5a67a73a612420fe395a75060727f4a9603e8a92ce"
+    },
+    "include/sys/sysdepend/cpu/rx65n/machine.h": {
+      "classification": "imported",
+      "template_blob": "37a7c3a9122c51aa4070b4ef1ac7d6006109ffa0",
+      "baseline_blob": "37a7c3a9122c51aa4070b4ef1ac7d6006109ffa0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a3c5a680502d14bb49d4164dc9d1583cbce7a1f5ee8c77dbfa691742a5483e96"
+    },
+    "include/sys/sysdepend/cpu/rx65n/profile.h": {
+      "classification": "imported",
+      "template_blob": "521da4e63dbc105ad7072e6ccfb883e0842d7b34",
+      "baseline_blob": "521da4e63dbc105ad7072e6ccfb883e0842d7b34",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d09423ce7cfc80f27e645ccf063dd965a27a035fd089f9c59df1369e855ff9f2"
+    },
+    "include/sys/sysdepend/cpu/rx65n/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "cb7218f6eba03854e0f1d4763728a5873c166455",
+      "baseline_blob": "cb7218f6eba03854e0f1d4763728a5873c166455",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "dc120b73b8a4569a5657c3d35d42f7b8e16175ced4b9a477999ea6ee23d9b170"
+    },
+    "include/sys/sysdepend/cpu/rza2m/machine.h": {
+      "classification": "imported",
+      "template_blob": "afe20f348d44a8b63067ca3063aaf5d2405f32c7",
+      "baseline_blob": "afe20f348d44a8b63067ca3063aaf5d2405f32c7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2baeaca29aabca2682e78a3f093bd67055808ef7e4f6a8a4c545636951071c38"
+    },
+    "include/sys/sysdepend/cpu/rza2m/profile.h": {
+      "classification": "imported",
+      "template_blob": "23b79cb475e717d0850888f86b64b9149f2f8389",
+      "baseline_blob": "23b79cb475e717d0850888f86b64b9149f2f8389",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0450b37e8d4b650131495dc2a72be3360fd48dc5501b99bd090ebad61a3d6d40"
+    },
+    "include/sys/sysdepend/cpu/rza2m/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "9360784b1f0efc9cebbe06bd8783268df39c9730",
+      "baseline_blob": "9360784b1f0efc9cebbe06bd8783268df39c9730",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "66fc49c0f5250c72df92bbfc5315568b61d75c372d8a099b08d0b4ce0e78a11a"
+    },
+    "include/sys/sysdepend/cpu/stm32h7/machine.h": {
+      "classification": "imported",
+      "template_blob": "d2889782d1d6d92a6a6d5e8bfecb4305caa75774",
+      "baseline_blob": "d2889782d1d6d92a6a6d5e8bfecb4305caa75774",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3b34fb3cde906753fa8f89c7a15a2211b4c76b6ec39ed46dee23f917ece0cdcc"
+    },
+    "include/sys/sysdepend/cpu/stm32h7/profile.h": {
+      "classification": "imported",
+      "template_blob": "64bc121b6d4d6b284e1ee7c7fe25b83ade14ec0e",
+      "baseline_blob": "64bc121b6d4d6b284e1ee7c7fe25b83ade14ec0e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "dbdc85a259bda054f4dbb6a2d72a0acfdde035b97bc10b9d42649a54b9d0b3e5"
+    },
+    "include/sys/sysdepend/cpu/stm32h7/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "ab7e6ae682a926096401c09e24f4fbcccc11507f",
+      "baseline_blob": "ab7e6ae682a926096401c09e24f4fbcccc11507f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "01aae19105653ed798c0d8baae194c8c9dc57b5e531361ed46ec6b90f13bf924"
+    },
+    "include/sys/sysdepend/cpu/stm32l4/machine.h": {
+      "classification": "imported",
+      "template_blob": "abf9d3b101a241c7b8d6a98fe3b622a0dd3bcedd",
+      "baseline_blob": "abf9d3b101a241c7b8d6a98fe3b622a0dd3bcedd",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a31ecd02e964d66382248d5b5be1f11116515ea9149f22b8c3e9561533422cff"
+    },
+    "include/sys/sysdepend/cpu/stm32l4/profile.h": {
+      "classification": "imported",
+      "template_blob": "03859405a395ac2a530ee578cf6bff7864f53b5b",
+      "baseline_blob": "03859405a395ac2a530ee578cf6bff7864f53b5b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e62168e70a316cdfe921de3061ef4db5f823f10b590450ad426a229d4682d836"
+    },
+    "include/sys/sysdepend/cpu/stm32l4/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "8805e782dd0cea86141e4e90c212dbca83b67316",
+      "baseline_blob": "8805e782dd0cea86141e4e90c212dbca83b67316",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f4cfcc630c395f2ae753a151f1540bc867e00f7d1eb93dbba06ee46ad598eb6a"
+    },
+    "include/sys/sysdepend/cpu/tx03_m367/machine.h": {
+      "classification": "imported",
+      "template_blob": "6c7616018080131361389e6c4e6e47b3465cdfbb",
+      "baseline_blob": "6c7616018080131361389e6c4e6e47b3465cdfbb",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f2856b2cd13362b8fca2f4627875d4bebaca5e00d5f100d68ac9f2339df6a882"
+    },
+    "include/sys/sysdepend/cpu/tx03_m367/profile.h": {
+      "classification": "imported",
+      "template_blob": "3f99f87ff79d07ee1a6233a99a1005cf2c5f6b10",
+      "baseline_blob": "3f99f87ff79d07ee1a6233a99a1005cf2c5f6b10",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f081a9aaa842959f39b07a3969ff0e91d6a83aea8fb729d7297c02bdade39b4a"
+    },
+    "include/sys/sysdepend/cpu/tx03_m367/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "371b185142e7cb1d738df56a186ccf73cc0411c1",
+      "baseline_blob": "371b185142e7cb1d738df56a186ccf73cc0411c1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5f23644d1bc6845fa017807b8f2843b9d200952e29ef7083c5b70040b06ac86d"
+    },
+    "include/sys/sysdepend/iote_m367/machine.h": {
+      "classification": "imported",
+      "template_blob": "64e73ae7ef16614a5d5f87411e1afd0c7b19c0e4",
+      "baseline_blob": "64e73ae7ef16614a5d5f87411e1afd0c7b19c0e4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fdbdc96a0209fd8c670f9a3b00a602cf4c131ac35092a2fd957e27c1050a6c16"
+    },
+    "include/sys/sysdepend/iote_m367/profile.h": {
+      "classification": "imported",
+      "template_blob": "7cd23cfba65d90620372e8540c811b649816b01c",
+      "baseline_blob": "7cd23cfba65d90620372e8540c811b649816b01c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "da5ac7f2f1ded67d687d0dc96d0e0757a12e2745be364ff7685fcba824b1b1bf"
+    },
+    "include/sys/sysdepend/iote_m367/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "59c4a26cd69847bf21a8a139f3e4e6c854709a1d",
+      "baseline_blob": "59c4a26cd69847bf21a8a139f3e4e6c854709a1d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "06932fc6a146a3e9cd0a17915cd0593ac11ba607784edaed815248d473d1b2aa"
+    },
+    "include/sys/sysdepend/iote_rx231/machine.h": {
+      "classification": "imported",
+      "template_blob": "728bc57c8b6a68a7808296c0f95bb3d973f0c704",
+      "baseline_blob": "728bc57c8b6a68a7808296c0f95bb3d973f0c704",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2a023cffee8b78db3bed7fecf6f2e27dd9dce0571b1d558df6cd30e72c695a08"
+    },
+    "include/sys/sysdepend/iote_rx231/profile.h": {
+      "classification": "imported",
+      "template_blob": "87b22710a774df0bff81c5e22b9a2b91822c2dd9",
+      "baseline_blob": "87b22710a774df0bff81c5e22b9a2b91822c2dd9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "83e92cae0b1fe41c0c65fdc3ce1b0ed6c8d9ebc85f5dace6113f750cfde35fbc"
+    },
+    "include/sys/sysdepend/iote_rx231/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "b964af60244c19864eaa67760f3f9cd07192afb4",
+      "baseline_blob": "b964af60244c19864eaa67760f3f9cd07192afb4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bcc13100d235f69b17f7edacea72634d6ebaa5184a835859eff35c94d2c74414"
+    },
+    "include/sys/sysdepend/iote_rza2m/machine.h": {
+      "classification": "imported",
+      "template_blob": "b3d68c3467ddf7db73ffe8d68982ce51750abda8",
+      "baseline_blob": "b3d68c3467ddf7db73ffe8d68982ce51750abda8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c07d02bcf6c0072ffd1f124a08ec62275e71f59ff67a8c44807b1fbeee290527"
+    },
+    "include/sys/sysdepend/iote_rza2m/profile.h": {
+      "classification": "imported",
+      "template_blob": "d04ce6d9c0e0855ab907992ea54821630d8458fe",
+      "baseline_blob": "d04ce6d9c0e0855ab907992ea54821630d8458fe",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "84799e320279e9c158c9dd48c17f1edcdb9284c737b5883948e1ced744e24787"
+    },
+    "include/sys/sysdepend/iote_rza2m/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "0f149b629b0a2935dca5cf1a05ecd1e1923da8ed",
+      "baseline_blob": "0f149b629b0a2935dca5cf1a05ecd1e1923da8ed",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "dde18669e45d9d8f1bcb9ee40bcfb0456335452ac643433f015010f3fca077b6"
+    },
+    "include/sys/sysdepend/iote_stm32l4/machine.h": {
+      "classification": "imported",
+      "template_blob": "4d6d7779733c074a6ac8e94df659513913cb2866",
+      "baseline_blob": "4d6d7779733c074a6ac8e94df659513913cb2866",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a2d7d3c3960c5ff27d9c79d42b01d02cc8f449ecf1cf6c8c092083db1d6afb42"
+    },
+    "include/sys/sysdepend/iote_stm32l4/profile.h": {
+      "classification": "imported",
+      "template_blob": "c77cf37333a2cc91e6e5a0368f4e07e672260ee1",
+      "baseline_blob": "c77cf37333a2cc91e6e5a0368f4e07e672260ee1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e2c163095823d81cb6a2710a0d740b9df341e594da63331b383d73b731165208"
+    },
+    "include/sys/sysdepend/iote_stm32l4/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "e42b044597fd3b95f1f679de790446fef489446f",
+      "baseline_blob": "e42b044597fd3b95f1f679de790446fef489446f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c80182dc602979a6ad161a737853a6105a9a2bc21ceaceb3188e1e3357e92da9"
+    },
+    "include/sys/sysdepend/nucleo_h723/machine.h": {
+      "classification": "imported",
+      "template_blob": "262cad3fd0469b292e8baf56cc6c71dc060e7876",
+      "baseline_blob": "262cad3fd0469b292e8baf56cc6c71dc060e7876",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7541659018da7385eadc104dd0ca1cb6895af81bfcb293ab4afda64abeae45ad"
+    },
+    "include/sys/sysdepend/nucleo_h723/profile.h": {
+      "classification": "imported",
+      "template_blob": "b8d637e18acf3b89993c6fe866933abd85fb512a",
+      "baseline_blob": "b8d637e18acf3b89993c6fe866933abd85fb512a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d6955bf0d576e480ae3bd5e3438363b987160b967a31e0be26e925cd2825d1c8"
+    },
+    "include/sys/sysdepend/nucleo_h723/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "ba317ef7a352def6979ae9e7e4cf1601f9fa173d",
+      "baseline_blob": "ba317ef7a352def6979ae9e7e4cf1601f9fa173d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "39fe2ae6ffdde588cae8fd6a016d6296f18c8823002676dd6d3ded572519fd80"
+    },
+    "include/sys/sysdepend/nucleo_l476/machine.h": {
+      "classification": "imported",
+      "template_blob": "69dfa5701c3d9e9ea09dfdc0331f74f0ccceb106",
+      "baseline_blob": "69dfa5701c3d9e9ea09dfdc0331f74f0ccceb106",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "01a099dc5b196a39c77af9214ad23672c8463ef3a6abd62f818ca25c6905db3b"
+    },
+    "include/sys/sysdepend/nucleo_l476/profile.h": {
+      "classification": "imported",
+      "template_blob": "7953baa5aee00f9159e750764e51863dfc734a08",
+      "baseline_blob": "7953baa5aee00f9159e750764e51863dfc734a08",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7449e770031880bd440ffcd4b8f11d35aa87269d3aa58e693a51851adf17359f"
+    },
+    "include/sys/sysdepend/nucleo_l476/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "0ecb297b48662a04a1beeec1e9ebafddcb7ee4bb",
+      "baseline_blob": "0ecb297b48662a04a1beeec1e9ebafddcb7ee4bb",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fff8a0c7a99d48079795ae58247a05406f98d5fbeff289b8b3aed97641d75a4f"
+    },
+    "include/sys/sysdepend/pico_rp2040/machine.h": {
+      "classification": "imported",
+      "template_blob": "e4567ceb58bc317cf1751db26213b6f748b60077",
+      "baseline_blob": "e4567ceb58bc317cf1751db26213b6f748b60077",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2e43fdb24d04cff4494e94ba56a33d836e9fdcd57b71d6d53bea9bae132384b2"
+    },
+    "include/sys/sysdepend/pico_rp2040/profile.h": {
+      "classification": "imported",
+      "template_blob": "490f5f8a64fcf6cade55828615c433f59daf8aba",
+      "baseline_blob": "490f5f8a64fcf6cade55828615c433f59daf8aba",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a4a61f807a379cfb4ee5b3987be2afa8f476b942e75a70be906159bd0d37dc9f"
+    },
+    "include/sys/sysdepend/pico_rp2040/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "6fb7853baba423aa48bd0837b7ccc0904bf91648",
+      "baseline_blob": "6fb7853baba423aa48bd0837b7ccc0904bf91648",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "94a134a07bb35c8aad30a719fba60e48d6411d26a9ababebf1a84aeea49b48e6"
+    },
+    "include/sys/sysdepend/rsk_rx65n/machine.h": {
+      "classification": "imported",
+      "template_blob": "5b7cfff84c2ab71b73e026f85504da751bc7fb44",
+      "baseline_blob": "5b7cfff84c2ab71b73e026f85504da751bc7fb44",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "794a70720a3b7ceacb6943ecfb0d483cfcb3e8a2da9473dbfad2ab4f335ac6e1"
+    },
+    "include/sys/sysdepend/rsk_rx65n/profile.h": {
+      "classification": "imported",
+      "template_blob": "a9fcae6eb53f34780b0f723f4d04c3e73dd7a09c",
+      "baseline_blob": "a9fcae6eb53f34780b0f723f4d04c3e73dd7a09c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8d48a55b8ab4b5d3669b7af94c2d15cac0ff6e0be27e50f8c4e1f8ecd4fe21e7"
+    },
+    "include/sys/sysdepend/rsk_rx65n/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "a4b6fc1cbdca9186e462d1a44e149dbfa289b38e",
+      "baseline_blob": "a4b6fc1cbdca9186e462d1a44e149dbfa289b38e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cb297131545fe7b114ccb5f089372e235e63f511fec46198bce183a575c4ad03"
+    },
+    "include/sys/sysdepend/rtb_rx65n/machine.h": {
+      "classification": "imported",
+      "template_blob": "30a2730cbac529a18812b6848a6559b85446c00b",
+      "baseline_blob": "30a2730cbac529a18812b6848a6559b85446c00b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "35d59227623f4061453e7cf7c83bf039fbe11b9ab9c2b52258c1e75a9a4864fb"
+    },
+    "include/sys/sysdepend/rtb_rx65n/profile.h": {
+      "classification": "imported",
+      "template_blob": "3abd00f16522582906ff045914382fe979177c83",
+      "baseline_blob": "3abd00f16522582906ff045914382fe979177c83",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ea4e02741b16cac3e55372a25fb2e0e258354ae5f1df24dc088a634947a3660c"
+    },
+    "include/sys/sysdepend/rtb_rx65n/sysdef.h": {
+      "classification": "imported",
+      "template_blob": "ba9573d138e11e057b65142cf121c3359d59b8c9",
+      "baseline_blob": "ba9573d138e11e057b65142cf121c3359d59b8c9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "85ecf20738df92e3dec476bede6fba6b87e8120d90646efd078afe9077ad1a0a"
+    },
+    "include/tk/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "6539874a166071f08fbeaadc4de344fd82225506",
+      "baseline_blob": "6539874a166071f08fbeaadc4de344fd82225506",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "330195651701d4a3c07c7d5d8358bc1d44749825dc053f3da2d014e7f88ed74a"
+    },
+    "include/tk/device.h": {
+      "classification": "imported",
+      "template_blob": "7cdae1c6ad270f348f6bd678e7d90a7784a78b01",
+      "baseline_blob": "7cdae1c6ad270f348f6bd678e7d90a7784a78b01",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cc9be776ff5ebbe5b7a01c4422f652f212686aae7a787b547b9b79035832397e"
+    },
+    "include/tk/errno.h": {
+      "classification": "imported",
+      "template_blob": "af4aa30057f16f6cc87b92669770b5153d4153ae",
+      "baseline_blob": "af4aa30057f16f6cc87b92669770b5153d4153ae",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e56650d0417a4c29ba50d3ec612c437c54b80edefd8b25386816802c63b70cac"
+    },
+    "include/tk/smp.h": {
+      "classification": "imported",
+      "template_blob": "093985ebf3328883442cf3692d199d4b30e7f85b",
+      "baseline_blob": "093985ebf3328883442cf3692d199d4b30e7f85b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7c1f45d6cc8c280f9c56eb8f91fa98f0c97123c7c0c0c8cc9ab24a633ec8af94"
+    },
+    "include/tk/syscall.h": {
+      "classification": "imported",
+      "template_blob": "fef8aaeefa7a017103522ca3891581569c901994",
+      "baseline_blob": "fef8aaeefa7a017103522ca3891581569c901994",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c13b350dc50f23ae8bd866fb417c325ee672b6c29fa634b088b2d7571ea2f0f3"
+    },
+    "include/tk/sysdepend/cpu/core/armv6m/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "5ba48e7bf5f3d5deca98a6ebcff85159a79db444",
+      "baseline_blob": "5ba48e7bf5f3d5deca98a6ebcff85159a79db444",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "53b20230fd0dd82f4936b47cab56652c80fa76da7ed869ef198d445acc3de1b0"
+    },
+    "include/tk/sysdepend/cpu/core/armv6m/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "bdd7f44bef47ccc122c1829677af1e420f605175",
+      "baseline_blob": "bdd7f44bef47ccc122c1829677af1e420f605175",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d0a2d3764b47c9f0e9e1dbea4d17fa05f768d4539594f1356c8b8f8a102644e5"
+    },
+    "include/tk/sysdepend/cpu/core/armv6m/syslib.h": {
+      "classification": "imported",
+      "template_blob": "42ba10a6fdaaf194ef3a0c43ef9378056bc14613",
+      "baseline_blob": "42ba10a6fdaaf194ef3a0c43ef9378056bc14613",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "83c81107fe24abc038411b38d093815f436bec18a890b0eb4530f6ad3a5eb2c0"
+    },
+    "include/tk/sysdepend/cpu/core/armv7a/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "cac8b152eaebd3e10444f5163f926b6519521061",
+      "baseline_blob": "cac8b152eaebd3e10444f5163f926b6519521061",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9f25b2666ddc5b2d30a72d2b5b9effe5badef056468c1cbf1e8a87ca8a6c80bf"
+    },
+    "include/tk/sysdepend/cpu/core/armv7a/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "572e3c0cf6dab9769d6422cea5fe83016cc7a88e",
+      "baseline_blob": "572e3c0cf6dab9769d6422cea5fe83016cc7a88e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d548e743438bbd997a934d957a5b796a1855c9881923e232dd76c5fe22d9f949"
+    },
+    "include/tk/sysdepend/cpu/core/armv7a/syslib.h": {
+      "classification": "imported",
+      "template_blob": "123285a90b924e5f768395beed275592a0ab54c9",
+      "baseline_blob": "123285a90b924e5f768395beed275592a0ab54c9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e8a5a850672ff9b0a3798e874dd747d0f85a4db5484aa4203fcc9d4889e13348"
+    },
+    "include/tk/sysdepend/cpu/core/armv7m/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "c465d039fa993828941330998539088eff0a0cc8",
+      "baseline_blob": "c465d039fa993828941330998539088eff0a0cc8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ccf21bd05cef5e59188134e3966934df29dd73f2166a475c524e90476a7bd072"
+    },
+    "include/tk/sysdepend/cpu/core/armv7m/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "46d919e69d805494e2b1b61fbb22b83f9b7fe301",
+      "baseline_blob": "46d919e69d805494e2b1b61fbb22b83f9b7fe301",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5e3aaa8c01400547c10d3320565c93120b0885c57612927ddeeb4d5cf8696edc"
+    },
+    "include/tk/sysdepend/cpu/core/armv7m/syslib.h": {
+      "classification": "imported",
+      "template_blob": "fd75db4ad2d9d3e9c67a1328b7d493af63a00f9a",
+      "baseline_blob": "fd75db4ad2d9d3e9c67a1328b7d493af63a00f9a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f8dc11bdece4b87b3aa975677b7cae88e051b8d41fa55af52e494fbd9f6827e1"
+    },
+    "include/tk/sysdepend/cpu/core/rxv2/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "cae2391563fd4257abb718f63e1048c55eb014a7",
+      "baseline_blob": "cae2391563fd4257abb718f63e1048c55eb014a7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d298c9c758229bc8a5ce53f644371f86937ff6ad0f25937789edff8201e1f8c7"
+    },
+    "include/tk/sysdepend/cpu/core/rxv2/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "ac0d62d23e15bd7d60e7a13c106f85a69bc33eaa",
+      "baseline_blob": "ac0d62d23e15bd7d60e7a13c106f85a69bc33eaa",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "df208b8bf3498296a5b09741f2931f2a4d8c5726e3a8a776cfacbaac7a9e3aa0"
+    },
+    "include/tk/sysdepend/cpu/core/rxv2/syslib.h": {
+      "classification": "imported",
+      "template_blob": "e62fa77447665a006ca764f4078e3365569fea7a",
+      "baseline_blob": "e62fa77447665a006ca764f4078e3365569fea7a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bef081e2931991b70030bbd4bce196485069a2c8ce62aafc9f0f88ced5d2c677"
+    },
+    "include/tk/sysdepend/cpu/rp2040/syslib.h": {
+      "classification": "imported",
+      "template_blob": "8575a05ac878238b34983ebdd0e675d2b6b3f9bb",
+      "baseline_blob": "8575a05ac878238b34983ebdd0e675d2b6b3f9bb",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "107c799fbdb426b1e4c597f5c83e5e9057f411bd2e38bdc646b2f3441d50f673"
+    },
+    "include/tk/sysdepend/cpu/rx231/syslib.h": {
+      "classification": "imported",
+      "template_blob": "4ca7cc46c5c8e4df03ba1fcadc50215e2af96010",
+      "baseline_blob": "4ca7cc46c5c8e4df03ba1fcadc50215e2af96010",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1db84add12145be7593d076b38a5ed5e46c34fcb6c5651bdd4837866ece8964a"
+    },
+    "include/tk/sysdepend/cpu/rx65n/syslib.h": {
+      "classification": "imported",
+      "template_blob": "b40b4fe66537a7fb224a44da7f8e54f3a927263c",
+      "baseline_blob": "b40b4fe66537a7fb224a44da7f8e54f3a927263c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f133fcb229ea31784845621801090d0cfc5abfe4f49f57eb2abd76a8c93b8254"
+    },
+    "include/tk/sysdepend/cpu/rza2m/syslib.h": {
+      "classification": "imported",
+      "template_blob": "4d6505744da2b4affe9cb2889c25f9c7fc2b6127",
+      "baseline_blob": "4d6505744da2b4affe9cb2889c25f9c7fc2b6127",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "001016aeee279345c7f47756536a99f3bbae204ea307539b9aa00e3f46538996"
+    },
+    "include/tk/sysdepend/cpu/stm32h7/syslib.h": {
+      "classification": "imported",
+      "template_blob": "c881f26e7f2a26fa3e9c483d509fb66aeda7deef",
+      "baseline_blob": "c881f26e7f2a26fa3e9c483d509fb66aeda7deef",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e207707a8fc29d5682c6a18b17aff0a51f0a29b22d740bb139fb065996871bd3"
+    },
+    "include/tk/sysdepend/cpu/stm32l4/syslib.h": {
+      "classification": "imported",
+      "template_blob": "bc2fc461bc9b220dad5d3f0395570d9e79eeaad5",
+      "baseline_blob": "bc2fc461bc9b220dad5d3f0395570d9e79eeaad5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ad8315f38bc2b9dc78a315d06ebe0bc0f18856f053d2b19da896ae767aba197b"
+    },
+    "include/tk/sysdepend/cpu/tx03_m367/syslib.h": {
+      "classification": "imported",
+      "template_blob": "fc0cae463afbe2cb1c912e635690361d995dd73c",
+      "baseline_blob": "fc0cae463afbe2cb1c912e635690361d995dd73c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cac0b679fb848a571aafe6c10acbea29a12700911b2fb24913d0650cd6e7acda"
+    },
+    "include/tk/sysdepend/iote_m367/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "fd3ff8294e99aa245b10e8a7b8979660200a5a82",
+      "baseline_blob": "fd3ff8294e99aa245b10e8a7b8979660200a5a82",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0e1fb8ab96a22b5e553db89cbdb5d807c886fe4e500de45f102b969480482819"
+    },
+    "include/tk/sysdepend/iote_m367/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "f079cfa3a13cd98876258b47367e8f54ce11c144",
+      "baseline_blob": "f079cfa3a13cd98876258b47367e8f54ce11c144",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "374dde3cde8c187245c5390a3905efa2b5fdc9f11a8bcfb61ea87dc7f4aed147"
+    },
+    "include/tk/sysdepend/iote_m367/syslib.h": {
+      "classification": "imported",
+      "template_blob": "168f32ab3b7bfde3495c031fbada81f3c6618d60",
+      "baseline_blob": "168f32ab3b7bfde3495c031fbada81f3c6618d60",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "de4588306e670ac3ab3a97ee0a417afe027774a526b068ef51cdb7146c232611"
+    },
+    "include/tk/sysdepend/iote_rx231/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "5226cd1bd1b029704cadad4e7940d7b351fc17a2",
+      "baseline_blob": "5226cd1bd1b029704cadad4e7940d7b351fc17a2",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bfc5ac232d07859e386275a59a95ab1700caa0f434637104d8fb1be3f5a64564"
+    },
+    "include/tk/sysdepend/iote_rx231/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "318bfd99bc1aee79816332e58356e4c4569b1b28",
+      "baseline_blob": "318bfd99bc1aee79816332e58356e4c4569b1b28",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "677d08b967f1a29b2044a35b51f006432373ccbfbf1c279e444aebffe4c7ce74"
+    },
+    "include/tk/sysdepend/iote_rx231/syslib.h": {
+      "classification": "imported",
+      "template_blob": "1da22e535972c028123784594b0773a1e643f611",
+      "baseline_blob": "1da22e535972c028123784594b0773a1e643f611",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cce8af00c3ab2458034c61a599cf7635d34741421ccac436fbf823a32f5f2564"
+    },
+    "include/tk/sysdepend/iote_rza2m/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "ec53a0a478109dce4edb00f33d1e3a1d04485bbd",
+      "baseline_blob": "ec53a0a478109dce4edb00f33d1e3a1d04485bbd",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "dc4ca1bb927643ee99d5854bdef90bd2adfe296c806ffcaf6344c2632b8f03b2"
+    },
+    "include/tk/sysdepend/iote_rza2m/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "c392cb8d33304724d74bb2b522d0e0821e0a6581",
+      "baseline_blob": "c392cb8d33304724d74bb2b522d0e0821e0a6581",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "85faddfa13799a94087ac1e480cb82aee7e9e453a2aa282d07d867a96fbf311b"
+    },
+    "include/tk/sysdepend/iote_rza2m/syslib.h": {
+      "classification": "imported",
+      "template_blob": "ec25218d0670ee43e5731ab7436022ff2de4265b",
+      "baseline_blob": "ec25218d0670ee43e5731ab7436022ff2de4265b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ce3910c2c02361b3e3a2ad18bd5bafbc85652ffe763b6304b90082f83af04f12"
+    },
+    "include/tk/sysdepend/iote_stm32l4/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "f5e8e407096663d28225535070341aac6c9bbcd6",
+      "baseline_blob": "f5e8e407096663d28225535070341aac6c9bbcd6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "282548394b5346972f1dc63444a2c8aad97a49bfc955109e43e6385981f74670"
+    },
+    "include/tk/sysdepend/iote_stm32l4/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "2e5d17192631dccdf3c903ca685d9716d04e48c8",
+      "baseline_blob": "2e5d17192631dccdf3c903ca685d9716d04e48c8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fbac52e4eab15e6abf479f34ea40b349e8c58c0aff100af977c2c887cbc6221f"
+    },
+    "include/tk/sysdepend/iote_stm32l4/syslib.h": {
+      "classification": "imported",
+      "template_blob": "6120204716b8a85712ecb0d2806f45b5ac80ef10",
+      "baseline_blob": "6120204716b8a85712ecb0d2806f45b5ac80ef10",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "12ed82546029e38d6f1ac205d5896a4d3c3e5f83b4ab2df092e0c7ebb7167ef0"
+    },
+    "include/tk/sysdepend/nucleo_h723/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "3f6cebdd881d95d81a04778a15f7deb238d7f232",
+      "baseline_blob": "3f6cebdd881d95d81a04778a15f7deb238d7f232",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8d8bd4773344932a31c6ab78ec0f8cbce1e960ec60526c0522199c53d6b5e5ec"
+    },
+    "include/tk/sysdepend/nucleo_h723/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "7741c3a395162bb7336465b9821946a53daa1e56",
+      "baseline_blob": "7741c3a395162bb7336465b9821946a53daa1e56",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "42505da040d3854ba643ea6e5e99ce1f5688060350883497f688f551823c8f38"
+    },
+    "include/tk/sysdepend/nucleo_h723/syslib.h": {
+      "classification": "imported",
+      "template_blob": "27bf686979932c283ba82d0f85c1526ddcb0e24a",
+      "baseline_blob": "27bf686979932c283ba82d0f85c1526ddcb0e24a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a7ab53b024163aa0ef46718aee4a2af2af519a47fadd66b0b5cad42cea2d183d"
+    },
+    "include/tk/sysdepend/nucleo_l476/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "4bc5ff27f126c746da6738bd1b11fd97a489cdef",
+      "baseline_blob": "4bc5ff27f126c746da6738bd1b11fd97a489cdef",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6cbba870b6010ef62a30f87dc0c6bd6cd08f3cc40783fa113b7eb4dc6d5e94fd"
+    },
+    "include/tk/sysdepend/nucleo_l476/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "eb14e3d14549253d763b69228ace517fddebf07f",
+      "baseline_blob": "eb14e3d14549253d763b69228ace517fddebf07f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "31f43d409276becc640893308d6f6ad8c22f24388cf30bdb8c15b2c8b6e597f1"
+    },
+    "include/tk/sysdepend/nucleo_l476/syslib.h": {
+      "classification": "imported",
+      "template_blob": "ff8ead9f5d5f2463d391c8d23f9226d88751cd30",
+      "baseline_blob": "ff8ead9f5d5f2463d391c8d23f9226d88751cd30",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "06c8080d6d37d9ad85269d413c1c27f0642df6c70d65351774b2a38b8561ca3d"
+    },
+    "include/tk/sysdepend/pico_rp2040/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "1915a349f6da600a35d28aa72ebfcb46c4590ca3",
+      "baseline_blob": "1915a349f6da600a35d28aa72ebfcb46c4590ca3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9f9ba20efa6e28e61e97b52c125827e1012c322a79ba0193158e76ca49c42db3"
+    },
+    "include/tk/sysdepend/pico_rp2040/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "66208a87cdb4af66022890b134a2e76fe4a76a14",
+      "baseline_blob": "66208a87cdb4af66022890b134a2e76fe4a76a14",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fd524920bf45e91223f75f4454d0184a81f56afd045df28f219e061f4c590eff"
+    },
+    "include/tk/sysdepend/pico_rp2040/syslib.h": {
+      "classification": "imported",
+      "template_blob": "cc4ee87b30557d3764b9a4e23d23c48df27bcfbe",
+      "baseline_blob": "cc4ee87b30557d3764b9a4e23d23c48df27bcfbe",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fef7a6a837086956556b0c93e5ba87ad0a4e21a4f973f9882403f96321f5aa0e"
+    },
+    "include/tk/sysdepend/rsk_rx65n/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "5e3eec58c677ec6d89df85512d577ffba4f86504",
+      "baseline_blob": "5e3eec58c677ec6d89df85512d577ffba4f86504",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2107b5e9bdcaf82c1a0a7a5a95fd306327bf77e74bc2bc37dd38de1465e30892"
+    },
+    "include/tk/sysdepend/rsk_rx65n/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "bf58cc1c53bb0cb660e2604330b6e083d5bc6f82",
+      "baseline_blob": "bf58cc1c53bb0cb660e2604330b6e083d5bc6f82",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c885c4c09f81b28b9766b313c4243bc7c98b3bea18054542116277bd5c5bb004"
+    },
+    "include/tk/sysdepend/rsk_rx65n/syslib.h": {
+      "classification": "imported",
+      "template_blob": "ef2cf42f05ed99957a9ebcba86c75bab263c90f3",
+      "baseline_blob": "ef2cf42f05ed99957a9ebcba86c75bab263c90f3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b2895d92a403fa4aa1696d4e625678b72b44e1eb76f6380166da8530259ea4be"
+    },
+    "include/tk/sysdepend/rtb_rx65n/cpudef.h": {
+      "classification": "imported",
+      "template_blob": "5946fca5a3f733c30bc64b3fe12cc7c7b7e448a6",
+      "baseline_blob": "5946fca5a3f733c30bc64b3fe12cc7c7b7e448a6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e97494e4de2aa08ccdb313077e9b19e01bc529f2ebbdce5fa498120787158031"
+    },
+    "include/tk/sysdepend/rtb_rx65n/dbgspt.h": {
+      "classification": "imported",
+      "template_blob": "f93d38a69cc2c54e2c70732b87e1743f7b64a4fb",
+      "baseline_blob": "f93d38a69cc2c54e2c70732b87e1743f7b64a4fb",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cd1695a7e656f7b12ccf04f0a9582723e7b788339b6dafab878b37008d7e62b4"
+    },
+    "include/tk/sysdepend/rtb_rx65n/syslib.h": {
+      "classification": "imported",
+      "template_blob": "7cfe604975b28e61d7c2caac9145e1b628c57284",
+      "baseline_blob": "7cfe604975b28e61d7c2caac9145e1b628c57284",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7be51caf0082b7d450111ed98f82e46fd8647090017a73a19256f7a8c2cccefe"
+    },
+    "include/tk/syslib.h": {
+      "classification": "imported",
+      "template_blob": "5edf039ea86f00db5fa0ed1a55ccff28143f786f",
+      "baseline_blob": "5edf039ea86f00db5fa0ed1a55ccff28143f786f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8f4b99eb6cfd60d270171af8a2a590b33882bc2bc59649509044f10242e507a9"
+    },
+    "include/tk/tkernel.h": {
+      "classification": "imported",
+      "template_blob": "a704ca4dc35087fab28b55e1cd80f881ff4f72b4",
+      "baseline_blob": "a704ca4dc35087fab28b55e1cd80f881ff4f72b4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ee2f5a50a8e8f56315121537454ed3ccc7fde80f763b07883823c204bbd3ea85"
+    },
+    "include/tk/typedef.h": {
+      "classification": "imported",
+      "template_blob": "b9ce4e021ead58035dfdb4c1694d8441392eb5af",
+      "baseline_blob": "b9ce4e021ead58035dfdb4c1694d8441392eb5af",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "953a338ed80243f2166d0f72db4a457b0631fc3038c556f2b3c8cd3f8157ead2"
+    },
+    "include/tm/tmonitor.h": {
+      "classification": "imported",
+      "template_blob": "e5e6daaf43812d2db6dd1b1983812f93d78ab962",
+      "baseline_blob": "e5e6daaf43812d2db6dd1b1983812f93d78ab962",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e5347cfafd454c0f9d0a8a55a50ac2f3abaefe1eb4c6c189ffd8807163b21894"
+    },
+    "kernel/inittask/inittask.c": {
+      "classification": "imported",
+      "template_blob": "2e497d2436222b94e29f999ed1d897757be2cc4f",
+      "baseline_blob": "2e497d2436222b94e29f999ed1d897757be2cc4f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "583d8274ee974e162891f91d828b2ed898b30b5aedac65ce2336e65b2b366408"
+    },
+    "kernel/knlinc/kernel.h": {
+      "classification": "imported",
+      "template_blob": "87ac98ee345201788ef59850500f86cc35e93cf9",
+      "baseline_blob": "87ac98ee345201788ef59850500f86cc35e93cf9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6df8c54552109c28a80b46c7cd2ce99cc3a51349032de5ee08eee6d4cf9daa2c"
+    },
+    "kernel/knlinc/limits.h": {
+      "classification": "imported",
+      "template_blob": "30f6b36d8a6c4d285b040dadbaa167ce9d77ffd3",
+      "baseline_blob": "30f6b36d8a6c4d285b040dadbaa167ce9d77ffd3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f5a4b8b5ca52328d0c78458cce43102e22a4f9f61ecbe90f3574c31b80dce6dc"
+    },
+    "kernel/knlinc/longlong.h": {
+      "classification": "imported",
+      "template_blob": "ca00d68df519c77faa328f0ed6e0111e9ce3acd0",
+      "baseline_blob": "ca00d68df519c77faa328f0ed6e0111e9ce3acd0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f05c54703a327b15b1abcd198aa83590fef58c6667e0982c5a57f9026a4e8b8c"
+    },
+    "kernel/knlinc/smp.h": {
+      "classification": "imported",
+      "template_blob": "084b421bdb1688c057d1bfcddc6a4805a1f81a4d",
+      "baseline_blob": "084b421bdb1688c057d1bfcddc6a4805a1f81a4d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a9746b0edb3264999dcd1d38c9eee4591e4ad9ac85bdc5494cf3f4f67ef94038"
+    },
+    "kernel/knlinc/smp_lock.h": {
+      "classification": "imported",
+      "template_blob": "9f60d91301dffd0bef52ddfb732cee721f8ce872",
+      "baseline_blob": "9f60d91301dffd0bef52ddfb732cee721f8ce872",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b6e4a59b636ea8ac1d05eef1eea1373d356dfb51123ad506a8748ebe3dd3e10f"
+    },
+    "kernel/knlinc/tstdlib.h": {
+      "classification": "imported",
+      "template_blob": "486087a69e87617c7930b32988a259a726e3e2b7",
+      "baseline_blob": "486087a69e87617c7930b32988a259a726e3e2b7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fe9f17c2756e290f2da82649367c930d5d8760a4a86cdeb2ff63673a1a24bd9d"
+    },
+    "kernel/sysdepend/cpu/core/armv6m/cpu_cntl.c": {
+      "classification": "imported",
+      "template_blob": "ad3d80aef9f4ba119b1aa7c3c616e32a3dce1cde",
+      "baseline_blob": "ad3d80aef9f4ba119b1aa7c3c616e32a3dce1cde",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f929916ac1b936d97c65daa3e03fae9c3228036445a09254d63ff7163f369d81"
+    },
+    "kernel/sysdepend/cpu/core/armv6m/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "f14bd8727d70f9b484c8e2577c0366366ecaeff9",
+      "baseline_blob": "f14bd8727d70f9b484c8e2577c0366366ecaeff9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a1293e92075fc50c0433c086a0285606f308820bd5ce2a9b261dba086dba0ab3"
+    },
+    "kernel/sysdepend/cpu/core/armv6m/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "7f2043397569e5e9933f1da06400bbde2ff4f20e",
+      "baseline_blob": "7f2043397569e5e9933f1da06400bbde2ff4f20e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "922b988f3ef19b7f60275f8ef9521da6df89bd96ebb65fe3fa8298a6514a2e71"
+    },
+    "kernel/sysdepend/cpu/core/armv6m/exc_hdr.c": {
+      "classification": "imported",
+      "template_blob": "572ac969ba4dec800bc60dba683164fbbaf85097",
+      "baseline_blob": "572ac969ba4dec800bc60dba683164fbbaf85097",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9882ed54813bae18aac17e4046daeee162bd11e5fe0a3d5694b7133edaa216fb"
+    },
+    "kernel/sysdepend/cpu/core/armv6m/interrupt.c": {
+      "classification": "imported",
+      "template_blob": "874498b7789f9f42d242230c5f5b5d05f0fff226",
+      "baseline_blob": "874498b7789f9f42d242230c5f5b5d05f0fff226",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a073821d25d4e677208a8684433dbe19e86a7a76042c4f78c92aad8c88716d37"
+    },
+    "kernel/sysdepend/cpu/core/armv6m/offset.h": {
+      "classification": "imported",
+      "template_blob": "73d41afe125a153fa25269aa828fd85548191ccf",
+      "baseline_blob": "73d41afe125a153fa25269aa828fd85548191ccf",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "95f45e8a9fb5a9bdedd99da4e38c3263d8784be7bef457f9791c2bc886586f41"
+    },
+    "kernel/sysdepend/cpu/core/armv6m/reset_hdl.c": {
+      "classification": "imported",
+      "template_blob": "6292f669d3230faaa819f6c864f8a16af00d13e6",
+      "baseline_blob": "6292f669d3230faaa819f6c864f8a16af00d13e6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d8767fa179b081771626dda3d7c34ba74ec39e27479f07bd6480598826613e3d"
+    },
+    "kernel/sysdepend/cpu/core/armv6m/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "b5380af4c0313a4d1c5473866852e6bb821eeeb1",
+      "baseline_blob": "b5380af4c0313a4d1c5473866852e6bb821eeeb1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "134f3616e6f107f7c81029670411fd0e94549509830eafe6f4e3b6967a353cd9"
+    },
+    "kernel/sysdepend/cpu/core/armv6m/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "44595cabdabe2a72e1a0269db82753d1be1ad935",
+      "baseline_blob": "44595cabdabe2a72e1a0269db82753d1be1ad935",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2c6f8a3431c96532d1308cd264e0c3f973ae7f142253c04067ace914f8255b38"
+    },
+    "kernel/sysdepend/cpu/core/armv7a/cpu_cntl.c": {
+      "classification": "imported",
+      "template_blob": "eb956b44bb93b361ef3c371678e64622c310cb82",
+      "baseline_blob": "eb956b44bb93b361ef3c371678e64622c310cb82",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1677642ff2fa03a01f61cb424a87e2a85a6a568d493e52716f8dcd1576c70605"
+    },
+    "kernel/sysdepend/cpu/core/armv7a/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "0ffbcf018e00f0ccf84eebd7166f8b7227257b37",
+      "baseline_blob": "0ffbcf018e00f0ccf84eebd7166f8b7227257b37",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1f8b20b47b0dddfab296c06ff456ba4f027a6dc1f576fb930a4fb2db429bd593"
+    },
+    "kernel/sysdepend/cpu/core/armv7a/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "75ebd6d7c93cecd60551616fa8508a1a2a41a50f",
+      "baseline_blob": "75ebd6d7c93cecd60551616fa8508a1a2a41a50f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3e8bf5a3c16826f88d2fb344d7ab50e68ccce868daa63db1a682ff105efb49a1"
+    },
+    "kernel/sysdepend/cpu/core/armv7a/exc_hdl.c": {
+      "classification": "imported",
+      "template_blob": "5e43027662afc7d8cb6c96c65dfcc7369261acf3",
+      "baseline_blob": "5e43027662afc7d8cb6c96c65dfcc7369261acf3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "057807d4c34ade9cd055f300a2a02bb8bbbb59a318165463aff8402ac4d2a397"
+    },
+    "kernel/sysdepend/cpu/core/armv7a/interrupt.c": {
+      "classification": "imported",
+      "template_blob": "0207a79956cd5517ee0d3de47c20292a075595c8",
+      "baseline_blob": "0207a79956cd5517ee0d3de47c20292a075595c8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f7d0e9b9ddedbf220720415d9d599b2ecada6305d24b7d1f98a2d32fde2b5b41"
+    },
+    "kernel/sysdepend/cpu/core/armv7a/offset.h": {
+      "classification": "imported",
+      "template_blob": "ecdc55604053b4cce21a98918b91fb666f5582e4",
+      "baseline_blob": "ecdc55604053b4cce21a98918b91fb666f5582e4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1b785209231b6516d340ebd77ef9692d7ff9f73e8b878d1377b720912b072506"
+    },
+    "kernel/sysdepend/cpu/core/armv7a/reset_main.c": {
+      "classification": "imported",
+      "template_blob": "23c2d0df443b66deff14cb031057925e620949a9",
+      "baseline_blob": "23c2d0df443b66deff14cb031057925e620949a9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c23879ae06bfbe4d8581b05f0bcf512b31e01c207f9d735e335b05f3ec73de68"
+    },
+    "kernel/sysdepend/cpu/core/armv7a/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "206e782a4d2e3d875bdab38e5a7140787a41f2c9",
+      "baseline_blob": "206e782a4d2e3d875bdab38e5a7140787a41f2c9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c695d2c439461be6d7a38463ffd52317ff3cb8994ae53e0255a605e33c3dc958"
+    },
+    "kernel/sysdepend/cpu/core/armv7a/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "053d82c2aa74de0248a2c48a6ee68915601dc85c",
+      "baseline_blob": "053d82c2aa74de0248a2c48a6ee68915601dc85c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "381d0e833e7d18bfbc71bbff116301a38129feb46be166221602ffd691f3b0fa"
+    },
+    "kernel/sysdepend/cpu/core/armv7m/cpu_cntl.c": {
+      "classification": "imported",
+      "template_blob": "75a1a630b0efdf0cd46236fcba76137be426d3fe",
+      "baseline_blob": "75a1a630b0efdf0cd46236fcba76137be426d3fe",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c4014c67be23eee49ab2617128755aa90de9aab42347a3eaf3b98a5f54ef1911"
+    },
+    "kernel/sysdepend/cpu/core/armv7m/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "93f4a70aa848e9e4c8865d7ff2df7fd2bcff1408",
+      "baseline_blob": "93f4a70aa848e9e4c8865d7ff2df7fd2bcff1408",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "df967feaa95625bc0f28e93e2d55fa0607e1cd459fe822ed4648a3dd84263c44"
+    },
+    "kernel/sysdepend/cpu/core/armv7m/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "019eaa9f6bf047428417eaed9915c9228d07c078",
+      "baseline_blob": "019eaa9f6bf047428417eaed9915c9228d07c078",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0ebec3e25b2d44dd23dce838a4ae89eb526115ab4b17d54e3ed5a5d5a996c9ce"
+    },
+    "kernel/sysdepend/cpu/core/armv7m/exc_hdr.c": {
+      "classification": "imported",
+      "template_blob": "b2935104fab57af0e61b7480f29a76003df7a0f1",
+      "baseline_blob": "b2935104fab57af0e61b7480f29a76003df7a0f1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4b6e00a8ed9b0c921b54fb822c9200b354555a9f8705a26370a0320e3052b681"
+    },
+    "kernel/sysdepend/cpu/core/armv7m/interrupt.c": {
+      "classification": "imported",
+      "template_blob": "38bd6ac1b56421ecdcc8bb4c093f5203953fc375",
+      "baseline_blob": "38bd6ac1b56421ecdcc8bb4c093f5203953fc375",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5d7a88d5fb1c2379840e70028481b58f9f9eeda69a006aa478cbd5f14c6ac574"
+    },
+    "kernel/sysdepend/cpu/core/armv7m/offset.h": {
+      "classification": "imported",
+      "template_blob": "89b92619717d671d0373f3ab2bb6e830c2287cc5",
+      "baseline_blob": "89b92619717d671d0373f3ab2bb6e830c2287cc5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ce93480abbec1838ddecacd6bc65899fea175c98c5e964a1f5f38433e49ced2a"
+    },
+    "kernel/sysdepend/cpu/core/armv7m/reset_hdl.c": {
+      "classification": "imported",
+      "template_blob": "03fe0e539447d225565f77917115042aeb6fe682",
+      "baseline_blob": "03fe0e539447d225565f77917115042aeb6fe682",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "96827249deb2c881e0e86d26d9a9475f6731d9a3befe9f1fa735157e4132a877"
+    },
+    "kernel/sysdepend/cpu/core/armv7m/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "5d752fa67fa26da5ac793e8ae50dffedf6257e7d",
+      "baseline_blob": "5d752fa67fa26da5ac793e8ae50dffedf6257e7d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "245516aff21686b9649a4b2fe303d40d355815e25b3df9c89b07ce755180cb9b"
+    },
+    "kernel/sysdepend/cpu/core/armv7m/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "09e365f1f66a3c9a78857b4a7b612277776b2654",
+      "baseline_blob": "09e365f1f66a3c9a78857b4a7b612277776b2654",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "75eddec9b9a0fca64a60aa9b07933cccd8d9ac83f64510fda08bea55a00a2458"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/cpu_cntl.c": {
+      "classification": "imported",
+      "template_blob": "556b59f67c2f4fa6444df85c8e478e70fee2ed16",
+      "baseline_blob": "556b59f67c2f4fa6444df85c8e478e70fee2ed16",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5bbc21d567481e7ca945fafb0aaea6dfd92a98af0d060575689850c54c49baeb"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "2c4666148a49da88b4e065ef8c84b26213bb4ec4",
+      "baseline_blob": "2c4666148a49da88b4e065ef8c84b26213bb4ec4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e8a7c2ba89f07777d8ffa73032ef9943b39c37c9e5a9e7f887fa1f5f9133e5fd"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "664430ab54b26d0449f79b8435f75beacdae2f63",
+      "baseline_blob": "664430ab54b26d0449f79b8435f75beacdae2f63",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4bff3c5475503d4501ecae87638920c10deea6d20f9ed5cd223bfb1d53aa6ebf"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/exc_hdr.c": {
+      "classification": "imported",
+      "template_blob": "b021ab13f55a3fc79d4bc92f6c48fa781bb36c64",
+      "baseline_blob": "b021ab13f55a3fc79d4bc92f6c48fa781bb36c64",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bfc21cd983dded8a150e38e782e8c78dabba1473237b8813e03c7d98853d4b6c"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/interrupt.c": {
+      "classification": "imported",
+      "template_blob": "b1a558c759eb406290f304e88e1fefbb279c0944",
+      "baseline_blob": "b1a558c759eb406290f304e88e1fefbb279c0944",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "24c8fc9b6c34f0451ab2329e4d01243aa81b39c66fe38d2564e0b61703689fc3"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/offset.h": {
+      "classification": "imported",
+      "template_blob": "ce31ce3ffc6b4c4792b202406e55bf549f197b4d",
+      "baseline_blob": "ce31ce3ffc6b4c4792b202406e55bf549f197b4d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4108196dd67c21c9e09bb4ed38e05fc714452f2dc17a23fe1704cd27e2c091f8"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/reset_main.c": {
+      "classification": "imported",
+      "template_blob": "823e1244fccce7c1a8d7c2832330d01329af7710",
+      "baseline_blob": "823e1244fccce7c1a8d7c2832330d01329af7710",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "55024164fe1296405e7541a41726f43e1760d73ab13ab469908206f54e3240e2"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "384d03cf6cb18ce985bb7dd5ba2f2e2fa09b7338",
+      "baseline_blob": "384d03cf6cb18ce985bb7dd5ba2f2e2fa09b7338",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5e10065a6bcf6e22b967525ed96fba462386b1008969c7106b9841b4d91a0727"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "16eecc5ebdadce20fbcea34642795157d35d96e2",
+      "baseline_blob": "16eecc5ebdadce20fbcea34642795157d35d96e2",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0a33c3197af503ae08f86b6ab3acb5cd69e5f0a7a757a4639bdf1e8155a0bf3e"
+    },
+    "kernel/sysdepend/cpu/core/rxv2/vector_tbl.c": {
+      "classification": "imported",
+      "template_blob": "49016349b821eec3c935848beea65765131a2c42",
+      "baseline_blob": "49016349b821eec3c935848beea65765131a2c42",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b38c03839673facb7e83edcce469406e722477dc30ba9ea262739343bc2e16ed"
+    },
+    "kernel/sysdepend/cpu/rp2040/boot_2nd.c": {
+      "classification": "imported",
+      "template_blob": "26b1534968fb5f7055d366acfe8bbe560a612613",
+      "baseline_blob": "26b1534968fb5f7055d366acfe8bbe560a612613",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "926f570a683d89f0399dec89e4072a04b66fdf9cab394b9964ad596653790413"
+    },
+    "kernel/sysdepend/cpu/rp2040/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "d44c63ef5c676ac567fdfe1e003bded9d0bd80f5",
+      "baseline_blob": "d44c63ef5c676ac567fdfe1e003bded9d0bd80f5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "17f3e3aa27c403a6e7c77d341b57a685f493af9a7b4bae2766314361e35f2903"
+    },
+    "kernel/sysdepend/cpu/rp2040/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "a1841fa9e7d312c2c4311c8ad3f2ab622a03a13d",
+      "baseline_blob": "a1841fa9e7d312c2c4311c8ad3f2ab622a03a13d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "75075ac328b37bf94240fa9284eb6672df717261302153d712b1679c081fa7f6"
+    },
+    "kernel/sysdepend/cpu/rp2040/smp_atomic.c": {
+      "classification": "imported",
+      "template_blob": "5b06b815b75d71f85dcaf4e9338b8bebd913c7ba",
+      "baseline_blob": "5b06b815b75d71f85dcaf4e9338b8bebd913c7ba",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5fb6f97264efc98c9cb96bd2ce9ace9207ab908162cf2becc6e1ca60d3ab78c2"
+    },
+    "kernel/sysdepend/cpu/rp2040/smp_rp2040.c": {
+      "classification": "imported",
+      "template_blob": "edc93c815fe52e95a1aa8f60a3853e8fac6dd2d0",
+      "baseline_blob": "edc93c815fe52e95a1aa8f60a3853e8fac6dd2d0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1890481e1b9565c65dbe175ff06277709af70be0d18b3e5520d501e98aeb0418"
+    },
+    "kernel/sysdepend/cpu/rp2040/smp_rp2040.h": {
+      "classification": "imported",
+      "template_blob": "21b6ef786b1ab24ff263973984a5c736ca6b78a5",
+      "baseline_blob": "21b6ef786b1ab24ff263973984a5c736ca6b78a5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0a2ac6715b1f9203f956e240b9e2c3a53900da6433fc6ab4b80bbdc0b8a7ec1c"
+    },
+    "kernel/sysdepend/cpu/rp2040/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "97e9defaeae12fa80603692058050d6d1d759369",
+      "baseline_blob": "97e9defaeae12fa80603692058050d6d1d759369",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "012ceda16583abdb83d65856f7161cf37b43362e3183e48415e9fd0d7c09d872"
+    },
+    "kernel/sysdepend/cpu/rp2040/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "5e2533a6ce3df8a4281a9c9f40c7e2a94e78862b",
+      "baseline_blob": "5e2533a6ce3df8a4281a9c9f40c7e2a94e78862b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "07d2e1f6ad59f851f4330737d22775e12b35d4cefe2ce8cedda5a335ae97113e"
+    },
+    "kernel/sysdepend/cpu/rp2040/vector_tbl.c": {
+      "classification": "imported",
+      "template_blob": "5a30376659febb081a30ce10202e9283d3d2efcc",
+      "baseline_blob": "5a30376659febb081a30ce10202e9283d3d2efcc",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fd33a6a808ec5c6585b00a09f46aef8f6a247ea883541468c2907f2d5aa17052"
+    },
+    "kernel/sysdepend/cpu/rx231/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "8d5a5418e8bbfe9f7e426ae6e1329539e25a32ca",
+      "baseline_blob": "8d5a5418e8bbfe9f7e426ae6e1329539e25a32ca",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "358dcc436b613975859df9ca1c7f85563583629fe221aae5f55c1328e1b6674d"
+    },
+    "kernel/sysdepend/cpu/rx231/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "2c87eec7ee4a9c528714d28589b3bf12bd663820",
+      "baseline_blob": "2c87eec7ee4a9c528714d28589b3bf12bd663820",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "29d2be5244562cf4d89ec303d899651e28a000ed86779d2561e042da0503045b"
+    },
+    "kernel/sysdepend/cpu/rx231/hllint_ent.h": {
+      "classification": "imported",
+      "template_blob": "9404deaa23f9cb405cece2d97da8bf9224b51a99",
+      "baseline_blob": "9404deaa23f9cb405cece2d97da8bf9224b51a99",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f7ce2735c5daeb4821cc261cf139565e6f5e04f8299e9d5d0efdec4305dff688"
+    },
+    "kernel/sysdepend/cpu/rx231/hllint_tbl.c": {
+      "classification": "imported",
+      "template_blob": "909adb4ee57323e4f5babd224cd9c49d73311a79",
+      "baseline_blob": "909adb4ee57323e4f5babd224cd9c49d73311a79",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "35795ce409f46dd1224e354b0fe51db055e6ff4d67fadaa3f7f951b0c9a6f04b"
+    },
+    "kernel/sysdepend/cpu/rx231/intvect_tbl.c": {
+      "classification": "imported",
+      "template_blob": "fb7c867893f8d37742624789bd36ccc56b4967f6",
+      "baseline_blob": "fb7c867893f8d37742624789bd36ccc56b4967f6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5ad78d6dc11aac006b5a8d18c4de6530dd86bd81fba667600ed640e9468c1b59"
+    },
+    "kernel/sysdepend/cpu/rx231/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "7963da20faa2210f3f1b6ef26b7c4147cb4b8d5c",
+      "baseline_blob": "7963da20faa2210f3f1b6ef26b7c4147cb4b8d5c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "98f76672a6a6e80dac85cff837d32ec5ff12aff87ca77cbe053483ede61761ce"
+    },
+    "kernel/sysdepend/cpu/rx231/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "9c6fe865bb6a3dd43e78b0adc742f2c45b629a8b",
+      "baseline_blob": "9c6fe865bb6a3dd43e78b0adc742f2c45b629a8b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "26181be21b959b011967e7dad830eba6d8e1460e7aef8124522754e318b59611"
+    },
+    "kernel/sysdepend/cpu/rx65n/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "a927cc74578a22c6adf531df892f3b12449202c6",
+      "baseline_blob": "a927cc74578a22c6adf531df892f3b12449202c6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "96abae44e0b440c193ac341a96aa4a854ca9e8085d84160b0aca8b1bac782003"
+    },
+    "kernel/sysdepend/cpu/rx65n/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "552a002e7a8c9cd4a38836a4e5c46f9ad8c3418f",
+      "baseline_blob": "552a002e7a8c9cd4a38836a4e5c46f9ad8c3418f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c011a8578b126ebca4cad36d87da02ba17d043921b9f9ec98cfdccdd99a5fed8"
+    },
+    "kernel/sysdepend/cpu/rx65n/group_int.c": {
+      "classification": "imported",
+      "template_blob": "9416212a747a074985df22ff7050f06ec5f81702",
+      "baseline_blob": "9416212a747a074985df22ff7050f06ec5f81702",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2965aa64e98eecd69e8d060bca63a36deb72535aff67bc0688e73cee8c2ba639"
+    },
+    "kernel/sysdepend/cpu/rx65n/hllint_ent.h": {
+      "classification": "imported",
+      "template_blob": "dc42e97bd45105d9199f959013488cafdf1442e4",
+      "baseline_blob": "dc42e97bd45105d9199f959013488cafdf1442e4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4a6da2b76a2c479d0d928b4fcbdac4b4887a04cd5f350f30234c9486ebc0208b"
+    },
+    "kernel/sysdepend/cpu/rx65n/hllint_tbl.c": {
+      "classification": "imported",
+      "template_blob": "391163f08b7ee73d55229f278ef0b34778ddae33",
+      "baseline_blob": "391163f08b7ee73d55229f278ef0b34778ddae33",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e0ae6a74cebb6b588065f68a9f027787c2ccc6315b3e8a4d6884b172c952e531"
+    },
+    "kernel/sysdepend/cpu/rx65n/intvect_tbl.c": {
+      "classification": "imported",
+      "template_blob": "1842305280db9f85f22ae901d8efd39ee3bbbbe2",
+      "baseline_blob": "1842305280db9f85f22ae901d8efd39ee3bbbbe2",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0d98eacc10a1768b5697ca96821ada30161dc7747122ba53e3d4d1ca8820381b"
+    },
+    "kernel/sysdepend/cpu/rx65n/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "81b89f0e3d4e1f0d1ad924918dfb693d9d51f7d4",
+      "baseline_blob": "81b89f0e3d4e1f0d1ad924918dfb693d9d51f7d4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "57555287c2d97e611ab53781841a82b493ecaeb1327d56ecf8641639464a46e4"
+    },
+    "kernel/sysdepend/cpu/rx65n/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "d1672f18abe475a5138f9e264a0a7fdf223392f5",
+      "baseline_blob": "d1672f18abe475a5138f9e264a0a7fdf223392f5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fa9636ee5b26d5b3ac48e62baf4193c9b7de46ac2a633dcc96469772873a24db"
+    },
+    "kernel/sysdepend/cpu/rza2m/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "8d5ef2eda818dbcfd60bfe7555725cae79f9a88e",
+      "baseline_blob": "8d5ef2eda818dbcfd60bfe7555725cae79f9a88e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "37eec8c241132e2be1a335d27adafb97645e9e37b5bd5a129dcd5ec256d237e3"
+    },
+    "kernel/sysdepend/cpu/rza2m/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "d2c900b1e260190da08a55eb3c2d2e21aac1a47a",
+      "baseline_blob": "d2c900b1e260190da08a55eb3c2d2e21aac1a47a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f5d0d8247247660e5f95db6cbd47b30eec55b90f8d783276e1106534adc10971"
+    },
+    "kernel/sysdepend/cpu/rza2m/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "c2881e2439f9be9bb41ccf07b16a70b3fa4d4fe9",
+      "baseline_blob": "c2881e2439f9be9bb41ccf07b16a70b3fa4d4fe9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1435ab56551a662774153972615efdf2186a0d5b19d3abe827393daf7d5996f0"
+    },
+    "kernel/sysdepend/cpu/rza2m/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "86bc937b5673702aaa56c7857d1c83e55b506537",
+      "baseline_blob": "86bc937b5673702aaa56c7857d1c83e55b506537",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "58818692be6df89a962af97c9992808a1a4d92aeb73ee34b08d02d92c24ba97d"
+    },
+    "kernel/sysdepend/cpu/rza2m/ttb_ini.c": {
+      "classification": "imported",
+      "template_blob": "5f07ffeb6dad3d8911f25c6d63b55705d1877d7e",
+      "baseline_blob": "5f07ffeb6dad3d8911f25c6d63b55705d1877d7e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "af9849e6576d18c84b07d568ed2b1427fce9b1651a76df8923c23a5bb799168a"
+    },
+    "kernel/sysdepend/cpu/stm32h7/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "61f600af758acba75ab45b218e491e9c39d77925",
+      "baseline_blob": "61f600af758acba75ab45b218e491e9c39d77925",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bfea7cb267bc8cb7180fa2b19e2ef156fec74688319f50b7f9070650cb221c91"
+    },
+    "kernel/sysdepend/cpu/stm32h7/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "9a0b2066ea09b1a2d0ab536ce04f7fbf6be70c0f",
+      "baseline_blob": "9a0b2066ea09b1a2d0ab536ce04f7fbf6be70c0f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "db905ae929d2b24afd67291c244b872ed5def9ebc782fac8b66fdedd042c9a7b"
+    },
+    "kernel/sysdepend/cpu/stm32h7/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "679d9bc0e8e16b9170bf8eb9eb3d930d1791fdec",
+      "baseline_blob": "679d9bc0e8e16b9170bf8eb9eb3d930d1791fdec",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2b885bf066091865e3eb689c9611bd7fbdd762e14227bf96402d1207cd564e61"
+    },
+    "kernel/sysdepend/cpu/stm32h7/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "7f3b35febc1f9c0877e2b27203949110ba16954b",
+      "baseline_blob": "7f3b35febc1f9c0877e2b27203949110ba16954b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9f30ef821895a93520d1ed13f4386db1f50e6c5e0960de5d20949ee5680c4b19"
+    },
+    "kernel/sysdepend/cpu/stm32h7/vector_tbl.c": {
+      "classification": "imported",
+      "template_blob": "48cdb54775d1c64b7b4e705d12b9ffc92ed0fb33",
+      "baseline_blob": "48cdb54775d1c64b7b4e705d12b9ffc92ed0fb33",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "dd603114d77f161191734c4fa94159e49f95610fe32b2fc30672c4fa68b27398"
+    },
+    "kernel/sysdepend/cpu/stm32l4/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "ffa6e08dc208bd454ffeb7dc3c2f3f7135e8bb18",
+      "baseline_blob": "ffa6e08dc208bd454ffeb7dc3c2f3f7135e8bb18",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ae7e4dddf71c00201e25708c2f25a40b1a3484913219a625f67c63af022c5eeb"
+    },
+    "kernel/sysdepend/cpu/stm32l4/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "6f6c207a9255425f7fc8bec2b57075799bfa512f",
+      "baseline_blob": "6f6c207a9255425f7fc8bec2b57075799bfa512f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b860c0956000c2bec7333ed91ff901d24cb1f51628d056ed6bbeb3f95f4b5f48"
+    },
+    "kernel/sysdepend/cpu/stm32l4/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "01f7e84fa10a1f3a71dae91026bf0cfc91172c48",
+      "baseline_blob": "01f7e84fa10a1f3a71dae91026bf0cfc91172c48",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f0c98aba3535f9e6781de796dd47b7d8c00728e959c4efd983107650c1935291"
+    },
+    "kernel/sysdepend/cpu/stm32l4/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "f87adcf04c621e1b3c54d3f440e8694a97082463",
+      "baseline_blob": "f87adcf04c621e1b3c54d3f440e8694a97082463",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d10977cd23708ea6d2ae184cd3baf087662d41b47c363e24a23ae4aac4e9932c"
+    },
+    "kernel/sysdepend/cpu/stm32l4/vector_tbl.c": {
+      "classification": "imported",
+      "template_blob": "a78e7f831bac4bf190c5270146b9d4261f6b2f73",
+      "baseline_blob": "a78e7f831bac4bf190c5270146b9d4261f6b2f73",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a78f2d1a66f76097ef1a2854366955143cf105949760405b5759c3a49f143f11"
+    },
+    "kernel/sysdepend/cpu/tx03_m367/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "24079b35ce9ad1818c063a4403ab560f259b8854",
+      "baseline_blob": "24079b35ce9ad1818c063a4403ab560f259b8854",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b24b8736fecea16f3ed71e7f35a084c8f0c70a803ca8456a07348e6047fca087"
+    },
+    "kernel/sysdepend/cpu/tx03_m367/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "013c95d8db1c484724509b5bb70d13de487466f9",
+      "baseline_blob": "013c95d8db1c484724509b5bb70d13de487466f9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f149eb77f803e75642aa521cf1184a2f2fd61927df877a51957c3324888e3cff"
+    },
+    "kernel/sysdepend/cpu/tx03_m367/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "9cd0fc370cfbf5513747f83853d987f2fabdb961",
+      "baseline_blob": "9cd0fc370cfbf5513747f83853d987f2fabdb961",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "596c6341bc96899c74b6ad0dd9f15cc688c65b0e906b99c4b5dde0ccbe33f5e6"
+    },
+    "kernel/sysdepend/cpu/tx03_m367/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "717c47ab213695ef95e79bb7317a31fb09924480",
+      "baseline_blob": "717c47ab213695ef95e79bb7317a31fb09924480",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "48fc1a3538b7068a4a96feef843161d03da64fc0ad61a7bb2e846a0bfff4ca7a"
+    },
+    "kernel/sysdepend/cpu/tx03_m367/vector_tbl.c": {
+      "classification": "imported",
+      "template_blob": "a85d8fdd9e56df3477ac4d3b886e54751160a261",
+      "baseline_blob": "a85d8fdd9e56df3477ac4d3b886e54751160a261",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4100e4a867427ee661800bd51d13889bbce23e0ec9b8d80a7be3a5ccb1cdf537"
+    },
+    "kernel/sysdepend/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "ecad37e2f9e7198ebfad9d8bf4695c21ddd16c76",
+      "baseline_blob": "ecad37e2f9e7198ebfad9d8bf4695c21ddd16c76",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5479436b0af74214f19cf1467e799379a493f828b37b584750d06166eab21570"
+    },
+    "kernel/sysdepend/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "7401800340fc568d5ca8d2bf80cf757b7de824bd",
+      "baseline_blob": "7401800340fc568d5ca8d2bf80cf757b7de824bd",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6885021116c3695d0cf0fad03783f84945b5e0ed05e7a761a465c008dea575c8"
+    },
+    "kernel/sysdepend/iote_m367/cpu_clock.c": {
+      "classification": "imported",
+      "template_blob": "d68e9bb6fd44ed9ac9e948d8c7910b3ec4da6371",
+      "baseline_blob": "d68e9bb6fd44ed9ac9e948d8c7910b3ec4da6371",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "da5aafdbc4ca66fc9919527e04d167473c28b43b2c511812770625c877537578"
+    },
+    "kernel/sysdepend/iote_m367/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "b290e4dd614ceb02d7b94872bb3f3e1125ba5d62",
+      "baseline_blob": "b290e4dd614ceb02d7b94872bb3f3e1125ba5d62",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "37ce9e917f2393358c5ff6d1b31a7e2cd10278e63f07e5eba314949d9488da5b"
+    },
+    "kernel/sysdepend/iote_m367/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "1fcff2c1a56fb7fe04a6071ac2a515c7259f57f2",
+      "baseline_blob": "1fcff2c1a56fb7fe04a6071ac2a515c7259f57f2",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "35f8ac1847219615258f500879458559c9fbde796d3a0c2038de01076f39330b"
+    },
+    "kernel/sysdepend/iote_m367/devinit.c": {
+      "classification": "imported",
+      "template_blob": "a218f7a726a1dee0b5176fe7319703a70df6e037",
+      "baseline_blob": "a218f7a726a1dee0b5176fe7319703a70df6e037",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8a4fdcb819e3ffed2fda07dae7c833b1f29701d9bfaae3e6790196b9e46a5968"
+    },
+    "kernel/sysdepend/iote_m367/hw_setting.c": {
+      "classification": "imported",
+      "template_blob": "713081c0651486ba72adbf5cf723d0d40f8b0dd3",
+      "baseline_blob": "713081c0651486ba72adbf5cf723d0d40f8b0dd3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1c1ce335621e8021eebc5422b08f5b29fe6884203a3fae345652e98de573294f"
+    },
+    "kernel/sysdepend/iote_m367/power_save.c": {
+      "classification": "imported",
+      "template_blob": "8fe95b697d2c5ae5e5291bbe2eda79562c284154",
+      "baseline_blob": "8fe95b697d2c5ae5e5291bbe2eda79562c284154",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "31f3e8aa7d377db2ab3d918549eebbea79bb2e98b55c5d06cdc64563b106dc61"
+    },
+    "kernel/sysdepend/iote_m367/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "25f9c37b2f6ab19e59339257f7084e662d32e4e7",
+      "baseline_blob": "25f9c37b2f6ab19e59339257f7084e662d32e4e7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6d1518385b4c17d798509dd29edc2619001c513902ada1f0af6e09d248d34739"
+    },
+    "kernel/sysdepend/iote_m367/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "c43342ed7d9f61a06361ecffc67607fb8234d926",
+      "baseline_blob": "c43342ed7d9f61a06361ecffc67607fb8234d926",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "389cc997ddbef52e442f244fc8b18934516fff1f09b88ea8f7d435b0f17ab41d"
+    },
+    "kernel/sysdepend/iote_m367/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "26d47c2c830d3993e9cd2918f6db3b011e833a60",
+      "baseline_blob": "26d47c2c830d3993e9cd2918f6db3b011e833a60",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f4e636126792a8ea95b6ded0e026fb825cf2fa8598bbcfdd1cdce70ddddb663c"
+    },
+    "kernel/sysdepend/iote_rx231/cpu_clock.c": {
+      "classification": "imported",
+      "template_blob": "c8283ee75042823f001ce8b6e35a0f1fbda673a4",
+      "baseline_blob": "c8283ee75042823f001ce8b6e35a0f1fbda673a4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bad2798955923cabf9bc50178bae8a305e2221398d2422887515d19547821833"
+    },
+    "kernel/sysdepend/iote_rx231/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "2b31bf0765f3bcede0c57eb31903580f294f23d7",
+      "baseline_blob": "2b31bf0765f3bcede0c57eb31903580f294f23d7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ca3a53015d9eac99a6e8b7d222c8c8a9b6921db2b660f353c285de589c51823d"
+    },
+    "kernel/sysdepend/iote_rx231/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "1d89c088ff110f9d97bab4d9ae894e17e9d316f1",
+      "baseline_blob": "1d89c088ff110f9d97bab4d9ae894e17e9d316f1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "070d7d66d6a257db91da379f0182883eaafc639b80ba1d64f61454db86639607"
+    },
+    "kernel/sysdepend/iote_rx231/devinit.c": {
+      "classification": "imported",
+      "template_blob": "d5c1d6fa1d0a959b90bcd949cc09df240616ffef",
+      "baseline_blob": "d5c1d6fa1d0a959b90bcd949cc09df240616ffef",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7d410223fe1ab6c8ebbc46f29b3ea1d84166de6b4dbf246cae63b371463d9750"
+    },
+    "kernel/sysdepend/iote_rx231/hw_setting.c": {
+      "classification": "imported",
+      "template_blob": "138402f8b506083172f69ae8ac7f4178f7afc419",
+      "baseline_blob": "138402f8b506083172f69ae8ac7f4178f7afc419",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "36b8d72c251291a6c911cee012875edc4309504a6c4e499403f5e57af792e023"
+    },
+    "kernel/sysdepend/iote_rx231/power_save.c": {
+      "classification": "imported",
+      "template_blob": "2d6d757d6d3fe97764b181a4a511da0c504126c9",
+      "baseline_blob": "2d6d757d6d3fe97764b181a4a511da0c504126c9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a1509ecdf0da1ec58b15bec1c30e92d5c3bfc231e4d1e293c5509be9c3e51b23"
+    },
+    "kernel/sysdepend/iote_rx231/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "628478bb621b1ebd3859aaccca75606b52702c6c",
+      "baseline_blob": "628478bb621b1ebd3859aaccca75606b52702c6c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0c565e3f2a6252e546f8690dc96e49e3ab3c8ced82bea5360db2930e2a58b354"
+    },
+    "kernel/sysdepend/iote_rx231/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "46cb4e6cf2893bd13f88d4310e8f8e2daf1b5622",
+      "baseline_blob": "46cb4e6cf2893bd13f88d4310e8f8e2daf1b5622",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "219bd6e67e0d767ad13e1b5997878da798292f36b3a9311e7eca17d649742e2c"
+    },
+    "kernel/sysdepend/iote_rx231/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "0de286a421123f8ab9fcac3eeb2ec840f2ac41a6",
+      "baseline_blob": "0de286a421123f8ab9fcac3eeb2ec840f2ac41a6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b6a487265140643bb1a10de9332cb9cb3043c7b7e19bf34516cd75452ddf348e"
+    },
+    "kernel/sysdepend/iote_rza2m/cpu_clock.c": {
+      "classification": "imported",
+      "template_blob": "26ec281626848ca6713851023420201798e45a3d",
+      "baseline_blob": "26ec281626848ca6713851023420201798e45a3d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "23746a90982e9f57e55b4c1cb63ab793c11c2e50f7a7ae890792f28bb914c815"
+    },
+    "kernel/sysdepend/iote_rza2m/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "c072cbe740d5a2b0fa5da8563a4132f1c4747f93",
+      "baseline_blob": "c072cbe740d5a2b0fa5da8563a4132f1c4747f93",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "311415ff8f3b7690271b55a65ff000bd10818bb1fe323c87e9a097bc426c3c97"
+    },
+    "kernel/sysdepend/iote_rza2m/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "30a9c445a21885cc1afd30a7787e0c2a55e33392",
+      "baseline_blob": "30a9c445a21885cc1afd30a7787e0c2a55e33392",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2f037e9eaa87bd76c15c21817a40818b5f8f00c033999c93f7a4dd6c0fba9d99"
+    },
+    "kernel/sysdepend/iote_rza2m/devinit.c": {
+      "classification": "imported",
+      "template_blob": "f13f36a3fa54712a28b1fd6be4a32e12964e3df2",
+      "baseline_blob": "f13f36a3fa54712a28b1fd6be4a32e12964e3df2",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5e3edc1547b398d01e329fb7900737e184c7811979f2cc2188052c6fdaccb48c"
+    },
+    "kernel/sysdepend/iote_rza2m/hw_setting.c": {
+      "classification": "imported",
+      "template_blob": "aa2d0384c880bb2db8c62e6799b788d805e07f39",
+      "baseline_blob": "aa2d0384c880bb2db8c62e6799b788d805e07f39",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cd1792eb25b30175d1de70cfa1b20adb013093550da60834a7a5f819e11cfd83"
+    },
+    "kernel/sysdepend/iote_rza2m/power_save.c": {
+      "classification": "imported",
+      "template_blob": "3d3a2b051f686130d8db79005eb9ece6117f44b8",
+      "baseline_blob": "3d3a2b051f686130d8db79005eb9ece6117f44b8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9128f4d99eb25d755f68c851b00602637216ebfb88b1176a37d93abcfb62d543"
+    },
+    "kernel/sysdepend/iote_rza2m/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "50cace45a9992feb9bb0b4e7b0484aa5cf31c4b3",
+      "baseline_blob": "50cace45a9992feb9bb0b4e7b0484aa5cf31c4b3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "baed13bd2672c1e3ad46c9127714de527f4f481779e2dc7a8f601797293e11b3"
+    },
+    "kernel/sysdepend/iote_rza2m/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "7590e6d3931887b59b2dd6cec378390011678d0c",
+      "baseline_blob": "7590e6d3931887b59b2dd6cec378390011678d0c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6a5270f1eb37f4f7a4597de4b509195ba5cc6f169a2f987c11e90bbf7d1c9304"
+    },
+    "kernel/sysdepend/iote_rza2m/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "2fe4b9592833fe33e0603cc1f192bb17424fae85",
+      "baseline_blob": "2fe4b9592833fe33e0603cc1f192bb17424fae85",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7b3ccff971048abb09cb9bd4bf2220d3529040c64aae09f40c4b702ba9009c2e"
+    },
+    "kernel/sysdepend/iote_stm32l4/cpu_clock.c": {
+      "classification": "imported",
+      "template_blob": "9801b88e1e440366096ee7ae7b60c7a2ac56835e",
+      "baseline_blob": "9801b88e1e440366096ee7ae7b60c7a2ac56835e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f591e08e9e23bad43b9c11a85df087107ebc62e50c81c793a7d9b9fd51860409"
+    },
+    "kernel/sysdepend/iote_stm32l4/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "2ddc71e44e7c550b8b24b1a03d3ffd63f445146b",
+      "baseline_blob": "2ddc71e44e7c550b8b24b1a03d3ffd63f445146b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8e3a372ec5f3f7815f6faca428f3c98134d37d56c0ea68277be0ad7365315053"
+    },
+    "kernel/sysdepend/iote_stm32l4/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "03c757e1529c710bdf7e9b37004575574bc18ced",
+      "baseline_blob": "03c757e1529c710bdf7e9b37004575574bc18ced",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8cf9f490e24947cbdfa08e996a9282d6bbd0606f85b9f38dcc0d32eae7a482d4"
+    },
+    "kernel/sysdepend/iote_stm32l4/devinit.c": {
+      "classification": "imported",
+      "template_blob": "e731014ded270fa65b43cf0f8f48f8327efde5fb",
+      "baseline_blob": "e731014ded270fa65b43cf0f8f48f8327efde5fb",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a231568a27f456ce9a769e9fa0b3b952dbdbb88e361cfa683c6d2b29e56de8de"
+    },
+    "kernel/sysdepend/iote_stm32l4/hw_setting.c": {
+      "classification": "imported",
+      "template_blob": "a122aa95baf3c64291db2175aae698bb2612f855",
+      "baseline_blob": "a122aa95baf3c64291db2175aae698bb2612f855",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e67318cc0b715bf2e70f86cd0a0fa9d5af754ce1b533eccdd058008b8e14ff87"
+    },
+    "kernel/sysdepend/iote_stm32l4/power_save.c": {
+      "classification": "imported",
+      "template_blob": "96feccfccbb45af1e3f099201291668402cd1052",
+      "baseline_blob": "96feccfccbb45af1e3f099201291668402cd1052",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "340a376bfdc3168e92b65df8f980f491138274451a7e91aa07bb3c4374212479"
+    },
+    "kernel/sysdepend/iote_stm32l4/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "5ed714085d929952dab838e8f3b445e12494b123",
+      "baseline_blob": "5ed714085d929952dab838e8f3b445e12494b123",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "acf804f8951da4d4a60f7dbdc6890f06a3fe741e8dc3f3c294f2b1ddc4e06400"
+    },
+    "kernel/sysdepend/iote_stm32l4/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "8993b51b3840cfde830cedfea67632734d1dc370",
+      "baseline_blob": "8993b51b3840cfde830cedfea67632734d1dc370",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6fcd0348ddc716b04249f8f551321947a690e6f5cc70540ddcbb8cc8f7bba2b3"
+    },
+    "kernel/sysdepend/iote_stm32l4/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "6ff1a734814fff6cdbe7727aa215e26c00cc55a7",
+      "baseline_blob": "6ff1a734814fff6cdbe7727aa215e26c00cc55a7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "750720de0ee491e1ce6696a052e1a5b9815e101857cfaef944a75ae9f74e5d7a"
+    },
+    "kernel/sysdepend/nucleo_h723/cpu_clock.c": {
+      "classification": "imported",
+      "template_blob": "8cab01ab3039795d302513c5a3825ee73242c30b",
+      "baseline_blob": "8cab01ab3039795d302513c5a3825ee73242c30b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cdd8a684a99804167f1f065ab1e239714ff9c9353bca1362b9273be340422ebe"
+    },
+    "kernel/sysdepend/nucleo_h723/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "3169469cdd02e9347db48ab37b930cce2a7f631b",
+      "baseline_blob": "3169469cdd02e9347db48ab37b930cce2a7f631b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "69c9e9c2ffb21ff096124edfb24e00c2accb28d16a9a5ab24daef3d865a20725"
+    },
+    "kernel/sysdepend/nucleo_h723/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "2bcbd41cbbf9532abc35ef89d5ab8fc5cdbf16c7",
+      "baseline_blob": "2bcbd41cbbf9532abc35ef89d5ab8fc5cdbf16c7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4752dfc7b38a855f6b5903303d7735dc96475972a889ac168ccc7059bbd9a706"
+    },
+    "kernel/sysdepend/nucleo_h723/devinit.c": {
+      "classification": "imported",
+      "template_blob": "6858d097d7075bccfe946ee409808fda2cebdbb6",
+      "baseline_blob": "6858d097d7075bccfe946ee409808fda2cebdbb6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7cf2fee2657328391d3b5659af907cae41f88cdc0345eedd2e57908e40806322"
+    },
+    "kernel/sysdepend/nucleo_h723/hw_setting.c": {
+      "classification": "imported",
+      "template_blob": "13f97f63870dc9024816eec7cb30b428fe973dc4",
+      "baseline_blob": "13f97f63870dc9024816eec7cb30b428fe973dc4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4df42ffb85d69c400626dd724daae1d41b28653bcc6f7bcac05346112ef1ca45"
+    },
+    "kernel/sysdepend/nucleo_h723/power_save.c": {
+      "classification": "imported",
+      "template_blob": "25c80c2a5326b8a1fca05a0c8494de1fda565f5a",
+      "baseline_blob": "25c80c2a5326b8a1fca05a0c8494de1fda565f5a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9653a9b63e56b1e26abf931243f487fa480febac0337f6df03e7c8a99e90e431"
+    },
+    "kernel/sysdepend/nucleo_h723/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "e0b8a722b92088c60a23788432e602baff93b5c3",
+      "baseline_blob": "e0b8a722b92088c60a23788432e602baff93b5c3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5f9f8b747bf370b92befd88941eb0fdc028e85f3682f9f0fa27239fb3fc19cbf"
+    },
+    "kernel/sysdepend/nucleo_h723/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "333bcd3df52c9d37496acd4968d30822aba6291d",
+      "baseline_blob": "333bcd3df52c9d37496acd4968d30822aba6291d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a791ef8c1a85888bc04623d6ac5714c4a7512e29c0e09d5fceeb3379daf60abb"
+    },
+    "kernel/sysdepend/nucleo_h723/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "43f810387893e02c7583c8518698ae5931ec34b8",
+      "baseline_blob": "43f810387893e02c7583c8518698ae5931ec34b8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a2882101e05ad497a64a45af3a57a2a1117f1f06a1a69d6697af2e36f43bc48f"
+    },
+    "kernel/sysdepend/nucleo_l476/cpu_clock.c": {
+      "classification": "imported",
+      "template_blob": "8db00dba079eb55a21424c211f8dd43a6c607b80",
+      "baseline_blob": "8db00dba079eb55a21424c211f8dd43a6c607b80",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b2b0e0e2544088f61edfd210bdb41311b4c56d58bc6254140aaecd3f1a0766bb"
+    },
+    "kernel/sysdepend/nucleo_l476/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "99e6f266e003f6610377b834ab1485bb21eb74f6",
+      "baseline_blob": "99e6f266e003f6610377b834ab1485bb21eb74f6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2e8bc3c92a88fec3696c2c7432cd456d31ab562508bb909e9d5cb8f968a90cd5"
+    },
+    "kernel/sysdepend/nucleo_l476/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "94dcad587d4ab02521a1cf563dc90999d5b2ba8d",
+      "baseline_blob": "94dcad587d4ab02521a1cf563dc90999d5b2ba8d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b39145598665087808be3a16261325b3bda4762e7c92f7df3a8d7e6409f0827a"
+    },
+    "kernel/sysdepend/nucleo_l476/devinit.c": {
+      "classification": "imported",
+      "template_blob": "d502aa7cddd04f060e592db7372c82cbe938356e",
+      "baseline_blob": "d502aa7cddd04f060e592db7372c82cbe938356e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e610cd63aa669463f8e34a6d9b0be7830d285a86c7714597deb97ab900c845fc"
+    },
+    "kernel/sysdepend/nucleo_l476/hw_setting.c": {
+      "classification": "imported",
+      "template_blob": "3bc746b9fbe5d878a6cb9dc9e4e8ae5d435185b5",
+      "baseline_blob": "3bc746b9fbe5d878a6cb9dc9e4e8ae5d435185b5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7622b679e196d455156b99c8e212091060d58bcb32dab8980e2e1db0a1b49e54"
+    },
+    "kernel/sysdepend/nucleo_l476/power_save.c": {
+      "classification": "imported",
+      "template_blob": "18b04a0a82263def43d77d140c4054c1dfd70e8b",
+      "baseline_blob": "18b04a0a82263def43d77d140c4054c1dfd70e8b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e8fd2266b457f11e9a5a191be8bcf0da275de9cdaab20cbb17e66609821811ce"
+    },
+    "kernel/sysdepend/nucleo_l476/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "4287f7ff45e2f98a6320143251a83aa4cb4970a3",
+      "baseline_blob": "4287f7ff45e2f98a6320143251a83aa4cb4970a3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2bd27cd6f3b9d6e55a8a816b9903a67b49913c931d6938857d20f84968cf1050"
+    },
+    "kernel/sysdepend/nucleo_l476/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "a3a18f921f2dde2238c4bafefe72723072a5aeec",
+      "baseline_blob": "a3a18f921f2dde2238c4bafefe72723072a5aeec",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9e36015ecbcda6d742bd276cddaefcd021fcc221241926b83cee5ce56d43d0ab"
+    },
+    "kernel/sysdepend/nucleo_l476/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "2e0bf89ca6e4af1a4ea8f5ee53f87b2421f6bc87",
+      "baseline_blob": "2e0bf89ca6e4af1a4ea8f5ee53f87b2421f6bc87",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6703b8d46a6ec26b924e01ccbea691c54b9537f5cdf1b7dd18b3d48292153e1b"
+    },
+    "kernel/sysdepend/pico_rp2040/cpu_clock.c": {
+      "classification": "imported",
+      "template_blob": "525ab67fda69b6c5e537836d98396472322ba30b",
+      "baseline_blob": "525ab67fda69b6c5e537836d98396472322ba30b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f34fd8ce0ca20cd0384aa8ea281d2cbafb3b9ab4b569aaf277a96901651c9b4c"
+    },
+    "kernel/sysdepend/pico_rp2040/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "f041d705ecc95491026048f0346aa411673c62e0",
+      "baseline_blob": "f041d705ecc95491026048f0346aa411673c62e0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c949aa73af2c0cfe17ad61e28af94e3be3e5a84795b211ce70cbfe231602d23b"
+    },
+    "kernel/sysdepend/pico_rp2040/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "c32532e24d84b7120d8d195b8ae8d4d4363b658d",
+      "baseline_blob": "c32532e24d84b7120d8d195b8ae8d4d4363b658d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "086a594d9a455e4d3ac531d26954c1bec6e395db97c5b316d5590eff9b3665c1"
+    },
+    "kernel/sysdepend/pico_rp2040/hw_setting.c": {
+      "classification": "imported",
+      "template_blob": "fec7da060eb635ded49830e6999916332249c066",
+      "baseline_blob": "fec7da060eb635ded49830e6999916332249c066",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "7740d82982c03a28195a20370ad8039af29e5e96ef2376c18777033e9fcb4570"
+    },
+    "kernel/sysdepend/pico_rp2040/power_save.c": {
+      "classification": "imported",
+      "template_blob": "e15e0e64deef8f017754fcc19704c37a19792de0",
+      "baseline_blob": "e15e0e64deef8f017754fcc19704c37a19792de0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ba8e56aaaf7261e05c089b14d57d5f32f48964f011ef55fe6388fac2682fc43c"
+    },
+    "kernel/sysdepend/pico_rp2040/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "824de2dfd13c787dc9a108adb6f670015bf25a38",
+      "baseline_blob": "824de2dfd13c787dc9a108adb6f670015bf25a38",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "196433bb67cfffc4217201a9192ae2a2f1fad04b51326fc51f1b897323551c50"
+    },
+    "kernel/sysdepend/pico_rp2040/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "9933871a9817bc9ec4f032ad42ef5a7f903470b6",
+      "baseline_blob": "9933871a9817bc9ec4f032ad42ef5a7f903470b6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9b7d7a210308cdedafe2fd84ccfe2579bb273cd6bfae50b37731230170203939"
+    },
+    "kernel/sysdepend/pico_rp2040/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "678c5a46c33f8cb347eee1767bb2b3a425ceae25",
+      "baseline_blob": "678c5a46c33f8cb347eee1767bb2b3a425ceae25",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d8e01ca307564eb59fabbf1338dbdf71c479e99671e00fe983a400bec8f35a10"
+    },
+    "kernel/sysdepend/rsk_rx65n/cpu_clock.c": {
+      "classification": "imported",
+      "template_blob": "5194ee7e1c5db3de1856c47651955f040f657f62",
+      "baseline_blob": "5194ee7e1c5db3de1856c47651955f040f657f62",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f03514de83dd2b167f365f82ada36cb7e7f8127d05dcf40f9724301b9b4dd6fb"
+    },
+    "kernel/sysdepend/rsk_rx65n/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "b840d5d3052589b25c712d2ee8be08a0d38dd321",
+      "baseline_blob": "b840d5d3052589b25c712d2ee8be08a0d38dd321",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "04734e7985270982f81f1cc6c2dd9850cd2efb64c3b5d856150076981e62dcb8"
+    },
+    "kernel/sysdepend/rsk_rx65n/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "7546a1423cc353fb8f35f84a6e4cb32936dece33",
+      "baseline_blob": "7546a1423cc353fb8f35f84a6e4cb32936dece33",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bc62d6d1deccfbcaa281ac93d903e54a5b857d993d6f802632be997f1b510d91"
+    },
+    "kernel/sysdepend/rsk_rx65n/devinit.c": {
+      "classification": "imported",
+      "template_blob": "e450bb1207dd33fc40296d11cd22bcb157090726",
+      "baseline_blob": "e450bb1207dd33fc40296d11cd22bcb157090726",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bb1d956c822bb9c0695eb2d348f7375e0ac5b21ecc08d9c75ae929a6fb22e8fa"
+    },
+    "kernel/sysdepend/rsk_rx65n/hw_setting.c": {
+      "classification": "imported",
+      "template_blob": "2a1dd4224c33acc3c7844030150c139b348ce107",
+      "baseline_blob": "2a1dd4224c33acc3c7844030150c139b348ce107",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f659a5669012c87d38d3130d879750c7b9fdd275bdd1be6dd04eabb5ff3ee396"
+    },
+    "kernel/sysdepend/rsk_rx65n/power_save.c": {
+      "classification": "imported",
+      "template_blob": "c6f97a8965c398b4c9c7521362746243b2f71315",
+      "baseline_blob": "c6f97a8965c398b4c9c7521362746243b2f71315",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1a9df79eece54735e2d3ea1b43ebf81f236a12e21446008d6fa38ff5c9670812"
+    },
+    "kernel/sysdepend/rsk_rx65n/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "0dce8544c1fd51975ce054434c1d0b2da6dd425f",
+      "baseline_blob": "0dce8544c1fd51975ce054434c1d0b2da6dd425f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "8f6c2912a4e09763751046d9d30311c4cfd4a68e6f8df0393c5a7120f9704670"
+    },
+    "kernel/sysdepend/rsk_rx65n/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "d6810887bf18942964db51d5f71383bd59424eb7",
+      "baseline_blob": "d6810887bf18942964db51d5f71383bd59424eb7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "74118662fbe3cbb9c79118800c7292bd3a59d9ee13b2da9b9dc94d3c0822e5a8"
+    },
+    "kernel/sysdepend/rsk_rx65n/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "fcdd2024468b4aa2ed51141c079e66652122bfcc",
+      "baseline_blob": "fcdd2024468b4aa2ed51141c079e66652122bfcc",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4fc5e872463c464a7ca4e9194db6a997e3c5ea262c8cdee9ad0948705fea8fb4"
+    },
+    "kernel/sysdepend/rtb_rx65n/cpu_clock.c": {
+      "classification": "imported",
+      "template_blob": "cb858ce974c933e8559ebdf1fb735a1fe68e2f9e",
+      "baseline_blob": "cb858ce974c933e8559ebdf1fb735a1fe68e2f9e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f75dc4cf681e6743b77aff7af68a19a1b0d8b226889f6a27a603c1da3adc3c78"
+    },
+    "kernel/sysdepend/rtb_rx65n/cpu_status.h": {
+      "classification": "imported",
+      "template_blob": "050b7688e94b5d4c403b2ae9aef9943fe086bbc9",
+      "baseline_blob": "050b7688e94b5d4c403b2ae9aef9943fe086bbc9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f1d9f24a3c5ddb4a4f633a38a9e5cbb6901f404335eb57c9322fe502a114ae32"
+    },
+    "kernel/sysdepend/rtb_rx65n/cpu_task.h": {
+      "classification": "imported",
+      "template_blob": "bdd65f0c81096edddadfb05b22f9be1f09657a65",
+      "baseline_blob": "bdd65f0c81096edddadfb05b22f9be1f09657a65",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2d11447e24f137faea28bb56aff0632792d90f969ca51324dec95742760398b5"
+    },
+    "kernel/sysdepend/rtb_rx65n/devinit.c": {
+      "classification": "imported",
+      "template_blob": "080b9e348d9e03e180b5423f9d7080eff97bc213",
+      "baseline_blob": "080b9e348d9e03e180b5423f9d7080eff97bc213",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "14b001fca96bab9353a7e98a50cfc9580a61b941945c7ab8f3f9007853dd24b8"
+    },
+    "kernel/sysdepend/rtb_rx65n/hw_setting.c": {
+      "classification": "imported",
+      "template_blob": "41d4538b294b40dddd9c78e4b30adff96c41a2f9",
+      "baseline_blob": "41d4538b294b40dddd9c78e4b30adff96c41a2f9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "adc4ece0a8b0eaa2a20c8564e6ef1fcecda1c6c6a66d6ee120c7b2e5c3dc9604"
+    },
+    "kernel/sysdepend/rtb_rx65n/power_save.c": {
+      "classification": "imported",
+      "template_blob": "c67fa892b83b08c4381a1f8ae6c08c50e44f5a46",
+      "baseline_blob": "c67fa892b83b08c4381a1f8ae6c08c50e44f5a46",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5780785187cccf62ab563aa80c03f1df9713379c274c50e024e76027cba2d2f9"
+    },
+    "kernel/sysdepend/rtb_rx65n/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "addc51bca6a4a964e7f589759ef1a68361d9bd4f",
+      "baseline_blob": "addc51bca6a4a964e7f589759ef1a68361d9bd4f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "90e819c4ec13264003e1fd580f7d029724e8fe4a8b23ed8b14a6a025f295608a"
+    },
+    "kernel/sysdepend/rtb_rx65n/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "057c06168ffb045023e8893837121b27b374a1b7",
+      "baseline_blob": "057c06168ffb045023e8893837121b27b374a1b7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cf8f7f35b8ccfaf5bac398377967e71ec4eb1506e5c54cc7323c5ee124669d74"
+    },
+    "kernel/sysdepend/rtb_rx65n/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "09f6d87d9cda707ddf3396c5cb19d2ce818c6182",
+      "baseline_blob": "09f6d87d9cda707ddf3396c5cb19d2ce818c6182",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0c44d64c8dc218d8fd7a3e0378bfa2fc178ebcf326a79f522852e9f8426456a7"
+    },
+    "kernel/sysdepend/sys_msg.h": {
+      "classification": "imported",
+      "template_blob": "ff2e9bdf7325a7f9c5a442b373d1b157f19e3d1c",
+      "baseline_blob": "ff2e9bdf7325a7f9c5a442b373d1b157f19e3d1c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "63117089624ee5c0d1ddfa3de12957347b0bed576547ac15fb952190e49ce6aa"
+    },
+    "kernel/sysdepend/sys_timer.h": {
+      "classification": "imported",
+      "template_blob": "10fef6e125fe84b9633a0ce5abe5fa519ba5fd2a",
+      "baseline_blob": "10fef6e125fe84b9633a0ce5abe5fa519ba5fd2a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2f492001b7f9439c7b0ebaf770ddf6297f54f6283a92487cb2ff34957a586050"
+    },
+    "kernel/sysdepend/sysdepend.h": {
+      "classification": "imported",
+      "template_blob": "539e813acbf8addaaaa6d46e24e4efd5238279b0",
+      "baseline_blob": "539e813acbf8addaaaa6d46e24e4efd5238279b0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "538ed5d2179d11f02629fc09d87d7aae301c401ab1ef58db80549a4b19e53d02"
+    },
+    "kernel/sysinit/sysinit.c": {
+      "classification": "imported",
+      "template_blob": "4e7c5d0d950d8113c84340a418338e117dcfbb48",
+      "baseline_blob": "4e7c5d0d950d8113c84340a418338e117dcfbb48",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a85099bcd3b390c8b5bdc0ed2e4704a6afded548f8511aa839dad69bfa627c58"
+    },
+    "kernel/tkernel/check.h": {
+      "classification": "imported",
+      "template_blob": "9bab129c794a58d1c0267e3ce701d36a91bbfa8f",
+      "baseline_blob": "9bab129c794a58d1c0267e3ce701d36a91bbfa8f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "30d3c0ceff332c1507cb5c5011d43f5901dedcc90cf2d7ff08904f9efb9889e7"
+    },
+    "kernel/tkernel/cpuctl.c": {
+      "classification": "imported",
+      "template_blob": "42709762f807849d34ebc42b6021b8ef222a29e6",
+      "baseline_blob": "42709762f807849d34ebc42b6021b8ef222a29e6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "dac158513defde368ef65199fe2016301899746f2105df2a77c1a51d00fde18a"
+    },
+    "kernel/tkernel/device.c": {
+      "classification": "imported",
+      "template_blob": "ae2092eab5f8c8020191075910b07cd84f1f4340",
+      "baseline_blob": "ae2092eab5f8c8020191075910b07cd84f1f4340",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4b763b7e5b3b76f25cab37887baea983e21908ce5c0452993c76a7483ac2cb17"
+    },
+    "kernel/tkernel/device.h": {
+      "classification": "imported",
+      "template_blob": "ed8ac8cce4b95d11416070850530c61bf61eb2e6",
+      "baseline_blob": "ed8ac8cce4b95d11416070850530c61bf61eb2e6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5284e2c3cb2203d775e35165a6a6905357e814bcfd32dfcb8999eec65269d9e6"
+    },
+    "kernel/tkernel/deviceio.c": {
+      "classification": "imported",
+      "template_blob": "fbc2c990802b4c4e6617828826954992516a971d",
+      "baseline_blob": "fbc2c990802b4c4e6617828826954992516a971d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a54f36c0c18661e42dd2d446c699003592e629eb7cfdfb143fcf914a994308a2"
+    },
+    "kernel/tkernel/eventflag.c": {
+      "classification": "imported",
+      "template_blob": "584e92b007979135ae0916910ec414c6ccd0a7b5",
+      "baseline_blob": "584e92b007979135ae0916910ec414c6ccd0a7b5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "13ecdd05cfae7bcb0710c990127a8e7360b66ec6da8a72e3c07ab95008285b24"
+    },
+    "kernel/tkernel/eventflag.h": {
+      "classification": "imported",
+      "template_blob": "3ecdbbf0c768daf7accb352bd430a5ec7f4c6e41",
+      "baseline_blob": "3ecdbbf0c768daf7accb352bd430a5ec7f4c6e41",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "65b7cc01c451eb548abe4778d4588691ed27994dbdb5a33d59609940200263d7"
+    },
+    "kernel/tkernel/int.c": {
+      "classification": "imported",
+      "template_blob": "668cbace09c269f7378ec2a9705d26dbd08b5f95",
+      "baseline_blob": "668cbace09c269f7378ec2a9705d26dbd08b5f95",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3765f719bd709dfca595eb4f4cbf2e4961d3c53e4f6218cc06812a8c6cb8e58d"
+    },
+    "kernel/tkernel/klock.c": {
+      "classification": "imported",
+      "template_blob": "cdc416ed7d920e411829da7e856f12203489ba43",
+      "baseline_blob": "cdc416ed7d920e411829da7e856f12203489ba43",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "af7d14e82f4e3cd792f552a8b9afb75058bce2ae49f76d005b92f7012e4b39c8"
+    },
+    "kernel/tkernel/klock.h": {
+      "classification": "imported",
+      "template_blob": "def55c82c05a4d1ab60fea20abcb55cdd8edc51b",
+      "baseline_blob": "def55c82c05a4d1ab60fea20abcb55cdd8edc51b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "090d8d1c498792fbac9f0933c7a70188fc39132e995f73e17f5cfb58fb32ffc2"
+    },
+    "kernel/tkernel/mailbox.c": {
+      "classification": "imported",
+      "template_blob": "007eaf506b6538f862093fd6c22590c0e3ba553c",
+      "baseline_blob": "007eaf506b6538f862093fd6c22590c0e3ba553c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b4ea5817a0a795f75b8608ca59dbfec913fd1c65a13df317c7cfb766132fb1cd"
+    },
+    "kernel/tkernel/mailbox.h": {
+      "classification": "imported",
+      "template_blob": "aed9fbf91859676001363cdf5006e66f8984474a",
+      "baseline_blob": "aed9fbf91859676001363cdf5006e66f8984474a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ccffce1121ac31b67d5e6c16bb2653fb40f5f60cfe07b474558b628f1f3e50d8"
+    },
+    "kernel/tkernel/memory.c": {
+      "classification": "imported",
+      "template_blob": "a4ab0774320390f944944ef2ec03ec3fc3ed12e0",
+      "baseline_blob": "a4ab0774320390f944944ef2ec03ec3fc3ed12e0",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2a5f061aabf9042064fd525a914c14e94e537606198d8a46d9e9f13425721b1d"
+    },
+    "kernel/tkernel/memory.h": {
+      "classification": "imported",
+      "template_blob": "a2696aac7f31314479fb2d350a35307cc560ff32",
+      "baseline_blob": "a2696aac7f31314479fb2d350a35307cc560ff32",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4db8e4e6b673e69868ba0f35e2a9ffeee024e63c86b9d82679f1d537946b9981"
+    },
+    "kernel/tkernel/mempfix.c": {
+      "classification": "imported",
+      "template_blob": "2fe1e5379434846d8ab24f377689a33ef6db7a4d",
+      "baseline_blob": "2fe1e5379434846d8ab24f377689a33ef6db7a4d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "44e96b3aa99345be851fbd09cb6e11622e9b9d5004361f4f047b3ad6054e7d75"
+    },
+    "kernel/tkernel/mempfix.h": {
+      "classification": "imported",
+      "template_blob": "73757b11dd640a3c90da2fb51cff28b64da0d8b8",
+      "baseline_blob": "73757b11dd640a3c90da2fb51cff28b64da0d8b8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "5d60afdaa78574a800787248e2efff6ab661de9d18d7cab2be141e1d7abb8069"
+    },
+    "kernel/tkernel/mempool.c": {
+      "classification": "imported",
+      "template_blob": "3639b60e7960e07d7e5a282fd657ee26b47cd482",
+      "baseline_blob": "3639b60e7960e07d7e5a282fd657ee26b47cd482",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "158248b77a7725f20af6518625f72f6e89ec80afdf344a16ade39e88a5183af2"
+    },
+    "kernel/tkernel/mempool.h": {
+      "classification": "imported",
+      "template_blob": "3f7a7b10c6363e4a4f0ccbd09434eb7a776f983e",
+      "baseline_blob": "3f7a7b10c6363e4a4f0ccbd09434eb7a776f983e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "391817c8f9e9b3752d8d50c84b96e96c292a5703b78fa19ddb60d1b2bb82c03d"
+    },
+    "kernel/tkernel/messagebuf.c": {
+      "classification": "imported",
+      "template_blob": "c2544cd77794bdf52d78f06dfe2183506d2bfbff",
+      "baseline_blob": "c2544cd77794bdf52d78f06dfe2183506d2bfbff",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "28f5440d1b55b532f04144efcbb7f80912e4c3729cafe2e80218b9ce63ec5a63"
+    },
+    "kernel/tkernel/messagebuf.h": {
+      "classification": "imported",
+      "template_blob": "6ab6a47901648ca26adf486690279439152ee8cc",
+      "baseline_blob": "6ab6a47901648ca26adf486690279439152ee8cc",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "785427d184d97b0cb5bc67ca4f7bef1e4c80b420959581cbe663b1378ae3adef"
+    },
+    "kernel/tkernel/misc_calls.c": {
+      "classification": "imported",
+      "template_blob": "3b22bdd4aad12c188cbf9ffdb8f90c0cba4a80a2",
+      "baseline_blob": "3b22bdd4aad12c188cbf9ffdb8f90c0cba4a80a2",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "33323caf1f236bfa41f51d863fcc9275adf8354300b05d1c7423e3342b74a262"
+    },
+    "kernel/tkernel/mutex.c": {
+      "classification": "imported",
+      "template_blob": "f2229882825c3f8c09ac39746365b245548066e6",
+      "baseline_blob": "f2229882825c3f8c09ac39746365b245548066e6",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "68f5fcab4933bf97408fcb4ce89eb8c987f1dd0531fcdf21b2e415a062adec5c"
+    },
+    "kernel/tkernel/mutex.h": {
+      "classification": "imported",
+      "template_blob": "7a69a0afd7633f5b6c8354eb0531e8ae1bc21759",
+      "baseline_blob": "7a69a0afd7633f5b6c8354eb0531e8ae1bc21759",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b85438f37892b4131702c9861222f9d4acfeb198b27cf3c31262e850d118d24e"
+    },
+    "kernel/tkernel/objname.c": {
+      "classification": "imported",
+      "template_blob": "b13de22479f377a2616c8ef9633d8c2e64863371",
+      "baseline_blob": "b13de22479f377a2616c8ef9633d8c2e64863371",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "164a796007ebc7508226d1d0a484a3d55ac8164d44444b247eada669a12432b5"
+    },
+    "kernel/tkernel/power.c": {
+      "classification": "imported",
+      "template_blob": "0873cca7e5546238a5e6c74bb176ce5934d4f74b",
+      "baseline_blob": "0873cca7e5546238a5e6c74bb176ce5934d4f74b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "728d8340ee628ce138736fa63a203d3f97020035076e834f0b3f76ea753870c7"
+    },
+    "kernel/tkernel/ready_queue.h": {
+      "classification": "imported",
+      "template_blob": "6809d9f7decba1f5ca5244a5caea0fbc9a2fee73",
+      "baseline_blob": "6809d9f7decba1f5ca5244a5caea0fbc9a2fee73",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fda0db13281c6dfb0916d3a67536770b9295782339241a3c4e73aec225788cc6"
+    },
+    "kernel/tkernel/ready_queue_smp.c": {
+      "classification": "imported",
+      "template_blob": "a97dcdf21f8952bf1fd309d327d7459ac066a477",
+      "baseline_blob": "a97dcdf21f8952bf1fd309d327d7459ac066a477",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "765485736d58b79742b0c8127593f4ce2aca6233667b3c3c765a5564c6a125b6"
+    },
+    "kernel/tkernel/rendezvous.c": {
+      "classification": "imported",
+      "template_blob": "d292d5e1ea74ffaa6819d6d69f3e24fa19e6e09b",
+      "baseline_blob": "d292d5e1ea74ffaa6819d6d69f3e24fa19e6e09b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2e7c436d8f044a2be62ad874d1f4a8fbd8ce582c7c1baa9babe00ef5db59b21d"
+    },
+    "kernel/tkernel/rendezvous.h": {
+      "classification": "imported",
+      "template_blob": "6cc8fdf87881ff5f7be9d396b01ee4b2b4fd98f9",
+      "baseline_blob": "6cc8fdf87881ff5f7be9d396b01ee4b2b4fd98f9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f1cd9ef8fa2f98326cfd604eef6008c1bc7ec2a209488c70c0478026dee4dada"
+    },
+    "kernel/tkernel/semaphore.c": {
+      "classification": "imported",
+      "template_blob": "b47b151238a90df2bb6902cff1a9d9e06da4425e",
+      "baseline_blob": "b47b151238a90df2bb6902cff1a9d9e06da4425e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "616ae8d1239343122050d5bc4d28a9a0207a7864c63aad37556440ea00ecd7e0"
+    },
+    "kernel/tkernel/semaphore.h": {
+      "classification": "imported",
+      "template_blob": "d511a9bafe498e89c8e3285d5e6becbdf089f31e",
+      "baseline_blob": "d511a9bafe498e89c8e3285d5e6becbdf089f31e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "07047bd0a2846a4ccf92bbdfd833a500cab7936254a0cdccbf5dcc5d70317091"
+    },
+    "kernel/tkernel/smp_dispatch.c": {
+      "classification": "imported",
+      "template_blob": "5904a21fc299671373810be9073b1fa629b9ccdc",
+      "baseline_blob": "5904a21fc299671373810be9073b1fa629b9ccdc",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e0cedcd2823c9febc0b8358161e20c4094788262c2b707596dc354273ff43838"
+    },
+    "kernel/tkernel/smp_lock.c": {
+      "classification": "imported",
+      "template_blob": "434a7d7ee7edb2f4a4b2a3ef80db2132da8e4cb9",
+      "baseline_blob": "434a7d7ee7edb2f4a4b2a3ef80db2132da8e4cb9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b14eeba0ac2aafa600fe8109fb74e4121a876ab5838b748c40456e1bd258cee9"
+    },
+    "kernel/tkernel/sysmgr.h": {
+      "classification": "imported",
+      "template_blob": "7c6b34f872a3549b1e2f417eb7eb3a3ab6d820c3",
+      "baseline_blob": "7c6b34f872a3549b1e2f417eb7eb3a3ab6d820c3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c40c8d97ed11508b109e9b315b99143af26df47614ae220b34ab40bc2b62bffd"
+    },
+    "kernel/tkernel/task.c": {
+      "classification": "imported",
+      "template_blob": "af11f00f9df80b813e4ffb2c4f53bf6fa6a36016",
+      "baseline_blob": "af11f00f9df80b813e4ffb2c4f53bf6fa6a36016",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "416fa58689299fe53dd7ea30237f326937101ea56930c9a0711445e127216dc7"
+    },
+    "kernel/tkernel/task.h": {
+      "classification": "imported",
+      "template_blob": "ef47275b1e807e840c9db1e77cdfcf12568719d9",
+      "baseline_blob": "ef47275b1e807e840c9db1e77cdfcf12568719d9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b3417b51b2794c11e3ff058b95c9aa6c4405c6b046ae46799593408c19ab99f8"
+    },
+    "kernel/tkernel/task_manage.c": {
+      "classification": "imported",
+      "template_blob": "9413f41843503dfb0fad1255f1aa64a3e984b1f2",
+      "baseline_blob": "9413f41843503dfb0fad1255f1aa64a3e984b1f2",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "45e168c88bd78ac48f31e5071bb0a797ce11daa5473ad11394fd6246c0c98ef2"
+    },
+    "kernel/tkernel/task_sync.c": {
+      "classification": "imported",
+      "template_blob": "4f4d0b6a8e9e51cc292056cc6009e30db627c900",
+      "baseline_blob": "4f4d0b6a8e9e51cc292056cc6009e30db627c900",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9da681282e08567c0d70997d410599ae4ae19f4b09fa9ce0a4194257b1e58d11"
+    },
+    "kernel/tkernel/time_calls.c": {
+      "classification": "imported",
+      "template_blob": "bc9132a1b28f9e8dcd48be64003c6f77a54cb244",
+      "baseline_blob": "bc9132a1b28f9e8dcd48be64003c6f77a54cb244",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b712d94131f5bed96f73c3dcb3ba88ac0f8a0bd33d2c6fb75475520b4a6dc83c"
+    },
+    "kernel/tkernel/time_calls.h": {
+      "classification": "imported",
+      "template_blob": "e0e8367a46fecd16e8f6d6ed8f6132181625eb07",
+      "baseline_blob": "e0e8367a46fecd16e8f6d6ed8f6132181625eb07",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f4c7ef570e4b6b622ff977afade57cdaa1e1871833f5bf888aebc366d7af1c19"
+    },
+    "kernel/tkernel/timer.c": {
+      "classification": "imported",
+      "template_blob": "24f0a05874fbb5e40e26f4f58307a1790fa506ff",
+      "baseline_blob": "24f0a05874fbb5e40e26f4f58307a1790fa506ff",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e2782b7f60b5d4c0f89f2d813cae2ede0993b169483d58150470dbb1e2aa3552"
+    },
+    "kernel/tkernel/timer.h": {
+      "classification": "imported",
+      "template_blob": "24f99bd753235a5bb35521b6afb6c1a39d82e232",
+      "baseline_blob": "24f99bd753235a5bb35521b6afb6c1a39d82e232",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "562623752e0c42cd5ce3a61ffaefe55d2ffa6d628e210bcaba717d8d55e9b992"
+    },
+    "kernel/tkernel/tkinit.c": {
+      "classification": "imported",
+      "template_blob": "8572e790b4006aecd2d0c34acd705580fc57dbe3",
+      "baseline_blob": "8572e790b4006aecd2d0c34acd705580fc57dbe3",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "dfa117b1c474973e8e53273805be642abf956933929bdf2e76eacdb486c3b5c7"
+    },
+    "kernel/tkernel/wait.c": {
+      "classification": "imported",
+      "template_blob": "ba4ae8c8a8a660b3502178ce04aee18573d4651e",
+      "baseline_blob": "ba4ae8c8a8a660b3502178ce04aee18573d4651e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d8cb9397b5cca47ac2b02d38136eda5b6a3c9f928cf95ba4e595f00866b5c332"
+    },
+    "kernel/tkernel/wait.h": {
+      "classification": "imported",
+      "template_blob": "4310d7238d7af29f6d6932ed1af69003c8d95126",
+      "baseline_blob": "4310d7238d7af29f6d6932ed1af69003c8d95126",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ac779991d556e99619f9b82581ff709b9d2db3b15a80b03a39ed26ed0bbb71fd"
+    },
+    "kernel/tkernel/winfo.h": {
+      "classification": "imported",
+      "template_blob": "d6fad14e0c5d70481337e754752b18a7ca596d17",
+      "baseline_blob": "d6fad14e0c5d70481337e754752b18a7ca596d17",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "3748d4d7ed216c63a546bcbd6468a355da55047fc97ec4952f9753155b829a71"
+    },
+    "kernel/tstdlib/bitop.c": {
+      "classification": "imported",
+      "template_blob": "58600a36cb626e01cb4d8f4ca956004a3b0cc62b",
+      "baseline_blob": "58600a36cb626e01cb4d8f4ca956004a3b0cc62b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "b20d8b0114c416dd6d07ea1932cdd44303545371b5431896a761951820cd4716"
+    },
+    "kernel/tstdlib/string.c": {
+      "classification": "imported",
+      "template_blob": "9c0cff6df1cc6e9a5ce5438181a1e68f76b624ae",
+      "baseline_blob": "9c0cff6df1cc6e9a5ce5438181a1e68f76b624ae",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "d23be010985edccaaca8a3e66fe1dcafb184961a17815326733e8fa196062353"
+    },
+    "kernel/usermain/usermain.c": {
+      "classification": "imported",
+      "template_blob": "dd3c6e818ac656b76b0f838ffca087906032982e",
+      "baseline_blob": "dd3c6e818ac656b76b0f838ffca087906032982e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "bcea7b6f50e6e5abd0005dabdc5610f44cbee1cd795c1a83184525d4a6a379d8"
+    },
+    "lib/libbsp/sysdepend/cpu/rp2040/libbsp_pwm.c": {
+      "classification": "imported",
+      "template_blob": "bb57e528dcfe212741c741c1a375e383025a9baf",
+      "baseline_blob": "bb57e528dcfe212741c741c1a375e383025a9baf",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "63f01683133376cf5952b70442c9e034544b9cee837106741cfd9192f574f4fa"
+    },
+    "lib/libtk/fastlock.c": {
+      "classification": "imported",
+      "template_blob": "46ce208058923e7d245817e46f5c69298427d7e9",
+      "baseline_blob": "46ce208058923e7d245817e46f5c69298427d7e9",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "0b7282a74e9a32249beaf7ea7f35ba72150ff4dc9d6f0b763376a16997c8f07d"
+    },
+    "lib/libtk/fastmlock.c": {
+      "classification": "imported",
+      "template_blob": "d015b31e77bbf1852611fd5bb2aafb69f9746d94",
+      "baseline_blob": "d015b31e77bbf1852611fd5bb2aafb69f9746d94",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ead5fd12706661b297c9f02901d5634dfcb51c8973020acc64ba52ec53fa4ca2"
+    },
+    "lib/libtk/kmalloc.c": {
+      "classification": "imported",
+      "template_blob": "0066cece86d5c091eeb1f0d682cd964362358d8d",
+      "baseline_blob": "0066cece86d5c091eeb1f0d682cd964362358d8d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cbefb2499f4cbdceffc4dc23bc8bd8c6651a5724f6d58e13554afdfa19870883"
+    },
+    "lib/libtk/sysdepend/cpu/core/armv6m/int_armv6m.c": {
+      "classification": "imported",
+      "template_blob": "05c301a99c2992895f9e93f65f5f5bbf0eac7236",
+      "baseline_blob": "05c301a99c2992895f9e93f65f5f5bbf0eac7236",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2dff8a2ae20199bf9149524152823630efd802c1bfae0d5b3b2e2e0f190425dc"
+    },
+    "lib/libtk/sysdepend/cpu/core/armv6m/int_armv6m.h": {
+      "classification": "imported",
+      "template_blob": "3c1cc1933e0e93f587555277b49d94539607cc6c",
+      "baseline_blob": "3c1cc1933e0e93f587555277b49d94539607cc6c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f6667d6653daf101588af76c7b022fab5c54b578469e331d6caba8c111bf2509"
+    },
+    "lib/libtk/sysdepend/cpu/core/armv6m/wusec_armv6m.c": {
+      "classification": "imported",
+      "template_blob": "899101d16ed4295d5024c20554fecf32356684db",
+      "baseline_blob": "899101d16ed4295d5024c20554fecf32356684db",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "fe8583e2c509f2869a20bef40ab6be275d7356c4ba333e69f7081f29c1299124"
+    },
+    "lib/libtk/sysdepend/cpu/core/armv7a/int_armv7a.c": {
+      "classification": "imported",
+      "template_blob": "633d64647bd45579ca46be638c1a2d1a9b0a8847",
+      "baseline_blob": "633d64647bd45579ca46be638c1a2d1a9b0a8847",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9a0a1a2f38bb112f1526751b885d2d43ba272ef9cedeef8a99d6ab393972f0fe"
+    },
+    "lib/libtk/sysdepend/cpu/core/armv7a/wusec_armv7a.c": {
+      "classification": "imported",
+      "template_blob": "59adab44ffb1edf78f1e0dd11039e2982e4d325d",
+      "baseline_blob": "59adab44ffb1edf78f1e0dd11039e2982e4d325d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "af06a3cb433333d8033a16375ed4ce63cf433f2cf04c48fe12405df9412d167f"
+    },
+    "lib/libtk/sysdepend/cpu/core/armv7m/int_armv7m.c": {
+      "classification": "imported",
+      "template_blob": "3f280da838c7e8a676285ca493db14205a96cad5",
+      "baseline_blob": "3f280da838c7e8a676285ca493db14205a96cad5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "ad84f36e5a1f55fe2ed3bf83eef3a04eb225cc913e5fdfd0057972934650c910"
+    },
+    "lib/libtk/sysdepend/cpu/core/armv7m/int_armv7m.h": {
+      "classification": "imported",
+      "template_blob": "a221fd0785c50fbe226081a496ec00fce99214f8",
+      "baseline_blob": "a221fd0785c50fbe226081a496ec00fce99214f8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "39c1b600acd4096577c2f21d155376ed4c090bb54b19727be70fa3932b0a1147"
+    },
+    "lib/libtk/sysdepend/cpu/core/armv7m/wusec_armv7m.c": {
+      "classification": "imported",
+      "template_blob": "14a29b29d5c4908a24005ca289dcd005f899d8d4",
+      "baseline_blob": "14a29b29d5c4908a24005ca289dcd005f899d8d4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "317f713684a4899777f2d88d494bfaa6ab3883db12c437b85f18f996b20066d8"
+    },
+    "lib/libtk/sysdepend/cpu/core/rxv2/int_rxv2.c": {
+      "classification": "imported",
+      "template_blob": "9c417bc875ceb4fadbb9b445bec36aee55c9f8ba",
+      "baseline_blob": "9c417bc875ceb4fadbb9b445bec36aee55c9f8ba",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "39a023d8697ea464186dbf0f1a5e70b5e48eb11f1cd6b0c006b643d967d202b7"
+    },
+    "lib/libtk/sysdepend/cpu/core/rxv2/wusec_rvx2.c": {
+      "classification": "imported",
+      "template_blob": "b2ee6b086e150bd9ecdbf2f7d4afcb12b1d0ff40",
+      "baseline_blob": "b2ee6b086e150bd9ecdbf2f7d4afcb12b1d0ff40",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "37ad66ed1cb19904235bbecdbb8c171db14a4f75989ea05a46b88ff208b0e288"
+    },
+    "lib/libtk/sysdepend/cpu/rp2040/int_rp2040.c": {
+      "classification": "imported",
+      "template_blob": "d9e7498e49204dcfe08d291dd5d67fb2ae99f07f",
+      "baseline_blob": "d9e7498e49204dcfe08d291dd5d67fb2ae99f07f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "553d47affed4973620c899a45e326d9b6535fd059bcdd8caca9cbded7b007cb5"
+    },
+    "lib/libtk/sysdepend/cpu/rp2040/ptimer_rp2040.c": {
+      "classification": "imported",
+      "template_blob": "a90a38a3f5260d47800c883007b5a4966f7eaae1",
+      "baseline_blob": "a90a38a3f5260d47800c883007b5a4966f7eaae1",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "2d171d47ad24bff180b382ebe2fcc7394a9448d12a2247c8dfe871d3cae7c3d8"
+    },
+    "lib/libtk/sysdepend/cpu/rx231/int_rx231.c": {
+      "classification": "imported",
+      "template_blob": "05dea462a669d40d9ce6e652d1fd5e0b0b1cdae5",
+      "baseline_blob": "05dea462a669d40d9ce6e652d1fd5e0b0b1cdae5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6d99a4c7e324c720ef89d17e4f7f0105990dca0ef71a7732f914f5ace323a632"
+    },
+    "lib/libtk/sysdepend/cpu/rx231/ipr_rx231.c": {
+      "classification": "imported",
+      "template_blob": "e8edbdce4a6f237767905c37ed9cbfeb69586881",
+      "baseline_blob": "e8edbdce4a6f237767905c37ed9cbfeb69586881",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "97b7f5420f31064be05ac83b00491b848dd7e0108767e588bd96c123febaf3e1"
+    },
+    "lib/libtk/sysdepend/cpu/rx231/ptimer_rx231.c": {
+      "classification": "imported",
+      "template_blob": "9e0566eb3a560f3165c842c59de7ce952c56a4c8",
+      "baseline_blob": "9e0566eb3a560f3165c842c59de7ce952c56a4c8",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f3b2f06f7089657acf707ec50fce7dad90730ad94e5f0f499f62d19d77dd3678"
+    },
+    "lib/libtk/sysdepend/cpu/rx65n/int_rx65n.c": {
+      "classification": "imported",
+      "template_blob": "436d81d8a6829ea4dc1dfd8ecd0e77893387c604",
+      "baseline_blob": "436d81d8a6829ea4dc1dfd8ecd0e77893387c604",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "64194f6f0d4bf1f7d45c18c484b70b3681e00bf1ffd1c1a62942b3d6e4b49232"
+    },
+    "lib/libtk/sysdepend/cpu/rx65n/ipr_rx65n.c": {
+      "classification": "imported",
+      "template_blob": "6c414a2d24f5fc47f8195650f3330060ceaf2ac7",
+      "baseline_blob": "6c414a2d24f5fc47f8195650f3330060ceaf2ac7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4a448fdd00d19c3fd41539c3213cdfb67bbb45eb2b443b4067593322fe1fc009"
+    },
+    "lib/libtk/sysdepend/cpu/rx65n/ptimer_rx65n.c": {
+      "classification": "imported",
+      "template_blob": "f058cb2a1ecab12ea790bdea48b6330a5dc379da",
+      "baseline_blob": "f058cb2a1ecab12ea790bdea48b6330a5dc379da",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "52ca5e10b5c1cda9dbbabb86b59b062bbfa5acf1af7f0a6a4cff422f52013efc"
+    },
+    "lib/libtk/sysdepend/cpu/rza2m/ptimer_rza2m.c": {
+      "classification": "imported",
+      "template_blob": "6786eec5b68b2387127d27c2f26d0d008060e39f",
+      "baseline_blob": "6786eec5b68b2387127d27c2f26d0d008060e39f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "91532acea4d5f281f517c52520ce9873b92dcb81217bee636a8210ef38b90c01"
+    },
+    "lib/libtk/sysdepend/cpu/stm32h7/int_stm32h7.c": {
+      "classification": "imported",
+      "template_blob": "e36500e4eb90bf9e48c4663fe8dedf8b02365412",
+      "baseline_blob": "e36500e4eb90bf9e48c4663fe8dedf8b02365412",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "a939818bc5015986832a53c0cafe3089d93db4e0841263b17c8872a4758828a5"
+    },
+    "lib/libtk/sysdepend/cpu/stm32h7/ptimer_stm32h7.c": {
+      "classification": "imported",
+      "template_blob": "064c7c578c95b5b4e437ff6abf2e12a10e9f0dfb",
+      "baseline_blob": "064c7c578c95b5b4e437ff6abf2e12a10e9f0dfb",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c03ba8de376753a7e704208441b2121c067ccff500f49644ecbfccea677ca8c5"
+    },
+    "lib/libtk/sysdepend/cpu/stm32l4/int_stm32l4.c": {
+      "classification": "imported",
+      "template_blob": "c48314da5f85e9db5eceb59d0cb7d9aef2e45930",
+      "baseline_blob": "c48314da5f85e9db5eceb59d0cb7d9aef2e45930",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "095e8d12e788d004e61f804fba9759ca015014325aa28b53fada73905e00c6a5"
+    },
+    "lib/libtk/sysdepend/cpu/stm32l4/ptimer_stm32l4.c": {
+      "classification": "imported",
+      "template_blob": "1ad091311b10de50b3a863d452f0ec0e5478ca29",
+      "baseline_blob": "1ad091311b10de50b3a863d452f0ec0e5478ca29",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "59f588b09de5b7b3600ab67f6ad41e2953b951cf0686567ab86c6ef6bab04e7f"
+    },
+    "lib/libtk/sysdepend/cpu/tx03_m367/int_m367.c": {
+      "classification": "imported",
+      "template_blob": "e11facc1b0c789b925590e5fb94b1fc48f45b36a",
+      "baseline_blob": "e11facc1b0c789b925590e5fb94b1fc48f45b36a",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "cada998e3b5c0a601dee55244822d3580aa8cd503b97d79807c727fcf2344e28"
+    },
+    "lib/libtk/sysdepend/cpu/tx03_m367/ptimer_m367.c": {
+      "classification": "imported",
+      "template_blob": "7c23f42ce4edc37b4741d10f0a5eff472a9c6002",
+      "baseline_blob": "7c23f42ce4edc37b4741d10f0a5eff472a9c6002",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6dc92b89135a3cb39c671e724db3e17abe767493faa7832bc1fe1db350a5fd8b"
+    },
+    "lib/libtm/libtm.c": {
+      "classification": "imported",
+      "template_blob": "17c8a7de115443e9ace35df5f97b7e2f4186fb5e",
+      "baseline_blob": "17c8a7de115443e9ace35df5f97b7e2f4186fb5e",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "4a13199a78a7c1bfe5de857d035e1643f7085dc08cb660166b81fce1d0fbfa42"
+    },
+    "lib/libtm/libtm.h": {
+      "classification": "imported",
+      "template_blob": "d531c247bcf376d49592abdcf9da05bc0b573ee7",
+      "baseline_blob": "d531c247bcf376d49592abdcf9da05bc0b573ee7",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c09b2b8e98603465bc7f3809e6d7c75d3e4330fd29c7e50efe8a932a872ffc17"
+    },
+    "lib/libtm/libtm_printf.c": {
+      "classification": "imported",
+      "template_blob": "7b626bab09c8132ef19f81ea6ffe279eb8792f40",
+      "baseline_blob": "7b626bab09c8132ef19f81ea6ffe279eb8792f40",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "f5b050f405772a7b6b36ac32cf870e14a06e6299bed8d3e86f49c7a053c6d175"
+    },
+    "lib/libtm/sysdepend/iote_m367/tm_com.c": {
+      "classification": "imported",
+      "template_blob": "305e4a3f71f79e6728f13eda14285da6570543a5",
+      "baseline_blob": "305e4a3f71f79e6728f13eda14285da6570543a5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "363834b1868a3e1f86454176fc299a4578463903ff906ec8e4418911c331e51b"
+    },
+    "lib/libtm/sysdepend/iote_rx231/tm_com.c": {
+      "classification": "imported",
+      "template_blob": "598fd09360909796db9344ad281c5ba4f08afa68",
+      "baseline_blob": "598fd09360909796db9344ad281c5ba4f08afa68",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "44774d4a7d6438fae475448d4a056853c904e302aeb88cc2792454e0c3f69c9f"
+    },
+    "lib/libtm/sysdepend/iote_rza2m/tm_com.c": {
+      "classification": "imported",
+      "template_blob": "9bad838da82007cb4bb9356c7b6dbbd4c679edba",
+      "baseline_blob": "9bad838da82007cb4bb9356c7b6dbbd4c679edba",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "72fad8a14625ffdd847bb71ce8a4244c19f122d583b5e30a552babbcd3c0d660"
+    },
+    "lib/libtm/sysdepend/iote_stm32l4/tm_com.c": {
+      "classification": "imported",
+      "template_blob": "9ea28b756754b50d0d2c661eb7c3e49b726fa52b",
+      "baseline_blob": "9ea28b756754b50d0d2c661eb7c3e49b726fa52b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "44e87682df26d2b11cf40fb657b7a1c65f52d15175e0b270a3a8694504332483"
+    },
+    "lib/libtm/sysdepend/no_device/tm_com.c": {
+      "classification": "imported",
+      "template_blob": "267004e0c18dc36166b388bcf5ceefbba0e5abd5",
+      "baseline_blob": "267004e0c18dc36166b388bcf5ceefbba0e5abd5",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "1d6769411f6bda51d87139ab6d77a0e4c1232e0923152743bd045fe6e7baacff"
+    },
+    "lib/libtm/sysdepend/nucleo_h723/tm_com.c": {
+      "classification": "imported",
+      "template_blob": "0cf4cc00ac2cb113f0e7ea79266d06bc7a34eb47",
+      "baseline_blob": "0cf4cc00ac2cb113f0e7ea79266d06bc7a34eb47",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "34226d166eae38ead18fa580dbafc7799dd00ee3fb444459cef416f84fbb4587"
+    },
+    "lib/libtm/sysdepend/nucleo_l476/tm_com.c": {
+      "classification": "imported",
+      "template_blob": "f82d63044cb7896d1ce1028d927054eb7c4e89c4",
+      "baseline_blob": "f82d63044cb7896d1ce1028d927054eb7c4e89c4",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "eccd0872475350ca930248c6f96c6389d31748fa9e103fdac568661eead9c7c0"
+    },
+    "lib/libtm/sysdepend/pico_rp2040/tm_com.c": {
+      "classification": "imported",
+      "template_blob": "53840023e658b8981d3dd83005cdbe411cd50c26",
+      "baseline_blob": "53840023e658b8981d3dd83005cdbe411cd50c26",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "98cfb0718e3c87d07133a901396f694e2767ffc577f1451268b1a8285d8e937f"
+    },
+    "lib/libtm/sysdepend/pico_rp2040/usb/pico/config_autogen.h": {
+      "classification": "imported",
+      "template_blob": "cf73e8b23ca5a0485c6d1b0cd15e7eb9f0ab8f9d",
+      "baseline_blob": "cf73e8b23ca5a0485c6d1b0cd15e7eb9f0ab8f9d",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "6a05e0aabe13dad006765b5fdb70b2376add1ef49ab3d5b6a0d915af4a07c3a8"
+    },
+    "lib/libtm/sysdepend/pico_rp2040/usb/pico/version.h": {
+      "classification": "imported",
+      "template_blob": "d02dc54abac30001e3176a876840c4660446c999",
+      "baseline_blob": "d02dc54abac30001e3176a876840c4660446c999",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "9109dde0a3d139a613f862bdab8dedf5fafa2d93cbee200eb39b5321dcb8856d"
+    },
+    "lib/libtm/sysdepend/rsk_rz65n/tm_com.c": {
+      "classification": "imported",
+      "template_blob": "3f956cb8d6b9e5d14c69467fd4551f4f7757711b",
+      "baseline_blob": "3f956cb8d6b9e5d14c69467fd4551f4f7757711b",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "e496cd2aea667635426679bd289768947a7537f05d6b75bbcedf1e2b054bb062"
+    },
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_bus_pio_spi.pio.h": {
+      "classification": "imported",
+      "template_blob": "dd9e4047b15ebb6f3fbaec68dbb5bc679c8a038f",
+      "baseline_blob": "dd9e4047b15ebb6f3fbaec68dbb5bc679c8a038f",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "33e13eed0c7ac52eea959232ef4d4d30a734a1eca0c333a6247aca6674b5505d"
+    },
+    "tools/elf2uf2/boot/uf2.h": {
+      "classification": "imported",
+      "template_blob": "279d4a13156378ec271bb61723c6374daf348f3c",
+      "baseline_blob": "279d4a13156378ec271bb61723c6374daf348f3c",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "c8dcf52331974b5d397a135f4e44fb318f9ea5172eaafcb3195ae706ee1cefa0"
+    },
+    "tools/elf2uf2/elf.h": {
+      "classification": "imported",
+      "template_blob": "32e3dbb4005dfa0ea612b4915d3adf5c10c73102",
+      "baseline_blob": "32e3dbb4005dfa0ea612b4915d3adf5c10c73102",
+      "origin_commit": "437f46eb91b3dab0ad3febe5ebfab235abe7ce04",
+      "baseline_content_sha256_lf": "053bccaf96bffd5e1ae399beeeedc94a56cdd930dfa88d7c9dea41cccb734aaa"
+    }
+  },
+  "working_content_policy": "Compare baseline bytes after CRLF-to-LF normalization; Git blob IDs retain exact provenance. No other content differences are allowed."
+}

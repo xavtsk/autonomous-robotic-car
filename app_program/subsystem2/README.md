@@ -1,5 +1,7 @@
 # Buddy 2 — Motion Control
 
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+
 Matching headers are in this folder.
 
 | Source / header basename | Purpose |
@@ -7,22 +9,21 @@ Matching headers are in this folder.
 | `motion` | Public motion subsystem interface. |
 | `motor_control` | Motor actuation interface. |
 | `wheel_encoder` | Wheel encoder acquisition. |
-| `motion_estimation` | Encoder-based speed and distance estimation. |
+| `estimate_motion` | Encoder-based speed and distance estimation. |
 | `speed_pid` | Motor speed PID control. |
-| `motion_controller` | Straight-line correction and encoder-based turning. |
-| `subsystem2` | RTOS lifecycle: mutex, 10 ms cyclic handler and the motion task. |
+| `ctrl_motion` | Straight-line correction and encoder-based turning. |
+| `buddy2` | RTOS lifecycle: mutex, 10 ms cyclic handler and the motion task. |
 | `motion_pack` | Minimum-bit packing of shared data: status (64 bits), reports (16 bits), commands (32 bits). See `DATA_FORMAT.md`. |
 
 `motion.h` declares the subsystem lifecycle API: `motion_init(void)` sets up
 the hardware and `motion_process(void)` runs one control period. Both are
 called by the motion task in `buddy2.c`.
 
-Agree on data types, units, errors, timing, and ownership before implementation.
-Route cross-subsystem requests and observations through the future integration
-layer in `app_program/app_main.c`; do not call other Buddies' modules directly.
-Define micro T-Kernel task, queue, and synchronization contracts during integration.
-Keep private implementation details within this source directory and follow the
-Barr C Coding Standard as development proceeds.
+Keep the existing data types, units, errors, timing and ownership contracts during
+cleanup. The integrated owner in `app_program/controller/s3_integration.c`
+authorizes motion requests; Buddy 2 retains hardware ownership and protected
+state. Review implementation changes against the BARR-C and CR1 ledgers linked
+from the current documentation index.
 
 ## How it runs
 

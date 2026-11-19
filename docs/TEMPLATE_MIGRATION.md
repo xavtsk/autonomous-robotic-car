@@ -1,5 +1,7 @@
 # Migration to the INF2004 RTOS template
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 Source: https://github.com/sirfonzie/INF2004_ProjectTemplate
 Upstream revision: `c3b09544cb1fd6dac6ad4b8f523be0af59b44482`
 Original car skeleton: `e6f533437127e5660cc64b44bdbcfe5399a4a212`

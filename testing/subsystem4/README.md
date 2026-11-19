@@ -1,5 +1,7 @@
 # Buddy 4 software and integration tests
 
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+
 Portable Make workflow: `make -C testing/subsystem4 test sanitize`. Runs processing/
 packing tests, production controller runtime tests and production task/transport
 tests with fake hardware. ASan/UBSan are enabled by the sanitize target.

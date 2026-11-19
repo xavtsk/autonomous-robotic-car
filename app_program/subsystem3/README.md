@@ -1,4 +1,6 @@
-# Buddy 3: core software implemented, hardware validation pending
+# Buddy 3: IR acquisition, navigation and barcode decoding
+
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
 
 Two front sensors provide line observations; the offset sensor provides barcode
 transitions. Algorithms are portable C with no GPIO, RTOS or Buddy 2 dependency.
@@ -6,7 +8,9 @@ The portable core remains independent. An opt-in `S3_MOTION=1` controller in
 `app_program/controller/` now
 connects it to Buddy 2, with explicit start/calibration, pending directions,
 manoeuvres and braking. See [motion integration](MOTION_INTEGRATION.md). The
-stationary `IR_BENCH` remains separate. Full-team arbitration is not implemented.
+stationary `IR_BENCH` remains separate. The integrated owner also coordinates
+enabled terrain and obstacle subsystems; physical course validation is recorded
+separately from software integration.
 
 | Module | Responsibility |
 |---|---|
@@ -16,10 +20,10 @@ stationary `IR_BENCH` remains separate. Full-team arbitration is not implemented
 | `ir_calibration` | Explicit labelled white/black collection, range/average summaries, validated commit |
 | `line_detection` | Signed line error, persistence, loss/reacquisition and junction candidates |
 | `line_controller` | Limited proportional left/right speed proposals in m/s |
-| `barcode_decoder` | Bounded Code 39 single-letter framing and direction detection |
+| `bc_decoder` | Bounded Code 39 single-letter framing and direction detection |
 | `line_navigation` | Readiness/run lifecycle, distance rearming, pre-run mapping, latched stop requests and manoeuvre suppression |
 | `ir_bench_config` | Explicit sensor enablement and measured per-sensor bench references |
-| `subsystem3` | Sampling/reporting tasks and protected diagnostic snapshot |
+| `buddy3` | Sampling/reporting tasks and protected diagnostic snapshot |
 
 ## Development configuration
 

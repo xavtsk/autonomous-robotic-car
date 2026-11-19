@@ -1,5 +1,7 @@
 # Teammate update integration — 25 October 2026
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 ## Result and recovery point
 
 Working branch: `integration/buddies-1-3`, advanced from `477230c` to

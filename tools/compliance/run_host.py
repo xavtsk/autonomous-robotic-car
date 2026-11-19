@@ -35,17 +35,19 @@ def main():
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--mode', choices=('gcc', 'clang', 'sanitize'), default='gcc')
+    parser.add_argument('--check-c99', action='store_true')
     args = parser.parse_args()
     if sys.platform != 'linux':
         parser.error('Execution requires Linux; native Windows tests are not run.')
     root, output = args.root.resolve(), args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     compiler = 'gcc-13' if args.mode == 'gcc' else 'clang-18'
-    flags = '-std=c11 -Wall -Wextra -Werror -O2 -g -pthread'
+    base_flags = '-std=c11 -Wall -Wextra -Werror -O2 -g -pthread'
+    if compiler.startswith('clang'):
+        base_flags += ' -Wno-bitwise-instead-of-logical'
+    flags = base_flags
     if args.mode == 'sanitize':
         flags += ' -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all'
-    if compiler.startswith('clang'):
-        flags += ' -Wno-bitwise-instead-of-logical'
     env = dict(os.environ, ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',
                UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1')
     compiler_path = shutil.which(compiler)
@@ -53,7 +55,13 @@ def main():
         parser.error('Missing pinned compiler: ' + compiler)
     tool_bin = output / 'tool-bin'
     tool_bin.mkdir()
-    (tool_bin / 'cc').symlink_to(compiler_path)
+    tooling = Path(__file__).resolve().parent
+    compiler_proxy = tool_bin/'cc'
+    compiler_proxy.write_text(f'#!{sys.executable}\nimport runpy\nrunpy.run_path({str(tooling/"compiler_proxy.py")!r}, run_name="__main__")\n', encoding='utf-8')
+    compiler_proxy.chmod(0o755)
+    env['COMPLIANCE_REAL_CC'] = compiler_path
+    env['COMPLIANCE_COMPILE_LOG'] = str(output/'compile_commands.jsonl')
+    compiler = str(compiler_proxy)
     env['PATH'] = str(tool_bin) + os.pathsep + env['PATH']
     results = []
 
@@ -81,12 +89,12 @@ def main():
         if outcome['status'] != 'PASS':
             print(contents[-5000:], flush=True)
 
-    def make(name, folder, targets, makefile=None):
+    def make(name, folder, targets, makefile=None, instrument=True):
         cmd = ['make', '-C', folder]
         if makefile:
             cmd += ['-f', makefile]
-        suite_flags = flags
-        if name in ('subsystem3', 'subsystem4', 'subsystem5', 'diagnostics'):
+        suite_flags = flags if instrument else base_flags
+        if name in ('subsystem3', 'subsystem4', 'subsystem5', 'diagnostics', 'diagnostics_disabled'):
             suite_flags += ' -pedantic'
         cmd += list(targets) + [f'CC={compiler}', 'PYTHON=/usr/bin/python3', f'BUILD={output / "bin" / name}', f'CFLAGS={suite_flags}']
         run(name, cmd)
@@ -110,7 +118,11 @@ def main():
             targets += ['codec', 'drive', 'feedback', 'replay']
         make(f'subsystem{number}', f'testing/subsystem{number}', targets)
     make('integration', 'testing/integration', ['test'], 'controller_test.mk')
-    make('diagnostics', 'testing/diagnostics', ['test', 'smoke', 'disabled'], 'firmware_test.mk')
+    make('diagnostics', 'testing/diagnostics', ['test', 'smoke'], 'firmware_test.mk')
+    # Instrumentation adds compiler runtime constructors even to an otherwise
+    # empty translation unit. Preserve the exact disabled-object expectation
+    # with production-like flags; execute the enabled tests with sanitizers.
+    make('diagnostics_disabled', 'testing/diagnostics', ['disabled'], 'firmware_test.mk', instrument=False)
     make('network_wifi', 'testing/network_wifi', ['test'])
     trace = Path(__file__).resolve().parents[2] / 'testing/compliance/control_debug_trace.c'
     trace_binary = output / 'control_debug_trace'
@@ -130,6 +142,10 @@ def main():
         run('laptop_codec', [sys.executable, 'testing/subsystem1/test_laptop_codec.py'])
         run('frontend', ['/usr/bin/node', '--test', 'testing/dashboard/test_frontend_controls.js'])
         run('widths', [sys.executable, 'testing/change_requirement_1/check_widths.py'])
+    if args.check_c99 and args.mode != 'sanitize':
+        run('application_c99', [sys.executable, str(tooling/'check_host_c99.py'),
+            '--root', str(root), '--commands', str(output/'compile_commands.jsonl'),
+            '--output', str(output/'application-c99')])
     manifest = dict(recorded_at=datetime.now(timezone.utc).isoformat(),
                     revision=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
                     mode=args.mode, results=results,

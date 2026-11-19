@@ -1,5 +1,7 @@
 # Review of the proposed calibration/buttons patch — 26 October 2026
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 ## Later update — version 2 approved and applied
 
 The findings below concern version 1 and are retained as historical evidence.

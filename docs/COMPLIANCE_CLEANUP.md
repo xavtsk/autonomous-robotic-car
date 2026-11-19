@@ -1,5 +1,7 @@
 # Compliance cleanup and behavior checks
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 This cleanup starts from `f684e0c` on `codex/compliance-preserve-behaviour`.
 It addresses the concrete findings in the 19 November review. The selected
 automated checks do not certify every rule in the full BARR-C standard.

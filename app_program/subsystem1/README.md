@@ -1,5 +1,7 @@
 # Buddy 1 Wi-Fi commands and telemetry
 
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+
 Buddy 1 now uses compact binary application data for Tribunal 1 (protocol v3).
 Robot and laptop must be updated together: v1 packets/commands are rejected.
 The shared fault mask now includes aggregate IR fault at bit 5; Buddy 3 keeps

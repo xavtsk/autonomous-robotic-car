@@ -1,4 +1,6 @@
-# Buddies 1-3 controller integration
+# Integrated controller
+
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
 
 The `S3_MOTION=1` profile starts Buddy 1, Buddy 2 and the teammate's
 `s3_integration`/`s3_drive` controller. It boots disarmed. Default normal
@@ -9,13 +11,14 @@ profiles are separate and mutually exclusive.
 IR -> Buddy 3 navigation -> s3_drive -> Buddy 2 motion/PWM
                           ^       <- timestamped feedback + ID reports
 Buddy 1 pre-run map ------|
-                          -> vehicle_controller facade -> Buddy 1 binary v2
+                          -> vehicle_controller facade -> Buddy 1 telemetry
 ```
 
 There is ONE sampling/navigation/motion-request/report-consumer owner.
 `vehicle_controller.c` is a taskless facade, not the old priority-15 task.
 It never consumes completion or writes a motor. Buddy 2 remains the sole
-motor-output writer. Buddies 4/5 have not been integrated.
+motor-output writer. Optional `S4=1` and `S5=1` integrate terrain monitoring and
+obstacle avoidance under the same controller ownership contract.
 
 ## Control and data ownership
 
@@ -47,7 +50,7 @@ motor-output writer. Buddies 4/5 have not been integrated.
 - Shared command/status storage is explicitly packed into 11/146 bytes under
   the existing priority-inheritance mutex. Pack/unpack runs on private copies
   where possible; no ADC, motor, network or console call occurs under that lock.
-- Buddy 1 v2 still supports +/-510 mm/s. New Buddy 2 status supports +/-1022
+- Buddy 1 v3 telemetry supports +/-510 mm/s. Buddy 2 status supports +/-1022
   mm/s. Out-of-range/nonfinite/busy/invalid motion telemetry is invalidated,
   never clipped or silently reinterpreted. Agree a versioned wider wire format
   before relying on high-speed telemetry; this does not change PID inputs.

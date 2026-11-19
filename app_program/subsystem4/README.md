@@ -1,5 +1,7 @@
 # Buddy 4: GY-511 / LSM303DLHC
 
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+
 Implemented: I2C sensor configuration/readout, signed acceleration and magnetic
 samples, level/still offset calibration, tilt, compass-derived turn rate,
 encoder-assisted hump height, highest completed valid hump per run, motion/impact
@@ -119,7 +121,7 @@ for fresh readings from the 50 Hz accelerometer. Check `missing_samples_before` 
 [packet format](DATA_FORMAT.md#raw-accelerometer-diagnostic-stream) defines the sample fields.
 
 Buddy 1 receives completed-hump count and highest valid peak in millimetres on its
-existing binary v2 hump topic. Only the IMU bit is updated in the shared fault mask;
+existing binary v3 hump topic. Only the IMU bit is updated in the shared fault mask;
 other subsystem fault bits are preserved. Peak telemetry is unavailable until a
 valid completed hump exists for the run, and a valid run maximum survives transient
 sensor faults. Cumulative counts do not depend on successful event delivery.

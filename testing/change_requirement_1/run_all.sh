@@ -20,11 +20,12 @@ printf 'step\tstatus\texit_code\n' > "$OUT/results.tsv"
 step() {
     name=$1
     shift
-    if "$@" > "$OUT/$name.txt" 2>&1; then
+    "$@" > "$OUT/$name.txt" 2>&1
+    code=$?
+    if python3 -c 'import pathlib,sys; from tools.compliance.run_host import classify_output; result=classify_output(int(sys.argv[1]),pathlib.Path(sys.argv[2]).read_text(errors="replace")); sys.exit(result["status"]!="PASS")' "$code" "$OUT/$name.txt"; then
         printf 'PASS  %s\n' "$name"
         printf '%s\tPASS\t0\n' "$name" >> "$OUT/results.tsv"
     else
-        code=$?
         printf 'FAIL  %s (exit %s)\n' "$name" "$code"
         printf '%s\tFAIL\t%s\n' "$name" "$code" >> "$OUT/results.tsv"
         FAIL=1

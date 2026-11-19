@@ -1,0 +1,1346 @@
+{
+  "schema_version": 1,
+  "standard": "BARR-C:2018",
+  "source": "BARR-C 2018 original PDF, chapters 1-8; cached extraction build/compliance-review-20261119/barr-c-2018.txt",
+  "baseline_commit": "4ad2cc42595722cedb47102e4343298339040d40",
+  "scope_manifest": "testing/compliance/inventory_scope.json",
+  "status_policy": "Coverage is not compliance. All initial rows remain unreviewed. Automated diagnostics do not waive review, and pending exceptions are not approved.",
+  "rules": [
+    {
+      "id": "1.1.a",
+      "strength": "mandatory",
+      "enforcement": "compiler-review",
+      "requirement": "Use ISO C99-compatible owned C code.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.1.b",
+      "strength": "mandatory",
+      "enforcement": "compiler-review",
+      "requirement": "Restrict a C++ compiler to the selected ISO C language when compiling C.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.1.c",
+      "strength": "qualified",
+      "enforcement": "ast-review",
+      "requirement": "Minimize proprietary extensions and localize necessary ones to hardware driver modules.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.1.d",
+      "strength": "mandatory",
+      "enforcement": "lexical-review",
+      "requirement": "Do not redefine language keywords or language constructs with macros.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.2.a",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Limit source lines to 80 characters.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.3.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Brace all control-statement bodies, including empty bodies.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.3.b",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Place opening and closing block braces on separate aligned lines.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.4.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Make expression evaluation order clear without depending on remembered precedence.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.4.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Parenthesize compound operands of logical AND and OR.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.5.a",
+      "strength": "preferred",
+      "enforcement": "manual",
+      "requirement": "Avoid abbreviations whose meanings are not broadly understood.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.5.b",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Maintain a version-controlled project abbreviation table.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.6.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Associate every cast with a comment explaining its valid input range and behavior.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.7.a",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Do not use auto.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.7.b",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Do not use register.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.7.c",
+      "strength": "mixed",
+      "enforcement": "ast-review",
+      "requirement": "Prefer no goto; any goto must target a later label in the same or enclosing block.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.7.d",
+      "strength": "preferred",
+      "enforcement": "lexical-review",
+      "requirement": "Prefer avoiding continue.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Make functions and objects static unless external visibility is necessary.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.b",
+      "strength": "qualified",
+      "enforcement": "ast-review",
+      "requirement": "Use const wherever appropriate.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.b.i",
+      "strength": "example",
+      "enforcement": "manual",
+      "requirement": "Consider const for objects unchanged after initialization.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.b.ii",
+      "strength": "example",
+      "enforcement": "ast-review",
+      "requirement": "Consider const for pointed-to function arguments that are not modified.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.b.iii",
+      "strength": "example",
+      "enforcement": "manual",
+      "requirement": "Consider const for immutable structure or union members, including hardware overlays.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.b.iv",
+      "strength": "example",
+      "enforcement": "manual",
+      "requirement": "Consider typed const values instead of numerical macros where language semantics allow.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.c",
+      "strength": "qualified",
+      "enforcement": "manual",
+      "requirement": "Use volatile wherever appropriate.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.c.i",
+      "strength": "example",
+      "enforcement": "manual",
+      "requirement": "Review objects accessible to interrupt handlers for volatile qualification.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.c.ii",
+      "strength": "example",
+      "enforcement": "manual",
+      "requirement": "Review objects accessible to multiple threads for volatile qualification.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.c.iii",
+      "strength": "example",
+      "enforcement": "manual",
+      "requirement": "Review memory-mapped peripheral pointers for volatile qualification.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "1.8.c.iv",
+      "strength": "example",
+      "enforcement": "manual",
+      "requirement": "Review delay-loop counters for volatile qualification.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.1.a",
+      "strength": "permission",
+      "enforcement": "manual",
+      "requirement": "C++-style single-line comments are permitted.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.1.b",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Do not place nested comment tokens or backslashes inside comment content.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.1.c",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Do not retain commented-out code.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.1.c.i",
+      "strength": "guidance",
+      "enforcement": "manual",
+      "requirement": "Use conditional compilation for temporarily disabled code.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.1.c.ii",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Place code existing specifically for increased debug output inside NDEBUG guards.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.a",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Write comments as clear complete sentences with spelling, grammar and punctuation.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.b",
+      "strength": "mixed",
+      "enforcement": "manual",
+      "requirement": "Place useful step comments before code; follow the described block with a blank line.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.c",
+      "strength": "guidance",
+      "enforcement": "manual",
+      "requirement": "Avoid comments that merely repeat obvious code.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.d",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Scale documentation detail to code complexity.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.e",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Cite external algorithm and technical references sufficiently to locate them.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.f",
+      "strength": "qualified",
+      "enforcement": "manual",
+      "requirement": "Version-control necessary diagrams and refer to them from code.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.g",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Document all assumptions.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.h",
+      "strength": "mandatory",
+      "enforcement": "ast-documentation",
+      "requirement": "Document every module and function for automatic documentation generation.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.i",
+      "strength": "guidance",
+      "enforcement": "manual",
+      "requirement": "Use the standard capitalized issue markers consistently.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.i.i",
+      "strength": "guidance",
+      "enforcement": "manual",
+      "requirement": "Use WARNING to explain maintenance risks.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.i.ii",
+      "strength": "guidance",
+      "enforcement": "manual",
+      "requirement": "Use NOTE to explain rationale and relevant assumptions.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "2.2.i.iii",
+      "strength": "guidance",
+      "enforcement": "manual",
+      "requirement": "Use TODO to explain unfinished work.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.a",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Use one space after control and return keywords when followed by text.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.b",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Space assignment operators on both sides.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.c",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Space binary operators on both sides.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.d",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Keep unary operators adjacent to their operands.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.e",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Space pointer operators in declarations; keep unary uses adjacent to operands.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.f",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Space both ternary operators on both sides.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.g",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Do not surround member-access operators with spaces.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.h",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Do not add spaces around array subscripts except where another rule requires.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.i",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Do not pad the inside of parentheses.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.j",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Keep calls tight and place one space before declaration parameter parentheses.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.k",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Follow parameter commas with one space unless at end of line.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.l",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Follow for-clause semicolons with one space.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.1.m",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Do not put a space immediately before statement semicolons.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.2.a",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Align names in consecutive variable declarations.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.2.b",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Align structure and union member names.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.2.c",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Align consecutive assignment operators.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.2.d",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Place every preprocessor hash at the start of its line.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.3.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Place no more than one statement on a line.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.3.b",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Separate natural code blocks with blank lines.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.3.c",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "End each C source file with an end-of-file comment and a blank line.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.4.a",
+      "strength": "preferred",
+      "enforcement": "formatter-review",
+      "requirement": "Prefer indentation in multiples of four columns.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.4.b",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Align switch case labels and indent case contents one level.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.4.c",
+      "strength": "guidance",
+      "enforcement": "manual",
+      "requirement": "Indent continued lines for readability.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.5.a",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Do not use literal tab characters in source files.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.6.a",
+      "strength": "qualified",
+      "enforcement": "lexical",
+      "requirement": "Use LF line endings whenever possible.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "3.6.b",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Permit no other control character except form feed.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.1.a",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Use lowercase letters, digits and underscores in module filenames.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.1.b",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Make module basenames unique in their first eight characters and use .c/.h suffixes.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.1.c",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Do not reuse a C or C++ standard-library header filename.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.1.d",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Include main in the filename of a module defining main.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.2.a",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Give each C source exactly one same-basename header.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.2.b",
+      "strength": "mandatory",
+      "enforcement": "lexical-review",
+      "requirement": "Protect every header from repeated inclusion.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.2.c",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Expose only the interface necessary to other modules.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.2.c.i",
+      "strength": "preferred",
+      "enforcement": "ast-review",
+      "requirement": "Prefer no extern object declarations in headers.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.2.c.ii",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Allocate no object storage in headers.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.2.d",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Do not include private headers from public headers.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.3.a",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Limit each module to behaviors belonging to one entity.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.3.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Order source sections: comment, includes, types/constants/macros, static data, private prototypes, public bodies, private bodies.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.3.c",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Include the corresponding same-basename header in each C source.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.3.d",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Do not use absolute include paths.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.3.e",
+      "strength": "mandatory",
+      "enforcement": "compiler-review",
+      "requirement": "Remove unused includes after checking every supported profile.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.3.f",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Do not include C source files.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "4.4.a",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Maintain project source and header templates.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.1.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Use lowercase type names with internal underscores ending in _t.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.1.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Name new structures, unions and enumerations with typedefs.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.1.c",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Prefix public type names with the module name and underscore.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.2.a",
+      "strength": "qualified",
+      "enforcement": "ast-review",
+      "requirement": "Use fixed-width integers whenever the number of bits or bytes matters.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.2.b",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Do not use the short or long keywords in owned declarations or expressions.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.2.c",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Reserve char for strings and character-string operations.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.3.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not define signed integer bit-fields.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.3.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not manipulate signed integer data with bitwise operators.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.3.c",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not combine signed and unsigned integers in expressions or comparisons.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.4.a",
+      "strength": "preferred",
+      "enforcement": "manual",
+      "requirement": "Avoid floating-point data where its precision and behavior are not required.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.4.b",
+      "strength": "conditional",
+      "enforcement": "manual",
+      "requirement": "Apply the floating-point rules wherever floating-point calculation is necessary.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.4.b.i",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Use float32_t, float64_t and float128_t names for necessary floating-point data.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.4.b.ii",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Suffix single-precision constants with f.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.4.b.iii",
+      "strength": "conditional",
+      "enforcement": "compiler-review",
+      "requirement": "Verify adequate double precision whenever calculations depend on it.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.4.b.iv",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not compare floating-point values for equality or inequality.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.4.b.v",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Use isfinite to check calculations for infinity and NaN.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.5.a",
+      "strength": "mandatory",
+      "enforcement": "compiler-review",
+      "requirement": "Verify padding and layout of structures or unions crossing hardware or processor boundaries.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.5.b",
+      "strength": "mandatory",
+      "enforcement": "compiler-review",
+      "requirement": "Verify intended bit-field ordering.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.6.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Declare Boolean variables with bool.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "5.6.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Convert non-Boolean values with relational operations rather than casts.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.1.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not name procedures with C or C++ language keywords.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.1.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not reuse C standard-library function names.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.1.c",
+      "strength": "mandatory",
+      "enforcement": "ast",
+      "requirement": "Do not begin procedure names with an underscore.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.1.d",
+      "strength": "mandatory",
+      "enforcement": "ast",
+      "requirement": "Limit procedure names to 31 characters.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.1.e",
+      "strength": "mandatory",
+      "enforcement": "ast",
+      "requirement": "Do not use uppercase letters in function names.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.1.f",
+      "strength": "mandatory",
+      "enforcement": "lexical",
+      "requirement": "Do not use lowercase letters in macro names.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.1.g",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Separate words in procedure names with underscores.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.1.h",
+      "strength": "mixed",
+      "enforcement": "manual",
+      "requirement": "Use descriptive procedure names; noun-verb ordering is recommended.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.1.i",
+      "strength": "mandatory",
+      "enforcement": "ast",
+      "requirement": "Prefix public function names with their module name and underscore.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.2.a",
+      "strength": "qualified",
+      "enforcement": "ast-review",
+      "requirement": "Make reasonable efforts to limit functions to one printed page or 100 lines.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.2.b",
+      "strength": "qualified",
+      "enforcement": "manual",
+      "requirement": "Start functions at the top of a printed page where practicable.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.2.c",
+      "strength": "preferred",
+      "enforcement": "ast-review",
+      "requirement": "Prefer a single return exit at the bottom of a function.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.2.d",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Declare every public function in its module header.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.2.e",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Declare private functions static.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.2.f",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Explicitly declare and meaningfully name all parameters.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.3.a",
+      "strength": "qualified",
+      "enforcement": "manual",
+      "requirement": "Replace parameterized macros with functions when functions can accomplish the same behavior.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.3.b",
+      "strength": "conditional",
+      "enforcement": "manual",
+      "requirement": "Apply the macro safeguards to remaining parameterized macros.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.3.b.i",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Parenthesize the entire macro body.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.3.b.ii",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Parenthesize every use of a macro parameter.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.3.b.iii",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Use each macro parameter at most once.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.3.b.iv",
+      "strength": "mandatory",
+      "enforcement": "lexical-review",
+      "requirement": "Do not place control transfers in macros.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.4.a",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "End thread entry-point names with _thread, _task or _process.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.5.a",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Declare actual ISRs through the compiler and platform's required mechanism.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.5.b",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "End actual ISR names with _isr.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.5.c",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Keep ISRs static or at the end of their driver as the platform permits.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "6.5.d",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Provide default handling for unexpected or unhandled interrupt sources.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not use language keywords as variable names.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not reuse standard-library variable names.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.c",
+      "strength": "mandatory",
+      "enforcement": "ast",
+      "requirement": "Do not begin variable names with an underscore.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.d",
+      "strength": "mandatory",
+      "enforcement": "ast",
+      "requirement": "Limit variable names to 31 characters.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.e",
+      "strength": "mandatory",
+      "enforcement": "ast",
+      "requirement": "Use at least three characters for all variable names, including loop counters.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.f",
+      "strength": "mandatory",
+      "enforcement": "ast",
+      "requirement": "Do not use uppercase letters in variable names.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.g",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Do not encode duplicated sizes or bit counts in variable names.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.h",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Separate words in variable names with underscores.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.i",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Make variable names descriptive.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.j",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Prefix global variable names with g.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.k",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Prefix pointer variable names with p.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.l",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Prefix pointer-to-pointer names with pp.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.m",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Prefix Boolean-information names with b and phrase them as questions.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.n",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Prefix non-pointer object handles with h.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.1.o",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Order combined prefixes as global, pointer depth, then Boolean or handle.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.2.a",
+      "strength": "mandatory",
+      "enforcement": "compiler-review",
+      "requirement": "Initialize every variable before use.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.2.b",
+      "strength": "preferred",
+      "enforcement": "manual",
+      "requirement": "Prefer declaring locals near their first use.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.2.c",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Group file/project globals near the top of a source file.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "7.2.d",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Initialize pointers without an initial address to NULL.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.1.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Use a separate declaration for every variable rather than comma declarations.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.2.a",
+      "strength": "preferred",
+      "enforcement": "manual",
+      "requirement": "Prefer the shortest conditional branch first when it preserves evaluation behavior.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.2.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Limit nested if/else statements to two levels.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.2.c",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not assign within if or else-if tests.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.2.d",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Finish every else-if chain with an else.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.3.a",
+      "strength": "mandatory",
+      "enforcement": "formatter-review",
+      "requirement": "Align a case's break with its case label.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.3.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Give every switch a default block.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.3.c",
+      "strength": "mandatory",
+      "enforcement": "manual",
+      "requirement": "Document deliberate case fallthrough.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.4.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Use named loop bounds instead of magic numbers.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.4.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Limit loop-control assignments to initializing and updating its loop counter.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.4.c",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Spell infinite loops as for (;;).",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.4.d",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Use braces and an explanatory comment for every empty loop body.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.5.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Apply the restricted forward-target goto rule.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.5.b",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Do not call abort, exit, setjmp or longjmp.",
+      "status": "unreviewed",
+      "evidence": []
+    },
+    {
+      "id": "8.6.a",
+      "strength": "mandatory",
+      "enforcement": "ast-review",
+      "requirement": "Put the constant on the left of a variable-to-constant equality test.",
+      "status": "unreviewed",
+      "evidence": []
+    }
+  ]
+}

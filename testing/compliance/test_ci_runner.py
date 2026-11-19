@@ -35,6 +35,12 @@ class RunnerVerdictTests(unittest.TestCase):
         self.assertEqual(RUNNER.classify_output(1, 'PASS: old output')['status'], 'FAIL')
         self.assertEqual(RUNNER.classify_output(0, 'Ran 7 tests in 1s\nOK')['status'], 'PASS')
 
+    def test_disabled_object_failure_is_not_filtered_as_sanitizer_noise(self):
+        output = '00000000 t asan.module_ctor\nmake: *** [disabled] Error 1\n'
+        result = RUNNER.classify_output(2, output)
+        self.assertEqual(result['status'], 'FAIL')
+        self.assertFalse(result['sanitizer_error'])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -61,8 +61,14 @@ def main():
     profile = dict(COMMON, **PROFILES[args.profile])
     manifest = dict(recorded_at=datetime.now(timezone.utc).isoformat(), profile=profile,
                     sdk_revision=sdk_revision, compiler=output_of(['arm-none-eabi-gcc', '--version']),
+                    host_cxx=output_of(['/usr/bin/g++-13', '--version']),
+                    runner_image={key: os.environ.get(key) for key in ('ImageOS', 'ImageVersion')},
                     configurations='Identical checked-in public example; no real credentials.',
                     hardware_executed=False, builds={})
+    host_tools = output/'host-tools'
+    host_tools.mkdir()
+    (host_tools/'c++').symlink_to('/usr/bin/g++-13')
+    build_env = dict(os.environ, PATH=str(host_tools)+os.pathsep+os.environ['PATH'])
     # Append a compile-only reporting flag without overriding the Makefile's
     # CPU, feature and profile flags. Both revisions use the identical wrapper.
     wrapper = output / 'arm-stack-gcc'
@@ -88,7 +94,7 @@ def main():
         record['command'] = command
         try:
             with (dest / 'build.log').open('w', encoding='utf-8') as log:
-                result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+                result = subprocess.run(command, env=build_env, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
             record['returncode'] = result.returncode
             if result.returncode:
                 failed = True

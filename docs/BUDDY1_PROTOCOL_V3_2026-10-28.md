@@ -1,5 +1,7 @@
 # Buddy 1–5 integration and protocol v3 handoff — 28 October 2026
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 Software steps 1–5 are implemented and host/build checked. No robot was flashed,
 serial port opened or real robot broker contacted. Hardware step 6 remains open.
 No new development commit or push was made.

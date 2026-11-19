@@ -1,0 +1,2654 @@
+{
+  "schema_version": 1,
+  "notes": [
+    "First matching reviewed rule wins. No integer declaration defaults to compliant.",
+    "Integrity PASS means ledger/source agreement, not completion.",
+    "AST ABI size is the width per scalar element; allocation_bits also records array/aggregate storage."
+  ],
+  "rules": [
+    {
+      "id": "debug-wide-validation",
+      "status": "boundary",
+      "domain": {
+        "description": "Public debug pack inputs remain full width so invalid values cannot truncate before validation. Compact capture_control_debug retained scratch independently."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Public debug pack inputs remain full width so invalid values cannot truncate before validation. Compact capture_control_debug retained scratch independently."
+      ],
+      "evidence": [
+        "app_program/controller/control_debug.c:43-66",
+        "testing/integration/control_debug_test.c:24-28"
+      ],
+      "reason": "Public debug pack inputs remain full width so invalid values cannot truncate before validation. Compact capture_control_debug retained scratch independently.",
+      "owner": "control_debug_sample_t",
+      "kind": "FIELD_DECL"
+    },
+    {
+      "id": "configuration-validation",
+      "status": "boundary",
+      "domain": {
+        "description": "Wide public input preserves rejected values; validated retained copies require separate compact representations."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Wide public input preserves rejected values; validated retained copies require separate compact representations."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_reflectance.c",
+        "app_program/subsystem3/ir_acquisition.c",
+        "app_program/subsystem3/line_navigation.c:30-72",
+        "app_program/subsystem3/bc_decoder.c:21-33"
+      ],
+      "reason": "Wide public input preserves rejected values; validated retained copies require separate compact representations.",
+      "owner": "ir_calibration_t|s3_acquisition_config_t|s3_navigation_config_t|s3_barcode_config_t|s3_line_config_t|s3_drive_options_t",
+      "kind": "FIELD_DECL"
+    },
+    {
+      "id": "telemetry-validation",
+      "status": "boundary",
+      "domain": {
+        "description": "Wide public codec view preserves invalid-input rejection and pointer-taking members; only compact validated forms may be retained."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Wide public codec view preserves invalid-input rejection and pointer-taking members; only compact validated forms may be retained."
+      ],
+      "evidence": [
+        "app_program/subsystem1/telemetry_codec.c",
+        "testing/subsystem1/host_test.c"
+      ],
+      "reason": "Wide public codec view preserves invalid-input rejection and pointer-taking members; only compact validated forms may be retained.",
+      "owner": "buddy1_snapshot_t|buddy1_terrain_t|buddy1_avoidance_t|buddy1_scan_t|buddy1_scan_sample_t|buddy1_barcode_map_t",
+      "kind": "FIELD_DECL"
+    },
+    {
+      "id": "raw-adc-validation",
+      "status": "boundary",
+      "domain": {
+        "description": "The ADC callback writes a full uint16 value before validity checks; 4096..65535 must remain detectable and normalize to invalid exactly as before."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "The ADC callback writes a full uint16 value before validity checks; 4096..65535 must remain detectable and normalize to invalid exactly as before."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_acquisition.c:48-66",
+        "testing/subsystem3/host_trace.c:93-116"
+      ],
+      "reason": "The ADC callback writes a full uint16 value before validity checks; 4096..65535 must remain detectable and normalize to invalid exactly as before.",
+      "owner": "s3_raw_sample_t",
+      "name": "raw",
+      "kind": "FIELD_DECL"
+    },
+    {
+      "id": "raw-rtos-error",
+      "status": "boundary",
+      "domain": {
+        "description": "Preserve the full signed RTOS/callback error code, including values outside application enum ranges."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Preserve the full signed RTOS/callback error code, including values outside application enum ranges."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_acquisition.c:54-65"
+      ],
+      "reason": "Preserve the full signed RTOS/callback error code, including values outside application enum ranges.",
+      "owner": "s3_raw_sample_t",
+      "name": "error",
+      "kind": "FIELD_DECL"
+    },
+    {
+      "id": "capture-raw-preservation",
+      "status": "preserve",
+      "domain": {
+        "description": "Current capture stores every uint16 input verbatim, including values outside physical ADC range; USB diagnostics must not change."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Current capture stores every uint16 input verbatim, including values outside physical ADC range; USB diagnostics must not change."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:46",
+        "app_program/controller/bc_capture.c:275"
+      ],
+      "reason": "Current capture stores every uint16 input verbatim, including values outside physical ADC range; USB diagnostics must not change.",
+      "owner": "bcap_sample_t",
+      "name": "raw",
+      "kind": "FIELD_DECL"
+    },
+    {
+      "id": "capture-position-sentinel",
+      "status": "preserve",
+      "domain": {
+        "description": "Signed Q8-mm positions span int64 values with INT64_MIN unavailable, INT64_MIN+1 low finite clamp, INT64_MAX high clamp; preserve quantization and relative-distance behavior."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Signed Q8-mm positions span int64 values with INT64_MIN unavailable, INT64_MIN+1 low finite clamp, INT64_MAX high clamp; preserve quantization and relative-distance behavior."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:62-100"
+      ],
+      "reason": "Signed Q8-mm positions span int64 values with INT64_MIN unavailable, INT64_MIN+1 low finite clamp, INT64_MAX high clamp; preserve quantization and relative-distance behavior.",
+      "owner": "bcap_t|bcap_episode_t",
+      "name": "pre_qmm|origin_qmm",
+      "kind": "FIELD_DECL"
+    },
+    {
+      "id": "terrain-state",
+      "path": "app_program/.*",
+      "owner": "terrain_result_t",
+      "name": "state",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 7
+      },
+      "ownership": "Terrain owner; copied under S4 mutex for publication.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/events_motion.h:6-16"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "terrain-safety",
+      "path": "app_program/.*",
+      "owner": "terrain_result_t|terrain_monitor_t",
+      "name": "safety",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "Terrain owner; decoded results are caller-owned.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/terr_data.h:20-25",
+        "app_program/subsystem4/terr_data.c:13-69"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "terrain-flags",
+      "path": "app_program/.*",
+      "owner": "terrain_result_t",
+      "name": "flags",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 31
+      },
+      "ownership": "Terrain owner; explicit packet representation under S4 mutex.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/terr_data.h:8-12"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "terrain-stable",
+      "path": "app_program/.*",
+      "owner": "terrain_monitor_t",
+      "name": "stable_count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3
+      },
+      "ownership": "Terrain task only.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/terr_data.c:350-375"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "terrain-candidate",
+      "path": "app_program/.*",
+      "owner": "terrain_monitor_t",
+      "name": "candidate",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 7
+      },
+      "ownership": "Terrain task only.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/events_motion.h:6-16",
+        "app_program/subsystem4/terr_data.c:354-366"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "terrain-geometry",
+      "path": "app_program/.*",
+      "owner": "terrain_monitor_t",
+      "name": "hump_geometry",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1
+      },
+      "ownership": "Terrain task only; validate wide enum first.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/terr_data.c:88-104"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "imu-calibration-count",
+      "path": "app_program/.*",
+      "owner": "imu_calibration_t",
+      "name": "count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 100
+      },
+      "ownership": "Terrain task only; 100 is retained ready state.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/imu_calibration.c:13-16",
+        "app_program/subsystem4/imu_calibration.c:48-57"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "hump-level-count",
+      "path": "app_program/.*",
+      "owner": "hump_detector_t",
+      "name": "level_samples",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 5
+      },
+      "ownership": "Terrain task only; retain terminal fifth sample.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/hump_detection.c:51-65",
+        "app_program/subsystem4/hump_detection.c:128-190"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "hump-debug-flags",
+      "path": "app_program/.*",
+      "owner": "hump_debug_t",
+      "name": "flags",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 127
+      },
+      "ownership": "Terrain task only; debug build.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/hump_detection.h:6-14"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "hump-debug-reason",
+      "path": "app_program/.*",
+      "owner": "hump_debug_t",
+      "name": "reason",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 18
+      },
+      "ownership": "Terrain task only; debug build.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/hump_detection.h:25-46"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "imu-debug-flags",
+      "path": "app_program/.*",
+      "owner": "imu_debug_row_t",
+      "name": "flags|hump_flags",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 127
+      },
+      "ownership": "g_imu_debug_mutex protects queue publication/consumption.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/buddy4.c:64-82",
+        "app_program/subsystem4/hump_detection.h:6-14"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "imu-debug-safety",
+      "path": "app_program/.*",
+      "owner": "imu_debug_row_t",
+      "name": "safety",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "g_imu_debug_mutex protects retained row.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/terr_data.h:20-25"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "imu-debug-reason",
+      "path": "app_program/.*",
+      "owner": "imu_debug_row_t",
+      "name": "hump_reason",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 18
+      },
+      "ownership": "g_imu_debug_mutex protects retained row.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/hump_detection.h:25-46"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s4-ring-head",
+      "path": "app_program/.*",
+      "owner": "subsystem4_queue_state_t",
+      "name": "head",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 7
+      },
+      "ownership": "Every access under g_mutex.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/buddy4.c:25-43"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s4-ring-count",
+      "path": "app_program/.*",
+      "owner": "subsystem4_queue_state_t",
+      "name": "count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 8
+      },
+      "ownership": "Every access under g_mutex; include full state.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem4/buddy4.c:25-43"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-states",
+      "path": "app_program/.*",
+      "owner": "motion_status_t|motion_feedback_t|motion_debug_snapshot_t|ctrl_t",
+      "name": "state",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 5
+      },
+      "ownership": "Motion mutex for retained state; output copy caller-owned.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/motion.h:37-45"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-fault-code",
+      "path": "app_program/.*",
+      "owner": "motion_report_t|motion_status_t|motion_feedback_t|motion_debug_snapshot_t",
+      "name": "fault",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 5
+      },
+      "ownership": "Motion mutex and explicit report queue packing.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/motion.h:48-56"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-report-outcome",
+      "path": "app_program/.*",
+      "owner": "motion_report_t",
+      "name": "outcome",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3
+      },
+      "ownership": "Output view; report queue already packed.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/motion.h:70-77"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-command-id",
+      "path": "app_program/.*",
+      "owner": "motion_report_t|motion_status_t|motion_feedback_t",
+      "name": "command_id",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255
+      },
+      "ownership": "Motion mutex; zero means no command, nonzero IDs wrap.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c:54-55"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-encoder-bits",
+      "path": "app_program/.*",
+      "owner": "wheel_count_t",
+      "name": "bits",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1048575
+      },
+      "ownership": "Caller-owned stored modular encoder count.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/wheel_encoder.h:34-41"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-control-encoder",
+      "path": "app_program/.*",
+      "owner": "wheel_ctrl_t",
+      "name": "stall_ref",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1048575
+      },
+      "ownership": "Motion mutex.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c:65-72"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-stall-ms",
+      "path": "app_program/.*",
+      "owner": "wheel_ctrl_t",
+      "name": "stall_ms",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1023
+      },
+      "ownership": "Motion mutex; current saturation retained.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c:56-62"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-wrong-ms",
+      "path": "app_program/.*",
+      "owner": "wheel_ctrl_t",
+      "name": "wrong_ms",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 511
+      },
+      "ownership": "Motion mutex; current saturation retained.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c:57-62"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-glitch-seen",
+      "path": "app_program/.*",
+      "owner": "wheel_ctrl_t",
+      "name": "glitch_seen",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255
+      },
+      "ownership": "Motion mutex; low counter bits wrap.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c:58-63"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-glitch-bucket",
+      "path": "app_program/.*",
+      "owner": "wheel_ctrl_t",
+      "name": "glitch_bucket",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 50
+      },
+      "ownership": "Motion mutex.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c:42-63"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "motion-report-count",
+      "path": "app_program/.*",
+      "owner": "motion_flags_t",
+      "name": "report_queued|report_peak",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 8
+      },
+      "ownership": "Motion mutex; includes queue-full state.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/motion.c:75-95"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "encoder-pin",
+      "path": "app_program/.*",
+      "owner": "encoder_t|motor_t",
+      "name": "pin_a|pin_b",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 29
+      },
+      "ownership": "Owner task; do not mix config word with published count word.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/wheel_encoder.c:105-115",
+        "app_program/subsystem2/motor_control.c:23-30"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "encoder-pio-sm",
+      "path": "app_program/.*",
+      "owner": "encoder_t",
+      "name": "sm",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3
+      },
+      "ownership": "Motion owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/wheel_encoder.c:105-115"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "encoder-published-count",
+      "path": "app_program/.*",
+      "owner": "encoder_t",
+      "name": "last",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1048575
+      },
+      "ownership": "Whole own word publication; preserve isolated allocation unit.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/wheel_encoder.c:105-115"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "estimator-count",
+      "path": "app_program/.*",
+      "owner": "wheel_estimate_t",
+      "name": "last_count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1048575
+      },
+      "ownership": "Motion owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem2/estimate_motion.c:11-17"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-work-phase",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_work_t",
+      "name": "phase",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 18
+      },
+      "ownership": "Sampling owner; 0 is initialized state.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c:1269-1289"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-work-orientation",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_work_t",
+      "name": "orientation",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "Sampling owner; terminal value 2 must not wrap.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c:1801-1805",
+        "app_program/subsystem3/bc_decoder.c:1857-1887"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-work-star",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_work_t",
+      "name": "star_index",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1
+      },
+      "ownership": "Sampling owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c:1864-1888"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-work-found",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_work_t",
+      "name": "found",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "Sampling owner; two matches distinguish ambiguity.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c:1854-1896"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-work-tick",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_work_t",
+      "name": "tick",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": -64,
+        "max": 65
+      },
+      "ownership": "Sampling owner; terminal 65 retained before next phase.",
+      "constraints": [
+        "Preserve signed range using explicit unsigned code/accessors; include terminal 65."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c:1838-1849"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-pre-head",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_record_t",
+      "name": "pre_head",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 319
+      },
+      "ownership": "Sampling owner; derive bound from S3_REC_PRE_MAX.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:115-116",
+        "app_program/subsystem3/bc_decoder.c:438-479"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-pre-count",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_record_t",
+      "name": "pre_count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 320
+      },
+      "ownership": "Sampling owner; include full ring.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c:461-479"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-work-units",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_record_t",
+      "name": "work_units",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 128
+      },
+      "ownership": "Sampling owner; preserve exact per-update work count.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c:1514-1520"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-fit-ticks",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_record_t",
+      "name": "fit_ticks",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 32
+      },
+      "ownership": "Sampling owner; preserve exact per-update fitting budget.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c:1516-1518",
+        "app_program/subsystem3/bc_decoder.c:1844"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-record-count",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_record_t",
+      "name": "count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4096
+      },
+      "ownership": "Sampling owner; include full record state.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:199",
+        "app_program/subsystem3/bc_decoder.c:2093"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-record-state",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_record_t",
+      "name": "state",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3
+      },
+      "ownership": "Sampling owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:166-173"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-darkness",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_record_t",
+      "name": "paper|best|prev",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1000
+      },
+      "ownership": "Sampling owner; input validity and clamp behavior unchanged.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:191-203",
+        "app_program/subsystem3/bc_decoder.c:1984-2025"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-result-code",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_stored_result_t",
+      "name": "letter_code",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 26
+      },
+      "ownership": "Sampling owner; zero means none.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:39-43"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-edge-count",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_decoder_t",
+      "name": "count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 29
+      },
+      "ownership": "Sampling owner; full 29-run state.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:6",
+        "app_program/subsystem3/bc_decoder.c:315-321"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "barcode-score-sentinels",
+      "status": "preserve",
+      "domain": {
+        "description": "Retain full score/width arithmetic and UINT32_MAX/UINT64_MAX no-candidate sentinels; range reduction needs a separate proof."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Retain full score/width arithmetic and UINT32_MAX/UINT64_MAX no-candidate sentinels; range reduction needs a separate proof."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c:1811-1859",
+        "app_program/subsystem3/bc_decoder.c:1390-1417"
+      ],
+      "reason": "Retain full score/width arithmetic and UINT32_MAX/UINT64_MAX no-candidate sentinels; range reduction needs a separate proof.",
+      "owner": "s3_barcode_work_t",
+      "name": "minimum|best_score|smallest",
+      "kind": "FIELD_DECL"
+    },
+    {
+      "id": "stored-adc-channel",
+      "path": "app_program/.*",
+      "owner": "s3_acquisition_stored_config_t",
+      "name": "channel[012]",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "Sampling owner; validated wide input first.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_acquisition.c:15-18"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "stored-adc-mask",
+      "path": "app_program/.*",
+      "owner": "s3_acquisition_stored_config_t",
+      "name": "enabled_mask",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 7
+      },
+      "ownership": "Sampling owner; zero initialized state included.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_acquisition.c:8-12"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "stored-cal-raw",
+      "path": "app_program/.*",
+      "owner": "ir_stored_calibration_t",
+      "name": "white_raw|black_raw",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4095
+      },
+      "ownership": "Sampling owner; input validator stays wide.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_reflectance.h:23-31"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "stored-cal-limit",
+      "path": "app_program/.*",
+      "owner": "ir_stored_calibration_t",
+      "name": "white_limit|black_limit",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1000
+      },
+      "ownership": "Sampling owner; input validator stays wide.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_reflectance.h:23-31"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "surface-state",
+      "path": "app_program/.*",
+      "owner": "ir_reflectance_t|s3_processed_sensor_t",
+      "name": "surface",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "Sampling owner / copied result.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_reflectance.h:8-13"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "processed-darkness",
+      "path": "app_program/.*",
+      "owner": "s3_processed_sensor_t",
+      "name": "darkness",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1000
+      },
+      "ownership": "Sampling owner; address taken by ir_reflectance_update.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_reflectance.h:47-53"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "calibration-count",
+      "path": "app_program/.*",
+      "owner": "s3_calibration_range_t|s3_calibration_summary_t",
+      "name": "count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535
+      },
+      "ownership": "Sampling owner; saturated at 65535.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_calibration.c:25-28"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "calibration-sum",
+      "path": "app_program/.*",
+      "owner": "s3_calibration_range_t",
+      "name": "sum",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 268365825
+      },
+      "ownership": "Sampling owner; 65535*4095.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_calibration.h:8"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "calibration-extrema",
+      "path": "app_program/.*",
+      "owner": "s3_calibration_range_t|s3_calibration_summary_t",
+      "name": "minimum|maximum",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4095
+      },
+      "ownership": "Sampling owner; 4095 empty-minimum sentinel included.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_calibration.c",
+        "app_program/controller/s3_integration.c:46"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "line-error",
+      "path": "app_program/.*",
+      "owner": "s3_line_observation_t",
+      "name": "error",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": -100,
+        "max": 100
+      },
+      "ownership": "Sampling owner / copied result; exact signed decode.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/line_detection.h:37"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "navigation-action",
+      "path": "app_program/.*",
+      "owner": "s3_navigation_output_t",
+      "name": "action",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4
+      },
+      "ownership": "Sampling owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:11-19"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "navigation-lifecycle",
+      "path": "app_program/.*",
+      "owner": "s3_navigation_t|s3_navigation_output_t",
+      "name": "lifecycle",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "Sampling owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:27-32"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "navigation-events",
+      "path": "app_program/.*",
+      "owner": "s3_navigation_output_t",
+      "name": "events",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 31
+      },
+      "ownership": "Sampling owner; five independent event bits.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:68-75"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "navigation-ready",
+      "path": "app_program/.*",
+      "owner": "s3_navigation_output_t",
+      "name": "readiness_blockers",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 31
+      },
+      "ownership": "Sampling owner; five independent readiness bits.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:34-41"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "navigation-faults",
+      "path": "app_program/.*",
+      "owner": "s3_navigation_t|s3_navigation_output_t",
+      "name": "latched_faults|current_faults",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 15
+      },
+      "ownership": "Sampling owner; four independent fault bits.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:43-50"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "navigation-sensor-mask",
+      "path": "app_program/.*",
+      "owner": "s3_navigation_t|s3_navigation_output_t",
+      "name": "accepted_calibration|seen_sensors|valid_sensors|fault_mask",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 7
+      },
+      "ownership": "Sampling owner; three sensor bits.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/ir_acquisition.h:15-16"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "navigation-barcode-status",
+      "path": "app_program/.*",
+      "owner": "s3_navigation_t|s3_navigation_output_t",
+      "name": "barcode_status|barcode_held",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4
+      },
+      "ownership": "Sampling owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.h:46-54"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "drive-state",
+      "path": "app_program/.*",
+      "owner": "s3_drive_t|s3_integration_status_t|g_telemetry",
+      "name": "state",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 6
+      },
+      "ownership": "Sampling owner; public status copies under mutex.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/s3_drive.h:9-18"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "drive-reason",
+      "path": "app_program/.*",
+      "owner": "s3_drive_t|s3_integration_status_t",
+      "name": "reason",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 10
+      },
+      "ownership": "Sampling owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/s3_drive.h:20-33"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "drive-action",
+      "path": "app_program/.*",
+      "owner": "s3_drive_t",
+      "name": "pending|turn",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4
+      },
+      "ownership": "Sampling owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem3/line_navigation.h:11-19"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "drive-reset",
+      "path": "app_program/.*",
+      "owner": "s3_drive_t",
+      "name": "reset_result",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3
+      },
+      "ownership": "Sampling owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/s3_drive.h:35-41"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "drive-search-leg",
+      "path": "app_program/.*",
+      "owner": "s3_drive_t",
+      "name": "search_leg",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1
+      },
+      "ownership": "Sampling owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/s3_drive.c:424-451"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "drive-search-sign",
+      "path": "app_program/.*",
+      "owner": "s3_drive_t",
+      "name": "search_sign",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": -1,
+        "max": 1
+      },
+      "ownership": "Sampling owner; zero-initialized inactive state included.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/s3_drive.c:121",
+        "app_program/controller/s3_drive.c:423-455"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "operator-phase",
+      "path": "app_program/.*",
+      "owner": "operator_t",
+      "name": "phase",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 8
+      },
+      "ownership": "Operator task only.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/op_logic.h:42-53"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "operator-step",
+      "path": "app_program/.*",
+      "owner": "operator_t",
+      "name": "step",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 6
+      },
+      "ownership": "Operator task; include completed sixth step.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/op_logic.h:24-25",
+        "app_program/controller/op_logic.h:66"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "operator-countdown",
+      "path": "app_program/.*",
+      "owner": "operator_t",
+      "name": "countdown_shown",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3
+      },
+      "ownership": "Operator task.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/op_logic.h:67"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "terrain-sent-fault",
+      "path": "app_program/.*",
+      "owner": "terrain_control_t",
+      "name": "sent_fault",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1
+      },
+      "ownership": "Sampling/controller owner; fault_sent separately represents unknown.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/terr_link.c:154-171"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "terrain-sent-height",
+      "path": "app_program/.*",
+      "owner": "terrain_control_t",
+      "name": "sent_height",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 500
+      },
+      "ownership": "Sampling/controller owner; mm integer after validation.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/terr_link.c:179-195"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "remote-reply-count",
+      "path": "app_program/.*",
+      "owner": "g_remote",
+      "name": "head",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 5
+      },
+      "ownership": "All accesses under g_mutex.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/s3_integration.c:82-100"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "remote-reply-ring-count",
+      "path": "app_program/.*",
+      "owner": "g_remote",
+      "name": "count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 6
+      },
+      "ownership": "All accesses under g_mutex; include full ring.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/s3_integration.c:82-100"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "remote-flags",
+      "path": "app_program/.*",
+      "owner": "g_remote",
+      "name": "flags",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 15
+      },
+      "ownership": "All accesses under g_mutex.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/remote_control.h",
+        "app_program/controller/s3_integration.c:82-100"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "remote-action",
+      "path": "app_program/.*",
+      "owner": "remote_request_t",
+      "name": "action",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3
+      },
+      "ownership": "g_mutex for shared requests; zero-initialized state included.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/remote_control.h:60-69"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-offset-count",
+      "path": "app_program/.*",
+      "owner": "bcap_t|bcap_episode_t",
+      "name": "used|first|count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4000
+      },
+      "ownership": "Sampling writer/report readers all hold capture g_mutex.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.h:27-30",
+        "app_program/controller/bc_capture.c:143-201"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-pre-head",
+      "path": "app_program/.*",
+      "owner": "bcap_t",
+      "name": "pre_head",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 299
+      },
+      "ownership": "Capture mutex; current BCAP_PRE=300, assert configuration bound.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.h:30-31",
+        "app_program/controller/bc_capture.c:207"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-pre-count",
+      "path": "app_program/.*",
+      "owner": "bcap_t",
+      "name": "pre_count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 300
+      },
+      "ownership": "Capture mutex; include full prehistory.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:207-210"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-episodes",
+      "path": "app_program/.*",
+      "owner": "bcap_t",
+      "name": "episodes",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 12
+      },
+      "ownership": "Capture mutex; include full episode count.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:103-109",
+        "app_program/controller/bc_capture.c:143"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-letter-count",
+      "path": "app_program/.*",
+      "owner": "bcap_t",
+      "name": "letter_count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 8
+      },
+      "ownership": "Capture mutex; NUL terminator stays a byte.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:119-123"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-dark4",
+      "path": "app_program/.*",
+      "owner": "bcap_sample_t",
+      "name": "dark4",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 250
+      },
+      "ownership": "Capture mutex.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:48-49"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-dt",
+      "path": "app_program/.*",
+      "owner": "bcap_sample_t",
+      "name": "dt_ms",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255
+      },
+      "ownership": "Capture mutex; saturation at255 retained.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:55-56"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-mm",
+      "path": "app_program/.*",
+      "owner": "bcap_sample_t",
+      "name": "mm",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535
+      },
+      "ownership": "Capture mutex; saturation at65535 retained.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:86-100"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-wire-flags",
+      "path": "app_program/.*",
+      "owner": "bcap_sample_t",
+      "name": "flags",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255
+      },
+      "ownership": "Capture mutex; all eight raw flag bits are retained.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:50-54"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "capture-quiet-range",
+      "status": "unresolved",
+      "domain": {
+        "description": "Quiet can continue beyond BCAP_END_QUIET while collecting; derive bound from pool-full closure before reducing width."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Quiet can continue beyond BCAP_END_QUIET while collecting; derive bound from pool-full closure before reducing width."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:193-201"
+      ],
+      "reason": "Quiet can continue beyond BCAP_END_QUIET while collecting; derive bound from pool-full closure before reducing width.",
+      "owner": "bcap_t",
+      "name": "quiet",
+      "kind": "FIELD_DECL"
+    },
+    {
+      "id": "s5-state",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "state",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 6
+      },
+      "ownership": "Sampling/controller owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:7-16"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-fault",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "fault",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 7
+      },
+      "ownership": "Sampling/controller owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:18-28"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-leg",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "leg",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 10
+      },
+      "ownership": "Sampling/controller owner;9 reversing,10 aiming included.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.c",
+        "app_program/subsystem5/s5_api.h:22-27"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-pass",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "pass",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4
+      },
+      "ownership": "Sampling/controller owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:44-51"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-relative-code",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "rel_bits",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255
+      },
+      "ownership": "Sampling/controller owner; preserve every current eight-bit code.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:104-121"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-aim-code",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "aim_bits",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 127
+      },
+      "ownership": "Sampling/controller owner; preserve every current seven-bit code.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:124-140"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-side-turn",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "side_turn",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 10
+      },
+      "ownership": "Sampling/controller owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:85-87"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-side-turns",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "side_turns",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3
+      },
+      "ownership": "Sampling/controller owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:85-87"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-centre-tries",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "centre_tries",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "Sampling/controller owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:87-89"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-blocked-count",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "blocked_reads",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "Sampling/controller owner; third confirmation is tested before increment.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.c:636-649"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-lateral",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "lat_mm",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 511
+      },
+      "ownership": "Sampling/controller owner; saturates.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:91-95"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-peek-lateral",
+      "path": "app_program/.*",
+      "owner": "s5_avoidance_t",
+      "name": "peek_lat_mm",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4095
+      },
+      "ownership": "Sampling/controller owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoid_obstacle.h:94-95"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-route",
+      "path": "app_program/.*",
+      "owner": "s5_plan_t",
+      "name": "route",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 2
+      },
+      "ownership": "Sampling/controller owner.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoidance_planner.h:5-10"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-plan-distances",
+      "path": "app_program/.*",
+      "owner": "s5_plan_t",
+      "name": "offset_mm|forward_mm|alt_offset_mm|closest_mm",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4095
+      },
+      "ownership": "Sampling/controller owner; current representable range retained.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/avoidance_planner.h:12-20"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-config-distance",
+      "path": "app_program/.*",
+      "owner": "s5_config_t",
+      "name": "detect_mm|emergency_mm|profile_mm|half_width_mm|margin_mm|max_depth_mm|recovery_gate_mm|max_offset_mm|sensor_axle_mm",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4095
+      },
+      "ownership": "Owner-local config; preserve all current12-bit settings.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/s5_config.h:179-186"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-config-speed",
+      "path": "app_program/.*",
+      "owner": "s5_config_t",
+      "name": "speed_mms",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 511
+      },
+      "ownership": "Owner-local config; preserve all current9-bit settings.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/s5_config.h:185"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-scan-count",
+      "path": "app_program/.*",
+      "owner": "s5_scan_t",
+      "name": "count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 16
+      },
+      "ownership": "S5 task; include full16 sample state.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/scan_obstacle.c:52-58"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-scan-attempts",
+      "path": "app_program/.*",
+      "owner": "s5_scan_t",
+      "name": "attempts",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 3
+      },
+      "ownership": "S5 task; terminal third attempt retained.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/scan_obstacle.c:42-49"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "s5-nearest-distance",
+      "path": "app_program/.*",
+      "owner": "s5_scan_t",
+      "name": "nearest_mm",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4000
+      },
+      "ownership": "S5 task; initialized zero and4000 clear sentinel included.",
+      "constraints": [
+        "Preserve initialized, sentinel and terminal values; use addressable temporaries at pointer-taking boundaries."
+      ],
+      "evidence": [
+        "app_program/subsystem5/scan_obstacle.c:8",
+        "app_program/subsystem5/scan_obstacle.c:64-67"
+      ],
+      "reason": "Reviewed producer/consumer domain; compare required bits with compiler-observed stored field width."
+    },
+    {
+      "id": "terrain-clock-epoch",
+      "path": "app_program/.*",
+      "owner": "terrain_result_t|terrain_monitor_t|terrain_odometry_t",
+      "name": "timestamp_us|previous_us|heading_us|epoch|safety_since_us",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "Terrain owner; 32-bit clock/epoch copies.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/subsystem4/terr_data.c"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "imu-clock",
+      "path": "app_program/.*",
+      "owner": "imu_sample_t|imu_debug_row_t",
+      "name": "timestamp_us|sequence",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "Terrain owner; debug rows under mutex.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/subsystem4/imu_sensor.c",
+        "app_program/subsystem4/buddy4.c"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "hump-clock",
+      "path": "app_program/.*",
+      "owner": "hump_detector_t",
+      "name": "started_us",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "Terrain owner.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/subsystem4/hump_detection.c:27",
+        "app_program/subsystem4/hump_detection.c:159"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "motion-feedback-clocks",
+      "path": "app_program/.*",
+      "owner": "motion_feedback_t|motion_debug_snapshot_t",
+      "name": "timestamp_us|epoch|report_loss_count",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "Motion mutex; full wrapping source counters.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/subsystem2/motion.c:244-350"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "navigation-clock-epoch",
+      "path": "app_program/.*",
+      "owner": "s3_odometry_sample_t|s3_capture_distance_t|s3_navigation_output_t|s3_navigation_t|s3_raw_sample_t|s3_sensor_frame_t|s3_barcode_result_t",
+      "name": "timestamp_us|epoch|sample_gap_us|last_us|sensor_last_us|healthy_since_us|rearm_epoch|rearm_since_us",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "Sampling owner; exact source timestamps/epochs.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/subsystem3/line_navigation.c",
+        "app_program/subsystem3/ir_acquisition.c"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "barcode-clocks",
+      "path": "app_program/.*",
+      "owner": "s3_barcode_decoder_t|s3_barcode_record_t",
+      "name": "last_us|run_start_us|frame_start_us",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "Sampling owner; preserve32-bit modular subtraction.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/subsystem3/bc_decoder.c"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "controller-clock-counters",
+      "path": "app_program/.*",
+      "owner": "s3_drive_t|s3_integration_status_t|s3_run_timing_t|remote_request_t|terrain_control_t|g_telemetry",
+      "name": "phase_us|pending_us|reset_us|report_loss_count|touch_us|search_us|obstacle_snapshot_us|turn_us|samples|max_gap_us|above_target|command_sequence|started_us|above_safety|last_safety_us|id|epoch|time_us|now|last_us",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "Enclosing owner or existing snapshot/mailbox mutex; never merge different ownership.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/controller/s3_drive.c",
+        "app_program/controller/run_timing.h",
+        "app_program/controller/remote_control.h"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "operator-clocks",
+      "path": "app_program/.*",
+      "owner": "operator_t|op_button_t",
+      "name": "phase_ms|prompt_ms|sequence|since_ms|pressed_ms",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "Operator task;32-bit time/sequence wrap.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/controller/op_logic.c"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "capture-clocks",
+      "path": "app_program/.*",
+      "owner": "bcap_t",
+      "name": "run_start_us|last_us",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "Capture mutex.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:35-58"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "s5-clocks",
+      "path": "app_program/.*",
+      "owner": "s5_scan_t|s5_avoidance_t|s5_recovery_t|s5_observation_t",
+      "name": "started_us|phase_us|since_us|timestamp_us|scan_us",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 4294967295
+      },
+      "ownership": "S5 owner/local controller; publication under existing mutex.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/subsystem5/scan_obstacle.c",
+        "app_program/subsystem5/avoid_obstacle.c",
+        "app_program/subsystem5/s5_codec.h"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "bcap-event-wrap-counters",
+      "path": "app_program/.*",
+      "owner": "bcap_t",
+      "name": "decoded|rejected|timing|overflow",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 65535
+      },
+      "ownership": "Capture mutex; preserve current16-bit wrap, do not silently saturate.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:116-135"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "bcap-dropped-saturation",
+      "path": "app_program/.*",
+      "owner": "bcap_t",
+      "name": "dropped",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 255
+      },
+      "ownership": "Capture mutex; saturation at255 retained.",
+      "constraints": [
+        "Preserve modulo behavior and initialized values; do not reduce wrapping lifetime."
+      ],
+      "evidence": [
+        "app_program/controller/bc_capture.c:146-149"
+      ],
+      "reason": "Reviewed full-range clock/counter domain."
+    },
+    {
+      "id": "test-fixture-storage",
+      "status": "test",
+      "domain": {
+        "description": "Host/fake/on-device test data must represent rejected and adversarial inputs; this disposition is test-scope only, not firmware compliance."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Host/fake/on-device test data must represent rejected and adversarial inputs; this disposition is test-scope only, not firmware compliance."
+      ],
+      "evidence": [
+        "testing/README.md"
+      ],
+      "reason": "Host/fake/on-device test data must represent rejected and adversarial inputs; this disposition is test-scope only, not firmware compliance.",
+      "path": "testing/.*|tools/compliance/.*|app_program/.*/buddy[1-5]_test\\.[ch]",
+      "type_category": ".*"
+    },
+    {
+      "id": "floating-point-preservation",
+      "status": "preserve",
+      "domain": {
+        "description": "Preserve existing float/double values, precision, NaN/infinity/signed-zero behavior and arithmetic order; telemetry quantization does not justify changing control storage."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Preserve existing float/double values, precision, NaN/infinity/signed-zero behavior and arithmetic order; telemetry quantization does not justify changing control storage."
+      ],
+      "evidence": [
+        "app_program/subsystem2/ctrl_motion.c:7-12",
+        "app_program/subsystem2/estimate_motion.c:11",
+        "app_program/subsystem4/terr_data.c"
+      ],
+      "reason": "Preserve existing float/double values, precision, NaN/infinity/signed-zero behavior and arithmetic order; telemetry quantization does not justify changing control storage.",
+      "type_category": "FLOAT|DOUBLE|LONGDOUBLE"
+    },
+    {
+      "id": "pointer-function-abi",
+      "status": "boundary",
+      "domain": {
+        "description": "Pointer/function-pointer representation is ABI-defined; do not pack addresses, change callbacks or narrow handles."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Pointer/function-pointer representation is ABI-defined; do not pack addresses, change callbacks or narrow handles."
+      ],
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ],
+      "reason": "Pointer/function-pointer representation is ABI-defined; do not pack addresses, change callbacks or narrow handles.",
+      "type_category": "POINTER|FUNCTIONPROTO|FUNCTIONNOPROTO"
+    },
+    {
+      "id": "record-container",
+      "status": "preserve",
+      "domain": {
+        "description": "Aggregate container: individual child fields are inventoried separately; allocation padding is measured by the target compiler. This row does not certify its children."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Aggregate container: individual child fields are inventoried separately; allocation padding is measured by the target compiler. This row does not certify its children."
+      ],
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ],
+      "reason": "Aggregate container: individual child fields are inventoried separately; allocation padding is measured by the target compiler. This row does not certify its children.",
+      "type_category": "RECORD"
+    },
+    {
+      "id": "enumerator-constant",
+      "status": "preserve",
+      "domain": {
+        "description": "Compile-time enum constant: retain numeric value and ABI; stored enum fields are inventoried independently."
+      },
+      "required_bits": null,
+      "ownership": "See source producer/consumer and enclosing object ownership.",
+      "constraints": [
+        "Compile-time enum constant: retain numeric value and ABI; stored enum fields are inventoried independently."
+      ],
+      "evidence": [
+        "testing/compliance/inventory_scope.json"
+      ],
+      "reason": "Compile-time enum constant: retain numeric value and ABI; stored enum fields are inventoried independently.",
+      "kind": "ENUM_CONSTANT_DECL"
+    },
+    {
+      "id": "c-boolean-field",
+      "kind": "FIELD_DECL",
+      "type_category": "BOOL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1
+      },
+      "ownership": "Must follow enclosing object ownership; cross-task flags require storage-unit review before packing.",
+      "constraints": [
+        "Never group flags whose writers/readers use different synchronization."
+      ],
+      "evidence": [
+        "C99 _Bool conversion yields0or1; declaration compiler-observed."
+      ],
+      "reason": "Every representable C bool value fits one bit."
+    },
+    {
+      "id": "one-bit-field",
+      "kind": "FIELD_DECL",
+      "type": ".*",
+      "status": "unresolved",
+      "domain": null,
+      "required_bits": null,
+      "ownership": "Unreviewed",
+      "constraints": [
+        "Existing field width alone does not prove its application domain or synchronization."
+      ],
+      "evidence": [],
+      "reason": "Review remaining field domain and ownership; no automatic compliant classification."
+    }
+  ]
+}

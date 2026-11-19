@@ -1,8 +1,11 @@
 # Buddy 5 — ultrasonic scanning, profiling, avoidance and recovery
 
-Implemented on `xavier/development` over `6225b04`, 27 October 2026.
-**Software implementation and simulated tests; no physical success claimed.**
-Tribunal 1 changes still require implementation AND demonstration in Week 13.
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+
+The original implementation was integrated from `xavier/development` over
+`6225b04` on 27 October 2026. Later changes are in the current source and CR1
+inventory. Saved simulated results and online deployment do not establish a
+successful physical avoidance demonstration.
 
 ## Hardware and activation
 
@@ -216,7 +219,7 @@ barcode manoeuvre stops it rather than starting competing motion.
 
 ## Telemetry and diagnostics
 
-The controller uses Buddy 1's existing protocol-v2 obstacle message (closest
+The controller uses Buddy 1's existing protocol-v3 obstacle message (closest
 range, conservative width, route), avoiding-obstacle state, and only the owned
 NO_ECHO fault bit. Other buddies' flags are preserved by Buddy 1's protected
 changed-mask update. Invalid profiles invalidate the cached obstacle section.
@@ -247,7 +250,7 @@ unchanged).
 ## Validation and deliverables
 
 The four code deliverables are implemented across `obstacle_scan`,
-`obstacle_profile`, `avoidance_planner`/`obstacle_avoidance`, and `line_recovery`.
+`profile_obstacle`, `avoidance_planner`/`avoid_obstacle`, and `line_recovery`.
 Drivers and controller wiring connect them into the integrated application.
 
 ```sh

@@ -1,5 +1,7 @@
 # Buddy 4 integration — 28 October 2026
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 Buddy 4 is now connected to the existing single controller alongside Buddies 1–3
 and 5 on `xavier/development`, based on main `19d02fe`. The implementation and
 test records are included with this document. No firmware was flashed, and no

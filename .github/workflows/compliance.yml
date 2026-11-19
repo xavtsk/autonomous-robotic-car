@@ -18,6 +18,25 @@ env:
   PYTHONUNBUFFERED: '1'
 
 jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # Bounded alias audit reads its recorded historical baseline.
+      - name: Install exact audit tools
+        run: /usr/bin/python3 tools/compliance/install_host.py --formatter
+      - name: Record all audits, including unresolved review gates
+        run: /usr/bin/python3 tools/compliance/static_report.py --output evidence
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: audit-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+
   host:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -39,7 +58,7 @@ jobs:
       - name: Install host dependencies
         run: /usr/bin/python3 tooling/tools/compliance/install_host.py
       - name: Execute host suites
-        run: /usr/bin/python3 tooling/tools/compliance/run_host.py --root subject --output evidence --mode '${{ matrix.mode }}'
+        run: /usr/bin/python3 tooling/tools/compliance/run_host.py --root subject --output evidence --mode '${{ matrix.mode }}' ${{ matrix.revision == 'candidate' && '--check-c99' || '' }}
       - name: Save execution evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -101,6 +120,11 @@ jobs:
           bash candidate/tools/compliance/install_arm.sh "$RUNNER_TEMP/arm"
       - name: Build identical baseline and candidate profiles
         run: /usr/bin/python3 candidate/tools/compliance/build_targets.py --baseline baseline --candidate candidate --sdk pico-sdk --profile '${{ matrix.profile }}' --output evidence
+      - name: Collect compiler observations (partial diagnostics remain explicit)
+        if: matrix.profile == 'production' && success()
+        run: |
+          /usr/bin/python3 -m pip install --disable-pip-version-check --target "$RUNNER_TEMP/clang-bindings" libclang==18.1.1
+          PYTHONPATH="$RUNNER_TEMP/clang-bindings" /usr/bin/python3 candidate/testing/compliance/inventory_ast.py --root candidate --compile-db evidence/candidate/compile_commands.json --output evidence/inventory-ast.json --jobs 4
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

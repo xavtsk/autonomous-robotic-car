@@ -1,0 +1,16 @@
+/** @file module.c
+ * @brief Implement the module's single responsibility.
+ * @details State algorithm assumptions and source references as appropriate.
+ */
+#include "module.h"
+
+/** @brief Return the input unchanged.
+ * @param sample Value to return.
+ * @return The same value without mutation or I/O.
+ */
+uint32_t module_read (uint32_t sample)
+{
+    return sample;
+}
+
+/* End of file. */

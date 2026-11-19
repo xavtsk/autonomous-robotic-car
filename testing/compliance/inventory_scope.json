@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "baseline_sha": "4ad2cc42595722cedb47102e4343298339040d40",
+  "imports_manifest": "testing/compliance/inventory_imports.json",
+  "include_globs": [
+    "app_program/**/*.c",
+    "app_program/**/*.h",
+    "testing/**/*.c",
+    "testing/**/*.h",
+    "tools/compliance/**/*.c",
+    "tools/compliance/**/*.h",
+    "config/*.h",
+    "device/i2c/sysdepend/rp2040/i2c_cnf_sysdep.h",
+    "device/adc/sysdepend/rp2040/*.c",
+    "device/adc/sysdepend/rp2040/*.h",
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk*.c",
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk*.h",
+    "lib/libwifi/sysdepend/pico_rp2040/cyw43_configport.h",
+    "lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h",
+    "lib/liblwip/sysdepend/pico_rp2040/*.c",
+    "lib/liblwip/sysdepend/pico_rp2040/*.h",
+    "lib/liblwip/sysdepend/pico_rp2040/include/**/*.h",
+    "lib/libtm/sysdepend/pico_rp2040/usb/*.c",
+    "lib/libtm/sysdepend/pico_rp2040/usb/tusb_config.h"
+  ],
+  "exclude_globs": [
+    "config/wifi_secrets.h"
+  ],
+  "mixed_files": {
+    "kernel/sysdepend/pico_rp2040/devinit.c": {
+      "project_symbol": "knl_start_device",
+      "project_lines_at_baseline": [
+        70,
+        74
+      ],
+      "project_change": "APP_S4 selects dev_init_i2c(1), avoiding I2C0 motor pins; fallback remains unit 0.",
+      "evidence": "git diff 437f46eb91b3dab0ad3febe5ebfab235abe7ce04 4ad2cc42595722cedb47102e4343298339040d40 -- kernel/sysdepend/pico_rp2040/devinit.c",
+      "boundary": "Only the project integration conditional/calls are owned. Imported surrounding kernel code must not be mechanically reformatted or rewritten.",
+      "review_status": "pending_manual_review",
+      "template_blob": "88128f160a52a251f6343b02eb8d9784ae5b1603",
+      "baseline_blob": "98ba6cace1dedcbc3df3d8222f5e47a100f8ed4b",
+      "project_region_start": "#if APP_S4",
+      "project_region_end": "#endif",
+      "preserved_body_sha256": "9fb9dc9c90d1fda6372cbc15a61d9800287654eac1735904cd208147d4899d6a"
+    }
+  },
+  "excluded_roots": [
+    "kernel",
+    "include",
+    "build/tooling",
+    "lib/libtm/sysdepend/pico_rp2040/usb/pico"
+  ],
+  "notes": [
+    "Repository-wide tracked and nonignored untracked C/H files must match owned or provenance-bound imported coverage; ignored private Wi-Fi credentials are excluded.",
+    "The imported kernel, SDK libraries, generated PIO program and generated SDK version/config headers remain unchanged.",
+    "Only explicitly listed team-owned adapters are included outside app_program and testing; imported generic device layers and other CPU ports are excluded.",
+    "RTOS/SDK callback signatures, handles, register types and ABI structures are preserved even inside an owned adapter."
+  ]
+}

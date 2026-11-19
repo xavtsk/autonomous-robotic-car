@@ -1,5 +1,7 @@
 # Course-test review — 26 October 2026
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 ## Later update — version 2 applied and built
 
 The review below is retained as the earlier audit. Its missing operator input

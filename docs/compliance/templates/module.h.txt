@@ -1,0 +1,19 @@
+/** @file module.h
+ * @brief State the module's single responsibility.
+ * @details State ownership, units, supported ranges and concurrency contract.
+ */
+#ifndef MODULE_H
+#define MODULE_H
+
+#include <stdint.h>
+
+/** @brief Describe the observable result.
+ * @param sample Input value and its units, valid range and resolution.
+ * @return Result, including the exact error or sentinel contract.
+ * @note State mutation, synchronization and timing assumptions if applicable.
+ */
+uint32_t module_read (uint32_t sample);
+
+#endif
+
+/* End of file. */

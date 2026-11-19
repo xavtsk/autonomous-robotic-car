@@ -1,5 +1,7 @@
 # Main + Buddy 5 integration — 28 October 2026
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 `xavier/development` was fast-forwarded from `6225b04` to fetched `origin/main`
 `19d02fefd3ef614224cd8485920c4d5978ae5c92`. The local Buddy 5 implementation was
 then reapplied. At that point it was uncommitted and nothing had been pushed or

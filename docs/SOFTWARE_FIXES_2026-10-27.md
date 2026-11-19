@@ -1,5 +1,7 @@
 # Software robustness fixes — 27 October 2026
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 ## Outcome and scope
 
 Applied to the existing uncommitted `integration/buddies-1-3` working tree,

@@ -1,5 +1,7 @@
 # First course trial — Buddies 1, 2 and 3
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 > Historical 26 October instructions below predate the evening wiring and
 > built-in calibration changes. Current mapping (confirmed 27 October) is GP27
 > left line, GP28 barcode, GP26 right line; built-in calibration must be rechecked after

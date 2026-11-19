@@ -1,5 +1,7 @@
 # Testing
 
+> Current guide: [documentation index](../docs/README.md), [baseline status](../docs/CURRENT_STATUS.md), and [build/test commands](../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+
 All test records for the project live in this folder. A test only counts as
 done when it is **written down here with its result and a saved log**.
 
@@ -36,7 +38,7 @@ Test IDs never change and are never reused, even if a test is dropped.
 1. **Define it first.** Add a row to the *Test cases* table in the right
    `TEST_LOG.md`: ID, what it checks, how, and the expected result.
 2. **Automate it if you can.** Add a `TEST_CHECK` with the same ID to
-   `app_program/subsystemN/subsystemN_test.c` (see `app_program/test_report.h`).
+   `app_program/subsystemN/buddyN_test.c` (see `app_program/test_report.h`).
    A test that needs eyes or instruments (an LED blinks, a motor turns, a
    scope shows 1 kHz) is a *manual* test. Write its steps in the table instead.
 3. **Build the test image and flash it.**

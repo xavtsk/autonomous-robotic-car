@@ -1,5 +1,7 @@
 # Change Requirement 1: Minimum-Bit Data Representation, Week 13 evidence
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 Team AAI07. Historical measurements below identify their original snapshots;
 they are not evidence that every test was executed on the current revision.
 The latest compliance cleanup starts from `f684e0c` and keeps the drive,

@@ -1,5 +1,7 @@
 # Buddy 5 implementation — 27 October 2026
 
+> Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
+
 Implemented on local `xavier/development`, based on `6225b04` (Buddies 1–4).
 At the end of that implementation session, changes were uncommitted and had not
 been pushed. They are now included with the Buddy 4/5 integration commit. No robot

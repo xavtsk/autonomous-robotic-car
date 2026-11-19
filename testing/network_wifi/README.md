@@ -1,5 +1,7 @@
 # Wi-Fi connection recovery tests
 
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+
 Run from the repository root:
 
 ```sh

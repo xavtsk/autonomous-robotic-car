@@ -12,6 +12,7 @@ tools/compliance/*.py text eol=lf
 tools/compliance/*.sh text eol=lf
 tools/compliance/*.json text eol=lf
 tools/compliance/**/*.c text eol=lf
+tools/compliance/**/*.h text eol=lf
 testing/compliance/*.py text eol=lf
 testing/compliance/*.json text eol=lf
 testing/**/*.sh text eol=lf

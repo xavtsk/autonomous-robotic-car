@@ -1,5 +1,7 @@
 # Buddy 3 stationary diagnostics and software tests
 
+> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+
 ## 11 November 2026: bounded decoding and noisy trailing paper
 
 The next big-Z batch still had four sensor timing faults. Four other complete
