@@ -1,0 +1,60 @@
+name: Immutable mechanical target checkpoint
+
+on:
+  push:
+    branches: ['codex/compliance-preserve-behaviour', 'codex/compliance-*']
+    paths:
+      - '.github/workflows/mechanical-checkpoint.yml'
+      - 'tools/compliance/verify_mechanical_target.py'
+      - 'testing/compliance/test_mechanical_target.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mechanical-tilt-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tilt-filename-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: tooling
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: 55af85ce084fa0fe1fe4f8fe6444cd78e5acf007
+          path: baseline
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: 99b07b777559c0dd5d536f147fae15ea08f0d642
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: 98a542c1a62fb549ffb5d66a3e5892b06276b670
+          path: pico-sdk
+          submodules: recursive
+          persist-credentials: false
+      - name: Install matched pinned compilers
+        run: |
+          /usr/bin/python3 tooling/tools/compliance/install_host.py
+          bash tooling/tools/compliance/install_arm.sh "$RUNNER_TEMP/arm"
+      - name: Build only the immutable rename pair
+        run: /usr/bin/python3 tooling/tools/compliance/build_targets.py --baseline baseline --candidate candidate --sdk pico-sdk --profile production --output evidence
+      - name: Require bound flash, allocation, stack and link-order equality
+        if: always()
+        run: /usr/bin/python3 tooling/tools/compliance/verify_mechanical_target.py --evidence evidence --baseline baseline --candidate candidate --output evidence/mechanical-checkpoint.json
+      - name: Preserve all mechanical comparison evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mechanical-tilt-55af85c-99b07b7-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
