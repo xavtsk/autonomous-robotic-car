@@ -27,9 +27,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # Bounded alias audit reads its recorded historical baseline.
       - name: Install exact audit tools
-        run: /usr/bin/python3 tools/compliance/install_host.py --formatter
+        run: |
+          /usr/bin/python3 tools/compliance/install_host.py --formatter
+          /usr/bin/python3 -m pip install --disable-pip-version-check --target "$RUNNER_TEMP/clang-audit" libclang==18.1.1
       - name: Record all audits, including unresolved review gates
-        run: /usr/bin/python3 tools/compliance/static_report.py --output evidence
+        run: CR1_REQUIRE_LIBCLANG=1 PYTHONPATH="$RUNNER_TEMP/clang-audit" /usr/bin/python3 tools/compliance/static_report.py --output evidence
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

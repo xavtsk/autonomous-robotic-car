@@ -49,12 +49,15 @@ def main():
                            fixtures/'subsystem3', ['-include', str(fixtures/'subsystem3/motion_kernel_stub.h')]),
                 'terrain': (4, ['imu_sensor', 'imu_calibration', 'tilt_estimation', 'hump_detection', 'events_motion', 'terr_data'],
                             fixtures/'subsystem4', ['-DAPP_IMU_DEBUG=1']),
+                'terrain_production': (4, ['imu_sensor', 'imu_calibration', 'tilt_estimation', 'hump_detection', 'events_motion', 'terr_data'],
+                                       fixtures/'subsystem4', ['-DAPP_IMU_DEBUG=0']),
                 'obstacle': (5, ['profile_obstacle', 'scan_obstacle', 'avoidance_planner', 'line_recovery', 'avoid_obstacle', 's5_codec', 'ultrasonic_sensor'],
                              fixtures/'subsystem5', ['-DS5_HOST_TEST']),
             }
             for name, (number, modules, harness_dir, flags) in suites.items():
                 directory = app / f'subsystem{number}'
-                binary = build(label, name, [shared/(name+'_trace.c'), *[directory/(module+'.c') for module in modules]],
+                trace_name = 'terrain' if name == 'terrain_production' else name
+                binary = build(label, name, [shared/(trace_name+'_trace.c'), *[directory/(module+'.c') for module in modules]],
                                [directory, harness_dir], flags)
                 with (output / (label + '-' + name + '.trace')).open('wb') as stream:
                     subprocess.run([str(binary)], stdout=stream, check=True, timeout=120)
@@ -97,7 +100,7 @@ def main():
             with (output / (label + '-navigation.trace')).open('wb') as stdout, (output / (label + '-navigation.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=180)
             binaries[label] = build(label, 'replay', [roots['candidate']/'testing/compliance/barcode_replay_trace.c', source/'bc_decoder.c'], [root])
-        for name, prefix in (('motion', b'M '), ('terrain', b'T '), ('obstacle', b'O '),
+        for name, prefix in (('motion', b'M '), ('terrain', b'T '), ('terrain_production', b'T '), ('obstacle', b'O '),
                              ('runtime', b'RUNTIME '), ('mqtt', b'MQTT_'),
                              ('motion_storage', b'MSTORE ')):
             before_trace = (output / ('baseline-' + name + '.trace')).read_bytes()

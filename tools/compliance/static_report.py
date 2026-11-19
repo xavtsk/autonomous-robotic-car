@@ -4,8 +4,20 @@ import argparse
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
+
+
+def audit_verdict(code, contents):
+    """A successful unittest exit cannot hide skipped or undiscovered checks."""
+    skips = re.findall(r"^.*\.\.\. skipped .*$", contents, re.MULTILINE)
+    empty = bool(re.search(r"^Ran 0 tests\b", contents, re.MULTILINE))
+    if code == 0 and (skips or empty or re.search(r"OK \(skipped=\d+\)", contents)):
+        code = 2
+    return dict(returncode=code,
+                status='PASS' if code == 0 else 'INCOMPLETE' if code == 2 else 'FAIL',
+                skipped=skips, empty_discovery=empty)
 
 
 def main():
@@ -40,9 +52,9 @@ def main():
             except (OSError, subprocess.SubprocessError) as exc:
                 stream.write(str(exc)+'\n')
                 code = 2
-        status = 'PASS' if code == 0 else 'INCOMPLETE' if code == 2 else 'FAIL'
-        results.append(dict(name=name, command=command, returncode=code, status=status))
-        print(status, name, flush=True)
+        verdict = audit_verdict(code, (output/(name+'.log')).read_text(encoding='utf-8'))
+        results.append(dict(name=name, command=command, **verdict))
+        print(verdict['status'], name, flush=True)
     (output/'results.json').write_text(json.dumps(dict(recorded_at=datetime.now(timezone.utc).isoformat(),
         revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip(),
         results=results),indent=2)+'\n',encoding='utf-8')

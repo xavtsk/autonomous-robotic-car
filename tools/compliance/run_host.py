@@ -124,6 +124,17 @@ def main():
         if number == 3:
             targets += ['codec', 'drive', 'feedback', 'replay']
         make(f'subsystem{number}', f'testing/subsystem{number}', targets)
+    # Production disables the extra IMU diagnostics fields. Exercise its actual
+    # layout and branches, including under sanitizers, with the same fixture.
+    terrain_binary = output/'terrain_production_test'
+    terrain_app = root/'app_program/subsystem4'
+    terrain_fixture = tooling.parents[1]/'testing/subsystem4'
+    run('terrain_production_build', [compiler, *shlex.split(flags), '-DAPP_IMU_DEBUG=0',
+        '-I'+str(terrain_app), '-I'+str(terrain_fixture), str(terrain_fixture/'host_test.c'),
+        *[str(terrain_app/(name+'.c')) for name in
+          ('imu_sensor', 'imu_calibration', 'tilt_estimation', 'hump_detection', 'events_motion', 'terr_data')],
+        '-lm', '-o', str(terrain_binary)])
+    run('terrain_production', [str(terrain_binary)])
     make('integration', 'testing/integration', ['test'], 'controller_test.mk')
     make('diagnostics', 'testing/diagnostics', ['test', 'smoke'], 'firmware_test.mk')
     # Instrumentation adds compiler runtime constructors even to an otherwise
