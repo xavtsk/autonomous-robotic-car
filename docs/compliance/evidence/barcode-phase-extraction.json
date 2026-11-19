@@ -1,0 +1,88 @@
+{
+  "source": "app_program/subsystem3/bc_decoder.c",
+  "before_lf_sha256": "c5dd69e9c3ff84470325eb90184ffb3e292f652db62360db6a5eafc80f1c7a21",
+  "candidate_lf_sha256": "89995779cbffbdbe7d8252e619f9c239fdea2205467006c9e8b82e35ca4de6fe",
+  "inverse_token_equal": true,
+  "before_token_count": 12584,
+  "helpers": [
+    {
+      "phase": "RW_PRIMARY",
+      "helper": "work_primary",
+      "switch_exit_count": 3
+    },
+    {
+      "phase": "RW_FAINT_WHITE",
+      "helper": "work_faint_white",
+      "switch_exit_count": 4
+    },
+    {
+      "phase": "RW_FAINT_INK",
+      "helper": "work_faint_ink",
+      "switch_exit_count": 3
+    },
+    {
+      "phase": "RW_FAINT_VALLEY",
+      "helper": "work_faint_valley",
+      "switch_exit_count": 2
+    }
+  ],
+  "inverse_rules": [
+    "remove exact local workspace-pointer binding",
+    "map helper returns to original phase-switch breaks",
+    "inline each recovered body at its one matching dispatcher call",
+    "remove the four helper definitions"
+  ],
+  "unmodified": [
+    "dispatcher guards",
+    "work_units increment",
+    "fit_ticks guard",
+    "remaining phase bodies",
+    "workspace layout",
+    "public API"
+  ],
+  "limits": [
+    "Token equivalence after bounded inversion does not prove equal machine code, stack or physical timing."
+  ],
+  "before_revision": "ba4f3391261e47ede38649b231324269d86c60bb",
+  "status": "source inverse verified and compile checked; extraction execution pending",
+  "characterization_before_extraction": {
+    "run_id": 44584191817,
+    "artifact_id": 14559782444,
+    "six_host_modes_passed": true,
+    "calls": 427,
+    "full_scratch_rows": 854,
+    "trace_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9"
+  },
+  "compile_validation": {
+    "host": "C99 -Wall -Wextra -Werror -pedantic-errors -O2, shared barcode fixture linked; not executed on Windows",
+    "target": "Arm GNU 14.3.1, same recorded production arguments and -fstack-usage for both sources",
+    "record_update_symbol_bytes": [
+      8348,
+      8324
+    ],
+    "record_update_stack_bytes": [
+      376,
+      376
+    ],
+    "all_emitted_function_stack_rows_unchanged": true,
+    "extracted_helpers": "All four inlined: no separate emitted symbol or stack frame; caller report remains 376 bytes.",
+    "work_begin_stack_bytes": [
+      16,
+      16
+    ],
+    "work_keep_candidate_stack_bytes": [
+      104,
+      104
+    ],
+    "artifacts": "build/barcode-phase-extraction/{before,candidate}/{command.json,bc_decoder.o,bc_decoder.su,symbols.txt,disassembly.txt}",
+    "limits": [
+      "Target function code differs by 24 bytes; equal instruction timing is not claimed.",
+      "Compiler stack estimates are per function, not physical task high-water measurements."
+    ]
+  },
+  "verification_command": "python tools/compliance/verify_barcode_phase_batch.py --candidate WORKTREE --json (pin the extraction commit after publishing)",
+  "pending": [
+    "Linux execution of the extracted candidate against fixed baseline: full scratch, replay, runtime and sanitizers.",
+    "Full target-profile links and subsequent hardware timing evidence."
+  ]
+}

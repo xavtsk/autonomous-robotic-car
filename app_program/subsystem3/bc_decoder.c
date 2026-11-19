@@ -1509,6 +1509,155 @@ static bool work_apply (s3_barcode_work_t * p_w,
     return true;
 }
 
+/** @brief Advance one primary extrema scan step.
+ * @param p_r Recorder owning the retained samples and workspace.
+ * @return Nothing. The retained workspace records the next phase.
+ * @note The dispatcher has already consumed this step's work unit.
+ *       This helper neither loops over phases nor owns sample storage.
+ */
+static void work_primary (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    if (p_w->cursor >= p_w->frozen_count)
+    {
+        if (!p_w->rising)
+        {
+            p_w->ext[p_w->n] = p_w->best;
+            p_w->ext_us[p_w->n++] = p_w->best_us;
+        }
+        p_w->phase = RW_PRUNE_BEGIN;
+        return;
+    }
+    else
+    {
+        const unsigned int value_d = REC_DARK(p_r, p_w->cursor),
+                           value_b = REC_DARK(p_r, p_w->best);
+        if (p_w->rising ? value_d > value_b : value_d < value_b)
+        {
+            p_w->best = p_w->cursor;
+            p_w->best_us = p_w->total_us;
+        }
+        else if ((p_w->rising ? value_b - value_d : value_d - value_b) >=
+                 (p_r->prominence ? p_r->prominence : S3_REC_PROMINENCE))
+        {
+            if (p_w->n >= S3_REC_EXT_MAX - 1U)
+            {
+                work_bad_path(p_r);
+                return;
+            }
+            p_w->ext[p_w->n] = p_w->best;
+            p_w->ext_us[p_w->n++] = p_w->best_us;
+            p_w->best = p_w->cursor;
+            p_w->best_us = p_w->total_us;
+            p_w->rising = !p_w->rising;
+        }
+        work_next(p_r);
+        return;
+    }
+}
+
+/** @brief Advance one quiet-background step of faint recovery.
+ * @param p_r Recorder owning the retained samples and workspace.
+ * @return Nothing. The retained workspace records the next phase.
+ * @note The dispatcher has already consumed this step's work unit.
+ *       This helper neither loops over phases nor owns sample storage.
+ */
+static void work_faint_white (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    if (p_w->cursor >= p_w->frozen_count)
+    {
+        p_w->phase = RW_EDGES_BEGIN;
+        return;
+    }
+    if (REC_DARK(p_r, p_w->cursor) <= p_r->paper + S3_REC_FAINT_BAND)
+    {
+        work_next(p_r);
+        return;
+    }
+    if (p_w->n + 2U > S3_BARCODE_RUNS + 2U)
+    {
+        work_bad_path(p_r);
+        return;
+    }
+    p_w->peak = p_w->dip = p_w->cursor;
+    p_w->peak_us = p_w->dip_us = p_w->total_us;
+    p_w->low_us = 0U;
+    work_next(p_r);
+    p_w->phase = RW_FAINT_INK;
+    return;
+}
+
+/** @brief Advance one ink-region step of faint recovery.
+ * @param p_r Recorder owning the retained samples and workspace.
+ * @return Nothing. The retained workspace records the next phase.
+ * @note The dispatcher has already consumed this step's work unit.
+ *       This helper neither loops over phases nor owns sample storage.
+ */
+static void work_faint_ink (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    if (p_w->cursor >= p_w->frozen_count)
+    {
+        work_bad_path(p_r);
+        return;
+    }
+    if (REC_DARK(p_r, p_w->cursor) > p_r->paper + S3_REC_FAINT_BAND)
+    {
+        if (REC_DARK(p_r, p_w->cursor) > REC_DARK(p_r, p_w->peak))
+        {
+            p_w->peak = p_w->cursor;
+            p_w->peak_us = p_w->total_us;
+        }
+        p_w->low_us = 0U;
+    }
+    else
+    {
+        if (!p_w->low_us ||
+            REC_DARK(p_r, p_w->cursor) < REC_DARK(p_r, p_w->dip))
+        {
+            p_w->dip = p_w->cursor;
+            p_w->dip_us = p_w->total_us;
+        }
+        p_w->low_us += REC_STEP_US(p_r, p_w->cursor);
+        if (p_w->low_us > S3_REC_FAINT_DIP_US)
+        {
+            p_w->phase = RW_FAINT_VALLEY;
+            return;
+        }
+    }
+    work_next(p_r);
+    return;
+}
+
+/** @brief Advance one valley step of faint recovery.
+ * @param p_r Recorder owning the retained samples and workspace.
+ * @return Nothing. The retained workspace records the next phase.
+ * @note The dispatcher has already consumed this step's work unit.
+ *       This helper neither loops over phases nor owns sample storage.
+ */
+static void work_faint_valley (s3_barcode_record_t * p_r)
+{
+    s3_barcode_work_t * p_w = &p_r->work;
+    if (p_w->cursor < p_w->frozen_count &&
+        REC_DARK(p_r, p_w->cursor) <= p_r->paper + S3_REC_FAINT_BAND)
+    {
+        if (REC_DARK(p_r, p_w->cursor) < REC_DARK(p_r, p_w->dip))
+        {
+            p_w->dip = p_w->cursor;
+            p_w->dip_us = p_w->total_us;
+        }
+        work_next(p_r);
+        return;
+    }
+    p_w->ext[p_w->n] = p_w->peak;
+    p_w->ext_us[p_w->n++] = p_w->peak_us;
+    p_w->ext[p_w->n] = p_w->dip;
+    p_w->ext_us[p_w->n++] = p_w->dip_us;
+    p_w->phase = RW_FAINT_WHITE;
+    return;
+}
+
 /* Each call performs bounded sample/pruning work and at most 32 fit ticks.
  * No complete-frame extraction or grid search runs synchronously here. */
 static void work_advance (s3_barcode_record_t * p_r,
@@ -1525,115 +1674,16 @@ static void work_advance (s3_barcode_record_t * p_r,
         switch (p_w->phase)
         {
         case RW_PRIMARY:
-            if (p_w->cursor >= p_w->frozen_count)
-            {
-                if (!p_w->rising)
-                {
-                    p_w->ext[p_w->n] = p_w->best;
-                    p_w->ext_us[p_w->n++] = p_w->best_us;
-                }
-                p_w->phase = RW_PRUNE_BEGIN;
-                break;
-            }
-            else
-            {
-                const unsigned int value_d = REC_DARK(p_r, p_w->cursor),
-                                   value_b = REC_DARK(p_r, p_w->best);
-                if (p_w->rising ? value_d > value_b : value_d < value_b)
-                {
-                    p_w->best = p_w->cursor;
-                    p_w->best_us = p_w->total_us;
-                }
-                else if ((p_w->rising ? value_b - value_d
-                                      : value_d - value_b) >=
-                         (p_r->prominence ? p_r->prominence
-                                          : S3_REC_PROMINENCE))
-                {
-                    if (p_w->n >= S3_REC_EXT_MAX - 1U)
-                    {
-                        work_bad_path(p_r);
-                        break;
-                    }
-                    p_w->ext[p_w->n] = p_w->best;
-                    p_w->ext_us[p_w->n++] = p_w->best_us;
-                    p_w->best = p_w->cursor;
-                    p_w->best_us = p_w->total_us;
-                    p_w->rising = !p_w->rising;
-                }
-                work_next(p_r);
-                break;
-            }
+            work_primary(p_r);
+            break;
         case RW_FAINT_WHITE:
-            if (p_w->cursor >= p_w->frozen_count)
-            {
-                p_w->phase = RW_EDGES_BEGIN;
-                break;
-            }
-            if (REC_DARK(p_r, p_w->cursor) <= p_r->paper + S3_REC_FAINT_BAND)
-            {
-                work_next(p_r);
-                break;
-            }
-            if (p_w->n + 2U > S3_BARCODE_RUNS + 2U)
-            {
-                work_bad_path(p_r);
-                break;
-            }
-            p_w->peak = p_w->dip = p_w->cursor;
-            p_w->peak_us = p_w->dip_us = p_w->total_us;
-            p_w->low_us = 0U;
-            work_next(p_r);
-            p_w->phase = RW_FAINT_INK;
+            work_faint_white(p_r);
             break;
         case RW_FAINT_INK:
-            if (p_w->cursor >= p_w->frozen_count)
-            {
-                work_bad_path(p_r);
-                break;
-            }
-            if (REC_DARK(p_r, p_w->cursor) > p_r->paper + S3_REC_FAINT_BAND)
-            {
-                if (REC_DARK(p_r, p_w->cursor) > REC_DARK(p_r, p_w->peak))
-                {
-                    p_w->peak = p_w->cursor;
-                    p_w->peak_us = p_w->total_us;
-                }
-                p_w->low_us = 0U;
-            }
-            else
-            {
-                if (!p_w->low_us ||
-                    REC_DARK(p_r, p_w->cursor) < REC_DARK(p_r, p_w->dip))
-                {
-                    p_w->dip = p_w->cursor;
-                    p_w->dip_us = p_w->total_us;
-                }
-                p_w->low_us += REC_STEP_US(p_r, p_w->cursor);
-                if (p_w->low_us > S3_REC_FAINT_DIP_US)
-                {
-                    p_w->phase = RW_FAINT_VALLEY;
-                    break;
-                }
-            }
-            work_next(p_r);
+            work_faint_ink(p_r);
             break;
         case RW_FAINT_VALLEY:
-            if (p_w->cursor < p_w->frozen_count &&
-                REC_DARK(p_r, p_w->cursor) <= p_r->paper + S3_REC_FAINT_BAND)
-            {
-                if (REC_DARK(p_r, p_w->cursor) < REC_DARK(p_r, p_w->dip))
-                {
-                    p_w->dip = p_w->cursor;
-                    p_w->dip_us = p_w->total_us;
-                }
-                work_next(p_r);
-                break;
-            }
-            p_w->ext[p_w->n] = p_w->peak;
-            p_w->ext_us[p_w->n++] = p_w->peak_us;
-            p_w->ext[p_w->n] = p_w->dip;
-            p_w->ext_us[p_w->n++] = p_w->dip_us;
-            p_w->phase = RW_FAINT_WHITE;
+            work_faint_valley(p_r);
             break;
         case RW_PRUNE_BEGIN:
             if (p_w->n <= S3_BARCODE_RUNS + 2U)
@@ -2252,4 +2302,3 @@ s3_barcode_record_update (s3_barcode_record_t * p_r,
 }
 
 /* End of file. */
-
