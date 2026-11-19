@@ -31,13 +31,45 @@ typedef struct
 
 /* Descriptive results even before enough samples exist to commit calibration.
  */
+/** @brief Copy a descriptive range summary without requiring ten samples.
+ * @param p_range Readable labelled range, or null for an unavailable result.
+ * @return Zero/unavailable for null or zero count; otherwise copies count and
+ * raw ADC extrema and computes sum/count using the existing float32 precision.
+ * @note No range validation or mutation. Caller ensures a stable snapshot;
+ * this function neither locks nor commits an active calibration.
+ */
 s3_calibration_summary_t
 s3_calibration_summary (const s3_calibration_range_t * p_range);
+/** @brief Clear both labelled ranges for a new calibration collection.
+ * @param p_collector Writable caller-owned collector, or null for a no-op.
+ * @post Counts, sums and maxima are zero; both minimum sentinels are 4095.
+ * @note No active sensor calibration changes. The sampling owner serializes
+ * all access to the collector; this function acquires no lock.
+ */
 void s3_calibration_begin (s3_calibration_collector_t * p_collector);
+/** @brief Accumulate one labelled 12-bit ADC sample without saturation.
+ * @param p_collector Collector initialized by begin and owned by the caller.
+ * @param labelled_surface Exactly IR_SURFACE_WHITE or IR_SURFACE_BLACK.
+ * @param raw ADC count in 0..4095; wider uint16 inputs are rejected unchanged.
+ * @return True after updating count, sum and bounds of the selected range.
+ * False for null, invalid label/raw or count 65535 leaves ranges unchanged.
+ * @note The caller serializes access. The other labelled range is untouched;
+ * counters stop accepting samples rather than wrapping or replacing history.
+ */
 bool s3_calibration_add (s3_calibration_collector_t * p_collector,
                          ir_surface_t labelled_surface, uint16_t raw);
 /* >=10 samples per surface, strictly non-overlapping ranges. Leaves active
  * unchanged on rejection. Apply success using ir_reflectance_init. */
+/** @brief Commit integer-mean raw endpoints after collection validation.
+ * @param p_collector Readable begin/add collector, stable and caller-owned.
+ * @param p_active Writable calibration with existing normalized limits.
+ * @return True after replacing raw endpoints with integer-truncated means.
+ * Nulls, fewer than ten samples per label, overlapping/touching ranges, or
+ * rejected candidate calibration return false and leave p_active unchanged.
+ * @note Either ADC polarity is accepted. Existing white/black limits are kept.
+ * No sensor state is installed here; the owner applies success through
+ * ir_reflectance_init and serializes collector/calibration access.
+ */
 bool s3_calibration_finish (const s3_calibration_collector_t * p_collector,
                             ir_calibration_t * p_active);
 #endif

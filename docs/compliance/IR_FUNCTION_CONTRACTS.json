@@ -1,0 +1,234 @@
+{
+  "before_commit": "3fda4d517e5720c51da7c41033bc0b9c221b11b5",
+  "batch_kind": "manually reviewed acquisition, calibration and reflectance contracts; comments only",
+  "source_operations_changed": false,
+  "files": [
+    {
+      "path": "app_program/subsystem3/ir_acquisition.c",
+      "before_lf_sha256": "ee20f9157a51297e67415910aa00820d18e982f02115aae27e62bec0c58945cb",
+      "after_lf_sha256": "75e6ff3b6f84cb9df3a71b95047502fcd9f1c48f32f1579300ee9cdb0c1e67cc",
+      "preprocessing_fingerprint": "c2b2ac6afb7cb04e0f6ddb0135c819f05663ffd52e8a3fd34de7866b2d74984b",
+      "functions": [
+        "s3_acquisition_config_valid",
+        "s3_acquisition_capture"
+      ]
+    },
+    {
+      "path": "app_program/subsystem3/ir_acquisition.h",
+      "before_lf_sha256": "6c2a744127ced196fc6674f1b9d5fddbbbb44a2345d1c443891513206ba175ec",
+      "after_lf_sha256": "45ad4b70880982b1b4c5a1679cbd6300e67baa5f8310d6ac785279df72df5929",
+      "preprocessing_fingerprint": "cc4edfa56f31bf3b54c429d312c25b493c54ff472e74cd1b31542c20b0b20619",
+      "functions": [
+        "s3_acquisition_config_valid",
+        "s3_acquisition_capture",
+        "s3_acquisition_expand"
+      ]
+    },
+    {
+      "path": "app_program/subsystem3/ir_calibration.c",
+      "before_lf_sha256": "819343c018997b33b9c52b3bf1085d202ac97be7d835cee0a4a333b5983d9412",
+      "after_lf_sha256": "7e07adf2569ad9df21e1c7538fee0806d0606a0b838c0e770f1cd2c843b47fc0",
+      "preprocessing_fingerprint": "a6e6f8d9a18eea59265e690c02f82ae8f1223fa33120bdcecb027fd4a087afb3",
+      "functions": [
+        "s3_calibration_begin",
+        "s3_calibration_add",
+        "s3_calibration_finish",
+        "s3_calibration_summary"
+      ]
+    },
+    {
+      "path": "app_program/subsystem3/ir_calibration.h",
+      "before_lf_sha256": "3a17ee6fa919edbcdff73da602b5d9efd293e341bcc570c49877b52435d4df42",
+      "after_lf_sha256": "09f6ecd5a5bb6c2ad34140600b592e4c8b0c5b43ac40ac4e335dff187e164134",
+      "preprocessing_fingerprint": "4d0788a5b0d521d9c0d8d2e9e5ea28c978205df181bae3fa2463e3db415dd7d4",
+      "functions": [
+        "s3_calibration_begin",
+        "s3_calibration_add",
+        "s3_calibration_finish",
+        "s3_calibration_summary"
+      ]
+    },
+    {
+      "path": "app_program/subsystem3/ir_reflectance.c",
+      "before_lf_sha256": "8bbf7ab5c2e90cd6a2094a7a155092470b0b046e4d8c2f35172aa72fff8579bd",
+      "after_lf_sha256": "b8ca4fcfe294e4d3706f914fbb2ba767c4743cbd24def4fbe9cbfd8e7102a112",
+      "preprocessing_fingerprint": "f281e5fdd09467bba472def1a4688e70a821e0c629da6baa62629abdb2fe0fd8",
+      "functions": [
+        "ir_reflectance_reset",
+        "ir_reflectance_init",
+        "ir_reflectance_update"
+      ]
+    },
+    {
+      "path": "app_program/subsystem3/ir_reflectance.h",
+      "before_lf_sha256": "2a4848ef7f0209c1b3c0105396b48418de1b94d7d4b7ee2f279784caf01178a9",
+      "after_lf_sha256": "ef1ca57b22f5787dd8f833592d0566c261429a25dbc395866726c60304ca9c97",
+      "preprocessing_fingerprint": "d3f8e77e18c7429beb058601019a86d117587ddf8082a28610df6f75bce7998b",
+      "functions": [
+        "ir_reflectance_reset",
+        "ir_reflectance_init",
+        "ir_reflectance_update"
+      ]
+    }
+  ],
+  "compiler_documentation_check": {
+    "compiler": "libclang18.1.1",
+    "context": "actual target source arguments from build/compliance-review-20261119/compile_commands.json",
+    "diagnostics": [],
+    "functions": [
+      {
+        "path": "app_program/subsystem3/ir_acquisition.h",
+        "name": "s3_acquisition_expand",
+        "line": 53,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_acquisition.h",
+        "name": "s3_acquisition_config_valid",
+        "line": 86,
+        "definition": false,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_acquisition.h",
+        "name": "s3_acquisition_capture",
+        "line": 102,
+        "definition": false,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_acquisition.c",
+        "name": "s3_acquisition_config_valid",
+        "line": 13,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_acquisition.c",
+        "name": "s3_acquisition_capture",
+        "line": 56,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_reflectance.h",
+        "name": "ir_reflectance_init",
+        "line": 56,
+        "definition": false,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_reflectance.h",
+        "name": "ir_reflectance_reset",
+        "line": 63,
+        "definition": false,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_reflectance.h",
+        "name": "ir_reflectance_update",
+        "line": 81,
+        "definition": false,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_calibration.h",
+        "name": "s3_calibration_summary",
+        "line": 42,
+        "definition": false,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_calibration.h",
+        "name": "s3_calibration_begin",
+        "line": 49,
+        "definition": false,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_calibration.h",
+        "name": "s3_calibration_add",
+        "line": 59,
+        "definition": false,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_calibration.h",
+        "name": "s3_calibration_finish",
+        "line": 73,
+        "definition": false,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_calibration.c",
+        "name": "s3_calibration_begin",
+        "line": 14,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_calibration.c",
+        "name": "s3_calibration_add",
+        "line": 33,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_calibration.c",
+        "name": "s3_calibration_finish",
+        "line": 72,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_calibration.c",
+        "name": "s3_calibration_summary",
+        "line": 108,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_reflectance.c",
+        "name": "ir_reflectance_reset",
+        "line": 14,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_reflectance.c",
+        "name": "ir_reflectance_init",
+        "line": 32,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      },
+      {
+        "path": "app_program/subsystem3/ir_reflectance.c",
+        "name": "ir_reflectance_update",
+        "line": 67,
+        "definition": true,
+        "comment_attached": true,
+        "parameters_documented": true
+      }
+    ],
+    "doxygen_generator_executed": false
+  }
+}
