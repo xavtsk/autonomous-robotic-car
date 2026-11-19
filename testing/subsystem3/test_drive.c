@@ -4,7 +4,7 @@
 /* Real Buddy 2 controller/PID/estimator + real Buddy 3 core/bridge.
  * Hardware edges and PWM are mocked; this cannot prove physical behaviour. */
 #include "ctrl_motion.h"
-#include "estimate_motion.h"
+#include "motion_estimation.h"
 #include "motion_lease.h"
 #include "motor_control.h"
 #include "s3_drive.h"

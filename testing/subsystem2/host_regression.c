@@ -8,7 +8,7 @@
 #include "host_kernel.h"
 #include "motion.h"
 #include "ctrl_motion.h"
-#include "estimate_motion.h"
+#include "motion_estimation.h"
 #include "motor_control.h"
 #include "wheel_encoder.h"
 #ifdef TEST_PACKED

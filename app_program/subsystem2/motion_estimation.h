@@ -1,8 +1,8 @@
-/** @file estimate_motion.h
+/** @file motion_estimation.h
  * @brief Encoder-based speed and distance estimation.
  */
 /*
- * File: estimate_motion.h
+ * File: motion_estimation.h
  * Owner: Buddy 2 - Motion Control
  * Purpose: Encoder-based speed and distance estimation.
  *

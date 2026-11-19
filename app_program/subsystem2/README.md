@@ -9,7 +9,7 @@ Matching headers are in this folder.
 | `motion` | Public motion subsystem interface. |
 | `motor_control` | Motor actuation interface. |
 | `wheel_encoder` | Wheel encoder acquisition. |
-| `estimate_motion` | Encoder-based speed and distance estimation. |
+| `motion_estimation` | Encoder-based speed and distance estimation. |
 | `speed_pid` | Motor speed PID control. |
 | `ctrl_motion` | Straight-line correction and encoder-based turning. |
 | `buddy2` | RTOS lifecycle: mutex, 10 ms cyclic handler and the motion task. |

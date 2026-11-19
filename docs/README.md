@@ -21,6 +21,9 @@ Records named for an earlier date retain their original results and assumptions.
 | [Abbreviations](compliance/ABBREVIATIONS.md) | Shared terminology. |
 | [Module templates](compliance/templates/README.md) | Header/source structure and documentation. |
 | [Alias/assertion batch](compliance/ALIAS_ASSERT_BATCH.md) | Exact type-alias/assertion transformation and verification limits. |
+| [Formatting batch](compliance/FORMAT_BATCH.md) | Token preservation, target-image comparison and executed trace evidence. |
+| [Function documentation](compliance/FUNCTION_DOCUMENTATION.md) | Reviewed contracts, observed coverage and remaining work. |
+| [Estimator module rename](compliance/MOTION_MODULE_RENAME.md) | Filename/API alignment with unchanged implementation and link order. |
 | [MQTT protocol](../app_program/subsystem1/MQTT_PROTOCOL.md) | Topic and byte contracts. |
 | [Remote control](REMOTE_CONTROL_PROTOCOL.md) | START/STOP/RESET request, reply and ownership contracts. |
 | [Barcode capture protocol](BARCODE_WIRE_PROTOCOL.md) | Trace transfer and replay data. |

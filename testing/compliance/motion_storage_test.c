@@ -3,7 +3,7 @@
  *
  * Use the candidate fixture against either subject checkout. Compile with
  * -I SUBJECT -I SUBJECT/app_program/subsystem2 -I testing/subsystem3 and link
- * ctrl_motion.c, motion_pack.c, estimate_motion.c and speed_pid.c from SUBJECT.
+ * ctrl_motion.c, motion_pack.c, motion_estimation.c and speed_pid.c from SUBJECT.
  * motion.c is included here so tests can seed otherwise unreachable boundary
  * values. Real motion_create/init/process/getter logic is still exercised.
  * Define MOTION_COMPACT_RETAINED only for the future private-storage adapter.

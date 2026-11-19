@@ -42,7 +42,7 @@ test:
 	$(BUILD)/bcap_test
 	$(CC) -I$(APP)/controller $(CFLAGS) bcap_wire_test.c $(APP)/controller/bc_capture.c -o $(BUILD)/bcap_wire_test
 	$(BUILD)/bcap_wire_test
-	$(CC) -D_DEFAULT_SOURCE -D_USE_MATH_DEFINES -I$(APP)/subsystem2 -I$(APP)/subsystem3 -I$(APP)/controller $(CFLAGS) course_sim.c $(APP)/controller/s3_drive.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c bc_decoder.c line_navigation.c) $(addprefix $(APP)/subsystem2/,ctrl_motion.c motion_pack.c estimate_motion.c speed_pid.c) -lm -o $(BUILD)/course_sim
+	$(CC) -D_DEFAULT_SOURCE -D_USE_MATH_DEFINES -I$(APP)/subsystem2 -I$(APP)/subsystem3 -I$(APP)/controller $(CFLAGS) course_sim.c $(APP)/controller/s3_drive.c $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c bc_decoder.c line_navigation.c) $(addprefix $(APP)/subsystem2/,ctrl_motion.c motion_pack.c motion_estimation.c speed_pid.c) -lm -o $(BUILD)/course_sim
 	$(BUILD)/course_sim
 
 sanitize:

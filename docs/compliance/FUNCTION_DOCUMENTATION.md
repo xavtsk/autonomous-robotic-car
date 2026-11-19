@@ -1,10 +1,14 @@
 # Function documentation coverage
 
-The first contract batch covers seven files: `estimate_motion.c/.h`,
+The first contract batch covers seven files: the estimator (now
+[`motion_estimation.c`](../../app_program/subsystem2/motion_estimation.c) and
+[`motion_estimation.h`](../../app_program/subsystem2/motion_estimation.h)),
 `integration_codec.c/.h`, `line_controller.c/.h` and `run_timing.h`. It documents
 31 definitions and 17 public prototypes from their actual implementations.
 The [batch manifest](FUNCTION_DOCS_BATCH1.json) binds every file to its preceding
-Git version. All preprocessing tokens and existing comments are preserved.
+Git version. Its original `estimate_motion.c/.h` paths are historical evidence
+and remain pinned to the documentation commit. All preprocessing tokens and
+existing comments were preserved by that comment-only batch.
 
 Contracts include estimator units and noncoherent live reads; codec validation,
 unchanged outputs on rejection and copied floating representations; steering
@@ -15,11 +19,10 @@ Doxygen output has not yet been generated or reviewed, so this is not closure of
 BARR 2.2.h across the project.
 
 ```sh
-python tools/compliance/verify_format_batch.py --manifest docs/compliance/FUNCTION_DOCS_BATCH1.json
+python tools/compliance/verify_format_batch.py --manifest docs/compliance/FUNCTION_DOCS_BATCH1.json --candidate 4f5dd616198455d9784e7a60f3bd1edc873fa89e
 ```
 
-After later changes, add `--candidate <function-doc-batch-commit>` to check this
-bounded historical batch rather than the current worktree.
+This command checks the bounded historical batch despite later source changes.
 
 ## Observed remaining workload
 
@@ -69,12 +72,10 @@ undocumented variants), `ctrl_motion.c` (43), `s3_integration.c` (41),
 `bc_decoder.c` and `buddy4.c` (30 each), `buddy5.c` (29), and `s3_drive.c` (28).
 Line movements and conditional definitions can change those counts.
 
-The small naming candidate is the ten `motion_estimation_*` functions in
-`estimate_motion.c/.h` (BARR 6.1.i). Before renaming, resolve every declaration and
-reference by compiler identity and record the inverse transformation. Shared
-differential harnesses also need an explicit test-only baseline symbol mapping,
-or an alternative reviewed module-file rename; otherwise a harness can stop
-building against the unchanged baseline. No namespace change is included here.
+The [separate module rename](MOTION_MODULE_RENAME.md) aligns the estimator's
+filenames with its ten existing `motion_estimation_*` functions (BARR 6.1.i).
+It preserves the public API names and uses revision-specific source lookup in
+the shared runners. No API symbol rename is included in the documentation batch.
 
 Prototype review candidates include `usermain`, the two MQTT debug-take callbacks
 in `s3_integration.c`, and `pass_extra_test` under `S5_HOST_TEST`. A canonical

@@ -20,7 +20,7 @@
 
 #include "ctrl_motion.h"
 #include "../app_types.h"
-#include "estimate_motion.h"
+#include "motion_estimation.h"
 #include "motion_pack.h"
 #include "motor_control.h"
 #include "speed_pid.h"

@@ -17,7 +17,7 @@
  *
  * Each scenario prints one line; the program fails if any expectation fails. */
 #include "ctrl_motion.h"
-#include "estimate_motion.h"
+#include "motion_estimation.h"
 #include "motion_lease.h"
 #include "motor_control.h"
 #include "wheel_encoder.h"

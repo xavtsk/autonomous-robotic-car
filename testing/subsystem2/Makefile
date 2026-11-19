@@ -6,7 +6,7 @@ CPPFLAGS = -DAPP_H -DAPP_TEST=1 -include host_kernel.h -I. -Ifakes -I$(SOURCE_DI
 # Both IRQ pins must be acknowledged: the original intentional boolean |
 # must not be changed to short-circuit || merely to silence Clang.
 CFLAGS = -std=c11 -Wall -Wextra -Werror -Wno-bitwise-instead-of-logical -O2 -g
-MODULES = motion ctrl_motion estimate_motion motor_control speed_pid wheel_encoder buddy2_test
+MODULES = motion ctrl_motion motion_estimation motor_control speed_pid wheel_encoder buddy2_test
 SOURCES = host_regression.c $(addprefix $(SOURCE_DIR)/,$(addsuffix .c,$(MODULES)))
 ifeq ($(SOURCE_DIR),$(APP))
 CPPFLAGS += -DTEST_PACKED

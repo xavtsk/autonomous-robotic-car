@@ -74,7 +74,7 @@ sanitize:
 	$(MAKE) test codec drive feedback CFLAGS='$(CFLAGS) -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'
 
 MOTION = $(APP)/../subsystem2
-MOTION_CORE = $(addprefix $(MOTION)/,ctrl_motion.c motion_pack.c estimate_motion.c speed_pid.c)
+MOTION_CORE = $(addprefix $(MOTION)/,ctrl_motion.c motion_pack.c motion_estimation.c speed_pid.c)
 ifeq ($(wildcard $(MOTION)/ctrl_motion.c),)
 MOTION_CORE = $(addprefix $(MOTION)/,motion_controller.c motion_pack.c motion_estimation.c speed_pid.c)
 CPPFLAGS += -DS2_LEGACY_MODULE_NAMES

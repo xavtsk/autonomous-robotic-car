@@ -4,7 +4,7 @@ BUILD = ../../build/buddy5
 CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g
 S5 = $(addprefix $(APP)/subsystem5/,profile_obstacle.c scan_obstacle.c avoidance_planner.c line_recovery.c avoid_obstacle.c s5_codec.c)
 S3 = $(addprefix $(APP)/subsystem3/,ir_acquisition.c ir_calibration.c ir_reflectance.c line_detection.c line_controller.c bc_decoder.c line_navigation.c)
-S2 = $(addprefix $(APP)/subsystem2/,ctrl_motion.c motion_pack.c estimate_motion.c speed_pid.c)
+S2 = $(addprefix $(APP)/subsystem2/,ctrl_motion.c motion_pack.c motion_estimation.c speed_pid.c)
 INC = -I$(APP)/subsystem5 -I$(APP)/subsystem3 -I$(APP)/subsystem2 -I$(APP)/controller
 .PHONY: test sanitize
 test:

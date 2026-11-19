@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "before_commit": "ba4f3391261e47ede38649b231324269d86c60bb",
+  "purpose": "Align module filenames with unchanged motion_estimation public APIs",
+  "renamed_files": 2,
+  "source_or_header_files": 9,
+  "files": [
+    {
+      "before_path": "app_program/subsystem2/estimate_motion.c",
+      "after_path": "app_program/subsystem2/motion_estimation.c",
+      "before_lf_sha256": "038b9574b6a10586206aec31cf3889e34b62363aece35e9e35b38a16484fa69e",
+      "after_lf_sha256": "7c6ce544b9a09e1d28b2eb519091bb6063f4eee8536e96665590050b00d0bc04",
+      "proof": "exact include/comment filename inversion"
+    },
+    {
+      "before_path": "app_program/subsystem2/estimate_motion.h",
+      "after_path": "app_program/subsystem2/motion_estimation.h",
+      "before_lf_sha256": "555e7fe79f78c11b07a6ba1cbe048ec540a4941e19e6abf01b8be39af991445e",
+      "after_lf_sha256": "65e49334c2b8332e20a6b5679e5c124564183ac2b9101462d4262dbc75a7d55b",
+      "proof": "exact include/comment filename inversion"
+    },
+    {
+      "before_path": "app_program/subsystem2/ctrl_motion.c",
+      "after_path": "app_program/subsystem2/ctrl_motion.c",
+      "before_lf_sha256": "c348810d1c8d0cca5db34d520c830617c0dfcd3688300a900e0d790e61014e99",
+      "after_lf_sha256": "5d6a461b4ce5737d273b8a11ca683491bca29074fbf22bbf9eddffe8f0485553",
+      "proof": "exact include/comment filename inversion"
+    },
+    {
+      "before_path": "app_program/subsystem2/motion.c",
+      "after_path": "app_program/subsystem2/motion.c",
+      "before_lf_sha256": "ee236789df711185907265d07ed987c1cfc646dc9af8d3687d7642136aa189e5",
+      "after_lf_sha256": "6c9a5efe618fd22218e967c78dd0b4d8b9e0c482357a237feb0993f61c0b1adb",
+      "proof": "exact include/comment filename inversion"
+    },
+    {
+      "before_path": "testing/integration/course_sim.c",
+      "after_path": "testing/integration/course_sim.c",
+      "before_lf_sha256": "3a3f0d68eb78623597ae8de5f87ea8556bde4e7b48f0673c3e9b00ef8d707c7c",
+      "after_lf_sha256": "7e57c413bdfd257fe217797a1fda613689a08a806e8662b91b224f6667e0f935",
+      "proof": "exact include/comment filename inversion"
+    },
+    {
+      "before_path": "testing/subsystem2/host_regression.c",
+      "after_path": "testing/subsystem2/host_regression.c",
+      "before_lf_sha256": "5faf5a44058b9d8343b5d9037eccdfe7119785575a19ce62dc3321939a9366f5",
+      "after_lf_sha256": "a10d58902fcc873c644360104f44198a3738d2f3717195f8e04906aec5af69de",
+      "proof": "exact include/comment filename inversion"
+    },
+    {
+      "before_path": "testing/subsystem3/test_drive.c",
+      "after_path": "testing/subsystem3/test_drive.c",
+      "before_lf_sha256": "77d067253d46acad1584d9ddbabe27d249faa4572a37fd6a9f47c33a391ed317",
+      "after_lf_sha256": "8cb824f17a81684b9d4509bcb9d22acb408173b511aacc314c1684bd55324aa2",
+      "proof": "exact include/comment filename inversion"
+    },
+    {
+      "before_path": "testing/subsystem5/controller_test.c",
+      "after_path": "testing/subsystem5/controller_test.c",
+      "before_lf_sha256": "5fe87f3d2aacabc1443407da997e9d2f9e0b68425972a02ba334fdd0d6f3cd1d",
+      "after_lf_sha256": "50025d0c859e9d7886a89da5bcfa38ec3b96a18c1efdb04e9d7918aaeb5215ac",
+      "proof": "exact include/comment filename inversion"
+    },
+    {
+      "before_path": "testing/compliance/motion_storage_test.c",
+      "after_path": "testing/compliance/motion_storage_test.c",
+      "before_lf_sha256": "34201fece1813f2c272c04f325f2840302d5af07e832e90935a1e22a813b9c72",
+      "after_lf_sha256": "5096837ccc63fa51043eced7bb7dbdfcb0bdb4f196baca597fe100b58909f9d9",
+      "proof": "exact include/comment filename inversion"
+    },
+    {
+      "before_path": "tools/test-buddy3.ps1",
+      "after_path": "tools/test-buddy3.ps1",
+      "before_lf_sha256": "f3837f4f6a6ddd4c1dd8c33f625c4b43e21fc69ee6754e2fb3e974d7d0d37184",
+      "after_lf_sha256": "16a90b898ca63a658d9c07b29f815135281a19826f49167c48278d0c2cdc4107",
+      "proof": "exact filename spelling substitution"
+    },
+    {
+      "before_path": "testing/subsystem5/Makefile",
+      "after_path": "testing/subsystem5/Makefile",
+      "before_lf_sha256": "f33d2c09316eaddb8dc3a48114432eeae9e009c92f7ce3d4000c5d6a32d0c3b5",
+      "after_lf_sha256": "9db28fe47aebddaff9fe4d94ca3a5a6d5a0955ceddf5e89279cf290b0d812a8a",
+      "proof": "exact filename spelling substitution"
+    },
+    {
+      "before_path": "testing/subsystem2/Makefile",
+      "after_path": "testing/subsystem2/Makefile",
+      "before_lf_sha256": "29348e58ab94d9ca26acacddd995a119209c985087d57f1f1d3df8382e3895a1",
+      "after_lf_sha256": "531c05f7b18365bf896d3b1962c04bb8cc2edaf5f6a3ee7ce570464bc04ebd73",
+      "proof": "exact filename spelling substitution"
+    },
+    {
+      "before_path": "testing/integration/controller_test.mk",
+      "after_path": "testing/integration/controller_test.mk",
+      "before_lf_sha256": "2ff45f10f7e62209550781477788976d910604f59fec99530d3a78ac8ad96b1a",
+      "after_lf_sha256": "34a410710ba1121853bade22304cfb914460af29d0f734253c3547916c012b1a",
+      "proof": "exact filename spelling substitution"
+    },
+    {
+      "before_path": "testing/subsystem3/Makefile",
+      "after_path": "testing/subsystem3/Makefile",
+      "before_lf_sha256": "0d2473529437936a15b6973db90a4e35d632510762a05396ee0bdf16abb035c7",
+      "after_lf_sha256": "791ee0caab0fe0936c86a387cd50b9ffa4f74a2100f33b97fe775f5345cde411",
+      "proof": "exact filename spelling substitution"
+    },
+    {
+      "before_path": "app_program/subsystem2/README.md",
+      "after_path": "app_program/subsystem2/README.md",
+      "before_lf_sha256": "7a4880a48d50002e8b40f44eb80f4c43e6060a79ee61dd73aa8e5caad42cf4f0",
+      "after_lf_sha256": "bb850a91f485d34199f39419e0c2911aeceb9df27e3baba2c7c7aa5ab2ae4af2",
+      "proof": "exact filename spelling substitution"
+    },
+    {
+      "before_path": "build_make/mtkernel_3/app_program/subdir.mk",
+      "after_path": "build_make/mtkernel_3/app_program/subdir.mk",
+      "before_lf_sha256": "fa9987188bd2957d9a704333193bbeb8c23781eadd5f6d1f8ad40356c14d9bff",
+      "after_lf_sha256": "dc0b5a3c5fec17764fe9dba3c3760580cb7ded3875d95c863045bf01d1ec57bf",
+      "proof": "reviewed historical source-order mapping"
+    }
+  ],
+  "prefix": "motion_e",
+  "prefix_collision_preflight": [],
+  "historical_reference_policy": "Published alias/format/function-doc and lexical-review manifests retain old filenames and must be checked at their pinned commits. The target Makefile retains estimate_motion.c only as a sort key.",
+  "target_bytes_compared": false,
+  "runtime_tests_executed": false
+}

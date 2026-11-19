@@ -1,13 +1,13 @@
-/** @file estimate_motion.c
+/** @file motion_estimation.c
  * @brief Encoder-based speed and distance estimation.
  */
 /*
- * File: estimate_motion.c
+ * File: motion_estimation.c
  * Owner: Buddy 2 - Motion Control
  * Purpose: Encoder-based speed and distance estimation.
  */
 
-#include "estimate_motion.h"
+#include "motion_estimation.h"
 #include "../app_types.h"
 
 #define SPEED_FILTER (0.4f) /* 0..1, 1 = no smoothing */
@@ -26,7 +26,7 @@ static volatile float32_t g_m_per_count = 0.0f;
 static float32_t g_track_width_m = 0.0f;
 
 /** @brief Reset scales, encoder history, speed and acceleration estimates.
- * @see estimate_motion.h for the initialization and ownership contract.
+ * @see motion_estimation.h for the initialization and ownership contract.
  */
 void motion_estimation_init (float32_t m_per_count, float32_t track_width_m)
 {
@@ -43,7 +43,7 @@ void motion_estimation_init (float32_t m_per_count, float32_t track_width_m)
 }
 
 /** @brief Store a new encoder scale while retaining filtered history.
- * @see estimate_motion.h for input units and the owner-only update contract.
+ * @see motion_estimation.h for input units and the owner-only update contract.
  */
 void motion_estimation_set_scale (float32_t m_per_count)
 {
@@ -57,7 +57,7 @@ float32_t motion_estimation_scale (void)
 }
 
 /** @brief Advance filtered speed and acceleration using modular wheel deltas.
- * @see estimate_motion.h for dt_s and serialization requirements.
+ * @see motion_estimation.h for dt_s and serialization requirements.
  */
 void motion_estimation_update (float32_t dt_s)
 {
@@ -110,7 +110,7 @@ float32_t motion_estimation_robot_dist (void)
 }
 
 /** @brief Return unwrapped differential-drive heading, or zero for no width.
- * @see estimate_motion.h for the sign, units and sampling limitations.
+ * @see motion_estimation.h for the sign, units and sampling limitations.
  */
 float32_t motion_estimation_heading_deg (void)
 {

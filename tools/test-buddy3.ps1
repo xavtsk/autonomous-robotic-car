@@ -107,7 +107,7 @@ try {
         "$repoRoot\app_program\controller\s3_drive.c" `
         "$repoRoot\app_program\subsystem2\ctrl_motion.c" `
         "$repoRoot\app_program\subsystem2\motion_pack.c" `
-        "$repoRoot\app_program\subsystem2\estimate_motion.c" `
+        "$repoRoot\app_program\subsystem2\motion_estimation.c" `
         "$repoRoot\app_program\subsystem2\speed_pid.c" `
         "$repoRoot\testing\subsystem3\test_drive.c" -o $driveExe
     if ($LASTEXITCODE -ne 0) { throw 'Integration test compilation failed.' }
@@ -120,7 +120,7 @@ try {
         "$repoRoot\app_program\subsystem2\motion.c" `
         "$repoRoot\app_program\subsystem2\ctrl_motion.c" `
         "$repoRoot\app_program\subsystem2\motion_pack.c" `
-        "$repoRoot\app_program\subsystem2\estimate_motion.c" `
+        "$repoRoot\app_program\subsystem2\motion_estimation.c" `
         "$repoRoot\app_program\subsystem2\speed_pid.c" `
         "$repoRoot\testing\subsystem3\test_motion_feedback.c" -o $feedbackExe
     if ($LASTEXITCODE -ne 0) { throw 'Motion feedback test compilation failed.' }

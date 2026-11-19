@@ -3,8 +3,11 @@
 This batch was applied locally after publishing the pristine repaired baseline
 `e7d1366fdde697a50e578f95a97290765a72c969`. The reviewed
 [plan](FORMAT_PLAN.json) and applied [manifest](FORMAT_MANIFEST.json) bind the
-239 changed files to that revision. Target-build and Linux execution evidence for
-this formatting candidate is still pending; no runtime-equivalence claim is made.
+239 changed files to that revision. The [CI evidence](evidence/FORMAT_CI_44579973340.md)
+records matching target-image bytes and all repaired-run semantic comparisons,
+while retaining the initial harness failure and two baseline replay expectation
+failures. These preservation checks do not certify physical behavior or all BARR
+rules. Function contracts are tracked in the [documentation review](FUNCTION_DOCUMENTATION.md).
 
 The applied batch has 239 files from the shared owned/mixed scope. Each has
 a specific module brief taken from an existing purpose statement or individually
@@ -27,7 +30,7 @@ and comment rewrites are outside this exact-token batch.
 python tools/compliance/format_owned.py --comments-only
 python tools/compliance/format_owned.py --formatter /path/to/clang-format-18
 python -m unittest testing.compliance.test_format_plan testing.compliance.test_instrument_harnesses
-python tools/compliance/verify_format_batch.py
+python tools/compliance/verify_format_batch.py --candidate 6326fcbecc1519f1332cda7f1ffb24d7a498e046
 ```
 
 Both tool invocations are read-only by default. The explicit `--apply` option
