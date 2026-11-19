@@ -37,6 +37,18 @@ def motion_storage_flags(root):
     return ['-DMOTION_COMPACT_RETAINED=1'] if compact else []
 
 
+def motion_estimation_module(root):
+    """Resolve the immutable baseline or renamed candidate, without ambiguity."""
+    directory = root/'app_program/subsystem2'
+    names = ('estimate_motion', 'motion_estimation')
+    present = {name: tuple((directory/(name+suffix)).is_file() for suffix in ('.c', '.h'))
+               for name in names}
+    complete = [name for name, pair in present.items() if pair == (True, True)]
+    if len(complete) != 1 or any(any(pair) for name, pair in present.items() if name not in complete):
+        raise ValueError('Expected exactly one complete motion estimation .c/.h pair: ' + str(present))
+    return complete[0]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, required=True)
@@ -156,12 +168,13 @@ def main():
     motion_fixture = tooling.parents[1]/'testing/compliance/motion_storage_test.c'
     motion_stubs = tooling.parents[1]/'testing/subsystem3'
     motion_app = root/'app_program/subsystem2'
+    estimation_module = motion_estimation_module(root)
     motion_binary = output/'motion_storage_test'
     run('motion_storage_build', [compiler, *shlex.split(flags),
         *motion_storage_flags(root), '-I'+str(root), '-I'+str(motion_app),
         '-I'+str(motion_stubs), '-include', str(motion_stubs/'motion_kernel_stub.h'),
         str(motion_fixture), *[str(motion_app/(name+'.c')) for name in
-            ('ctrl_motion', 'motion_pack', 'estimate_motion', 'speed_pid')],
+            ('ctrl_motion', 'motion_pack', estimation_module, 'speed_pid')],
         '-o', str(motion_binary)])
     run('motion_storage', [str(motion_binary)])
     barcode_fixture = tooling.parents[1]/'testing/compliance/barcode_work_test.c'
@@ -169,6 +182,11 @@ def main():
     run('barcode_work_build', [compiler, *shlex.split(flags), '-I'+str(root),
         str(barcode_fixture), '-o', str(barcode_binary)])
     run('barcode_work', [str(barcode_binary)])
+    bcap_binary = output/'bcap_storage_test'
+    run('bcap_storage_build', [compiler, *shlex.split(flags), '-I'+str(root),
+        str(tooling.parents[1]/'testing/compliance/bcap_storage_test.c'),
+        str(root/'app_program/controller/bc_capture.c'), '-lm', '-o', str(bcap_binary)])
+    run('bcap_storage', [str(bcap_binary)])
     # The existing S1 make targets cover 0/0 and 1/1. Exercise each independent
     # debug layout with the same assertions, including under ASan/UBSan.
     mqtt_fixtures = tooling.parents[1]/'testing/subsystem1'

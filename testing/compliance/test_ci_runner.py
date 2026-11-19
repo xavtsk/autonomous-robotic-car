@@ -1,6 +1,7 @@
 """Runner verdict regressions; no C compiler, broker or robot is executed."""
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -10,6 +11,34 @@ SPEC.loader.exec_module(RUNNER)
 
 
 class RunnerVerdictTests(unittest.TestCase):
+    def test_motion_module_lookup_accepts_each_complete_historical_pair(self):
+        for name in ('estimate_motion', 'motion_estimation'):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                directory = root/'app_program/subsystem2'
+                directory.mkdir(parents=True)
+                for suffix in ('.c', '.h'):
+                    (directory/(name+suffix)).touch()
+                self.assertEqual(RUNNER.motion_estimation_module(root), name)
+
+    def test_motion_module_lookup_rejects_missing_partial_or_ambiguous_pairs(self):
+        names = ('estimate_motion.c', 'estimate_motion.h',
+                 'motion_estimation.c', 'motion_estimation.h')
+        # Enumerate all 16 presence combinations; only the two complete,
+        # exclusive pairs are valid. In particular, stale lone headers fail.
+        for mask in range(16):
+            if mask in (3, 12):
+                continue
+            with self.subTest(mask=mask), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                directory = root/'app_program/subsystem2'
+                directory.mkdir(parents=True)
+                for index, name in enumerate(names):
+                    if mask & (1 << index):
+                        (directory/name).touch()
+                with self.assertRaises(ValueError):
+                    RUNNER.motion_estimation_module(root)
+
     def test_swallowed_sanitizer_report_still_fails(self):
         for report in ('ERROR: AddressSanitizer: heap-buffer-overflow',
                        'ERROR: LeakSanitizer: detected memory leaks',

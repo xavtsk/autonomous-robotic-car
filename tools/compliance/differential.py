@@ -8,7 +8,7 @@ import subprocess
 import sys
 from replay_audit import audit
 from instrument_harnesses import runtime_source, mqtt_source
-from run_host import motion_storage_flags
+from run_host import motion_estimation_module, motion_storage_flags
 
 
 def main():
@@ -46,8 +46,9 @@ def main():
                 subprocess.run([str(debug_binary)], stdout=stream, check=True, timeout=30)
             app = root / 'app_program'
             fixtures = roots['candidate'] / 'testing'
+            estimation_module = motion_estimation_module(root)
             suites = {
-                'motion': (2, ['motion', 'ctrl_motion', 'motion_pack', 'estimate_motion', 'speed_pid'],
+                'motion': (2, ['motion', 'ctrl_motion', 'motion_pack', estimation_module, 'speed_pid'],
                            fixtures/'subsystem3', ['-include', str(fixtures/'subsystem3/motion_kernel_stub.h')]),
                 'terrain': (4, ['imu_sensor', 'imu_calibration', 'tilt_estimation', 'hump_detection', 'events_motion', 'terr_data'],
                             fixtures/'subsystem4', ['-DAPP_IMU_DEBUG=1']),
@@ -66,13 +67,17 @@ def main():
             binary = build(label, 'motion_storage',
                 [fixtures/'compliance/motion_storage_test.c',
                  *[app/'subsystem2'/(name+'.c') for name in
-                   ('ctrl_motion', 'motion_pack', 'estimate_motion', 'speed_pid')]],
+                   ('ctrl_motion', 'motion_pack', estimation_module, 'speed_pid')]],
                 [root, app/'subsystem2', fixtures/'subsystem3'],
                 [*motion_storage_flags(root), '-include', str(fixtures/'subsystem3/motion_kernel_stub.h')])
             with (output/(label+'-motion_storage.trace')).open('wb') as stdout, (output/(label+'-motion_storage.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
             binary = build(label, 'barcode_work', [fixtures/'compliance/barcode_work_test.c'], [root])
             with (output/(label+'-barcode_work.trace')).open('wb') as stdout, (output/(label+'-barcode_work.log')).open('wb') as stderr:
+                subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
+            binary = build(label, 'bcap_storage',
+                [fixtures/'compliance/bcap_storage_test.c', app/'controller/bc_capture.c'], [root])
+            with (output/(label+'-bcap_storage.trace')).open('wb') as stdout, (output/(label+'-bcap_storage.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
             runtime = runtime_source(roots['candidate'], root, output/(label+'-runtime.c'))
             runtime_sources = [app/'controller'/(name+'.c') for name in
@@ -118,7 +123,8 @@ def main():
                              ('runtime', b'RUNTIME '), ('mqtt', b'MQTT_'), ('mqtt_plain', b'MQTT_'),
                              ('mqtt_production', b'MQTT_'), ('mqtt_imu', b'MQTT_'),
                              ('mqtt_receive', b'MQSTORE '),
-                             ('motion_storage', b'MSTORE '), ('barcode_work', b'BWORK ')):
+                             ('motion_storage', b'MSTORE '), ('barcode_work', b'BWORK '),
+                             ('bcap_storage', b'BCSTORE ')):
             before_trace = (output / ('baseline-' + name + '.trace')).read_bytes()
             after_trace = (output / ('candidate-' + name + '.trace')).read_bytes()
             if name.startswith('mqtt'):
@@ -129,8 +135,12 @@ def main():
             rows = sum(line.startswith(prefix) for line in before_trace.splitlines())
             minimum_rows = (802 if name == 'motion_storage' else
                             784 if name == 'barcode_work' else
+                            619 if name == 'bcap_storage' else
                             2093 if name == 'mqtt_receive' else
-                            100 if name.startswith('mqtt') else 11)
+                            # Complete fixed-baseline profile counts observed
+                            # in run 44584191817; plain MQTT has 99 real rows.
+                            {'mqtt': 269, 'mqtt_plain': 99,
+                             'mqtt_production': 251, 'mqtt_imu': 116}.get(name, 11))
             matched = before_trace == after_trace and rows >= minimum_rows
             results['checks'].append(dict(name=name+'_semantic_trace', matched=matched, semantic_rows=rows,
                 baseline_sha256=hashlib.sha256(before_trace).hexdigest(), candidate_sha256=hashlib.sha256(after_trace).hexdigest()))
