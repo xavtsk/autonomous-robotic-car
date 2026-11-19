@@ -1,0 +1,921 @@
+{
+  "schema_version": 1,
+  "baseline_revision": "99b07b777559c0dd5d536f147fae15ea08f0d642",
+  "scope": [
+    "app_program/controller/control_debug.c"
+  ],
+  "before_sha256_lf": "1296e652c7ed9c1ad0425509468333309d5170acecdc5f01b5ced3b31b5a45fc",
+  "after_sha256_lf": "e641a99e8dc50068bbc581979897d6a30ee847124dc579c67376a5f5b5717457",
+  "public_header_sha256_lf": "913f254df87b14885e7ac51b20eccd6b9f79bef5c3813fcd7764a04bc4460560",
+  "domain": {
+    "rows": [
+      {
+        "name": "timestamp_us",
+        "offset": 0,
+        "width": 32,
+        "signed": false,
+        "encoded_word": 31744
+      },
+      {
+        "name": "motion_timestamp_us",
+        "offset": 32,
+        "width": 32,
+        "signed": false,
+        "encoded_word": 31776
+      },
+      {
+        "name": "sequence",
+        "offset": 64,
+        "width": 8,
+        "signed": false,
+        "encoded_word": 7232
+      },
+      {
+        "name": "motion_available",
+        "offset": 72,
+        "width": 1,
+        "signed": false,
+        "encoded_word": 72
+      },
+      {
+        "name": "motion_valid",
+        "offset": 73,
+        "width": 1,
+        "signed": false,
+        "encoded_word": 73
+      },
+      {
+        "name": "braked",
+        "offset": 74,
+        "width": 1,
+        "signed": false,
+        "encoded_word": 74
+      },
+      {
+        "name": "busy",
+        "offset": 75,
+        "width": 1,
+        "signed": false,
+        "encoded_word": 75
+      },
+      {
+        "name": "motion_state",
+        "offset": 76,
+        "width": 3,
+        "signed": false,
+        "encoded_word": 2124
+      },
+      {
+        "name": "motion_fault",
+        "offset": 79,
+        "width": 3,
+        "signed": false,
+        "encoded_word": 2127
+      },
+      {
+        "name": "setpoint_left",
+        "offset": 82,
+        "width": 13,
+        "signed": true,
+        "encoded_word": 45138
+      },
+      {
+        "name": "setpoint_right",
+        "offset": 95,
+        "width": 13,
+        "signed": true,
+        "encoded_word": 45151
+      },
+      {
+        "name": "measured_left",
+        "offset": 108,
+        "width": 13,
+        "signed": true,
+        "encoded_word": 45164
+      },
+      {
+        "name": "measured_right",
+        "offset": 121,
+        "width": 13,
+        "signed": true,
+        "encoded_word": 45177
+      },
+      {
+        "name": "duty_left",
+        "offset": 134,
+        "width": 8,
+        "signed": true,
+        "encoded_word": 40070
+      },
+      {
+        "name": "duty_right",
+        "offset": 142,
+        "width": 8,
+        "signed": true,
+        "encoded_word": 40078
+      },
+      {
+        "name": "encoder_left",
+        "offset": 150,
+        "width": 20,
+        "signed": true,
+        "encoded_word": 52374
+      },
+      {
+        "name": "encoder_right",
+        "offset": 170,
+        "width": 20,
+        "signed": true,
+        "encoded_word": 52394
+      },
+      {
+        "name": "drive_state",
+        "offset": 190,
+        "width": 3,
+        "signed": false,
+        "encoded_word": 2238
+      },
+      {
+        "name": "reason",
+        "offset": 193,
+        "width": 4,
+        "signed": false,
+        "encoded_word": 3265
+      },
+      {
+        "name": "pending",
+        "offset": 197,
+        "width": 3,
+        "signed": false,
+        "encoded_word": 2245
+      },
+      {
+        "name": "line_error",
+        "offset": 200,
+        "width": 8,
+        "signed": true,
+        "encoded_word": 40136
+      },
+      {
+        "name": "line_flags",
+        "offset": 208,
+        "width": 5,
+        "signed": false,
+        "encoded_word": 4304
+      },
+      {
+        "name": "barcode_status",
+        "offset": 213,
+        "width": 3,
+        "signed": false,
+        "encoded_word": 2261
+      },
+      {
+        "name": "accepted_calibration",
+        "offset": 216,
+        "width": 3,
+        "signed": false,
+        "encoded_word": 2264
+      },
+      {
+        "name": "readiness",
+        "offset": 219,
+        "width": 5,
+        "signed": false,
+        "encoded_word": 4315
+      },
+      {
+        "name": "barcode_events",
+        "offset": 224,
+        "width": 16,
+        "signed": false,
+        "encoded_word": 15584
+      },
+      {
+        "name": "junction_events",
+        "offset": 240,
+        "width": 16,
+        "signed": false,
+        "encoded_word": 15600
+      },
+      {
+        "name": "lost_events",
+        "offset": 256,
+        "width": 16,
+        "signed": false,
+        "encoded_word": 15616
+      },
+      {
+        "name": "sample_gap_us",
+        "offset": 272,
+        "width": 32,
+        "signed": false,
+        "encoded_word": 32016
+      },
+      {
+        "name": "run_max_gap_us",
+        "offset": 304,
+        "width": 32,
+        "signed": false,
+        "encoded_word": 32048
+      },
+      {
+        "name": "left_white",
+        "offset": 336,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11600
+      },
+      {
+        "name": "left_black",
+        "offset": 348,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11612
+      },
+      {
+        "name": "left_white_limit",
+        "offset": 360,
+        "width": 10,
+        "signed": false,
+        "encoded_word": 9576
+      },
+      {
+        "name": "left_black_limit",
+        "offset": 370,
+        "width": 10,
+        "signed": false,
+        "encoded_word": 9586
+      },
+      {
+        "name": "right_white",
+        "offset": 380,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11644
+      },
+      {
+        "name": "right_black",
+        "offset": 392,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11656
+      },
+      {
+        "name": "right_white_limit",
+        "offset": 404,
+        "width": 10,
+        "signed": false,
+        "encoded_word": 9620
+      },
+      {
+        "name": "right_black_limit",
+        "offset": 414,
+        "width": 10,
+        "signed": false,
+        "encoded_word": 9630
+      },
+      {
+        "name": "barcode_white",
+        "offset": 424,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11688
+      },
+      {
+        "name": "barcode_black",
+        "offset": 436,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11700
+      },
+      {
+        "name": "barcode_white_limit",
+        "offset": 448,
+        "width": 10,
+        "signed": false,
+        "encoded_word": 9664
+      },
+      {
+        "name": "barcode_black_limit",
+        "offset": 458,
+        "width": 10,
+        "signed": false,
+        "encoded_word": 9674
+      },
+      {
+        "name": "cal_sensor",
+        "offset": 468,
+        "width": 2,
+        "signed": false,
+        "encoded_word": 1492
+      },
+      {
+        "name": "collecting",
+        "offset": 470,
+        "width": 1,
+        "signed": false,
+        "encoded_word": 470
+      },
+      {
+        "name": "white_min",
+        "offset": 471,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11735
+      },
+      {
+        "name": "white_max",
+        "offset": 483,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11747
+      },
+      {
+        "name": "black_min",
+        "offset": 495,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11759
+      },
+      {
+        "name": "black_max",
+        "offset": 507,
+        "width": 12,
+        "signed": false,
+        "encoded_word": 11771
+      },
+      {
+        "name": "white_count",
+        "offset": 519,
+        "width": 16,
+        "signed": false,
+        "encoded_word": 15879
+      },
+      {
+        "name": "black_count",
+        "offset": 535,
+        "width": 16,
+        "signed": false,
+        "encoded_word": 15895
+      }
+    ],
+    "count": 50,
+    "body_bits": 551,
+    "max_offset": 535,
+    "exact_schema_match": true
+  },
+  "representation": {
+    "offset_bits": 10,
+    "width_minus_one_bits": 5,
+    "signed_boolean_bits": 1,
+    "table_entries": 50,
+    "arm_record_bytes": 2,
+    "arm_table_bytes": 100,
+    "host_mingw_record_bytes": 4,
+    "host_mingw_table_bytes": 200
+  },
+  "proof": {
+    "public_header_byte_identical": true,
+    "wide_pack_unpack_and_helpers_byte_identical": true,
+    "builder_bodies_inverse_token_identical": true,
+    "before_builder_fingerprint": "14698580c2138d52d2f307b4649a87706c4f49640b085f212f8fc1bc32d97374",
+    "after_inverse_builder_fingerprint": "14698580c2138d52d2f307b4649a87706c4f49640b085f212f8fc1bc32d97374",
+    "constant_table_row_names_offsets_widths_signs_identical": true,
+    "object_constant_bytes": {
+      "before": {
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-objdump.exe",
+          "-s",
+          "-j",
+          ".rodata.g_debug_fields",
+          "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\before.o"
+        ],
+        "byte_count": 200,
+        "sha256": "80f9b4a450f9c03ffd528d5d3c106598c27e9f49bf9489625a90be95b7c86445",
+        "hex": "00002000200020004000080048000100490001004a0001004b0001004c0003004f00030052000d015f000d016c000d0179000d01860008018e00080196001401aa001401be000300c1000400c5000300c8000801d0000500d5000300d8000300db000500e0001000f000100000011000100120003001200050010c005c010c0068010a0072010a007c010c0088010c0094010a009e010a00a8010c00b4010c00c0010a00ca010a00d4010200d6010100d7010c00e3010c00ef010c00fb010c000702100017021000",
+        "all_fifty_rows_equal_decoded_schema": true
+      },
+      "after": {
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-objdump.exe",
+          "-s",
+          "-j",
+          ".rodata.g_debug_fields",
+          "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\after.o"
+        ],
+        "byte_count": 100,
+        "sha256": "516356559c8249fc1f6f7bf7b4dc334979ec0b0dcba97da8edea0e2db6143f4b",
+        "hex": "007c207c401c480049004a004b004c084f0852b05fb06cb079b0869c8e9c96ccaaccbe08c10cc508c89cd010d508d808db10e03cf03c003d107d307d502d5c2d682572257c2d882d94259e25a82db42dc025ca25d405d601d72de32def2dfb2d073e173e",
+        "all_fifty_rows_equal_decoded_schema": true
+      }
+    },
+    "format": {
+      "command": [
+        "C:\\Code\\autonomous-robotic-car\\build\\tooling\\clang-format-18\\clang_format\\data\\bin\\clang-format.exe",
+        "-i",
+        "--style={BasedOnStyle: InheritParentConfig, InsertBraces: false, BreakStringLiterals: false, ReflowComments: false}",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c"
+      ],
+      "before_sha256_lf": "e641a99e8dc50068bbc581979897d6a30ee847124dc579c67376a5f5b5717457",
+      "after_sha256_lf": "e641a99e8dc50068bbc581979897d6a30ee847124dc579c67376a5f5b5717457",
+      "tokens_and_comments_identical": true
+    }
+  },
+  "preserved": [
+    "Null and unsigned-cast selector rejection remain before metadata indexing.",
+    "Public signed/unsigned values retain full32-bit domain until original width and semantic validation.",
+    "Width32 remains32 after decoding; 64-bit limit and signed arithmetic are unchanged.",
+    "Wrong signedness, invalid range, error latch, later valid writes and end-output mutation retain original bodies after metadata decoding.",
+    "No public structure, selector enum, packet bit position, floating precision, owner or synchronization change.",
+    "Private b_signed_value Boolean name follows BARR convention; no public name changes."
+  ],
+  "arm": {
+    "receipts": {
+      "before": {
+        "revision": "99b07b777559c0dd5d536f147fae15ea08f0d642",
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\arm-none-eabi\\include",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\lib\\gcc\\arm-none-eabi\\14.3.1\\include",
+          "-mcpu=cortex-m0plus",
+          "-mthumb",
+          "-ffreestanding",
+          "-O2",
+          "-g3",
+          "-mfloat-abi=soft",
+          "-DCNF_SMP=1",
+          "-DAPP_S4=1",
+          "-DAPP_S4_BENCH=0",
+          "-DAPP_S5=1",
+          "-DS5_HARDWARE_CONFIRMED=1",
+          "-DAPP_TEST=0",
+          "-DAPP_IR_BENCH=0",
+          "-DAPP_S3_MOTION=1",
+          "-DAPP_IR_CHANNELS=1",
+          "-DS3_STRAIGHT_TEST=0",
+          "-DAPP_DIAGNOSTICS=0",
+          "-DAPP_MOTION_SMOKE=0",
+          "-DAPP_IR_DEBUG=1",
+          "-DAPP_IMU_DEBUG=0",
+          "-DTM_CONSOLE_UART=0",
+          "-DBOARD_UART0_FREE=1",
+          "-DTM_CONSOLE_USB_CDC=1",
+          "-DNDEBUG",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\tinyusb\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-DTM_WIFI_CYW43=1",
+          "-DCYW43_LWIP=1",
+          "-DCYW43_ENABLE_BLUETOOTH=0",
+          "-DCYW43_USE_OTP_MAC=1",
+          "-DPICO_CYW43_LOGGING_ENABLED=0",
+          "-DPICO_RP2040=1",
+          "-DPICO_32BIT=1",
+          "-DPICO_ON_DEVICE=1",
+          "-DPICO_BUILD=1",
+          "-DPICO_NO_HARDWARE=0",
+          "-DRASPBERRYPI_PICO_W=1",
+          "-DCYW43_DEFAULT_PIN_WL_REG_ON=23u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_OUT=24u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_IN=24u",
+          "-DCYW43_DEFAULT_PIN_WL_HOST_WAKE=24u",
+          "-DCYW43_DEFAULT_PIN_WL_CLOCK=29u",
+          "-DCYW43_DEFAULT_PIN_WL_CS=25u",
+          "-DNDEBUG",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libwifi\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\firmware",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_cyw43_driver\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\boards\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\hardware_claim\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_util\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_pio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_gpio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_dma\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_clocks\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-DTM_NET_LWIP=1",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\lwip\\src\\include",
+          "-DTM_MQTT=1",
+          "-D_PICO_RP2040_",
+          "-IC:\\Code\\autonomous-robotic-car\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\config",
+          "-IC:\\Code\\autonomous-robotic-car\\kernel\\knlinc",
+          "-std=c99",
+          "-fstack-usage",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-c",
+          "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c",
+          "-o",
+          "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\before.o"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "",
+        "source_sha256_lf": "1296e652c7ed9c1ad0425509468333309d5170acecdc5f01b5ced3b31b5a45fc",
+        "symbols": "00000000 0000001e T control_debug_builder_init\n00000000 00000036 T control_debug_builder_end\n00000000 00000044 t put\n00000000 00000054 t debug_builder_write\n00000000 00000080 T control_debug_builder_s\n00000000 000000bc T control_debug_builder_u\n00000000 000000c8 r g_debug_fields\n00000000 000004d0 T control_debug_pack\n00000000 00000848 T control_debug_unpack\n",
+        "stack": "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:15:13:put\t28\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:279:13:debug_builder_write\t28\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:77:6:control_debug_pack\t32\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:128:6:control_debug_unpack\t96\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:302:6:control_debug_builder_init\t8\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:322:6:control_debug_builder_u\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:353:6:control_debug_builder_s\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:385:6:control_debug_builder_end\t8\tstatic\n",
+        "disassembly_sha256": "d98bd128c4e954f2bfb89e0e2353875347b47125b3ffb0a70541509aef1b8b73"
+      },
+      "after": {
+        "revision": "99b07b777559c0dd5d536f147fae15ea08f0d642",
+        "command": [
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\bin\\arm-none-eabi-gcc.exe",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\arm-none-eabi\\include",
+          "-isystem",
+          "C:\\Code\\autonomous-robotic-car\\build\\tooling\\arm\\lib\\gcc\\arm-none-eabi\\14.3.1\\include",
+          "-mcpu=cortex-m0plus",
+          "-mthumb",
+          "-ffreestanding",
+          "-O2",
+          "-g3",
+          "-mfloat-abi=soft",
+          "-DCNF_SMP=1",
+          "-DAPP_S4=1",
+          "-DAPP_S4_BENCH=0",
+          "-DAPP_S5=1",
+          "-DS5_HARDWARE_CONFIRMED=1",
+          "-DAPP_TEST=0",
+          "-DAPP_IR_BENCH=0",
+          "-DAPP_S3_MOTION=1",
+          "-DAPP_IR_CHANNELS=1",
+          "-DS3_STRAIGHT_TEST=0",
+          "-DAPP_DIAGNOSTICS=0",
+          "-DAPP_MOTION_SMOKE=0",
+          "-DAPP_IR_DEBUG=1",
+          "-DAPP_IMU_DEBUG=0",
+          "-DTM_CONSOLE_UART=0",
+          "-DBOARD_UART0_FREE=1",
+          "-DTM_CONSOLE_USB_CDC=1",
+          "-DNDEBUG",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\tinyusb\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-DTM_WIFI_CYW43=1",
+          "-DCYW43_LWIP=1",
+          "-DCYW43_ENABLE_BLUETOOTH=0",
+          "-DCYW43_USE_OTP_MAC=1",
+          "-DPICO_CYW43_LOGGING_ENABLED=0",
+          "-DPICO_RP2040=1",
+          "-DPICO_32BIT=1",
+          "-DPICO_ON_DEVICE=1",
+          "-DPICO_BUILD=1",
+          "-DPICO_NO_HARDWARE=0",
+          "-DRASPBERRYPI_PICO_W=1",
+          "-DCYW43_DEFAULT_PIN_WL_REG_ON=23u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_OUT=24u",
+          "-DCYW43_DEFAULT_PIN_WL_DATA_IN=24u",
+          "-DCYW43_DEFAULT_PIN_WL_HOST_WAKE=24u",
+          "-DCYW43_DEFAULT_PIN_WL_CLOCK=29u",
+          "-DCYW43_DEFAULT_PIN_WL_CS=25u",
+          "-DNDEBUG",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libwifi\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\libtm\\sysdepend\\pico_rp2040\\usb",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\src",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\cyw43-driver\\firmware",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_cyw43_driver\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\boards\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_base_headers\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\hardware_claim\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_binary_info\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\common\\pico_util\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\pico_platform\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_regs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2040\\hardware_structs\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_common\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_compiler\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_sections\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\pico_platform_panic\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_base\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_pio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_gpio\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_dma\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_irq\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_sync_spin_lock\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_clocks\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_resets\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\src\\rp2_common\\hardware_timer\\include",
+          "-DTM_NET_LWIP=1",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\lib\\liblwip\\sysdepend\\pico_rp2040",
+          "-IC:\\Code\\autonomous-robotic-car\\build\\tooling\\pico-sdk\\lib\\lwip\\src\\include",
+          "-DTM_MQTT=1",
+          "-D_PICO_RP2040_",
+          "-IC:\\Code\\autonomous-robotic-car\\include",
+          "-IC:\\Code\\autonomous-robotic-car\\config",
+          "-IC:\\Code\\autonomous-robotic-car\\kernel\\knlinc",
+          "-std=c99",
+          "-fstack-usage",
+          "-ffunction-sections",
+          "-fdata-sections",
+          "-c",
+          "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c",
+          "-o",
+          "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\after.o"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "",
+        "source_sha256_lf": "e641a99e8dc50068bbc581979897d6a30ee847124dc579c67376a5f5b5717457",
+        "symbols": "00000000 0000001e T control_debug_builder_init\n00000000 00000036 T control_debug_builder_end\n00000000 00000044 t put\n00000000 00000058 t debug_builder_write\n00000000 00000064 r g_debug_fields\n00000000 00000080 T control_debug_builder_s\n00000000 000000bc T control_debug_builder_u\n00000000 000004d0 T control_debug_pack\n00000000 00000848 T control_debug_unpack\n",
+        "stack": "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:16:13:put\t28\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:291:13:debug_builder_write\t28\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:78:6:control_debug_pack\t32\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:129:6:control_debug_unpack\t96\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:314:6:control_debug_builder_init\t8\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:334:6:control_debug_builder_u\t16\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:365:6:control_debug_builder_s\t24\tstatic\nC:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c:397:6:control_debug_builder_end\t8\tstatic\n",
+        "disassembly_sha256": "00f24e2bbd04410b53539cc1feb995d01ee3d7dbb8ca79b8342cdb6138bdc196"
+      }
+    },
+    "all_symbol_changes": [
+      {
+        "name": "debug_builder_write",
+        "before": {
+          "bytes": 84,
+          "kind": "t"
+        },
+        "after": {
+          "bytes": 88,
+          "kind": "t"
+        }
+      },
+      {
+        "name": "g_debug_fields",
+        "before": {
+          "bytes": 200,
+          "kind": "r"
+        },
+        "after": {
+          "bytes": 100,
+          "kind": "r"
+        }
+      }
+    ],
+    "all_stack_changes": [],
+    "read_only_delta_bytes": -100,
+    "text_delta_bytes": 4,
+    "static_ram_delta_bytes": 0,
+    "total_code_plus_constants_delta_bytes": -96
+  },
+  "host_layout": {
+    "command": [
+      "C:/msys64/ucrt64/bin/gcc.exe",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-pedantic-errors",
+      "-O2",
+      "-S",
+      "-x",
+      "c",
+      "-o",
+      "-",
+      "-"
+    ],
+    "source": "#include \"C:/Code/autonomous-robotic-car/app_program/controller/control_debug.c\"\nunsigned debug_metadata_layout_probe(void) { return sizeof(control_debug_field_info_t); }\nunsigned debug_metadata_table_probe(void) { return sizeof(g_debug_fields); }\n",
+    "exit_code": 0,
+    "stderr": "",
+    "assembly": {
+      "debug_metadata_layout_probe": "debug_metadata_layout_probe:\n\t.seh_endprologue\n\tmovl\t$4, %eax\n\tret\n\t.seh_endproc",
+      "debug_metadata_table_probe": "debug_metadata_table_probe:\n\t.seh_endprologue\n\tmovl\t$200, %eax\n\tret\n\t.seh_endproc"
+    },
+    "record_bytes": 4,
+    "table_bytes": 200,
+    "meaning": "MinGW bitfield allocation differs from Arm; logical16 bits are unchanged, and no wire/public struct relies on this private layout."
+  },
+  "host_compile_only": [
+    {
+      "subject": "before",
+      "fixture": "testing/compliance/control_builder_test.c",
+      "fixture_sha256_lf": "dfe6453872ff4a701aad800ad765810843a10844562ff778e133de181422ae74",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic-errors",
+        "-O2",
+        "-g",
+        "-IC:\\Code\\autonomous-robotic-car",
+        "-iquote",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller",
+        "C:\\Code\\autonomous-robotic-car\\testing\\compliance\\control_builder_test.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\before-source.c",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\before-control_builder_test.exe"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "subject": "before",
+      "fixture": "testing/compliance/control_debug_trace.c",
+      "fixture_sha256_lf": "e844b180136231bf7f92810aff7daaf925f9297da4c2f9315ef1ef4fbb4a9ab4",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic-errors",
+        "-O2",
+        "-g",
+        "-IC:\\Code\\autonomous-robotic-car",
+        "-iquote",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller",
+        "C:\\Code\\autonomous-robotic-car\\testing\\compliance\\control_debug_trace.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\before-source.c",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\before-control_debug_trace.exe"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "subject": "before",
+      "fixture": "testing/integration/control_debug_test.c",
+      "fixture_sha256_lf": "64d9e1c148f0138cf5b10d13803f5905aaaebf9a0a10b78d43ab45cd23df6950",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic-errors",
+        "-O2",
+        "-g",
+        "-IC:\\Code\\autonomous-robotic-car",
+        "-iquote",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller",
+        "C:\\Code\\autonomous-robotic-car\\testing\\integration\\control_debug_test.c",
+        "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\before-source.c",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\before-control_debug_test.exe"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "subject": "after",
+      "fixture": "testing/compliance/control_builder_test.c",
+      "fixture_sha256_lf": "dfe6453872ff4a701aad800ad765810843a10844562ff778e133de181422ae74",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic-errors",
+        "-O2",
+        "-g",
+        "-IC:\\Code\\autonomous-robotic-car",
+        "-iquote",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller",
+        "C:\\Code\\autonomous-robotic-car\\testing\\compliance\\control_builder_test.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\after-control_builder_test.exe"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "subject": "after",
+      "fixture": "testing/compliance/control_debug_trace.c",
+      "fixture_sha256_lf": "e844b180136231bf7f92810aff7daaf925f9297da4c2f9315ef1ef4fbb4a9ab4",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic-errors",
+        "-O2",
+        "-g",
+        "-IC:\\Code\\autonomous-robotic-car",
+        "-iquote",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller",
+        "C:\\Code\\autonomous-robotic-car\\testing\\compliance\\control_debug_trace.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\after-control_debug_trace.exe"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "subject": "after",
+      "fixture": "testing/integration/control_debug_test.c",
+      "fixture_sha256_lf": "64d9e1c148f0138cf5b10d13803f5905aaaebf9a0a10b78d43ab45cd23df6950",
+      "command": [
+        "C:/msys64/ucrt64/bin/gcc.exe",
+        "-std=c99",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-pedantic-errors",
+        "-O2",
+        "-g",
+        "-IC:\\Code\\autonomous-robotic-car",
+        "-iquote",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller",
+        "C:\\Code\\autonomous-robotic-car\\testing\\integration\\control_debug_test.c",
+        "C:\\Code\\autonomous-robotic-car\\app_program\\controller\\control_debug.c",
+        "-o",
+        "C:\\Code\\autonomous-robotic-car\\build\\debug-metadata-compile\\after-control_debug_test.exe"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "linux_gate": {
+    "status": "pending",
+    "required": [
+      "All1141 unchanged builder acceptance/byte/failure comparisons",
+      "Existing control packet tests and detailed runtime2398/operator8066 traces",
+      "All six GCC/Clang/sanitizer host modes",
+      "Linked Arm flash/RAM and complete normalized stack delta"
+    ]
+  },
+  "limits": [
+    "All local C checks are compiler/object/compile-link evidence. No native Windows project executable was run.",
+    "Arm object allocation is measured with GCC14.3.1; whole-firmware linked flash change awaits Linux target build.",
+    "Private bitfield allocation is ABI-specific; the two-byte assertion is Arm-only.",
+    "No RTOS scheduling, timing or hardware equivalence is inferred."
+  ],
+  "python_audit": {
+    "command": [
+      "C:/Users/ginli/AppData/Local/Programs/Python/Python313/python.exe",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "testing/compliance"
+    ],
+    "environment": {
+      "CR1_REQUIRE_LIBCLANG": "1"
+    },
+    "tests": 215,
+    "failures": 0,
+    "skips": 0
+  },
+  "inventory_policy_sha256_lf": "bcec195011537eb10d59fec687ab2437913efe561bc2e7f93d2791965782196a"
+}

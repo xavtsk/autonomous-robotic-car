@@ -1293,36 +1293,64 @@
         "max": 535,
         "units": "bit offset"
       },
-      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
-      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "ownership": "Private immutable codec schema table; no caller can mutate or publish its native representation.",
+      "synchronization": "Read-only static storage; concurrent callers only read it. Builder/input/output access stays caller-owned.",
       "constraints": [
         "Immutable protocol schema offsets range from 0 through final field offset 535. Ten bits retain the complete numeric offset; no packet layout changes."
       ],
       "reason": "Immutable protocol schema offsets range from 0 through final field offset 535. Ten bits retain the complete numeric offset; no packet layout changes.",
       "evidence": [
-        "app_program/controller/control_debug.c"
+        "app_program/controller/control_debug.c:153-226",
+        "app_program/controller/control_debug.h:12-62",
+        "docs/compliance/evidence/debug-metadata-storage.json"
       ]
     },
     {
       "id": "debug-schema-width",
       "path": "app_program/controller/control_debug.c",
       "owner": "control_debug_field_info_t",
-      "name": "width",
+      "name": "width_minus_one",
       "status": "compare",
       "domain": {
-        "min": 1,
-        "max": 32,
-        "units": "bits",
-        "encoding": "Store width minus one; decode by adding one before all existing uses."
+        "min": 0,
+        "max": 31,
+        "units": "encoded bit width minus one",
+        "encoding": "All three consumers add1 as unsigned arithmetic before the original width checks or bit-writing loop; decoded widths remain1..32."
       },
-      "ownership": "Existing enclosing module/task owns the representation; retain the recorded consumer contract.",
-      "synchronization": "Preserve existing module synchronization; no new shared storage unit.",
+      "ownership": "Private immutable codec schema table; no caller can mutate or publish its native representation.",
+      "synchronization": "Read-only static storage; concurrent callers only read it. Builder/input/output access stays caller-owned.",
       "constraints": [
-        "Immutable schema widths are 1..32. Five encoded bits require storing width minus one and restoring the original width before validation/shifts; a direct numeric bitfield would need six."
+        "All50 schema rows are immutable and match the wide field macro. Width minus one stores0..31 in five bits; adding one restores every original width including32. Public field selectors and values are never narrowed, and invalid selectors short-circuit before indexing."
       ],
-      "reason": "Immutable schema widths are 1..32. Five encoded bits require storing width minus one and restoring the original width before validation/shifts; a direct numeric bitfield would need six.",
+      "reason": "All50 schema rows are immutable and match the wide field macro. Width minus one stores0..31 in five bits; adding one restores every original width including32. Public field selectors and values are never narrowed, and invalid selectors short-circuit before indexing.",
       "evidence": [
-        "app_program/controller/control_debug.c"
+        "app_program/controller/control_debug.c:153-226",
+        "app_program/controller/control_debug.h:12-62",
+        "docs/compliance/evidence/debug-metadata-storage.json"
+      ]
+    },
+    {
+      "id": "debug-schema-signedness",
+      "path": "app_program/controller/control_debug.c",
+      "owner": "control_debug_field_info_t",
+      "name": "b_signed_value",
+      "kind": "FIELD_DECL",
+      "status": "compare",
+      "domain": {
+        "min": 0,
+        "max": 1,
+        "units": "Boolean signed-field marker"
+      },
+      "ownership": "Private immutable schema table; one Boolean sign marker per field.",
+      "synchronization": "Read-only static storage; original caller ownership of builder and packet unchanged.",
+      "constraints": [
+        "The50 signedness markers exactly match CONTROL_DEBUG_FIELDS U/S declarations. Public signed/unsigned setters reject mismatched selectors before encoding; no C bitfield layout is transmitted."
+      ],
+      "reason": "One immutable Boolean bit retains the exact signedness of each wire-schema field.",
+      "evidence": [
+        "app_program/controller/control_debug.c:153-226",
+        "app_program/controller/control_debug.h:12-62",
+        "docs/compliance/evidence/debug-metadata-storage.json"
       ]
     },
     {

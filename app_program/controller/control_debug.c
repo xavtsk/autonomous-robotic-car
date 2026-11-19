@@ -2,6 +2,7 @@
  * @brief Observation-only controller snapshot.
  */
 #include "control_debug.h"
+#include "../build_assert.h"
 #include <string.h>
 
 /** @brief OR validated low-order value bits into the packet body.
@@ -153,63 +154,74 @@ bool control_debug_unpack (const control_debug_packet_t * p_packet,
  */
 typedef struct
 {
-    uint16_t bit;
-    uint8_t width;
-    bool signed_value;
+    uint16_t bit : 10;
+    uint16_t width_minus_one : 5;
+    bool b_signed_value : 1;
 } control_debug_field_info_t;
 
-static const control_debug_field_info_t g_debug_fields[CD_FIELD_COUNT] = {
-    {0U, 32U, false},   /* timestamp_us */
-    {32U, 32U, false},  /* motion_timestamp_us */
-    {64U, 8U, false},   /* sequence */
-    {72U, 1U, false},   /* motion_available */
-    {73U, 1U, false},   /* motion_valid */
-    {74U, 1U, false},   /* braked */
-    {75U, 1U, false},   /* busy */
-    {76U, 3U, false},   /* motion_state */
-    {79U, 3U, false},   /* motion_fault */
-    {82U, 13U, true},   /* setpoint_left */
-    {95U, 13U, true},   /* setpoint_right */
-    {108U, 13U, true},  /* measured_left */
-    {121U, 13U, true},  /* measured_right */
-    {134U, 8U, true},   /* duty_left */
-    {142U, 8U, true},   /* duty_right */
-    {150U, 20U, true},  /* encoder_left */
-    {170U, 20U, true},  /* encoder_right */
-    {190U, 3U, false},  /* drive_state */
-    {193U, 4U, false},  /* reason */
-    {197U, 3U, false},  /* pending */
-    {200U, 8U, true},   /* line_error */
-    {208U, 5U, false},  /* line_flags */
-    {213U, 3U, false},  /* barcode_status */
-    {216U, 3U, false},  /* accepted_calibration */
-    {219U, 5U, false},  /* readiness */
-    {224U, 16U, false}, /* barcode_events */
-    {240U, 16U, false}, /* junction_events */
-    {256U, 16U, false}, /* lost_events */
-    {272U, 32U, false}, /* sample_gap_us */
-    {304U, 32U, false}, /* run_max_gap_us */
-    {336U, 12U, false}, /* left_white */
-    {348U, 12U, false}, /* left_black */
-    {360U, 10U, false}, /* left_white_limit */
-    {370U, 10U, false}, /* left_black_limit */
-    {380U, 12U, false}, /* right_white */
-    {392U, 12U, false}, /* right_black */
-    {404U, 10U, false}, /* right_white_limit */
-    {414U, 10U, false}, /* right_black_limit */
-    {424U, 12U, false}, /* barcode_white */
-    {436U, 12U, false}, /* barcode_black */
-    {448U, 10U, false}, /* barcode_white_limit */
-    {458U, 10U, false}, /* barcode_black_limit */
-    {468U, 2U, false},  /* cal_sensor */
-    {470U, 1U, false},  /* collecting */
-    {471U, 12U, false}, /* white_min */
-    {483U, 12U, false}, /* white_max */
-    {495U, 12U, false}, /* black_min */
-    {507U, 12U, false}, /* black_max */
-    {519U, 16U, false}, /* white_count */
-    {535U, 16U, false}, /* black_count */
+/* Widths are encoded as width minus one, so all 1..32 bit fields fit five
+ * stored bits. Decode to unsigned before the unchanged validation and writes.
+ * The table is private constant data; no native layout is put on the wire. */
+static const control_debug_field_info_t g_debug_fields[] = {
+    {0U, 32U - 1U, false},   /* timestamp_us */
+    {32U, 32U - 1U, false},  /* motion_timestamp_us */
+    {64U, 8U - 1U, false},   /* sequence */
+    {72U, 1U - 1U, false},   /* motion_available */
+    {73U, 1U - 1U, false},   /* motion_valid */
+    {74U, 1U - 1U, false},   /* braked */
+    {75U, 1U - 1U, false},   /* busy */
+    {76U, 3U - 1U, false},   /* motion_state */
+    {79U, 3U - 1U, false},   /* motion_fault */
+    {82U, 13U - 1U, true},   /* setpoint_left */
+    {95U, 13U - 1U, true},   /* setpoint_right */
+    {108U, 13U - 1U, true},  /* measured_left */
+    {121U, 13U - 1U, true},  /* measured_right */
+    {134U, 8U - 1U, true},   /* duty_left */
+    {142U, 8U - 1U, true},   /* duty_right */
+    {150U, 20U - 1U, true},  /* encoder_left */
+    {170U, 20U - 1U, true},  /* encoder_right */
+    {190U, 3U - 1U, false},  /* drive_state */
+    {193U, 4U - 1U, false},  /* reason */
+    {197U, 3U - 1U, false},  /* pending */
+    {200U, 8U - 1U, true},   /* line_error */
+    {208U, 5U - 1U, false},  /* line_flags */
+    {213U, 3U - 1U, false},  /* barcode_status */
+    {216U, 3U - 1U, false},  /* accepted_calibration */
+    {219U, 5U - 1U, false},  /* readiness */
+    {224U, 16U - 1U, false}, /* barcode_events */
+    {240U, 16U - 1U, false}, /* junction_events */
+    {256U, 16U - 1U, false}, /* lost_events */
+    {272U, 32U - 1U, false}, /* sample_gap_us */
+    {304U, 32U - 1U, false}, /* run_max_gap_us */
+    {336U, 12U - 1U, false}, /* left_white */
+    {348U, 12U - 1U, false}, /* left_black */
+    {360U, 10U - 1U, false}, /* left_white_limit */
+    {370U, 10U - 1U, false}, /* left_black_limit */
+    {380U, 12U - 1U, false}, /* right_white */
+    {392U, 12U - 1U, false}, /* right_black */
+    {404U, 10U - 1U, false}, /* right_white_limit */
+    {414U, 10U - 1U, false}, /* right_black_limit */
+    {424U, 12U - 1U, false}, /* barcode_white */
+    {436U, 12U - 1U, false}, /* barcode_black */
+    {448U, 10U - 1U, false}, /* barcode_white_limit */
+    {458U, 10U - 1U, false}, /* barcode_black_limit */
+    {468U, 2U - 1U, false},  /* cal_sensor */
+    {470U, 1U - 1U, false},  /* collecting */
+    {471U, 12U - 1U, false}, /* white_min */
+    {483U, 12U - 1U, false}, /* white_max */
+    {495U, 12U - 1U, false}, /* black_min */
+    {507U, 12U - 1U, false}, /* black_max */
+    {519U, 16U - 1U, false}, /* white_count */
+    {535U, 16U - 1U, false}, /* black_count */
 };
+
+BUILD_ASSERT(sizeof(g_debug_fields) / sizeof(g_debug_fields[0]) ==
+                 CD_FIELD_COUNT,
+             debug_metadata_count_t);
+BUILD_ASSERT(CONTROL_DEBUG_BITS <= 1024U, debug_metadata_offset_t);
+#if defined(__arm__) || defined(__thumb__)
+BUILD_ASSERT(sizeof(control_debug_field_info_t) == 2U, debug_metadata_size_t);
+#endif
 
 /** Apply the same additional domains as the wide public pack interface. */
 /** @brief Check unsigned semantic limits beyond the encoded field width.
@@ -281,7 +293,7 @@ static void debug_builder_write (control_debug_builder_t * p_builder,
 {
     const control_debug_field_info_t * p_info = &g_debug_fields[field];
     uint32_t index = 0U;
-    for (index = 0U; index < p_info->width; ++index)
+    for (index = 0U; index < (p_info->width_minus_one + 1U); ++index)
     {
         const uint32_t bit = p_info->bit + index;
         const uint32_t byte = 1U + (bit / 8U);
@@ -328,8 +340,8 @@ void control_debug_builder_u (control_debug_builder_t * p_builder,
     }
     /* Converting a negative selector to unsigned also makes it out of range. */
     if (((uint32_t)field >= CD_FIELD_COUNT) ||
-        g_debug_fields[field].signed_value ||
-        !unsigned_fits(value, g_debug_fields[field].width) ||
+        g_debug_fields[field].b_signed_value ||
+        !unsigned_fits(value, (g_debug_fields[field].width_minus_one + 1U)) ||
         !debug_unsigned_domain(field, value))
     {
         p_builder->valid = false;
@@ -359,8 +371,8 @@ void control_debug_builder_s (control_debug_builder_t * p_builder,
     }
     /* Converting a negative selector to unsigned also makes it out of range. */
     if (((uint32_t)field >= CD_FIELD_COUNT) ||
-        !g_debug_fields[field].signed_value ||
-        !signed_fits(value, g_debug_fields[field].width) ||
+        !g_debug_fields[field].b_signed_value ||
+        !signed_fits(value, (g_debug_fields[field].width_minus_one + 1U)) ||
         !debug_signed_domain(field, value))
     {
         p_builder->valid = false;
