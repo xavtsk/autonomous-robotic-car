@@ -134,7 +134,10 @@ void terrain_monitor_process (terrain_monitor_t * p_t, const imu_sample_t * p_s,
 {
     float32_t value_a[3], value_m[3], pitch = 0, roll = 0, heading, value_ds = 0,
                                   speed = 0, value_dt = 0;
-    float32_t value_n, dynamic_g;
+    /* BARR-P12, pending approval: this single primitive spelling preserves
+     * Arm 14.3.1 executable bytes; see the recorded alias investigation. */
+    float value_n;
+    float32_t dynamic_g;
     uint32_t gap = p_t->seen ? p_s->timestamp_us - p_t->previous_us : 0;
     bool valid = imu_sample_is_valid(p_s), tilt_ok = false, movement_ok = false;
     /* Measure continuity from sample timestamps. A sensor overrun can still
