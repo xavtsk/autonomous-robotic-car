@@ -38,6 +38,14 @@ static const char * const g_topics[BUDDY1_TOPIC_COUNT] = {
 /* Compile-time guarantee: outbox topic selector is four bits. */
 BUILD_ASSERT(BUDDY1_TOPIC_COUNT <= 16U, telemetry_codec_c_check_b_t);
 
+/** @brief Append a low-bit-first field into zeroed packet storage.
+ * @param[in,out] p_bytes Writable storage covering the field.
+ * @param[in,out] p_bit Non-null cursor; advanced by width bits.
+ * @param[in] value Low 32 value bits; bits beyond 32 are treated as zero.
+ * @param[in] width Number of field bits, including zero-filled wide sections.
+ * @pre Pointers/capacity are valid and all destination field bits are zero.
+ * @post Set bits are ORed into storage. Existing bits are never cleared.
+ */
 static void put (uint8_t * p_bytes, unsigned * p_bit, uint32_t value,
                  unsigned width)
 {
@@ -51,6 +59,13 @@ static void put (uint8_t * p_bytes, unsigned * p_bit, uint32_t value,
     }
 }
 
+/** @brief Read an unsigned low-bit-first packet field.
+ * @param[in] p_bytes Stable readable storage covering the field.
+ * @param[in,out] p_bit Non-null cursor; advanced by width bits.
+ * @param[in] width Field width, 0..32 bits.
+ * @return The decoded value, or zero for a zero-width field.
+ * @pre Pointers and bounds are valid; this helper does not validate them.
+ */
 static uint32_t get (const uint8_t * p_bytes, unsigned * p_bit, unsigned width)
 {
     uint32_t value = 0;
@@ -65,22 +80,36 @@ static uint32_t get (const uint8_t * p_bytes, unsigned * p_bit, unsigned width)
     return value;
 }
 
+/** @brief Include version and rounded-up body bytes in a topic's wire size.
+ * @see telemetry_codec.h for selector validation and MAP_REPLY behavior.
+ */
 unsigned buddy1_payload_size (uint8_t topic)
 {
     return topic < BUDDY1_TOPIC_COUNT ? 1U + (g_body_bits[topic] + 7U) / 8U
                                       : 0U;
 }
 
+/** @brief Look up the meaningful body bit count without version or padding.
+ * @see telemetry_codec.h for the unknown-selector return value.
+ */
 unsigned buddy1_payload_bits (uint8_t topic)
 {
     return topic < BUDDY1_TOPIC_COUNT ? g_body_bits[topic] : 0U;
 }
 
+/** @brief Select the immutable MQTT topic string for one wire layout.
+ * @see telemetry_codec.h for pointer lifetime and invalid selectors.
+ */
 const char * buddy1_topic_name (uint8_t topic)
 {
     return topic < BUDDY1_TOPIC_COUNT ? g_topics[topic] : (const char *)0;
 }
 
+/** @brief Form the original seven-section snapshot validity mask.
+ * @param[in] p_v Non-null stable decoded view; each nonzero flag means valid.
+ * @return Bits for motion, barcode, hump, heading, obstacle, state and faults,
+ * in that order. Pose has a separate bit and is not included here.
+ */
 static unsigned validity (const buddy1_snapshot_t * p_v)
 {
     return (unsigned)((p_v->motion_valid != 0U) |
@@ -92,6 +121,18 @@ static unsigned validity (const buddy1_snapshot_t * p_v)
                       ((p_v->faults_valid != 0U) << 6));
 }
 
+/** @brief Validate and append one telemetry section without its valid bit.
+ * @param[in] topic A supported single-section selector; SNAPSHOT, STATUS,
+ * MAP_REPLY and unknown selectors are rejected.
+ * @param[in] p_v Non-null stable decoded values; top-level validity is ignored.
+ * @param[in,out] p_p Packet body with enough zeroed destination bits.
+ * @param[in,out] p_bit Non-null body cursor; advanced only on success.
+ * @return One after writing the whole section; zero before any section bits
+ * are written if its fields or selector are invalid.
+ * @details Domains and units follow buddy1_encode. Only motion is quantized:
+ * nearest 2 mm/s, ties away from zero. Other fields retain integer precision.
+ * @pre Caller has checked pointers, capacity and disjoint input/output storage.
+ */
 static int write_fields (uint8_t topic, const buddy1_snapshot_t * p_v,
                          uint8_t * p_p, unsigned * p_bit)
 {
@@ -321,6 +362,18 @@ static int write_fields (uint8_t topic, const buddy1_snapshot_t * p_v,
     }
 }
 
+/** @brief Decode and validate one telemetry section into temporary state.
+ * @param[in] topic Supported single-section selector; wrappers are rejected.
+ * @param[in] p_p Stable readable packet body containing the whole section.
+ * @param[in,out] p_bit Non-null cursor; consumed bits remain advanced on error.
+ * @param[in,out] p_v Non-null temporary decoded view; selected fields and
+ * validity may be partially changed even when validation fails.
+ * @return One for an accepted section, zero for invalid fields or selector.
+ * @details Units/domains follow buddy1_decode. Motion negative zero is
+ * rejected; packet-level padding and absent sections are checked by its caller.
+ * @pre Pointers and capacity are valid. This helper never commits public
+ * output.
+ */
 static int read_fields (uint8_t topic, const uint8_t * p_p, unsigned * p_bit,
                         buddy1_snapshot_t * p_v)
 {
@@ -502,6 +555,16 @@ static int read_fields (uint8_t topic, const uint8_t * p_p, unsigned * p_bit,
     }
 }
 
+/** @brief Clear and fill a versioned packet from selected telemetry fields.
+ * @param[in] topic Known selector other than MAP_REPLY.
+ * @param[in] p_v Stable decoded view, disjoint from packet storage.
+ * @param[out] p_packet Writable capacity-byte buffer; may be partly filled
+ * when field validation fails after the initial argument checks.
+ * @param[in] capacity Available byte count.
+ * @return Encoded length on success or zero on failure; a zero return does
+ * not promise unchanged packet bytes.
+ * @see telemetry_codec.h for complete ranges, precision and validity behavior.
+ */
 unsigned buddy1_encode (uint8_t topic, const buddy1_snapshot_t * p_v,
                         uint8_t * p_packet, unsigned capacity)
 {
@@ -569,6 +632,10 @@ unsigned buddy1_encode (uint8_t topic, const buddy1_snapshot_t * p_v,
     return length;
 }
 
+/** @brief Validate a complete payload and publish only a fully decoded view.
+ * @see telemetry_codec.h for canonical encoding and unchanged-on-failure
+ * output.
+ */
 int buddy1_decode (uint8_t topic, const uint8_t * p_packet, unsigned length,
                    buddy1_snapshot_t * p_out)
 {
@@ -653,6 +720,9 @@ int buddy1_decode (uint8_t topic, const uint8_t * p_packet, unsigned length,
     return 1;
 }
 
+/** @brief Validate reply bytes directly or other payloads through the decoder.
+ * @see telemetry_codec.h for accepted versions, lengths and reply codes.
+ */
 int buddy1_payload_valid (uint8_t topic, const uint8_t * p_packet,
                           unsigned length)
 {
@@ -665,6 +735,9 @@ int buddy1_payload_valid (uint8_t topic, const uint8_t * p_packet,
     return buddy1_decode(topic, p_packet, length, &decoded);
 }
 
+/** @brief Validate all four distinct letters before writing the map packet.
+ * @see telemetry_codec.h for action order, bit layout and failure behavior.
+ */
 int buddy1_map_pack (const buddy1_barcode_map_t * p_map,
                      uint8_t p_packet[BUDDY1_MAP_BYTES])
 {
@@ -701,6 +774,9 @@ int buddy1_map_pack (const buddy1_barcode_map_t * p_map,
     return 1;
 }
 
+/** @brief Validate padding and a local decoded map before publishing it.
+ * @see telemetry_codec.h for map domains and caller ownership.
+ */
 int buddy1_map_unpack (const uint8_t * p_packet, unsigned length,
                        buddy1_barcode_map_t * p_out)
 {

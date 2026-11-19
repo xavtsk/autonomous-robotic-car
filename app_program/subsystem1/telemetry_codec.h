@@ -207,19 +207,118 @@ typedef struct
     buddy1_scan_sample_t scan_sample;
 } buddy1_snapshot_t;
 
+/** @brief Return the complete wire length for a topic selector.
+ * @param[in] topic Selector in 0..BUDDY1_TOPIC_COUNT-1.
+ * @return Version byte plus rounded-up body bytes, or zero for an unknown
+ * selector. MAP_REPLY has a size although buddy1_encode does not build it.
+ */
 unsigned buddy1_payload_size (uint8_t topic);
+/** @brief Return the meaningful body width, excluding version and padding.
+ * @param[in] topic Selector in 0..BUDDY1_TOPIC_COUNT-1.
+ * @return Body bits for that layout, or zero for an unknown selector.
+ */
 unsigned buddy1_payload_bits (uint8_t topic);
+/** @brief Look up the MQTT topic string for a wire layout.
+ * @param[in] topic Selector in 0..BUDDY1_TOPIC_COUNT-1.
+ * @return Borrowed NUL-terminated string with program lifetime, or null for
+ * an unknown selector. The caller must not modify or free the string.
+ */
 const char * buddy1_topic_name (uint8_t topic);
 /* Return packet length, or zero for invalid input/capacity. Byte 0 is version;
  * body bits are numbered from the least significant bit of byte 1. */
+/** @brief Serialize the selected telemetry fields into a versioned packet.
+ * @param[in] topic Known selector other than BUDDY1_TOPIC_MAP_REPLY.
+ * @param[in] p_value Stable decoded fields in the units described below.
+ * @param[out] p_packet Caller-owned storage of at least capacity bytes.
+ * @param[in] capacity Writable byte count; at least buddy1_payload_size(topic).
+ * @return Packet length on success, or zero for nulls, unsupported topic,
+ * insufficient capacity or invalid selected fields.
+ * @details Null/topic/capacity failures leave the packet unchanged. After
+ * those checks, the complete payload is cleared and its version written;
+ * a later field failure can leave a partial packet. Bytes beyond the topic's
+ * payload length are untouched. Treat a zero return as no usable packet.
+ * @pre Input and packet storage do not overlap. The caller keeps input
+ * stable and owns output exclusively; no locking, allocation or retention
+ * of caller pointers is performed.
+ * @par Layout and validity
+ * Byte zero is BUDDY1_WIRE_VERSION. Body fields and bytes are low bit first;
+ * unused high bits are zero. Single-section topics encode their fields even
+ * if the corresponding top-level validity flag is zero. SNAPSHOT selects the
+ * original seven sections plus pose using nonzero validity flags; absent
+ * sections have zero bits without validating their stale values. Version 3
+ * includes pose in the snapshot despite retained earlier live-only notes.
+ * Terrain, avoidance and scan reports are not snapshot sections. STATUS sets
+ * the heartbeat and includes faults only when faults_valid is nonzero.
+ * @par Numeric domains and precision
+ * Motion accepts -510..510 mm/s and rounds to the nearest 2 mm/s, with ties
+ * away from zero (at most 1 mm/s error). Other fields use exact integer units.
+ * Barcode letters are A..Z and actions UNKNOWN..UTURN. Hump count is 16 bits
+ * and height is 0..500 mm. Heading is 0..359 degrees. Obstacles use distance
+ * 30..4000 mm, width 0..4095 mm and route UNKNOWN..RIGHT. Robot state is
+ * STOPPED..ERROR; faults use only BUDDY1_FAULT_MASK. Pose uses 0..4095 cm and
+ * heading 0..359 degrees; the caller performs distance wrapping beforehand.
+ * Terrain accepts pitch/roll -900..900 in tenths of a degree, state 0..7,
+ * climb/peak 0..500 mm, turn -360..360 degrees/s and safety NONE..OVERTURNED.
+ * Unavailable tilt, climb, peak and turn components must have zero values.
+ * Its validity flags are normalized from zero/nonzero.
+ * Avoidance follows the ranges in buddy1_avoidance_t: range_valid, no_echo
+ * and swapped are 0/1; a valid range excludes no_echo, and an invalid range
+ * must be zero. Scan geometry follows buddy1_scan_t, with left edge at least
+ * right edge when valid and all geometry zero when invalid; scan ID remains
+ * unrestricted. A scan sample requires peek/valid 0/1, count 1..16,
+ * index below count, angle 30..150 in 5-degree steps, and distance 30..4000 mm
+ * when valid or zero otherwise. Values are rejected rather than saturated.
+ */
 unsigned buddy1_encode (uint8_t topic, const buddy1_snapshot_t * p_value,
                         uint8_t * p_packet, unsigned capacity);
+/** @brief Decode one canonical telemetry payload into a fresh decoded view.
+ * @param[in] topic Known selector other than BUDDY1_TOPIC_MAP_REPLY.
+ * @param[in] p_packet Stable readable packet containing length bytes.
+ * @param[in] length Exact buddy1_payload_size(topic), including version.
+ * @param[out] p_out Caller-owned snapshot; unchanged on every failure.
+ * @return One after assigning the complete decoded view; zero for nulls,
+ * unsupported topic, wrong length/version, nonzero padding or invalid fields.
+ * @details A local zeroed result is populated before assignment. Fields not
+ * present in the chosen topic remain zero, and decoded sections get validity
+ * flags of one. Snapshot sections marked absent must contain canonical zeros.
+ * STATUS requires heartbeat one and zero fault bits when faults are invalid.
+ * Motion negative-zero codes are rejected; decoded speed is an even number
+ * of mm/s. Other domains and units match buddy1_encode. No locking occurs
+ * and no caller pointer is retained; the caller stabilizes input and owns
+ * output.
+ */
 int buddy1_decode (uint8_t topic, const uint8_t * p_packet, unsigned length,
                    buddy1_snapshot_t * p_out);
+/** @brief Validate a payload without publishing decoded state.
+ * @param[in] topic Selector to validate, including BUDDY1_TOPIC_MAP_REPLY.
+ * @param[in] p_packet Stable readable packet, or null to return zero.
+ * @param[in] length Exact packet byte count.
+ * @return One for a valid packet, otherwise zero. MAP_REPLY specifically
+ * requires two bytes: current version and reply code OK..INTERNAL; all other
+ * topics use buddy1_decode. The input is never changed or retained.
+ */
 int buddy1_payload_valid (uint8_t topic, const uint8_t * p_packet,
                           unsigned length);
+/** @brief Encode four distinct barcode letters for the route actions.
+ * @param[in] p_map Stable mapping of forward, left, right and U-turn to A..Z.
+ * @param[out] p_packet Writable four-byte packet; unchanged on failure.
+ * @return One after writing the complete packet; zero for null pointers,
+ * an out-of-range letter or any duplicate letter.
+ * @details Byte zero is the version, followed by four five-bit A-based
+ * codes in action order, low bit first. The final four padding bits are zero.
+ * Validation completes before writes; no pointer is retained or lock taken.
+ */
 int buddy1_map_pack (const buddy1_barcode_map_t * p_map,
                      uint8_t p_packet[BUDDY1_MAP_BYTES]);
+/** @brief Decode and validate a complete four-action barcode map.
+ * @param[in] p_packet Stable readable map packet containing length bytes.
+ * @param[in] length Exactly BUDDY1_MAP_BYTES.
+ * @param[out] p_out Caller-owned map; unchanged on failure.
+ * @return One after assigning four distinct A..Z letters; zero for nulls,
+ * wrong size/version, nonzero final padding, unused codes or duplicates.
+ * @details A local decoded map is checked with buddy1_map_pack before commit.
+ * The caller supplies synchronization; no caller pointer is retained.
+ */
 int buddy1_map_unpack (const uint8_t * p_packet, unsigned length,
                        buddy1_barcode_map_t * p_out);
 

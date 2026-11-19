@@ -24,6 +24,14 @@ BUILD_ASSERT(sizeof(s3_raw_frame_packet_t) == 34 && S3_SENSOR_COUNT == 3,
 BUILD_ASSERT(S3_EVENT_SENSOR_FAULT == 16 && S3_ALL_SENSORS == 7,
              navigation_codec_c_check_f_t);
 
+/** @brief OR one low-bit-first field into a zero-initialized packet region.
+ * @param[in,out] p_bytes Writable storage covering the complete field.
+ * @param[in,out] p_bit Non-null cursor; advanced by width bits.
+ * @param[in] value Bits to write; only its lowest width bits are examined.
+ * @param[in] width Field width, 0..32 bits.
+ * @pre Pointers and capacity are valid and destination field bits are zero.
+ * @post Set value bits are ORed into the packet; no bits are cleared.
+ */
 static void put (uint8_t * p_bytes, unsigned * p_bit, uint32_t value,
                  unsigned width)
 {
@@ -36,6 +44,13 @@ static void put (uint8_t * p_bytes, unsigned * p_bit, uint32_t value,
     }
 }
 
+/** @brief Read one unsigned field from the packet's low-bit-first layout.
+ * @param[in] p_bytes Stable readable storage covering the complete field.
+ * @param[in,out] p_bit Non-null cursor; advanced by width bits.
+ * @param[in] width Field width, 0..32 bits; zero reads no bytes.
+ * @return The field value, or zero for width zero.
+ * @pre Pointers and capacity are valid; no bounds or null checks are made.
+ */
 static uint32_t get (const uint8_t * p_bytes, unsigned * p_bit, unsigned width)
 {
     uint32_t value = 0;
@@ -49,6 +64,12 @@ static uint32_t get (const uint8_t * p_bytes, unsigned * p_bit, unsigned width)
     return value;
 }
 
+/** @brief Obtain the binary32 representation used by steering packets.
+ * @param[in] value Steering value in m/s, including diagnostic nonfinite data.
+ * @return The union-reinterpreted 32 bits, without numerical conversion.
+ * @details No arithmetic, rounding, finite-value check or state mutation
+ * occurs.
+ */
 static uint32_t float_bits (float32_t value)
 {
     union
@@ -61,6 +82,11 @@ static uint32_t float_bits (float32_t value)
     return copy.bits;
 }
 
+/** @brief Reconstruct a binary32 steering value from its packet bits.
+ * @param[in] value Unmodified 32-bit field read from the packet.
+ * @return The union-reinterpreted float, including signed zero or nonfinite
+ * representations; no scaling or validity check is performed.
+ */
 static float32_t bits_float (uint32_t value)
 {
     union
@@ -73,11 +99,22 @@ static float32_t bits_float (uint32_t value)
     return copy.f;
 }
 
+/** @brief Test the supported barcode alphabet and absent-letter sentinel.
+ * @param[in] value_c Decoded character to inspect.
+ * @return True for NUL or A..Z; false for every other character.
+ */
 static bool letter_valid (char value_c)
 {
     return value_c == 0 || (value_c >= 'A' && value_c <= 'Z');
 }
 
+/** @brief Append a binary64 distance as its low word then high word.
+ * @param[in,out] p_bytes Writable packet with 64 zero destination bits.
+ * @param[in,out] p_bit Non-null cursor; advanced by 64 bits.
+ * @param[in] value Distance in metres; nonfinite values are not rejected.
+ * @pre Storage covers the field. No null, capacity or numeric check is made.
+ * @post The representation is copied without scaling or rounding.
+ */
 static void write_double (uint8_t * p_bytes, unsigned * p_bit, float64_t value)
 {
     union
@@ -91,6 +128,12 @@ static void write_double (uint8_t * p_bytes, unsigned * p_bit, float64_t value)
     put(p_bytes, p_bit, (uint32_t)(copy.bits >> 32), 32);
 }
 
+/** @brief Reconstruct a binary64 distance from two packet words.
+ * @param[in] p_bytes Stable readable packet containing the next 64 bits.
+ * @param[in,out] p_bit Non-null cursor; advanced by 64 bits.
+ * @return The represented distance in metres, without finite-value checking.
+ * @pre Pointers and capacity are valid; low-word-first storage is assumed.
+ */
 static float64_t read_double (const uint8_t * p_bytes, unsigned * p_bit)
 {
     union
@@ -104,6 +147,13 @@ static float64_t read_double (const uint8_t * p_bytes, unsigned * p_bit)
     return copy.value;
 }
 
+/** @brief Append a previously validated barcode, direction and timestamp.
+ * @param[in,out] p_bytes Writable packet with 38 zero destination bits.
+ * @param[in,out] p_bit Non-null cursor; advanced by 38 bits.
+ * @param[in] p_value Stable result with letter NUL or A..Z.
+ * @pre Pointers, capacity and letter validity were checked by the caller.
+ * @post Letter code, reversed bit and microsecond timestamp are appended.
+ */
 static void write_barcode (uint8_t * p_bytes, unsigned * p_bit,
                            const s3_barcode_result_t * p_value)
 {
@@ -113,6 +163,15 @@ static void write_barcode (uint8_t * p_bytes, unsigned * p_bit,
     put(p_bytes, p_bit, p_value->timestamp_us, 32);
 }
 
+/** @brief Read a barcode field while rejecting unused letter codes.
+ * @param[in] p_bytes Stable packet containing at least the next 38 bits.
+ * @param[in,out] p_bit Non-null cursor; advances five bits on an invalid code
+ * and 38 bits on success.
+ * @param[out] p_value Writable result; unchanged when the code is invalid.
+ * @return False for letter codes 27..31; true after decoding codes 0..26,
+ * the direction bit and unchanged microsecond timestamp.
+ * @pre Pointers and capacity are valid. Padding is checked by the caller.
+ */
 static bool read_barcode (const uint8_t * p_bytes, unsigned * p_bit,
                           s3_barcode_result_t * p_value)
 {
@@ -127,6 +186,10 @@ static bool read_barcode (const uint8_t * p_bytes, unsigned * p_bit,
     return true;
 }
 
+/** @brief Build a validated barcode packet locally before publishing it.
+ * @see navigation_codec.h for inputs, bit layout and unchanged-on-failure
+ * output.
+ */
 bool s3_barcode_pack (const s3_barcode_result_t * p_value,
                       s3_barcode_packet_t * p_out)
 {
@@ -141,6 +204,9 @@ bool s3_barcode_pack (const s3_barcode_result_t * p_value,
     return true;
 }
 
+/** @brief Validate barcode padding and letter code before assigning output.
+ * @see navigation_codec.h for units, ownership and failure behavior.
+ */
 bool s3_barcode_unpack (const s3_barcode_packet_t * p_packet,
                         s3_barcode_result_t * p_out)
 {
@@ -155,6 +221,9 @@ bool s3_barcode_unpack (const s3_barcode_packet_t * p_packet,
     return true;
 }
 
+/** @brief Validate all raw readings before publishing a complete frame packet.
+ * @see navigation_codec.h for raw/error preservation and output ownership.
+ */
 bool s3_raw_frame_pack (const s3_sensor_frame_t * p_value,
                         s3_raw_frame_packet_t * p_out)
 {
@@ -185,6 +254,10 @@ bool s3_raw_frame_pack (const s3_sensor_frame_t * p_value,
     return true;
 }
 
+/** @brief Reconstruct all sample fields after validating frame padding.
+ * @see navigation_codec.h for accepted error/timestamp values and
+ * unchanged-on-failure output.
+ */
 bool s3_raw_frame_unpack (const s3_raw_frame_packet_t * p_packet,
                           s3_sensor_frame_t * p_out)
 {
@@ -212,6 +285,9 @@ bool s3_raw_frame_unpack (const s3_raw_frame_packet_t * p_packet,
     return true;
 }
 
+/** @brief Validate bounded navigation fields and commit one complete packet.
+ * @see navigation_codec.h for field domains, float precision and ownership.
+ */
 bool s3_navigation_pack (const s3_navigation_output_t * p_value,
                          s3_navigation_packet_t * p_out)
 {
@@ -280,6 +356,9 @@ bool s3_navigation_pack (const s3_navigation_output_t * p_value,
     return true;
 }
 
+/** @brief Validate navigation codes into a local result before publishing it.
+ * @see navigation_codec.h for padding, output mutation and diagnostic values.
+ */
 bool s3_navigation_unpack (const s3_navigation_packet_t * p_packet,
                            s3_navigation_output_t * p_out)
 {
