@@ -16,6 +16,17 @@ def sha256(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def input_snapshot(paths):
+    """Bind explicit non-source inputs, including excluded public settings."""
+    return {str(Path(path).resolve()): sha256(Path(path).read_bytes()) for path in paths}
+
+
+def verify_input_snapshot(snapshot):
+    for name, expected in snapshot.items():
+        if sha256(Path(name).read_bytes()) != expected:
+            raise ValueError('Compiler observation input changed: '+name)
+
+
 def revision(root):
     return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
 
@@ -70,10 +81,38 @@ def equivalent_roots(root, alternatives, paths):
 
 
 def remap(value, root, alternatives):
+    # Only standalone path operands and recognized joined path options may
+    # refer to the equivalent checkout. Never replace substrings in another
+    # absolute path, a macro definition, or a literal compiler argument.
+    prefix = next((flag for flag in ('--sysroot=', '-resource-dir=', '-isystem', '-iquote',
+                                    '-include', '-imacros', '-isysroot', '-I')
+                   if value.startswith(flag) and len(value) > len(flag)), '')
+    path = value[len(prefix):]
     for alternative in alternatives:
         for spelling in {str(alternative), alternative.as_posix()}:
-            value = re.sub(re.escape(spelling)+r'(?=[/\\]|$)', lambda _: str(root), value)
+            if path == spelling or path.startswith((spelling+'/', spelling+'\\')):
+                return prefix+str(root)+path[len(spelling):]
     return value
+
+
+def source_operands(arguments):
+    """Return positional C inputs, excluding forced includes and output paths."""
+    paired = {'-o','-MF','-MT','-MQ','-I','-isystem','-iquote','-include','-imacros',
+              '-isysroot','--sysroot','-D','-U','-x','-Xclang','-Xpreprocessor',
+              '-target','--target','-arch','-resource-dir','-idirafter','-iprefix',
+              '-iwithprefix','-iwithprefixbefore','-isystem-after'}
+    result, index = [], 1
+    while index < len(arguments):
+        value = arguments[index]
+        if value in paired:
+            if index+1 >= len(arguments):
+                raise ValueError('Compiler option lacks its operand: '+value)
+            index += 2
+            continue
+        if not value.startswith('-') and value.endswith('.c'):
+            result.append(value)
+        index += 1
+    return result
 
 
 def public_configuration(root, destination):
@@ -106,9 +145,10 @@ def plan(root, databases, paths, profiles, resource, alternatives=(), recorded_o
     """Retain actual commands; explicitly label every synthetic/fallback parse."""
     commands, common = {}, None
     for database in databases:
-        entries = ([json.loads(line) for line in database.read_text().splitlines() if line.strip()]
-                   if database.suffix == '.jsonl' else json.loads(database.read_text()))
-        database_hash = sha256(database.read_bytes())
+        database_bytes = database.read_bytes()
+        entries = ([json.loads(line) for line in database_bytes.decode().splitlines() if line.strip()]
+                   if database.suffix == '.jsonl' else json.loads(database_bytes))
+        database_hash = sha256(database_bytes)
         for index, entry in enumerate(entries):
             original = entry.get('arguments', entry.get('command'))
             if isinstance(original, str):
@@ -127,7 +167,14 @@ def plan(root, databases, paths, profiles, resource, alternatives=(), recorded_o
                        'equivalent_root_remapping': [str(path) for path in alternatives]}
             if common is None:
                 common = context
-            sources = [entry['file']] if 'file' in entry else [value for value in original if value.endswith('.c')]
+            sources = source_operands(original)
+            if 'file' in entry:
+                declared = Path(remap(entry['file'], root, alternatives))
+                declared = (declared if declared.is_absolute() else directory/declared).resolve()
+                positional = {(directory/Path(remap(value, root, alternatives))).resolve() for value in sources}
+                if declared not in positional:
+                    raise ValueError('Compilation database file is not a positional C input')
+                sources = [entry['file']]
             for value in sources:
                 source = Path(remap(value, root, alternatives))
                 source = (source if source.is_absolute() else directory/source).resolve()

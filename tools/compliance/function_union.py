@@ -54,6 +54,18 @@ def combine(reports, revision, bindings, scope_hash):
         resource = report.get('resource_headers', {})
         if report.get('libclang_package') != '18.1.1' or not re.search(r'\bversion 18\.1\.', resource.get('version', '')) or not re.fullmatch(r'[0-9a-f]{64}', resource.get('stdint_header_sha256', '')):
             raise ValueError('Compiler receipt lacks pinned parser/resource header provenance')
+        inputs = report.get('context_input_bindings', {})
+        if report.get('context_inputs_unchanged') is not True or not inputs:
+            raise ValueError('Compiler context inputs were not verified unchanged')
+        scope_path = str(Path(report['source_root'])/'testing/compliance/inventory_scope.json')
+        if inputs.get(scope_path) != scope_hash:
+            raise ValueError('Compiler context scope binding differs')
+        for derivation in report.get('public_configuration', []):
+            template_path = str(Path(report['source_root'])/derivation['template'])
+            if (inputs.get(template_path) != derivation['template_bytes_sha256'] or
+                    inputs.get(derivation['derived_path']) != derivation['derived_bytes_sha256'] or
+                    derivation['template_bytes_sha256'] != derivation['derived_bytes_sha256']):
+                raise ValueError('Derived public configuration input binding differs')
         if set(report['files']) != set(bindings):
             raise ValueError('Compiler receipt owned file set differs: '+label)
         if label.startswith('host-') and report.get('recorded_only') is not True:
@@ -72,6 +84,8 @@ def combine(reports, revision, bindings, scope_hash):
                 raise ValueError('Duplicate or mismatched compiler context')
             if not context.get('original_arguments') or not context.get('arguments') or not context.get('database_sha256'):
                 raise ValueError('Compiler context lacks exact command provenance')
+            if inputs.get(context.get('database')) != context['database_sha256']:
+                raise ValueError('Compiler database input binding differs')
             method = context_method(context)
             if label.startswith('host-') and context['origin'] != 'recorded-command':
                 raise ValueError('Synthetic host context cannot be treated as recorded evidence')

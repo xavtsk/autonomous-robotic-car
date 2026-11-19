@@ -115,7 +115,12 @@ def add_counts(report):
 def collect(root, databases, profiles, jobs, *, alternatives=(), recorded_only=False,
             profile_label='local-observation', public_config_output=None):
     root = root.resolve()
-    scope = inventory.read_json(root/'testing/compliance/inventory_scope.json')
+    scope_path = root/'testing/compliance/inventory_scope.json'
+    tracked_inputs = [scope_path, *databases]
+    if public_config_output:
+        tracked_inputs.append(root/'config/wifi_secrets.example.h')
+    input_bindings = compiler_contexts.input_snapshot(tracked_inputs)
+    scope = inventory.read_json(scope_path)
     inputs = set(inventory.owned_files(root, scope))
     bindings = compiler_contexts.source_bindings(root, inputs)
     source_revision = compiler_contexts.revision(root)
@@ -124,9 +129,17 @@ def collect(root, databases, profiles, jobs, *, alternatives=(), recorded_only=F
     extra, derivations = [], []
     if public_config_output:
         extra, derivation = compiler_contexts.public_configuration(root, public_config_output)
+        template_key = str((root/'config/wifi_secrets.example.h').resolve())
+        if derivation['template_bytes_sha256'] != input_bindings[template_key]:
+            raise ValueError('Public template changed before compiler observation')
         derivations.append(derivation)
+        input_bindings.update(compiler_contexts.input_snapshot([Path(derivation['derived_path'])]))
     planned = compiler_contexts.plan(root, databases, inputs, profiles, resource,
         mapped_roots, recorded_only, extra, derivations)
+    for _, metadata in planned:
+        if metadata['database_sha256'] != input_bindings[metadata['database']]:
+            raise ValueError('Compile database changed before context planning')
+    compiler_contexts.verify_input_snapshot(input_bindings)
     files = {name: {**binding, 'status': 'unobserved', 'profiles': [], 'input_bindings': {},
                     'context_ids': []} for name, binding in bindings.items()}
     receipts, rows = [], {}
@@ -165,8 +178,12 @@ def collect(root, databases, profiles, jobs, *, alternatives=(), recorded_only=F
                 print(f'Parsed {index}/{len(planned)} function contexts', flush=True)
     if bindings != compiler_contexts.source_bindings(root, inputs) or source_revision != compiler_contexts.revision(root):
         raise ValueError('Source text changed during function-documentation observation')
+    compiler_contexts.verify_input_snapshot(input_bindings)
+    if public_config_output and ((root/'config/wifi_secrets.h').exists() or (root/'config/wifi_secrets.h').is_symlink()):
+        raise ValueError('Source network settings appeared during compiler observation')
     observed = {'schema_version': 3, 'revision': source_revision, 'source_root': str(root),
-        'scope_sha256': hashlib.sha256((root/'testing/compliance/inventory_scope.json').read_bytes()).hexdigest(),
+        'scope_sha256': input_bindings[str(scope_path.resolve())],
+        'context_input_bindings': input_bindings, 'context_inputs_unchanged':True,
         'collector_profile': profile_label,
         'compiler': 'libclang 18.1.1 Python binding', 'libclang_package': importlib.metadata.version('libclang'),
         'resource_headers': resource_receipt, 'recorded_only': recorded_only,

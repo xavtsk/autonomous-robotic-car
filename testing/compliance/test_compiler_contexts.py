@@ -96,6 +96,46 @@ class ContextTests(unittest.TestCase):
             self.assertEqual(contexts.remap('-I'+str(alternative/'inc'), root, [alternative]), '-I'+str(root/'inc'))
             unchanged = str(alternative)+'-other/a.c'
             self.assertEqual(contexts.remap(unchanged, root, [alternative]), unchanged)
+            for unchanged in ('/prefix'+str(alternative)+'/a.c', '-DROOT='+str(alternative)):
+                self.assertEqual(contexts.remap(unchanged, root, [alternative]), unchanged)
+
+    def test_forced_include_and_output_are_not_standalone_source_commands(self):
+        arguments = ['cc','-include','forced.c','-D','TEXT=macro.c','actual.c','-o','output.c']
+        self.assertEqual(contexts.source_operands(arguments), ['actual.c'])
+        with tempfile.TemporaryDirectory() as directory:
+            root, database, resource = self.fixture(directory)
+            rows = json.loads(database.read_text())
+            rows[0]['arguments'] = ['cc','-include','app/unrecorded.c','app/a.c']
+            rows[0]['file'] = 'app/unrecorded.c'
+            database.write_text(json.dumps(rows))
+            with self.assertRaisesRegex(ValueError, 'not a positional C input'):
+                contexts.plan(root,[database],{root/'app/a.c',root/'app/unrecorded.c'},['configured'],resource)
+
+    def test_non_source_context_inputs_are_rechecked_after_parse(self):
+        for changed in ('scope','database','template','derived','settings-presence'):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as directory:
+                root, database, resource = self.fixture(directory)
+                (root/'config').mkdir()
+                template = root/'config/wifi_secrets.example.h'
+                template.write_text('#define WIFI_SSID "public-example"\n')
+                output = Path(directory)/'derived'
+                original = barr_functions.parse_functions
+                def mutate(*args):
+                    result = original(*args)
+                    paths = {'scope':root/'testing/compliance/inventory_scope.json',
+                             'database':database, 'template':template,
+                             'derived':output/'wifi_secrets.h'}
+                    if changed == 'settings-presence':
+                        (root/'config/wifi_secrets.h').touch()
+                    else:
+                        with paths[changed].open('a') as stream:
+                            stream.write('\n')
+                    return result
+                with patch.object(contexts,'revision',return_value='revision'), \
+                        patch.object(contexts,'pinned_resource',return_value=(resource,{'version':'test'})), \
+                        patch.object(barr_functions,'parse_functions',side_effect=mutate), \
+                        self.assertRaisesRegex(ValueError,'input changed|settings appeared'):
+                    barr_functions.collect(root,[database],['configured'],1,recorded_only=True,public_config_output=output)
 
     def test_public_template_derivation_does_not_mutate_source_or_overwrite_private_settings(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -146,11 +186,13 @@ class UnionTests(unittest.TestCase):
             context = dict(context_id=label, collector_profile=label, origin='recorded-command',
                 profile='configured', errors=[], diagnostics=[], owned_inputs=['a.c'],
                 recorded_source=True, profile_overrides={},
-                original_arguments=['cc','a.c'], arguments=['-std=c99'], database_sha256='db')
+                original_arguments=['cc','a.c'], arguments=['-std=c99'], database='database', database_sha256='db')
             row = dict(path='a.c', line=1, end_line=1, name='answer', method='libclang-ast',
                 profiles=['configured'], definition_documented=True,
                 context_observations=[dict(context_id=label, origin='recorded-command', method='libclang-ast')])
             reports.append(dict(schema_version=3, revision='same', scope_sha256='scope', collector_profile=label,
+                source_root=str(Path('/subject')), context_inputs_unchanged=True,
+                context_input_bindings={str(Path('/subject/testing/compliance/inventory_scope.json')):'scope','database':'db'},
                 recorded_only=label.startswith('host-'), files={'a.c':{**binding,'input_bindings':{'a.c':binding}}},
                 translation_units=[context], functions=[row], libclang_package='18.1.1',
                 resource_headers={'version':'clang version 18.1.3','stdint_header_sha256':'0'*64}, definition_count=1,
@@ -217,6 +259,16 @@ class UnionTests(unittest.TestCase):
         reports[0]['translation_units'][0]['profile_overrides'] = {'APP_TEST':1}
         with self.assertRaisesRegex(ValueError, 'derivation metadata'):
             self.combine(reports, bindings)
+
+    def test_unverified_context_inputs_or_changed_database_hash_fail_union(self):
+        for change in ('preservation','database'):
+            reports, bindings = self.reports()
+            if change == 'preservation':
+                reports[0]['context_inputs_unchanged'] = False
+            else:
+                reports[0]['context_input_bindings']['database'] = 'changed'
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                self.combine(reports, bindings)
 
     def test_artifact_directory_must_match_profile_and_revision(self):
         root = Path('receipts')
