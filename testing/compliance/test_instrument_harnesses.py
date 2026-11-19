@@ -51,6 +51,13 @@ class AnchorTests(unittest.TestCase):
             self.assertIn('trace_runtime("cycle")', runtime)
             self.assertIn('trace_runtime("receive")', runtime)
             self.assertIn('trace_publish(topic,payload,len,qos,retain)', mqtt)
+            # Only sensor_sample_task belongs to the unbraced setjmp if. The
+            # assertion and observer must return to the enclosing indentation;
+            # placing them on its body line fails GCC -Wmisleading-indentation.
+            cycle_tail = runtime[runtime.index('sensor_sample_task(0, NULL);'):]
+            self.assertTrue(cycle_tail.startswith(
+                'sensor_sample_task(0, NULL);\n    assert(!locked);\n'
+                '    trace_runtime("cycle");\n}'))
         self.assertEqual([path.read_bytes() for path in paths], originals)
 
 

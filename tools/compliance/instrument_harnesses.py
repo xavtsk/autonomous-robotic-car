@@ -35,7 +35,7 @@ def runtime_source(candidate, subject, destination):
     source = replace_once(source, 'static void cycle(void)', observer + '\nstatic void cycle(void)')
     source = replace_once(source,
         'sensor_sample_task(0,NULL);assert(!locked); }',
-        'sensor_sample_task(0,NULL);assert(!locked); trace_runtime("cycle"); }')
+        'sensor_sample_task(0, NULL);\n    assert(!locked);\n    trace_runtime("cycle");\n}')
     source = replace_once(source, 's3_remote_receive(p,sizeof p);',
                           's3_remote_receive(p,sizeof p); trace_runtime("receive");')
     source = replace_once(source, 'assert((p[1]&0x80U)==0U);',
