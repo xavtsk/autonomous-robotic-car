@@ -9,6 +9,7 @@ import sys
 from replay_audit import audit
 from instrument_harnesses import runtime_source, mqtt_source, operator_source
 from run_host import motion_estimation_module, motion_storage_flags
+from fixture_binding import select_fixture_root
 
 
 def main():
@@ -38,14 +39,19 @@ def main():
         return binary
 
     try:
-        trace_harness = roots['candidate'] / 'testing/compliance/control_debug_trace.c'
-        shared = roots['candidate'] / 'tools/compliance/traces'
+        results['fixture_bindings'] = {}
         for label, root in roots.items():
+            receipt = output/(label+'-fixture-bindings.json')
+            results['fixture_bindings'][label] = receipt.name
+            fixtures_root = select_fixture_root(root, roots['candidate'],
+                results['revisions'][label], results['revisions']['candidate'], receipt)
+            trace_harness = fixtures_root/'testing/compliance/control_debug_trace.c'
+            shared = fixtures_root/'tools/compliance/traces'
             debug_binary = build(label, 'control_debug', [trace_harness, root / 'app_program/controller/control_debug.c'], [root])
             with (output / (label + '-control_debug.trace')).open('wb') as stream:
                 subprocess.run([str(debug_binary)], stdout=stream, check=True, timeout=30)
             app = root / 'app_program'
-            fixtures = roots['candidate'] / 'testing'
+            fixtures = fixtures_root/'testing'
             estimation_module = motion_estimation_module(root)
             suites = {
                 'motion': (2, ['motion', 'ctrl_motion', 'motion_pack', estimation_module, 'speed_pid'],
@@ -79,7 +85,7 @@ def main():
                 [fixtures/'compliance/bcap_storage_test.c', app/'controller/bc_capture.c'], [root])
             with (output/(label+'-bcap_storage.trace')).open('wb') as stdout, (output/(label+'-bcap_storage.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
-            runtime = runtime_source(roots['candidate'], root, output/(label+'-runtime.c'))
+            runtime = runtime_source(fixtures_root, root, output/(label+'-runtime.c'))
             runtime_sources = [app/'controller'/(name+'.c') for name in
                                ('bc_capture', 'integration_codec', 's3_drive', 'ir_debug', 'control_debug')]
             runtime_sources += [app/'subsystem3'/(name+'.c') for name in
@@ -90,7 +96,7 @@ def main():
                 ['-pthread', '-DAPP_IR_DEBUG=1', '-DTM_MQTT=1'])
             with (output/(label+'-runtime.trace')).open('wb') as stream:
                 subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
-            operator = operator_source(roots['candidate'], root, output/(label+'-operator.c'))
+            operator = operator_source(fixtures_root, root, output/(label+'-operator.c'))
             operator_modules = [app/'controller'/(name+'.c') for name in
                                 ('bc_capture', 'op_logic', 'integration_codec', 's3_drive')]
             operator_modules += [app/'subsystem3'/(name+'.c') for name in
@@ -100,7 +106,7 @@ def main():
                            [fixtures/'integration', fixtures/'integration/fakes', app/'controller'], ['-pthread'])
             with (output/(label+'-operator.trace')).open('wb') as stream:
                 subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
-            mqtt = mqtt_source(roots['candidate'], output/(label+'-mqtt.c'))
+            mqtt = mqtt_source(fixtures_root, output/(label+'-mqtt.c'))
             mqtt_sources = [app/'subsystem1'/(name+'.c') for name in
                             ('telemetry_codec', 'buddy1', 'command', 'mqtt_bridge', 'buddy1_test')]
             mqtt_sources += [root/'lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c']
@@ -128,7 +134,7 @@ def main():
             binary = build(label, 'navigation', [harness/'host_trace.c', *[source/(name+'.c') for name in modules]], [source, harness])
             with (output / (label + '-navigation.trace')).open('wb') as stdout, (output / (label + '-navigation.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=180)
-            binaries[label] = build(label, 'replay', [roots['candidate']/'testing/compliance/barcode_replay_trace.c', source/'bc_decoder.c'], [root])
+            binaries[label] = build(label, 'replay', [fixtures/'compliance/barcode_replay_trace.c', source/'bc_decoder.c'], [root])
         for name, prefix in (('motion', b'M '), ('terrain', b'T '), ('terrain_production', b'T '), ('obstacle', b'O '),
                              ('runtime', b'RUNTIME '), ('mqtt', b'MQTT_'), ('mqtt_plain', b'MQTT_'),
                              ('mqtt_production', b'MQTT_'), ('mqtt_imu', b'MQTT_'),

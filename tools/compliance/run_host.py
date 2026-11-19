@@ -75,6 +75,20 @@ def main():
     tool_bin = output / 'tool-bin'
     tool_bin.mkdir()
     tooling = Path(__file__).resolve().parent
+    from fixture_binding import select_fixture_root
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+    tooling_revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+                                               cwd=tooling.parents[1], text=True).strip()
+    try:
+        fixtures_root = select_fixture_root(root, tooling.parents[1], revision,
+                                             tooling_revision, output/'fixture-bindings.json')
+    except (OSError, ValueError) as error:
+        failure = dict(revision=revision, mode=args.mode, fixture_bindings='fixture-bindings.json',
+                       results=[dict(name='fixture_bindings', status='FAIL', returncode=125,
+                                     error=str(error))])
+        (output/'results.json').write_text(json.dumps(failure, indent=2)+'\n', encoding='utf-8')
+        print('FAIL: fixture bindings: '+str(error), file=sys.stderr)
+        return 1
     compiler_proxy = tool_bin/'cc'
     compiler_proxy.write_text(f'#!{sys.executable}\nimport runpy\nrunpy.run_path({str(tooling/"compiler_proxy.py")!r}, run_name="__main__")\n', encoding='utf-8')
     compiler_proxy.chmod(0o755)
@@ -140,7 +154,7 @@ def main():
     # layout and branches, including under sanitizers, with the same fixture.
     terrain_binary = output/'terrain_production_test'
     terrain_app = root/'app_program/subsystem4'
-    terrain_fixture = tooling.parents[1]/'testing/subsystem4'
+    terrain_fixture = fixtures_root/'testing/subsystem4'
     run('terrain_production_build', [compiler, *shlex.split(flags), '-DAPP_IMU_DEBUG=0',
         '-I'+str(terrain_app), '-I'+str(terrain_fixture), str(terrain_fixture/'host_test.c'),
         *[str(terrain_app/(name+'.c')) for name in
@@ -154,7 +168,7 @@ def main():
     # with production-like flags; execute the enabled tests with sanitizers.
     make('diagnostics_disabled', 'testing/diagnostics', ['disabled'], 'firmware_test.mk', instrument=False)
     make('network_wifi', 'testing/network_wifi', ['test'])
-    trace = Path(__file__).resolve().parents[2] / 'testing/compliance/control_debug_trace.c'
+    trace = fixtures_root/'testing/compliance/control_debug_trace.c'
     trace_binary = output / 'control_debug_trace'
     run('control_debug_trace_build', [compiler, *shlex.split(flags), '-I' + str(root),
         str(trace), str(root / 'app_program/controller/control_debug.c'), '-o', str(trace_binary)])
@@ -165,8 +179,8 @@ def main():
         run('control_builder_build', [compiler, *shlex.split(flags), '-I'+str(root),
             str(builder_test), str(root/'app_program/controller/control_debug.c'), '-o', str(builder_binary)])
         run('control_builder', [str(builder_binary)])
-    motion_fixture = tooling.parents[1]/'testing/compliance/motion_storage_test.c'
-    motion_stubs = tooling.parents[1]/'testing/subsystem3'
+    motion_fixture = fixtures_root/'testing/compliance/motion_storage_test.c'
+    motion_stubs = fixtures_root/'testing/subsystem3'
     motion_app = root/'app_program/subsystem2'
     estimation_module = motion_estimation_module(root)
     motion_binary = output/'motion_storage_test'
@@ -177,40 +191,40 @@ def main():
             ('ctrl_motion', 'motion_pack', estimation_module, 'speed_pid')],
         '-o', str(motion_binary)])
     run('motion_storage', [str(motion_binary)])
-    barcode_fixture = tooling.parents[1]/'testing/compliance/barcode_work_test.c'
+    barcode_fixture = fixtures_root/'testing/compliance/barcode_work_test.c'
     barcode_binary = output/'barcode_work_test'
     run('barcode_work_build', [compiler, *shlex.split(flags), '-I'+str(root),
         str(barcode_fixture), '-o', str(barcode_binary)])
     run('barcode_work', [str(barcode_binary)])
     bcap_binary = output/'bcap_storage_test'
     run('bcap_storage_build', [compiler, *shlex.split(flags), '-I'+str(root),
-        str(tooling.parents[1]/'testing/compliance/bcap_storage_test.c'),
+        str(fixtures_root/'testing/compliance/bcap_storage_test.c'),
         str(root/'app_program/controller/bc_capture.c'), '-lm', '-o', str(bcap_binary)])
     run('bcap_storage', [str(bcap_binary)])
     from instrument_harnesses import operator_source
-    operator_fixture = operator_source(tooling.parents[1], root, output/'operator-observed.c')
+    operator_fixture = operator_source(fixtures_root, root, output/'operator-observed.c')
     operator_binary = output/'operator_observed'
     operator_modules = [root/'app_program/controller'/(name+'.c') for name in
                         ('bc_capture', 'op_logic', 'integration_codec', 's3_drive')]
     operator_modules += [root/'app_program/subsystem3'/(name+'.c') for name in
                          ('navigation_codec', 'ir_acquisition', 'ir_calibration', 'ir_reflectance',
                           'line_detection', 'line_controller', 'bc_decoder', 'line_navigation')]
-    operator_fixtures = tooling.parents[1]/'testing/integration'
+    operator_fixtures = fixtures_root/'testing/integration'
     run('operator_observed_build', [compiler, *shlex.split(flags),
         *['-I'+str(path) for path in (operator_fixtures, operator_fixtures/'fakes',
                                     root/'app_program/controller')],
-        str(operator_fixture), str(tooling/'traces/op_trace.c'),
+        str(operator_fixture), str(fixtures_root/'tools/compliance/traces/op_trace.c'),
         *map(str, operator_modules), '-lm', '-o', str(operator_binary)])
     run('operator_observed', [str(operator_binary)])
     # The existing S1 make targets cover 0/0 and 1/1. Exercise each independent
     # debug layout with the same assertions, including under ASan/UBSan.
-    mqtt_fixtures = tooling.parents[1]/'testing/subsystem1'
+    mqtt_fixtures = fixtures_root/'testing/subsystem1'
     mqtt_app = root/'app_program/subsystem1'
     mqtt_driver = root/'lib/liblwip/sysdepend/pico_rp2040'
     for name, ir_debug, imu_debug, fixture in (
             ('mqtt_production', 1, 0, mqtt_fixtures/'host_test.c'),
             ('mqtt_imu', 0, 1, mqtt_fixtures/'host_test.c'),
-            ('mqtt_receive', 1, 1, tooling.parents[1]/'testing/compliance/mqtt_receive_test.c')):
+            ('mqtt_receive', 1, 1, fixtures_root/'testing/compliance/mqtt_receive_test.c')):
         mqtt_binary = output/name
         run(name+'_build', [compiler, *shlex.split(flags), '-DAPP_H', '-DAPP_TEST=1',
             '-DTM_MQTT=1', f'-DAPP_IR_DEBUG={ir_debug}', f'-DAPP_IMU_DEBUG={imu_debug}',
@@ -233,8 +247,8 @@ def main():
             '--root', str(root), '--commands', str(output/'compile_commands.jsonl'),
             '--output', str(output/'application-c99')])
     manifest = dict(recorded_at=datetime.now(timezone.utc).isoformat(),
-                    revision=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
-                    mode=args.mode, results=results,
+                    revision=revision, mode=args.mode, results=results,
+                    fixture_bindings='fixture-bindings.json',
                     runner_image={key: os.environ.get(key) for key in ('ImageOS', 'ImageVersion', 'RUNNER_OS', 'RUNNER_ARCH')},
                     limits=['Host fakes do not prove physical timing or hardware behavior.',
                             'S5 turn=0.9 remains an explicitly documented geometric limitation.'])
