@@ -41,10 +41,11 @@ Bit positions below are relative to the body, excluding the version byte.
 | `car/telemetry/state` | state bits 0–2 | 2 |
 | `car/telemetry/faults` | shared fault mask bits 0–5 | 2 |
 | `car/telemetry/pose` | distance since START, cm modulo 4096, bits 0–11; heading since START bits 12–20 | 4 |
-| `car/telemetry/terrain` | tilt-available bit 0; pitch bits 1–11; roll bits 12–22 (signed, 0.1°); terrain state bits 23–25; on-hump bit 26; climb height bits 27–35 (0–500 mm); peak-valid bit 36; run peak bits 37–45 (0–500 mm); two zero padding bits | 7 |
+| `car/telemetry/terrain` | tilt-available bit 0; pitch bits 1–11; roll bits 12–22 (signed, 0.1°); terrain state bits 23–25; on-hump bit 26; climb height bits 27–35 (0–500 mm); peak-valid bit 36; run peak bits 37–45 (0–500 mm); turn-valid bit 46; compass turn rate bits 47–56 (signed, −360…+360 deg/s); safety bits 57–58 (0 none, 1 lifted, 2 overturned); five zero padding bits | 9 |
 | `car/telemetry/avoidance` | range-valid bit 0; no-echo bit 1; front range bits 2–13 (30–4000 mm, 0 if not valid); servo angle bits 14–21 (1–180°, 0 unknown); Buddy 5 state bits 22–24; fault bits 25–27; route bits 28–29; leg bits 30–33; leg-3 step bits 34–36; side-swapped bit 37; two zero padding bits | 6 |
+| `car/telemetry/scan_sample` | scan id bits 0–7; side-peek bit 8; reading index bits 9–12; readings in the scan minus 1 bits 13–16; angle index bits 17–21 (30 + 5 × index degrees); reading-valid bit 22; distance bits 23–34 (30–4000 mm, 0 if no reading); five zero padding bits | 6 |
 | `car/telemetry/scan` | profile-valid bit 0; scan id bits 1–8; closest bits 9–20; width bits 21–32; left clearance bits 33–44; right clearance bits 45–56; depth bits 57–68; left edge bits 69–81 and right edge bits 82–94 (−4000…+4000 mm, sent +4000); one zero padding bit | 13 |
-| `car/reply/snapshot` | validity and all seven sections, described below | 14 |
+| `car/reply/snapshot` | validity and all seven sections, then distance/heading since START (19 Nov 2026), described below | 17 |
 | `car/reply/barcode_map` | result bits 0–1: 0 OK, 1 invalid, 2 configuration closed, 3 internal error | 2 |
 | `car/status` | alive bit 0; faults-valid bit 1; fault mask bits 2–7 | 2 |
 
@@ -65,7 +66,9 @@ against calibrated speed before freezing the team contract.
 
 ### Route pose (`car/telemetry/pose`, added 28 Oct 2026)
 
-Live only: it has no snapshot section and is never cached. The controller
+Not one of the seven original snapshot sections; since 19 Nov 2026 the last
+pose is also kept in the cache and appended to the snapshot reply (bits
+102–123 below), so a snapshot answers "how far has it gone". The controller
 sends one pose at START (0, 0), one every 200 ms while a run is active
 (following, braking, turning, reacquiring or avoiding) and a final one when the
 run ends. Both values come from Buddy 2's encoder estimate
@@ -105,9 +108,18 @@ height in mm, and validity for each value.
   0–500 mm. Buddy 4 resets it at START (FR5), so "peak valid = 0" right after
   START is the visible reset. Before the first START it covers the time since
   power-up.
-- 46 bits + 2 zero padding bits; 7 bytes with the version byte. Example
-  `03 f7 d0 fc be 30 05` = pitch +12.3°, roll −5.1°, climbing, 23 mm up the
-  current hump, highest hump this run 41 mm.
+- **Turn valid + turn rate** (19 Nov 2026): Buddy 4's compass turn rate in
+  whole deg/s, 10-bit two's complement, −360…+360, + = anticlockwise. It needs
+  Buddy 4's magnetometer calibration; without it, valid = 0 and the value is
+  zero (show "unavailable", not 0°/s).
+- **Safety** (19 Nov 2026): 0 none, 1 lifted, 2 overturned (3 rejected). A trip
+  seen at any time in the 200 ms period is reported, like impact.
+- 59 bits + 5 zero padding bits; 9 bytes with the version byte. Example
+  `03 f7 d0 fc be 30 c5 d4 01` = pitch +12.3°, roll −5.1°, climbing, 23 mm up
+  the current hump, highest hump this run 41 mm, turning −87 deg/s, not lifted.
+- Firmware from before 19 Nov 2026 sends the first 46 bits only (7 bytes, two
+  padding bits). The laptop decoder still accepts that length and reports turn
+  rate and safety as not sent.
 
 `car/telemetry/hump` is unchanged: count + height of completed humps, sent
 during runs when either changes.
@@ -131,7 +143,9 @@ the avoidance state, request progress and unsafe-route / timeout / fault reasons
   fault=6. **Fault**: none=0, bad range, no path, scan failed, deadline, no line,
   motion error, interrupted=7. **Route**: unknown=0, left, right.
 - **Leg** (0–15) and **leg-3 step** (approach=0, peek, peeking, step, extra=4)
-  of the bypass; **swapped** = the first side was blocked and the other side
+  of the bypass. Legs 0–8 are the bypass legs; two telemetry-only numbers show
+  the steps around leg 0: **9** = reversing first (too close for the 45° turn),
+  **10** = turning to face the obstacle before the second scan (state scanning); **swapped** = the first side was blocked and the other side
   is being used.
 - Example `03 71 86 e5 e0 2c` = front 412 mm, servo 150°, moving, right side,
   leg 3, step, switched sides.
@@ -145,7 +159,19 @@ the avoidance state, request progress and unsafe-route / timeout / fault reasons
 - Example `03 0f f4 01 32 68 01 28 f8 c2 06 9a 3a` = scan 7, closest 250 mm,
   width 400 mm, clearance L 180 / R 320 mm, depth 380 mm, edges +150 / −250 mm.
 
-Individual scan samples (distance per angle) stay on USB (`[S5SCAN]`).
+**Scan sample** (`car/telemetry/scan_sample`, added 19 Nov 2026), the raw
+readings behind each profile: after the scan packet, one message per reading,
+at most one every 40 ms and only while the outbox is empty, so the readings use
+spare link capacity and never take a slot a barcode/state/fault event or a
+command reply needs (a new scan replaces the rest).
+- **Scan id** (low 8 bits) and **side peek** match the scan packet. **Index**
+  0…count−1 is the order measured (coarse 30/60/90/120/150°, then the fine
+  sector); **count** 1–16 is sent minus 1.
+- **Angle** 30–150° in 5° steps (90 = ahead). **Valid** = 0 means no usable
+  echo; the distance is then zero. A failed scan ends with one such entry at
+  the angle where it stopped.
+- Example `03 07 86 53 ce 00` = scan 7, reading 4 of 13 (index 3), 75°, 412 mm.
+- `[S5SCAN]` on USB prints the same readings.
 
 Letter is A=0 through Z=25. Action is unknown=0, forward=1, left=2, right=3,
 uturn=4. Route is unknown=0, left=1, right=2. State is stopped=0,
@@ -165,7 +191,15 @@ ninth transmitted state. Snapshot validity represents an unavailable state.
 | 67–92 | obstacle: same 26 bits as live obstacle |
 | 93–95 | state: same 3 bits as live state |
 | 96–101 | fault mask: same 6 bits as live faults |
-| 102–103 | zero padding |
+| 102 | pose valid (19 Nov 2026; 0 until the first drive after power-up) |
+| 103–114 | distance since START: same 12 bits (cm modulo 4096) as live pose |
+| 115–123 | heading since START: same 9 bits as live pose |
+| 124–127 | zero padding |
+
+Before 19 Nov 2026 the reply was 14 bytes (bits 0–101, then two padding
+bits). The laptop decoder accepts both lengths; the short one has no pose.
+The pose in the snapshot is the last one reported: during a run it is at most
+200 ms old, and after STOP it is the final distance of that run.
 
 An invalid section has its validity bit clear and canonical zero data bits.
 A valid zero height is different from an invalid height. The snapshot holds
@@ -173,6 +207,14 @@ the most recently reported values; it is not a history or a simultaneous sample
 of all sensors. Validity does not expire automatically. Owners should call
 `buddy1_invalidate(type)` when their cached result is no longer usable. Per-field
 age limits/timestamps remain a team integration decision.
+
+**Replies and events are not dropped by a busy link (19 Nov 2026).** The
+outbox has four slots shared by everything. A map or snapshot reply that finds
+it full is retried every 10 ms by the command task for up to 2 s (the dashboard
+waits 8 s); the command itself is applied once. Barcode, robot-state, obstacle
+summary, scan profile and fault changes are retried by the controller every
+10 ms cycle until queued. Periodic live samples (motion, pose, terrain,
+avoidance) stay best effort: the next one follows 200 ms later.
 
 ### Fault ownership
 
@@ -220,8 +262,9 @@ motor-driving commands are unsupported.
 
 ## Buffering and task behaviour
 
-- Outbox: four fixed 15-byte slots, each containing a one-byte topic ID and a
-  14-byte maximum payload. Topic IDs 0–10 use four bits; the rest of the byte is
+- Outbox: four fixed 18-byte slots, each containing a one-byte topic ID and a
+  17-byte maximum payload (15/14 bytes before the 19 Nov 2026 snapshot pose).
+  Topic IDs 0–14 use four bits; the rest of the byte is
   zero. The slot's unused payload tail is zero and is not published.
 - Incoming commands: two fixed 5-byte slots, each containing a two-bit command
   kind in one byte and four payload bytes. Length is implicit in the kind.

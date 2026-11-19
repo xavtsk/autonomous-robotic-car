@@ -54,6 +54,10 @@ def _snapshot(d):
             parts.append(f"obstacle {s['distance_mm']} mm away, {s['width_mm']} mm wide, go {s['route']}")
         elif name == "faults":
             parts.append(f"faults={_faults(s)}")
+    pose = d.get("pose")   # absent from firmware before 19 Nov 2026
+    if pose is not None:
+        parts.append(f"distance {pose['distance_cm_mod'] / 100:.2f} m, heading {pose['heading_deg']} deg since START"
+                     if pose["valid"] else "distance=n/a")
     return "SNAPSHOT  " + " | ".join(parts)
 
 

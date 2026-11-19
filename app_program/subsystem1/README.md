@@ -31,7 +31,8 @@ simultaneous sample of every sensor.
 8. `subsystem1_test.c`: portable checks also compiled into `TEST=1` firmware.
 
 The existing platform files `lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c/.h`
-preserve binary input, bound staging to 14 bytes and publish explicit lengths.
+preserve binary input, bound staging to 17 bytes (14 before the 19 Nov 2026
+snapshot pose) and publish explicit lengths.
 The small CYW43 hook reports Wi-Fi link transitions after releasing the radio
 lock. The networking task continues to own lwIP and MQTT. The Vehicle Controller
 freezes barcode configuration before requesting the first run.

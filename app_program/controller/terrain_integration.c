@@ -16,6 +16,7 @@ typedef struct {
 static terrain_control_t control;
 static void terrain_live_report(void);
 static bool impact_seen; /* impact since the last live report */
+static uint8_t safety_seen; /* lifted/overturned since the last live report */
 
 static bool healthy(uint32_t now)
 {
@@ -24,7 +25,7 @@ static bool healthy(uint32_t now)
         !(control.sample.flags&TERRAIN_FAULT) && !control.sample.impact &&
         control.sample.state!=TERRAIN_IMPACT && control.sample.safety==TERRAIN_SAFETY_NONE;
 }
-void terrain_control_init(void) { control=(terrain_control_t){0}; impact_seen=false; }
+void terrain_control_init(void) { control=(terrain_control_t){0}; impact_seen=false; safety_seen=(uint8_t)TERRAIN_SAFETY_NONE; }
 bool terrain_control_ready(uint32_t now)
 { return !control.latched && !control.waiting && healthy(now); }
 bool terrain_control_reset_ready(uint32_t now)
@@ -65,6 +66,7 @@ void terrain_control_poll(s3_drive_t *drive,uint32_t now)
             event_fault=true;
         }
         if(event.impact || event.state==TERRAIN_IMPACT) { impact_seen=true; }
+        if(event.safety!=TERRAIN_SAFETY_NONE) { safety_seen=(uint8_t)event.safety; }
     }
     if(!running && !resetting) { return; }
     if(control.waiting && (uint32_t)(now-control.reset_us)<=TERRAIN_RESET_WAIT_US && !event_fault) {
@@ -83,7 +85,9 @@ void terrain_control_report(void)
          control.sample.safety!=TERRAIN_SAFETY_NONE));
     if(!control.fault_sent || control.sent_fault!=(int)bad) {
         ER er=buddy1_update_faults(BUDDY1_FAULT_IMU,bad?BUDDY1_FAULT_IMU:0U);
-        if(er==E_OK || er==E_TMOUT) { control.fault_sent=true; control.sent_fault=(int)bad; }
+        /* E_TMOUT: mirror updated but the live fault report was not queued;
+         * retry next cycle so the dashboard sees the change promptly. */
+        if(er==E_OK) { control.fault_sent=true; control.sent_fault=(int)bad; }
     }
     /* A previous valid run peak survives transient sensor faults. It is not
      * relabelled as a current instantaneous measurement. */
@@ -148,6 +152,16 @@ static void terrain_live_report(void)
     if(impact_seen) { t.state=(uint8_t)TERRAIN_IMPACT; }
     if(fresh && s->hump_active && height_mm(s->hump_height_m,&t.climb_mm)) { t.on_hump=1U; }
     if(control.have && (s->flags&TERRAIN_PEAK_VALID) && height_mm(s->peak_m,&t.peak_mm)) { t.peak_valid=1U; }
-    if(buddy1_report_terrain(&t)==E_OK) { impact_seen=false; }
+    /* Compass turn rate: only with a fresh, valid estimate (needs Buddy 4's
+     * magnetometer calibration); unavailable is sent as 0 with valid = 0. */
+    if(fresh && (s->flags&TERRAIN_TURN_VALID) && s->turn_dps>=-(float)BUDDY1_TURN_LIMIT_DPS &&
+       s->turn_dps<=(float)BUDDY1_TURN_LIMIT_DPS) {
+        t.turn_valid=1U; t.turn_dps=(int16_t)(s->turn_dps>=0.0f ? s->turn_dps+0.5f : s->turn_dps-0.5f);
+    }
+    if(fresh && s->safety==TERRAIN_SAFETY_LIFTED) { t.safety=BUDDY1_SAFETY_LIFTED; }
+    if(fresh && s->safety==TERRAIN_SAFETY_OVERTURNED) { t.safety=BUDDY1_SAFETY_OVERTURNED; }
+    if(t.safety==BUDDY1_SAFETY_NONE && safety_seen==TERRAIN_SAFETY_LIFTED) { t.safety=BUDDY1_SAFETY_LIFTED; }
+    if(safety_seen==TERRAIN_SAFETY_OVERTURNED) { t.safety=BUDDY1_SAFETY_OVERTURNED; }
+    if(buddy1_report_terrain(&t)==E_OK) { impact_seen=false; safety_seen=(uint8_t)TERRAIN_SAFETY_NONE; }
 }
 #endif

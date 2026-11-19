@@ -1,0 +1,26 @@
+Outgoing slot: 452 -> 18 bytes
+Command slot: 450 -> 5 bytes
+4-slot outbox including RTOS per-message headers/alignment: 1824 -> 96 bytes
+2-slot commands including RTOS per-message headers/alignment: 912 -> 24 bytes
+Combined message-buffer storage requested at startup: 2736 -> 120 bytes
+Shared snapshot cache: 52 -> 17 bytes
+Network staging message (T_MQTT_UTK_APP_MSG): 88 bytes
+MQTT application payloads (exclude topic/TCP/MQTT headers); * = JSON equivalent:
+| Topic | Text bytes | Binary bits | Binary bytes (incl. version byte) |
+|---|---:|---:|---:|
+| car/telemetry/motion | 33 | 18 | 4 |
+| car/telemetry/barcode | 30 | 8 | 2 |
+| car/telemetry/hump | 26 | 25 | 5 |
+| car/telemetry/heading | 19 | 9 | 3 |
+| car/telemetry/obstacle | 49 | 26 | 5 |
+| car/telemetry/state | 26 | 3 | 2 |
+| car/telemetry/faults * | 59 | 6 | 2 |
+| car/reply/snapshot * | 279 | 124 | 17 |
+| car/reply/barcode_map * | 15 | 2 | 2 |
+| car/status * | 39 | 8 | 2 |
+| car/telemetry/pose * | 38 | 21 | 4 |
+| car/telemetry/terrain * | 168 | 59 | 9 |
+| car/telemetry/avoidance * | 124 | 38 | 6 |
+| car/telemetry/scan * | 152 | 95 | 13 |
+| car/telemetry/scan_sample * | 87 | 35 | 6 |
+| all 15 topics, one message each | 1144 | | 82 |

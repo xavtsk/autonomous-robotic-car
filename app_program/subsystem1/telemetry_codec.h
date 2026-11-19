@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #define BUDDY1_WIRE_VERSION       3U
-#define BUDDY1_PAYLOAD_MAX       14U /* version + 102-bit snapshot */
+#define BUDDY1_PAYLOAD_MAX       17U /* version + 124-bit snapshot (19 Nov 2026: + pose) */
 #define BUDDY1_HUMP_HEIGHT_MAX_MM 500U
 #define BUDDY1_OBSTACLE_MIN_MM    30U
 #define BUDDY1_OBSTACLE_MAX_MM    4000U
@@ -32,13 +32,21 @@
 #define BUDDY1_TILT_LIMIT_X10     900
 #define BUDDY1_TERRAIN_STATES     8U  /* Buddy 4 terrain_state_t, 3 bits */
 #define BUDDY1_TERRAIN_IMPACT     7U
+/* 19 Nov 2026: Buddy 4 turn rate (compass, whole deg/s, same 10-bit signed
+ * width as Buddy 4's own packet) and safety trip, previously USB-only. */
+#define BUDDY1_TURN_BITS          10U
+#define BUDDY1_TURN_LIMIT_DPS     360
+#define BUDDY1_SAFETY_NONE        0U
+#define BUDDY1_SAFETY_LIFTED      1U
+#define BUDDY1_SAFETY_OVERTURNED  2U
 
 enum {
     BUDDY1_TOPIC_MOTION = 0, BUDDY1_TOPIC_BARCODE, BUDDY1_TOPIC_HUMP,
     BUDDY1_TOPIC_HEADING, BUDDY1_TOPIC_OBSTACLE, BUDDY1_TOPIC_STATE,
     BUDDY1_TOPIC_FAULTS, BUDDY1_TOPIC_SNAPSHOT, BUDDY1_TOPIC_MAP_REPLY,
     BUDDY1_TOPIC_STATUS, BUDDY1_TOPIC_POSE, BUDDY1_TOPIC_TERRAIN,
-    BUDDY1_TOPIC_AVOIDANCE, BUDDY1_TOPIC_SCAN, BUDDY1_TOPIC_COUNT
+    BUDDY1_TOPIC_AVOIDANCE, BUDDY1_TOPIC_SCAN, BUDDY1_TOPIC_SCAN_SAMPLE,
+    BUDDY1_TOPIC_COUNT
 };
 typedef enum {
     BUDDY1_ACTION_UNKNOWN = 0, BUDDY1_ACTION_FORWARD, BUDDY1_ACTION_LEFT,
@@ -99,10 +107,25 @@ typedef struct {
     uint16_t climb_mm;       /* 0..500, height so far on that hump          */
     uint8_t peak_valid;      /* a valid hump completed since START          */
     uint16_t peak_mm;        /* 0..500, highest of this run                 */
+    uint8_t turn_valid;      /* 0: turn rate unavailable (compass)          */
+    int16_t turn_dps;        /* -360..360 deg/s, + = anticlockwise          */
+    uint8_t safety;          /* BUDDY1_SAFETY_*: none, lifted, overturned   */
 } BUDDY1_TERRAIN;
+/* One Buddy 5 ultrasonic reading of a finished scan or side peek
+ * (car/telemetry/scan_sample, sent one by one after the profile). */
+#define BUDDY1_SCAN_SAMPLES_MAX 16U
+typedef struct {
+    uint8_t scan_id;         /* low 8 bits, same id as car/telemetry/scan     */
+    uint8_t peek;            /* 1: single side-peek reading, 0: full scan    */
+    uint8_t index;           /* 0..count-1, order measured                   */
+    uint8_t count;           /* 1..16 readings in this scan                  */
+    uint8_t angle_deg;       /* 30..150 in 5 degree steps, 90 = ahead         */
+    uint8_t valid;           /* 0: no usable echo at this angle               */
+    uint16_t distance_mm;    /* 30..4000 when valid, else 0                   */
+} BUDDY1_SCAN_SAMPLE;
 
 /* Temporary decoded view for callers/calculations. The shared cache is a
- * packed 14-byte packet, protected by the Buddy 1 mutex. */
+ * packed 17-byte packet, protected by the Buddy 1 mutex. */
 typedef struct {
     uint8_t motion_valid;
     int16_t left_mms, right_mms;
@@ -130,6 +153,8 @@ typedef struct {
     BUDDY1_AVOIDANCE avoidance;
     uint8_t scan_valid;
     BUDDY1_SCAN scan;
+    uint8_t scan_sample_valid;
+    BUDDY1_SCAN_SAMPLE scan_sample;
 } BUDDY1_SNAPSHOT;
 
 unsigned buddy1_payload_size(uint8_t topic);

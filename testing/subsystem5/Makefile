@@ -29,7 +29,7 @@ test:
 	$(BUILD)/runtime_test
 	$(CC) $(CFLAGS) $(INC) -Ifakes -DS5_HARDWARE_CONFIRMED=0 runtime_test.c $(S5) -o $(BUILD)/activation_gate_test
 	$(BUILD)/activation_gate_test
-	$(CC) $(CFLAGS) $(INC) -DAPP_S5=1 -DAPP_H -DAPP_TEST=0 -include ../integration/controller_test_kernel.h telemetry_test.c $(APP)/controller/vehicle_controller.c -o $(BUILD)/telemetry_test
+	$(CC) $(CFLAGS) $(INC) -DAPP_S5=1 -DAPP_H -DAPP_TEST=0 -include ../integration/controller_test_kernel.h telemetry_test.c $(APP)/controller/vehicle_controller.c $(APP)/subsystem5/obstacle_profile.c -o $(BUILD)/telemetry_test
 	$(BUILD)/telemetry_test
 sanitize:
 	$(MAKE) test CFLAGS='$(CFLAGS) -O1 -fsanitize=address,undefined -fno-omit-frame-pointer'

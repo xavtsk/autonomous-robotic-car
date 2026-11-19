@@ -1,0 +1,290 @@
+[TEST] S1-B01 PASS  outgoing slot is 18 bytes; command slot is 5 bytes
+[TEST] S1-B02 PASS  signed wheel values enter and leave the copied FIFO
+[TEST] S1-B03 PASS  motion binary payload keeps wheel direction
+[TEST] S1-B04 PASS  protected packed cache returns the reported values
+[TEST] S1-B05 PASS  overflow rejected before cache update
+[TEST] S1-B06 PASS  2 mm/s steps round away from zero at half steps
+[TEST] S1-B07 PASS  embedded zero bytes survive queue copy
+[TEST] S1-B08 PASS  truncated and oversized binary packets rejected
+[TEST] S1-B09 PASS  unknown protocol version rejected
+[TEST] S1-B10 PASS  nonzero padding bits rejected
+[TEST] S1-B11 PASS  20-bit pre-run mapping is parsed and applied
+[TEST] S1-B12 PASS  duplicate letters rejected without changing active map
+[TEST] S1-B13 PASS  lowercase mapping rejected
+[TEST] S1-B14 PASS  barcode and action share eight body bits
+[TEST] S1-B15 PASS  invalid barcode rejected
+[TEST] S1-B16 PASS  valid zero height differs from unavailable height
+[TEST] S1-B17 PASS  hump height uses nine bits, rejects above 500 mm without clipping
+[TEST] S1-B18 PASS  heading uses nine bits and checks limits
+[TEST] S1-B19 PASS  obstacle fields use twelve bits and reject out-of-range values
+[TEST] S1-B20 PASS  reserved obstacle route rejected
+[TEST] S1-B21 PASS  eight valid robot states use three bits
+[TEST] S1-B22 PASS  separate fault updates preserve both bits
+[TEST] S1-B23 PASS  Wi-Fi recovery clears only its owned fault bit
+[TEST] S1-B24 PASS  invalid fault-mask updates rejected
+[TEST] S1-B35 PASS  IR fault uses bit five without erasing the motor fault
+[TEST] S1-B36 PASS  IR recovery clears only its owned bit
+[TEST] S1-B37 PASS  six-bit mask rejects the first reserved bit
+[TEST] S1-B25 PASS  all seven sections and pose fit a 17-byte snapshot
+[TEST] S1-B26 PASS  invalidation preserves neighbouring packed fields
+[TEST] S1-B27 PASS  full four-slot outbox rejects live message but retains latest value
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B29 PASS  only four messages remained after overflow
+[TEST] S1-B30 PASS  incoming command buffer is bounded to two messages
+[TEST] S1-B31 PASS  bad command lengths and remote movement rejected
+[TEST] S1-B32 PASS  snapshot command produces the binary summary
+[TEST] S1-B33 PASS  valid setup command produces a compact success reply
+[TEST] S1-B34 PASS  configuration freezes before run; existing map remains usable
+[TEST] S1-B38 PASS  claim reports a new freeze once; an existing freeze is reported as not new
+[TEST] subsystem1-binary SUMMARY 41 passed, 0 failed
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: RX [car/cmd/barcode_map] 4 binary bytes
+mqtt: RX [car/cmd/snapshot] 1 binary bytes
+mqtt: RX [car/cmd/snapshot] 1 binary bytes (rejected)
+mqtt: RX [car/cmd/barcode_map] 4 binary bytes (rejected)
+mqtt: RX [car/cmd/snapshot/this/topic/is/intentionally/far/too/long/to/be] 1 binary bytes (rejected)
+mqtt: application publish delayed, err=-1; retaining packet
+mqtt: application publish delayed, err=-11; retaining packet
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: application publish delayed, err=-3; retaining packet
+mqtt: connection status 256, retrying in 3s
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: application packet discarded, err=-16
+mqtt: application publish delayed, err=-1; retaining packet
+HOST PASS: MQTT retained FIFO retry, exact binary/QoS, bounded pacing/logging, deferred completion, disconnect recovery, permanent error, clock rollover
+HOST PASS: exact 164-byte binary capture, event priority, zero bytes preserved, paced and retried
+HOST PASS: saturated FIFO and BCAP each progress every other slot, app order intact, synchronous completion safe
+HOST PASS: faults/state/barcode/replies ahead of fresh captures, QoS preserved, no app FIFO reordering
+mqtt: application publish delayed, err=-1; retaining packet
+mqtt: connection status 256, retrying in 3s
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+HOST PASS: mixed app/capture exact retries, 164 bytes, one in-flight, reconnect, one heartbeat chain, permanent-error recovery
+HOST PASS: route pose 21 bits/4 bytes, 4095/359 limits, padding/length rejection, own topic; snapshot pose section (bits 102-123), rejected values never cached
+HOST PASS: Buddy 4 terrain 59 bits/9 bytes, all pitch/roll codes, +/-90.0, 0..500 mm and +/-360 deg/s limits, lifted/overturned, unavailable=zero, padding/length rejection, live-only, own topic
+HOST PASS: Buddy 5 scan sample 35 bits/6 bytes: every angle 30..150, every index/count 1..16, 30/4000 mm limits, no reading=zero, padding/length rejection, live-only, own topic, outbox-idle gate
+HOST PASS: map/snapshot replies wait for outbox space (10 ms retries, bounded), command applied once
+HOST PASS: Buddy 5 avoidance 38 bits/6 bytes and FR6 scan 95 bits/13 bytes: all range/edge codes, servo/state/route/leg/pass limits, unavailable=zero, padding/length rejection, live-only, own topics
+HOST PASS: v3 9/12-bit terrain fields, exhaustive height codes, sensor boundaries, no clipping/cache corruption, v2 rejection
+VECTOR car/telemetry/motion 033c7602
+VECTOR car/telemetry/barcode 0356
+VECTOR car/telemetry/hump 0302002d00
+VECTOR car/telemetry/heading 036701
+VECTOR car/telemetry/obstacle 03b4c00801
+VECTOR car/telemetry/state 0301
+VECTOR car/telemetry/faults 0331
+VECTOR car/reply/snapshot 037f1e3bad04005a9ca5054628f100d402
+VECTOR car/status 03c7
+VECTOR car/telemetry/pose 0301a805
+VECTOR car/telemetry/terrain 03f7d0fcbe30c5d401
+VECTOR car/telemetry/avoidance 037186e5e02c
+VECTOR car/telemetry/scan 030ff40132680128f8c2069a3a
+VECTOR car/telemetry/scan_sample 03078653ce00
+HOST PASS: binary FIFO, full speed range, 64 fault masks, eight concurrent producers, real MQTT callbacks and bridge
+[TEST] S1-B01 PASS  outgoing slot is 18 bytes; command slot is 5 bytes
+[TEST] S1-B02 PASS  signed wheel values enter and leave the copied FIFO
+[TEST] S1-B03 PASS  motion binary payload keeps wheel direction
+[TEST] S1-B04 PASS  protected packed cache returns the reported values
+[TEST] S1-B05 PASS  overflow rejected before cache update
+[TEST] S1-B06 PASS  2 mm/s steps round away from zero at half steps
+[TEST] S1-B07 PASS  embedded zero bytes survive queue copy
+[TEST] S1-B08 PASS  truncated and oversized binary packets rejected
+[TEST] S1-B09 PASS  unknown protocol version rejected
+[TEST] S1-B10 PASS  nonzero padding bits rejected
+[TEST] S1-B11 PASS  20-bit pre-run mapping is parsed and applied
+[TEST] S1-B12 PASS  duplicate letters rejected without changing active map
+[TEST] S1-B13 PASS  lowercase mapping rejected
+[TEST] S1-B14 PASS  barcode and action share eight body bits
+[TEST] S1-B15 PASS  invalid barcode rejected
+[TEST] S1-B16 PASS  valid zero height differs from unavailable height
+[TEST] S1-B17 PASS  hump height uses nine bits, rejects above 500 mm without clipping
+[TEST] S1-B18 PASS  heading uses nine bits and checks limits
+[TEST] S1-B19 PASS  obstacle fields use twelve bits and reject out-of-range values
+[TEST] S1-B20 PASS  reserved obstacle route rejected
+[TEST] S1-B21 PASS  eight valid robot states use three bits
+[TEST] S1-B22 PASS  separate fault updates preserve both bits
+[TEST] S1-B23 PASS  Wi-Fi recovery clears only its owned fault bit
+[TEST] S1-B24 PASS  invalid fault-mask updates rejected
+[TEST] S1-B35 PASS  IR fault uses bit five without erasing the motor fault
+[TEST] S1-B36 PASS  IR recovery clears only its owned bit
+[TEST] S1-B37 PASS  six-bit mask rejects the first reserved bit
+[TEST] S1-B25 PASS  all seven sections and pose fit a 17-byte snapshot
+[TEST] S1-B26 PASS  invalidation preserves neighbouring packed fields
+[TEST] S1-B27 PASS  full four-slot outbox rejects live message but retains latest value
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B29 PASS  only four messages remained after overflow
+[TEST] S1-B30 PASS  incoming command buffer is bounded to two messages
+[TEST] S1-B31 PASS  bad command lengths and remote movement rejected
+[TEST] S1-B32 PASS  snapshot command produces the binary summary
+[TEST] S1-B33 PASS  valid setup command produces a compact success reply
+[TEST] S1-B34 PASS  configuration freezes before run; existing map remains usable
+[TEST] S1-B38 PASS  claim reports a new freeze once; an existing freeze is reported as not new
+[TEST] subsystem1-binary SUMMARY 41 passed, 0 failed
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: RX [car/cmd/barcode_map] 4 binary bytes
+mqtt: RX [car/cmd/snapshot] 1 binary bytes
+mqtt: RX [car/cmd/snapshot] 1 binary bytes (rejected)
+mqtt: RX [car/cmd/barcode_map] 4 binary bytes (rejected)
+mqtt: RX [car/cmd/snapshot/this/topic/is/intentionally/far/too/long/to/be] 1 binary bytes (rejected)
+mqtt: application publish delayed, err=-1; retaining packet
+mqtt: application publish delayed, err=-11; retaining packet
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: application publish delayed, err=-3; retaining packet
+mqtt: connection status 256, retrying in 3s
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: application packet discarded, err=-16
+mqtt: application publish delayed, err=-1; retaining packet
+HOST PASS: MQTT retained FIFO retry, exact binary/QoS, bounded pacing/logging, deferred completion, disconnect recovery, permanent error, clock rollover
+HOST PASS: exact 164-byte binary capture, event priority, zero bytes preserved, paced and retried
+HOST PASS: saturated FIFO and BCAP each progress every other slot, app order intact, synchronous completion safe
+HOST PASS: faults/state/barcode/replies ahead of fresh captures, QoS preserved, no app FIFO reordering
+mqtt: application publish delayed, err=-1; retaining packet
+mqtt: connection status 256, retrying in 3s
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+HOST PASS: mixed app/capture exact retries, 164 bytes, one in-flight, reconnect, one heartbeat chain, permanent-error recovery
+HOST PASS: route pose 21 bits/4 bytes, 4095/359 limits, padding/length rejection, own topic; snapshot pose section (bits 102-123), rejected values never cached
+HOST PASS: Buddy 4 terrain 59 bits/9 bytes, all pitch/roll codes, +/-90.0, 0..500 mm and +/-360 deg/s limits, lifted/overturned, unavailable=zero, padding/length rejection, live-only, own topic
+HOST PASS: Buddy 5 scan sample 35 bits/6 bytes: every angle 30..150, every index/count 1..16, 30/4000 mm limits, no reading=zero, padding/length rejection, live-only, own topic, outbox-idle gate
+HOST PASS: map/snapshot replies wait for outbox space (10 ms retries, bounded), command applied once
+HOST PASS: Buddy 5 avoidance 38 bits/6 bytes and FR6 scan 95 bits/13 bytes: all range/edge codes, servo/state/route/leg/pass limits, unavailable=zero, padding/length rejection, live-only, own topics
+HOST PASS: v3 9/12-bit terrain fields, exhaustive height codes, sensor boundaries, no clipping/cache corruption, v2 rejection
+VECTOR car/telemetry/motion 033c7602
+VECTOR car/telemetry/barcode 0356
+VECTOR car/telemetry/hump 0302002d00
+VECTOR car/telemetry/heading 036701
+VECTOR car/telemetry/obstacle 03b4c00801
+VECTOR car/telemetry/state 0301
+VECTOR car/telemetry/faults 0331
+VECTOR car/reply/snapshot 037f1e3bad04005a9ca5054628f100d402
+VECTOR car/status 03c7
+VECTOR car/telemetry/pose 0301a805
+VECTOR car/telemetry/terrain 03f7d0fcbe30c5d401
+VECTOR car/telemetry/avoidance 037186e5e02c
+VECTOR car/telemetry/scan 030ff40132680128f8c2069a3a
+VECTOR car/telemetry/scan_sample 03078653ce00
+HOST PASS: binary FIFO, full speed range, 64 fault masks, eight concurrent producers, real MQTT callbacks and bridge
+...........
+----------------------------------------------------------------------
+Ran 11 tests in 0.025s
+
+OK
+[TEST] S1-B01 PASS  outgoing slot is 18 bytes; command slot is 5 bytes
+[TEST] S1-B02 PASS  signed wheel values enter and leave the copied FIFO
+[TEST] S1-B03 PASS  motion binary payload keeps wheel direction
+[TEST] S1-B04 PASS  protected packed cache returns the reported values
+[TEST] S1-B05 PASS  overflow rejected before cache update
+[TEST] S1-B06 PASS  2 mm/s steps round away from zero at half steps
+[TEST] S1-B07 PASS  embedded zero bytes survive queue copy
+[TEST] S1-B08 PASS  truncated and oversized binary packets rejected
+[TEST] S1-B09 PASS  unknown protocol version rejected
+[TEST] S1-B10 PASS  nonzero padding bits rejected
+[TEST] S1-B11 PASS  20-bit pre-run mapping is parsed and applied
+[TEST] S1-B12 PASS  duplicate letters rejected without changing active map
+[TEST] S1-B13 PASS  lowercase mapping rejected
+[TEST] S1-B14 PASS  barcode and action share eight body bits
+[TEST] S1-B15 PASS  invalid barcode rejected
+[TEST] S1-B16 PASS  valid zero height differs from unavailable height
+[TEST] S1-B17 PASS  hump height uses nine bits, rejects above 500 mm without clipping
+[TEST] S1-B18 PASS  heading uses nine bits and checks limits
+[TEST] S1-B19 PASS  obstacle fields use twelve bits and reject out-of-range values
+[TEST] S1-B20 PASS  reserved obstacle route rejected
+[TEST] S1-B21 PASS  eight valid robot states use three bits
+[TEST] S1-B22 PASS  separate fault updates preserve both bits
+[TEST] S1-B23 PASS  Wi-Fi recovery clears only its owned fault bit
+[TEST] S1-B24 PASS  invalid fault-mask updates rejected
+[TEST] S1-B35 PASS  IR fault uses bit five without erasing the motor fault
+[TEST] S1-B36 PASS  IR recovery clears only its owned bit
+[TEST] S1-B37 PASS  six-bit mask rejects the first reserved bit
+[TEST] S1-B25 PASS  all seven sections and pose fit a 17-byte snapshot
+[TEST] S1-B26 PASS  invalidation preserves neighbouring packed fields
+[TEST] S1-B27 PASS  full four-slot outbox rejects live message but retains latest value
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B28 PASS  FIFO preserves message order
+[TEST] S1-B29 PASS  only four messages remained after overflow
+[TEST] S1-B30 PASS  incoming command buffer is bounded to two messages
+[TEST] S1-B31 PASS  bad command lengths and remote movement rejected
+[TEST] S1-B32 PASS  snapshot command produces the binary summary
+[TEST] S1-B33 PASS  valid setup command produces a compact success reply
+[TEST] S1-B34 PASS  configuration freezes before run; existing map remains usable
+[TEST] S1-B38 PASS  claim reports a new freeze once; an existing freeze is reported as not new
+[TEST] subsystem1-binary SUMMARY 41 passed, 0 failed
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: RX [car/cmd/barcode_map] 4 binary bytes
+mqtt: RX [car/cmd/snapshot] 1 binary bytes
+mqtt: RX [car/cmd/snapshot] 1 binary bytes (rejected)
+mqtt: RX [car/cmd/barcode_map] 4 binary bytes (rejected)
+mqtt: RX [car/cmd/snapshot/this/topic/is/intentionally/far/too/long/to/be] 1 binary bytes (rejected)
+mqtt: application publish delayed, err=-1; retaining packet
+mqtt: application publish delayed, err=-11; retaining packet
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: application publish delayed, err=-3; retaining packet
+mqtt: connection status 256, retrying in 3s
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+mqtt: application packet discarded, err=-16
+mqtt: application publish delayed, err=-1; retaining packet
+HOST PASS: MQTT retained FIFO retry, exact binary/QoS, bounded pacing/logging, deferred completion, disconnect recovery, permanent error, clock rollover
+HOST PASS: exact 164-byte binary capture, event priority, zero bytes preserved, paced and retried
+HOST PASS: saturated FIFO and BCAP each progress every other slot, app order intact, synchronous completion safe
+HOST PASS: faults/state/barcode/replies ahead of fresh captures, QoS preserved, no app FIFO reordering
+mqtt: application publish delayed, err=-1; retaining packet
+mqtt: connection status 256, retrying in 3s
+mqtt: connected to 127.0.0.1
+mqtt: subscribed to car/status
+mqtt: subscribed to car/cmd/#
+HOST PASS: mixed app/capture exact retries, 164 bytes, one in-flight, reconnect, one heartbeat chain, permanent-error recovery
+HOST PASS: route pose 21 bits/4 bytes, 4095/359 limits, padding/length rejection, own topic; snapshot pose section (bits 102-123), rejected values never cached
+HOST PASS: Buddy 4 terrain 59 bits/9 bytes, all pitch/roll codes, +/-90.0, 0..500 mm and +/-360 deg/s limits, lifted/overturned, unavailable=zero, padding/length rejection, live-only, own topic
+HOST PASS: Buddy 5 scan sample 35 bits/6 bytes: every angle 30..150, every index/count 1..16, 30/4000 mm limits, no reading=zero, padding/length rejection, live-only, own topic, outbox-idle gate
+HOST PASS: map/snapshot replies wait for outbox space (10 ms retries, bounded), command applied once
+HOST PASS: Buddy 5 avoidance 38 bits/6 bytes and FR6 scan 95 bits/13 bytes: all range/edge codes, servo/state/route/leg/pass limits, unavailable=zero, padding/length rejection, live-only, own topics
+HOST PASS: v3 9/12-bit terrain fields, exhaustive height codes, sensor boundaries, no clipping/cache corruption, v2 rejection
+HOST PASS: IR preview below telemetry/capture priority, binary length, QoS0, pacing, drop-on-backpressure and one in-flight slot
+HOST PASS: bounded control diagnostics after events, staged BCAP intact, exact 70 bytes, drop-on-reject and one in-flight buffer
+HOST PASS: controller preview progresses with saturated routine/BCAP, >=2 data packets and <=5Hz; completion=0ms
+HOST PASS: controller preview progresses with saturated routine/BCAP, >=2 data packets and <=5Hz; completion=250ms
+HOST PASS: overdue controller preview waits for exact BCAP retries, in-flight completion and queued event
+HOST PASS: bounded raw IMU batches, legacy traffic priority and fairness, no diagnostic retry
+VECTOR car/telemetry/motion 033c7602
+VECTOR car/telemetry/barcode 0356
+VECTOR car/telemetry/hump 0302002d00
+VECTOR car/telemetry/heading 036701
+VECTOR car/telemetry/obstacle 03b4c00801
+VECTOR car/telemetry/state 0301
+VECTOR car/telemetry/faults 0331
+VECTOR car/reply/snapshot 037f1e3bad04005a9ca5054628f100d402
+VECTOR car/status 03c7
+VECTOR car/telemetry/pose 0301a805
+VECTOR car/telemetry/terrain 03f7d0fcbe30c5d401
+VECTOR car/telemetry/avoidance 037186e5e02c
+VECTOR car/telemetry/scan 030ff40132680128f8c2069a3a
+VECTOR car/telemetry/scan_sample 03078653ce00
+HOST PASS: binary FIFO, full speed range, 64 fault masks, eight concurrent producers, real MQTT callbacks and bridge

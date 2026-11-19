@@ -27,11 +27,14 @@ typedef int ID, ER, PRI, TMO;
 #define TA_INHERIT 1
 typedef struct { unsigned mbfatr; int bufsz, maxmsz; } T_CMBF;
 typedef struct { unsigned mtxatr; } T_CMTX;
+typedef struct { void *exinf; ID wtsk, stsk; INT msgsz; int frbufsz; INT maxmsz; } T_RMBF;
 ID tk_cre_mbf(const T_CMBF *p);
 ER tk_del_mbf(ID id);
 ID tk_cre_mtx(const T_CMTX *p);
 ER tk_snd_mbf(ID id, const void *data, INT length, TMO timeout);
 INT tk_rcv_mbf(ID id, void *data, TMO timeout);
+ER tk_ref_mbf(ID id, T_RMBF *ref);
+ER tk_dly_tsk(TMO time);
 ER tk_loc_mtx(ID id, TMO timeout);
 ER tk_unl_mtx(ID id);
 ID app_start_task(void (*entry)(INT, void *), PRI priority, UW core, const char *name);

@@ -5,10 +5,18 @@
 #include "../subsystem5/s5_api.h"
 /* Publish the bypass status (state, fault, route, leg, leg-3 step, swap) for
  * telemetry; the controller task is the only writer. */
+/* Telemetry-only leg numbers (the bypass itself still uses legs 0..8):
+ * 9 = reversing before the 45-degree out-turn (too close to turn),
+ * 10 = turning to face the obstacle before the second scan. */
+#define S5_TELEMETRY_LEG_REVERSE 9U
+#define S5_TELEMETRY_LEG_AIM 10U
 static void report_obstacle_status(const s3_drive_t *d)
 {
+    unsigned leg = d->obstacle.leg;
+    if (d->obstacle.state == S5_MOVING && d->obstacle.leg == 0U && d->obstacle.backing) leg = S5_TELEMETRY_LEG_REVERSE;
+    if (d->obstacle.state == S5_SCANNING && d->obstacle.aiming) leg = S5_TELEMETRY_LEG_AIM;
     subsystem5_set_controller_status(d->obstacle.state, d->obstacle.fault, d->obstacle.plan.route,
-                                     d->obstacle.leg, d->obstacle.pass, d->obstacle.swapped);
+                                     leg, d->obstacle.pass, d->obstacle.swapped);
 }
 #endif
 #define S3_BRAKE_WAIT_US (500000U)

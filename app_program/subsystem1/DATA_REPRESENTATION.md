@@ -2,7 +2,8 @@
 
 Source requirement: **Change Requirement 1: Minimum-Bit Data Representation**.
 Implementation: `telemetry_codec.c/.h`, coordinated binary protocol version 3.
-Snapshot body: 102 meaningful bits, 14 bytes including version; heartbeat body
+Snapshot body: 124 meaningful bits, 17 bytes including version (102 bits / 14 bytes
+before 19 Nov 2026, when distance/heading since START were appended); heartbeat body
 8 bits in 2 bytes. Versions 1/2 are explicitly rejected. Units are application units;
 packets also contain a one-byte version header. C enums are temporary decoded
 values only: their compiler-dependent representation is never the wire format.
@@ -17,31 +18,37 @@ values only: their compiler-dependent representation is never the wire format.
 | Hump height | 0–500 mm | 1 mm | 9 | matches Buddy 4 packet; values 501–511 rejected |
 | Heading | 0–359 degrees | 1 degree | 9 | 360–511 rejected |
 | Pose distance since START | 0–4095 cm, modulo (wrapping counter) | 1 cm | 12 | width set by the largest step between samples plus a loss margin, not the run length; laptop unwraps |
-| Pose heading since START | 0–359 degrees | 1 degree | 9 | 360–511 rejected; live-only packet |
+| Pose heading since START | 0–359 degrees | 1 degree | 9 | 360–511 rejected; live packet, and since 19 Nov 2026 also the last value in the snapshot |
 | Tilt available | angles usable / unavailable | Boolean | 1 | unavailable sends zero angles; zero alone never means unavailable |
 | Pitch (+ nose up), roll | −90.0…+90.0 degrees each | 0.1 degree | 11 each, signed | same widths as Buddy 4's packet (1801 codes); ±90.1 and beyond rejected; live-only packet |
 | Terrain state | Buddy 4 states 0–7 (unknown…impact) | one state | 3 | sent even when the angles are unavailable; impact latched over the 200 ms period |
 | On hump / run peak valid | Boolean each | Boolean | 1 each | unavailable height is sent as zero; zero alone never means unavailable |
-| Live climb height, run peak height | 0–500 mm each | 1 mm | 9 each | same range/width as the hump packet; 501–511 rejected; live-only `car/telemetry/terrain` (46 bits, 7 bytes) |
+| Live climb height, run peak height | 0–500 mm each | 1 mm | 9 each | same range/width as the hump packet; 501–511 rejected; live-only `car/telemetry/terrain` (59 bits, 9 bytes since 19 Nov 2026; 46 bits, 7 bytes before) |
+| Turn rate valid, compass turn rate (19 Nov 2026) | Boolean; −360…+360 deg/s, + = anticlockwise | 1 deg/s | 1 + 10, signed | same width as Buddy 4's packet; unavailable (no magnetometer calibration) sends zero |
+| Lifted / overturned (19 Nov 2026) | none / lifted / overturned (0–2) | one value | 2 | code 3 rejected; a trip inside the 200 ms period is latched until reported |
 | Front range / valid / no-echo | 30–4000 mm; Boolean; Boolean | 1 mm | 12 + 1 + 1 | invalid range sent as zero; never both valid and no-echo; live-only `car/telemetry/avoidance` (38 bits, 6 bytes) |
 | Servo angle | 1–180 degrees, 0 = not positioned | 1 degree | 8 | last commanded angle |
 | Buddy 5 state / fault / route | 7 states / 8 reasons / 3 routes | one value | 3 / 3 / 2 | from the controller's 16-bit Buddy 5 status word |
-| Bypass leg / leg-3 step / side swapped | 0–15 / 5 steps / Boolean | one value | 4 / 3 / 1 | same word |
+| Bypass leg / leg-3 step / side swapped | 0–10 / 5 steps / Boolean | one value | 4 / 3 / 1 | same word; legs 0–8 of the bypass, 9 = reversing before leg 0, 10 = turning to face the obstacle (telemetry-only numbers) |
 | Scan profile valid, scan id | Boolean; low 8 bits of the scan id | — | 1 + 8 | live-only `car/telemetry/scan` (95 bits, 13 bytes) |
 | Closest, width, left/right clearance, depth | 30–4000 / 0–4095 / 0–4000 mm | 1 mm | 12 each | same ranges as Buddy 5's packed observation; failed scan = zero values |
 | Left/right edge (obstacle position) | −4000…+4000 mm, + = left | 1 mm | 13 each, offset +4000 | left edge ≥ right edge |
+| Raw scan reading (19 Nov 2026): scan id, side peek | low 8 bits of the id; Boolean | — | 8 + 1 | live-only `car/telemetry/scan_sample` (35 bits, 6 bytes), one message per reading after the profile |
+| Raw scan reading: index, count | 0–15; 1–16 (sent minus 1) | one reading | 4 + 4 | index < count |
+| Raw scan reading: angle, valid, distance | 30–150 degrees in 5 degree steps; Boolean; 30–4000 mm | 5 degrees; 1 mm | 5 + 1 + 12 | no reading = valid 0 and distance 0 |
 | Obstacle distance | 30–4000 mm | 1 mm | 12 | matches Buddy 5; invalid uses snapshot validity, not zero distance |
 | Obstacle width | 0–4095 mm | 1 mm | 12 | conservative profile width, not exact physical width |
 | Obstacle route | unknown/left/right (0–2) | one route | 2 | code 3 rejected |
 | Robot state | eight valid states (0–7) | one state | 3 | unknown represented by snapshot validity, not a ninth code |
 | Snapshot section validity | invalid/valid for seven sections | Boolean | 7 total | validity separate from numeric zero |
+| Snapshot pose validity (19 Nov 2026) | no drive yet / distance+heading valid | Boolean | 1 | bit 102, after the seven sections; then 12 + 9 pose bits (snapshot 124 bits, 17 bytes) |
 | Shared telemetry faults | stall, encoder, IMU, no echo, Wi-Fi loss, IR sensor fault | Boolean | 6 total | protected mask; bit ownership documented in protocol |
 | Each configured barcode letter | A–Z mapped to 0–25 | one letter | 5 | four letters = 20 bits; all different |
 | Configuration open/closed | before run / frozen | Boolean | 1 | stored in spare bit of LOCAL map version byte; never sent |
 | Mapping reply result | OK/invalid/closed/internal | one result | 2 | exact two-byte packet including version |
 | Heartbeat alive | true | Boolean | 1 | versioned status packet; not proof every task is healthy |
 | Heartbeat fault validity | unknown / update received | Boolean | 1 | faults occupy six adjacent bits |
-| Outbox topic selector | 12 topics (0–11) | one topic | 4 | explicit one-byte envelope; high nibble zero; replaces 64-byte text topic; compile-time check that topics fit 4 bits |
+| Outbox topic selector | 15 topics (0–14) | one topic | 4 | explicit one-byte envelope; high nibble zero; replaces 64-byte text topic; compile-time check that topics fit 4 bits |
 | Incoming command selector | unknown/snapshot/map (0–2) | one kind | 2 | one-byte envelope; upper six bits zero |
 
 The physical storage unit is a byte. Fields are packed across byte boundaries;

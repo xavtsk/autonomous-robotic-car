@@ -233,6 +233,17 @@ validity, no-echo, scan ID, width and both clearances. Numeric state/fault meani
 are in `obstacle_avoidance.h`. Existing MQTT best-effort/drop behaviour and the
 network-priority/timing issue have not been solved by adding Buddy 5.
 
+Wi-Fi (see `subsystem1/MQTT_PROTOCOL.md`): `car/telemetry/avoidance` every 200 ms,
+`car/telemetry/scan` per finished scan or side peek, and since 19 Nov 2026
+`car/telemetry/scan_sample`, every raw reading of that scan (angle, distance or
+"no reading"), so the `[S5SCAN]` USB line is no longer the only copy. The S5
+task keeps the last scan's readings (`subsystem5_scan_samples()`); the
+controller sends them one by one, at most every 40 ms and only while Buddy 1's
+outbox is empty (spare capacity only). The avoidance leg field also
+reports 9 while reversing before the 45° turn and 10 while turning to face the
+obstacle before the second scan (telemetry-only numbers; the bypass legs are
+unchanged).
+
 ## Validation and deliverables
 
 The four code deliverables are implemented across `obstacle_scan`,

@@ -36,10 +36,26 @@ class LaptopCodecTests(unittest.TestCase):
                 self.assertEqual(codec.decode(topic, self.vectors[topic]), value)
                 self.assertEqual(snapshot[name], dict(valid=True, **value))
         self.assertTrue(codec.decode("car/status", self.vectors["car/status"])["alive"])
-        # Pose is live-only (no snapshot section).
+        # Pose (distance/heading since START) is also in the snapshot since 19 Nov 2026.
         self.assertEqual(codec.decode("car/telemetry/pose", self.vectors["car/telemetry/pose"]),
                          dict(distance_cm_mod=2049, heading_deg=90))
-        self.assertNotIn("pose", snapshot)
+        self.assertEqual(snapshot["pose"], dict(valid=True, distance_cm_mod=2049, heading_deg=90))
+        self.assertEqual(len(self.vectors["car/reply/snapshot"]), 17)
+
+    def test_snapshot_pose_section_and_legacy_length(self):
+        def packet(pose_valid, cm, deg, pad=0):
+            body = pose_valid << 102 | cm << 103 | deg << 115 | pad << 124
+            return bytes([codec.VERSION]) + body.to_bytes(16, "little")
+        for cm, deg in ((0, 0), (4095, 359), (1234, 270)):
+            self.assertEqual(codec.decode("car/reply/snapshot", packet(1, cm, deg))["pose"],
+                             dict(valid=True, distance_cm_mod=cm, heading_deg=deg))
+        self.assertEqual(codec.decode("car/reply/snapshot", packet(0, 0, 0))["pose"], dict(valid=False))
+        for bad in (packet(0, 5, 0), packet(1, 0, 360), packet(1, 0, 0, pad=1),
+                    packet(1, 0, 0)[:-1] + b"\0\0"):
+            with self.subTest(bad=bad.hex()), self.assertRaises(ValueError):
+                codec.decode("car/reply/snapshot", bad)
+        # A 14-byte reply from older firmware still decodes, without pose.
+        self.assertNotIn("pose", codec.decode("car/reply/snapshot", bytes([codec.VERSION]) + bytes(13)))
 
     def test_buddy5_wire(self):
         self.assertEqual(codec.decode("car/telemetry/avoidance", self.vectors["car/telemetry/avoidance"]),
@@ -65,12 +81,31 @@ class LaptopCodecTests(unittest.TestCase):
 
     def test_terrain_wire(self):
         full = dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, state="climbing",
-                    on_hump=True, climb_mm=23, peak_valid=True, peak_mm=41)
+                    on_hump=True, climb_mm=23, peak_valid=True, peak_mm=41,
+                    turn_valid=True, turn_dps=-87, safety="none")
         self.assertEqual(codec.decode("car/telemetry/terrain", self.vectors["car/telemetry/terrain"]), full)
         self.assertNotIn("terrain", codec.decode("car/reply/snapshot", self.vectors["car/reply/snapshot"]))
+        # Legacy 7-byte packet (firmware before 19 Nov 2026): no turn rate/safety.
         self.assertEqual(codec.decode("car/telemetry/terrain", bytes.fromhex("03000000010000")),
                          dict(tilt_valid=False, pitch_deg=None, roll_deg=None, state="moving",
-                              on_hump=False, climb_mm=None, peak_valid=False, peak_mm=None))
+                              on_hump=False, climb_mm=None, peak_valid=False, peak_mm=None,
+                              turn_valid=False, turn_dps=None, safety=None))
+
+        def pack9(turn, safety):
+            body = (2 << 23 | (turn is not None) << 46 | ((turn or 0) & 0x3ff) << 47 | safety << 57)
+            return bytes([3]) + body.to_bytes(8, "little")
+        for turn, safety in ((None, 0), (360, 1), (-360, 2), (0, 0), (-1, 1)):
+            self.assertEqual(codec.decode("car/telemetry/terrain", pack9(turn, safety)),
+                             dict(tilt_valid=False, pitch_deg=None, roll_deg=None, state="moving",
+                                  on_hump=False, climb_mm=None, peak_valid=False, peak_mm=None,
+                                  turn_valid=turn is not None, turn_dps=turn,
+                                  safety=codec.SAFETY[safety]))
+        for bad in (pack9(361, 0), pack9(-361, 0), pack9(None, 3),
+                    bytes([3]) + (1 << 47).to_bytes(8, "little"),    # turn without valid
+                    bytes([3]) + (1 << 59).to_bytes(8, "little"),    # padding
+                    pack9(0, 0)[:-1] + b"\0\0"):                    # length 10
+            with self.subTest(bad=bad.hex()), self.assertRaises(ValueError):
+                codec.decode("car/telemetry/terrain", bad)
 
         def pack(pitch, roll, state, climb, peak):
             body = (1 | (pitch & 0x7ff) << 1 | (roll & 0x7ff) << 12 | state << 23 |
@@ -81,7 +116,8 @@ class LaptopCodecTests(unittest.TestCase):
             self.assertEqual(codec.decode("car/telemetry/terrain", pack(pitch, roll, 7, climb, peak)),
                              dict(tilt_valid=True, pitch_deg=pitch / 10, roll_deg=roll / 10, state="impact",
                                   on_hump=climb is not None, climb_mm=climb,
-                                  peak_valid=peak is not None, peak_mm=peak))
+                                  peak_valid=peak is not None, peak_mm=peak,
+                                  turn_valid=False, turn_dps=None, safety=None))
         for bad in ("03f10700000000",   # pitch +101.6
                     "03020000000000",   # unavailable but nonzero angle
                     "03000000080000",   # climb height without a hump
@@ -92,6 +128,29 @@ class LaptopCodecTests(unittest.TestCase):
                     "02000000000000"):  # version
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 codec.decode("car/telemetry/terrain", bytes.fromhex(bad))
+
+    def test_scan_sample_wire(self):
+        self.assertEqual(codec.decode("car/telemetry/scan_sample", self.vectors["car/telemetry/scan_sample"]),
+                         dict(scan_id=7, peek=False, index=3, count=13, angle_deg=75, valid=True, distance_mm=412))
+
+        def pack(sid, peek, index, count, angle, mm):
+            body = (sid | peek << 8 | index << 9 | (count - 1) << 13 | (angle - 30) // 5 << 17 |
+                    (mm is not None) << 22 | (mm or 0) << 23)
+            return bytes([3]) + body.to_bytes(5, "little")
+        for angle in range(30, 151, 5):
+            for index, count in ((0, 1), (15, 16), (4, 13)):
+                for mm in (30, 4000, None):
+                    self.assertEqual(codec.decode("car/telemetry/scan_sample", pack(255, 1, index, count, angle, mm)),
+                                     dict(scan_id=255, peek=True, index=index, count=count, angle_deg=angle,
+                                          valid=mm is not None, distance_mm=mm))
+        for bad in (pack(1, 0, 1, 1, 90, 200),                        # index outside count
+                    pack(1, 0, 0, 1, 90, 29), pack(1, 0, 0, 1, 90, 4001),
+                    bytes([3]) + (25 << 17).to_bytes(5, "little"),     # angle 155
+                    bytes([3]) + (5 << 23).to_bytes(5, "little"),      # distance without valid
+                    bytes([3]) + (1 << 35).to_bytes(5, "little"),      # padding
+                    pack(1, 0, 0, 1, 90, 200)[:-1]):                   # length
+            with self.subTest(bad=bad.hex()), self.assertRaises(ValueError):
+                codec.decode("car/telemetry/scan_sample", bad)
 
     def test_pose_wire_and_unwrap(self):
         self.assertEqual(codec.decode("car/telemetry/pose", bytes.fromhex("03ff7f16")),
@@ -149,7 +208,7 @@ class LaptopCodecTests(unittest.TestCase):
 
     def test_minimum_width_terrain_ranges_and_padding(self):
         self.assertEqual(codec.WIDTHS,(18,8,25,9,26,3,6))
-        self.assertEqual(codec.SNAPSHOT_BYTES,14)
+        self.assertEqual((codec.SNAPSHOT_BYTES, codec.SNAPSHOT_LEGACY_BYTES), (17, 14))
         for height in range(512):
             packet=bytes([codec.VERSION])+(65535 | height<<16).to_bytes(4,"little")
             if height<=500:

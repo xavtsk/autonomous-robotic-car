@@ -51,6 +51,9 @@ FIELDS = [
     ("terrain", "climb so far, mm", (0, 500, 1), 9, ""),
     ("terrain", "run peak valid", FLAG, 1, ""),
     ("terrain", "run peak, mm", (0, 500, 1), 9, ""),
+    ("terrain", "turn rate valid (19 Nov 2026)", FLAG, 1, ""),
+    ("terrain", "compass turn rate, deg/s", (-360, 360, 1), 10, ""),
+    ("terrain", "safety none/lifted/overturned", (0, 2, 1), 2, ""),
     ("avoidance", "front range valid", FLAG, 1, ""),
     ("avoidance", "no echo", FLAG, 1, ""),
     ("avoidance", "front range, mm", (30, 4000, 1), 12, ""),
@@ -58,7 +61,7 @@ FIELDS = [
     ("avoidance", "Buddy 5 state", (0, 6, 1), 3, ""),
     ("avoidance", "Buddy 5 fault", (0, 7, 1), 3, ""),
     ("avoidance", "route", (0, 2, 1), 2, ""),
-    ("avoidance", "bypass leg", (0, 10, 1), 4, ""),
+    ("avoidance", "bypass leg (9 = reversing, 10 = aiming)", (0, 10, 1), 4, ""),
     ("avoidance", "pass step", (0, 4, 1), 3, ""),
     ("avoidance", "side swapped", FLAG, 1, ""),
     ("scan", "profile valid", FLAG, 1, ""),
@@ -70,11 +73,18 @@ FIELDS = [
     ("scan", "depth to far face, mm", (0, 4000, 1), 12, ""),
     ("scan", "left edge, mm (+4000 offset)", (-4000, 4000, 1), 13, ""),
     ("scan", "right edge, mm (+4000 offset)", (-4000, 4000, 1), 13, ""),
+    ("scan_sample", "scan id (low 8 bits, 19 Nov 2026)", (0, 255, 1), 8, WRAP),
+    ("scan_sample", "side peek", FLAG, 1, ""),
+    ("scan_sample", "reading index", (0, 15, 1), 4, ""),
+    ("scan_sample", "readings in this scan", (1, 16, 1), 4, ""),
+    ("scan_sample", "angle index (30..150 deg, 5 deg steps)", (0, 24, 1), 5, ""),
+    ("scan_sample", "reading valid", FLAG, 1, ""),
+    ("scan_sample", "distance, mm (0 = no reading)", (0, 4000, 1), 12, ""),
     ("status", "alive", FLAG, 1, ""),
     ("status", "fault field known", FLAG, 1, ""),
     ("status", "fault bitmask", (0, 63, 1), 6, ""),
     ("map_reply", "result ok/invalid/closed/internal", (0, 3, 1), 2, ""),
-    ("envelope", "outbox topic selector (14 topics)", (0, 13, 1), 4, ""),
+    ("envelope", "outbox topic selector (15 topics)", (0, 14, 1), 4, ""),
     ("envelope", "incoming command kind", (0, 2, 1), 2, ""),
     # Buddy 4 internal 12-byte packet (shared snapshot and 8-slot event queue).
     ("b4 packet", "timestamp, us", (0, 2**32 - 1, 1), 32, WRAP),
@@ -111,7 +121,7 @@ FIELDS = [
     ("s5 status", "state", (0, 6, 1), 3, ""),
     ("s5 status", "fault", (0, 7, 1), 3, ""),
     ("s5 status", "route", (0, 2, 1), 2, ""),
-    ("s5 status", "leg", (0, 10, 1), 4, ""),
+    ("s5 status", "leg (9 = reversing, 10 = aiming)", (0, 10, 1), 4, ""),
     ("s5 status", "pass step", (0, 4, 1), 3, ""),
     ("s5 status", "side swapped", FLAG, 1, ""),
     # Buddy 5 private avoidance state (single owner, C bit-fields).
@@ -133,6 +143,7 @@ TOTALS = {
     "heading": codec.WIDTHS[3], "obstacle": codec.WIDTHS[4], "state": codec.WIDTHS[5],
     "faults": codec.WIDTHS[6], "pose": codec.POSE_DISTANCE_BITS + 9,
     "terrain": codec.TERRAIN_BITS, "avoidance": codec.AVOIDANCE_BITS, "scan": codec.SCAN_BITS,
+    "scan_sample": codec.SCAN_SAMPLE_BITS,
     "b4 packet": 93, "b5 packet": 182, "b5 sample": 18, "s5 status": 16,
 }
 
@@ -162,10 +173,10 @@ def main():
         ok = sums.get(group) == total
         bad += not ok
         print(f"| {group} | {sums.get(group)} | {total} | {'yes' if ok else '**NO**'} |")
-    snap = 7 + sum(codec.WIDTHS)
+    snap = 7 + sum(codec.WIDTHS) + 1 + codec.POSE_DISTANCE_BITS + 9   # + pose valid + pose (19 Nov 2026)
     ok = snap == codec.SNAPSHOT_BITS
     bad += not ok
-    print(f"| snapshot (7 validity + 7 sections) | {snap} | {codec.SNAPSHOT_BITS} | {'yes' if ok else '**NO**'} |")
+    print(f"| snapshot (7 validity + 7 sections + pose validity + pose) | {snap} | {codec.SNAPSHOT_BITS} | {'yes' if ok else '**NO**'} |")
     print()
     print("RESULT:", "PASS" if not bad else f"FAIL ({bad} problems)")
     return 1 if bad else 0

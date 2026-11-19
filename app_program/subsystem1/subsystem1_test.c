@@ -20,8 +20,8 @@ EXPORT void subsystem1_test(void)
     H left, right;
     TEST_INIT();
     drain();
-    TEST_CHECK("S1-B01", sizeof(message) == 15 && sizeof(command) == 5,
-               "outgoing slot is 15 bytes; command slot is 5 bytes");
+    TEST_CHECK("S1-B01", sizeof(message) == 18 && sizeof(command) == 5,
+               "outgoing slot is 18 bytes; command slot is 5 bytes");
     TEST_CHECK("S1-B02", buddy1_report_motion(120, -118) == E_OK && buddy1_outbox_take(&message),
                "signed wheel values enter and leave the copied FIFO");
     TEST_CHECK("S1-B03", message.type == BUDDY1_TOPIC_MOTION &&
@@ -123,7 +123,7 @@ EXPORT void subsystem1_test(void)
                buddy1_decode(BUDDY1_TOPIC_SNAPSHOT, p, sizeof(p), &decoded) &&
                decoded.motion_valid && decoded.barcode_valid && decoded.hump_valid &&
                decoded.heading_valid && decoded.obstacle_valid && decoded.robot_state_valid && decoded.faults_valid,
-               "all seven sections fit a 14-byte snapshot");
+               "all seven sections and pose fit a 17-byte snapshot");
     TEST_CHECK("S1-B26", buddy1_invalidate(BUDDY1_TOPIC_HUMP) == E_OK &&
                buddy1_snapshot(&decoded) && !decoded.hump_valid && decoded.heading_valid,
                "invalidation preserves neighbouring packed fields");
