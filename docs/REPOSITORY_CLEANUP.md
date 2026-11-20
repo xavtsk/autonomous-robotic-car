@@ -79,7 +79,7 @@ completion of that phase or a full compliance claim.
 - Routine CI now selects four jobs: baseline/candidate GCC, semantic comparison
   and paired production builds. Manual `suite=full` retains the full matrix,
   sanitizers, audits and evidence collectors. Action pins and failure handling
-  are unchanged; the revised workflow has not yet run on GitHub.
+  are unchanged; the first GitHub run is recorded below.
 
 Remaining Phase 2 work includes identifier/API conventions, header interfaces,
 long string/macro lines, complete function contracts, type-rule boundaries and
@@ -87,6 +87,20 @@ larger-function decomposition. The source-bound CR1/compiler inventories need
 refreshing after line movements; their historical measurements are not current
 source validation. BARR-P13 failure-diagnostic source locations remain pending.
 
-The next executable regression gate is Linux CI. This plan reserves pushing
-for a separate user instruction, so changes remain local until that instruction
-is received. No firmware was flashed and no vehicle operation was performed.
+After the user's separate push instruction, Phase 1 and this Phase 2 batch were
+published as `903057d35ecc1c8551f58c357ae1517c58bd16f5`.
+[Linux run 44699456784](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44699456784)
+executed the four routine jobs. Both GCC host runs fail only at the original
+subsystem3 replay gate; all other recorded host steps pass. All 16 semantic
+comparisons and all 1008 replay outputs match the fixed baseline. The replay
+audit retains the same two expectation failures, so the workflow remains red.
+
+The paired production build succeeds. Independently hashed downloaded flash
+and UF2 bytes match the previous a3de92a cleanup build. Static RAM remains
+129496 bytes, with 465788 text bytes and 696 data bytes. This is the public
+example network profile, not a newly deployed image. Sanitizers and alternate
+target profiles were not repeated by quick mode. The existing source receipt
+now includes the run, artifact hashes and exact evidence limits.
+
+No firmware was flashed and no vehicle operation was performed. Phase 2 remains
+in progress; the Linux gate for this bounded source batch has been examined.

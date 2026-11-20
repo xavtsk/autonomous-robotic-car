@@ -1,14 +1,18 @@
 # Current status and preservation baseline
 
-> Housekeeping checkpoint, 20 November 2026: the latest retained Linux receipt
+> Housekeeping checkpoint, 20 November 2026: the latest retained full-matrix receipt
 > is [revision a3de92a](compliance/evidence/checkpoint-a3de92a-linux.json).
 > Its affected checks pass in six host modes and twelve target profiles; the
 > two original replay expectation failures remain. The detailed 55af85c summary
 > below is the previous checkpoint and has not yet been consolidated for the
 > final candidate. Subsequent working-tree edits have separate bounded checks
 > in the [cleanup record](REPOSITORY_CLEANUP.md), not a new firmware execution claim.
-> Phase 2's first source batch is now implemented locally; Linux regression
-> execution and the remaining BARR work are still pending.
+> Phase 2 source revision `903057d35ecc1c8551f58c357ae1517c58bd16f5` is published.
+> Its [four-job Linux run](https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44699456784)
+> has matching semantic/replay outputs and a successful production build.
+> CI remains red for the two unchanged baseline replay expectations. The
+> production UF2 matches the previous a3de92a cleanup build byte for byte;
+> remaining BARR work and physical validation are still pending.
 
 The cleanup baseline is `4ad2cc42595722cedb47102e4343298339040d40`.
 The local firmware `build/compliance-review-20261119/compliance-wifi.uf2` has

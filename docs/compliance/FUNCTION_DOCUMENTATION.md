@@ -102,17 +102,17 @@ python tools/compliance/barr_functions.py --compile-db <target.json> --compile-d
 
 ## Retained operator contracts
 
-The interrupted operator documentation batch is retained in the working tree.
+The interrupted operator documentation batch was published in `903057d`.
 Its [source-bound receipt](OPERATOR_FUNCTION_CONTRACTS.json) covers 23 definitions
 and eight prototypes in `op_logic.c`/`.h`, including STOP precedence, startup
 button arming, callback lifetime, rejected requests and timeout behaviour.
 The existing comment-batch verifier confirms unchanged C tokens, preprocessing
 directives and original comment order against `a3de92a`. The recorded six parser
-contexts have no documentation diagnostics. This is not new Linux execution or
-physical evidence; a published commit is not yet assigned to this batch.
+contexts have no documentation diagnostics. The later four-job Linux run for
+`903057d` also has identical operator traces; physical validation is separate.
 
 ```sh
-python tools/compliance/verify_comment_batch.py --manifest docs/compliance/OPERATOR_FUNCTION_CONTRACTS.json --candidate WORKTREE
+python tools/compliance/verify_comment_batch.py --manifest docs/compliance/OPERATOR_FUNCTION_CONTRACTS.json --candidate 903057d35ecc1c8551f58c357ae1517c58bd16f5
 ```
 
 ## Next review batches

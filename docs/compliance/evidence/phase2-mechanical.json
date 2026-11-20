@@ -756,5 +756,78 @@
     "tools/compliance/traces/terrain_trace.h": "a9d4bb5b88c189be95e81583618b3853364705288ce47c96221aab0537e1b7a2"
   },
   "source_receipt_complete": true,
-  "current_linux_regression": "pending; changes have not been pushed"
+  "current_linux_regression": "Executed at 903057d; detailed outputs match, original replay failures remain; no new regression observed.",
+  "linux_checkpoint": {
+    "revision": "903057d35ecc1c8551f58c357ae1517c58bd16f5",
+    "run_id": 44699456784,
+    "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44699456784",
+    "workflow_conclusion": "failure",
+    "routine_jobs_executed": 4,
+    "hosts": [
+      {
+        "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+        "mode": "gcc",
+        "artifact_id": 14612212705,
+        "failed_steps": [
+          "subsystem3"
+        ],
+        "other_steps_pass": true,
+        "results_sha256": "d64586c201b4c19146cb0d37c86e433b19a51f2234641c3f2935b034192935ce"
+      },
+      {
+        "revision": "903057d35ecc1c8551f58c357ae1517c58bd16f5",
+        "mode": "gcc",
+        "artifact_id": 14611588427,
+        "failed_steps": [
+          "subsystem3"
+        ],
+        "other_steps_pass": true,
+        "results_sha256": "090cdb4c79b8c0b54fb631a4255a1f5ca5c3da2e3aebfea261865dd9fb190df5"
+      }
+    ],
+    "semantic_comparisons": 16,
+    "all_semantic_comparisons_match": true,
+    "recorded_replay": {
+      "name": "recorded_replay",
+      "cases": 1008,
+      "mismatches": 0,
+      "expectation_failures": 2,
+      "matched": true
+    },
+    "production": {
+      "artifact_id": 14611424016,
+      "build_returncode": 0,
+      "sizes": {
+        "text": 465788,
+        "data": 696,
+        "bss": 128800,
+        "static_ram": 129496
+      },
+      "flash_sha256": "7591708ee30bf81bc0ab474004949f9899993fd44a29b774a2041e9bb2c14874",
+      "uf2_sha256": "19457bbb3747c02ad840e831db01ea57a80e6dc867c865f3853dbd97c0785268",
+      "identical_to_prior_cleanup_revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "downloaded_binary_hashes_verified": true
+    },
+    "sanitizers_rerun": false,
+    "additional_target_profiles_rerun": false,
+    "physical_validation": false,
+    "artifact_archives": [
+      {
+        "id": 14612212705,
+        "sha256": "bb0f3fa4a071b855d79ed28cea79efffce42993d8929f2508732c44aae9de6ae"
+      },
+      {
+        "id": 14611588427,
+        "sha256": "475846e22b4c8c33c9e41c61d3132da89bd7bf4d82054552299489c905717bd2"
+      },
+      {
+        "id": 14611862446,
+        "sha256": "221408951e5119c7e62d668e91fa850d20a9f5dbda450b355da3bf13687e9991"
+      },
+      {
+        "id": 14611424016,
+        "sha256": "68952d01f435a530039c96d10e3b22f66675fc3c8dccaa02f17ab35f543cd2c2"
+      }
+    ]
+  }
 }
