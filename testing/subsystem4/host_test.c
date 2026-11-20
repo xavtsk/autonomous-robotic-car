@@ -132,7 +132,8 @@ static void right_wheel_tests (void)
 {
     hump_detector_t h = {0};
     uint32_t now = 0;
-    /* No count without an observed level baseline, or from stationary tilting. */
+    /* No count without an observed level baseline, or from stationary tilting.
+     */
     right_samples(&h, &now, 0.01f, 0.001f, 20);
     assert(!h.active && !h.highest_valid);
     right_samples(&h, &now, 0, 0, 5);
@@ -173,7 +174,8 @@ static void right_wheel_tests (void)
     assert(!h.active && !h.armed);
     right_samples(&h, &now, 0.01f, 0.001f, 20);
     assert(!h.active); /* no restart on same plateau */
-    /* Left-only elevation, pitch-only humps, brief roll spikes and steep roll do not count. */
+    /* Left-only elevation, pitch-only humps, brief roll spikes and steep roll
+     * do not count. */
     hump_reset(&h);
     right_samples(&h, &now, 0, 0.001f, 5);
     right_samples(&h, &now, -0.01f, 0.001f, 20);
@@ -191,7 +193,8 @@ static void right_wheel_tests (void)
     hump_update_right_wheel(&h, 0, 10, 0.116f, 0.001f, HUMP_SAMPLE_VALID,
                             now += 20000);
     assert(!h.active && !h.armed);
-    /* Width and pitch affect the calculation; the result is not fixed at 1 cm. */
+    /* Width and pitch affect the calculation; the result is not fixed at 1 cm.
+     */
     for (unsigned variant = 0; variant < 3; variant++)
     {
         const float track = variant == 0 ? 0.116f : 0.2f,
@@ -222,7 +225,8 @@ static void right_wheel_tests (void)
                        TERRAIN_SAFETY_NONE);
             }
             assert(f.monitor.result.hump_active && f.completed == pass);
-            /* A brief forward jolt must preserve the crossing and its trusted peak. */
+            /* A brief forward jolt must preserve the crossing and its trusted
+             * peak. */
             float peak = f.monitor.hump.peak_m,
                   travel = f.monitor.hump.travel_m;
             terrain_accel(&f, -0.13f, -0.01f / 0.116f, 0.9963f, 0.0008f, 40000);
@@ -309,7 +313,7 @@ static void right_wheel_tests (void)
         }
         assert(f.monitor.hump.active);
         /* Two consecutive lateral disturbances cancel a crossing even with
-   * plausible filtered roll. The first cannot inflate the peak. */
+         * plausible filtered roll. The first cannot inflate the peak. */
         float peak = f.monitor.hump.peak_m;
         terrain_step(&f, 0, 14, 0.0008f, 20000);
         assert(f.monitor.hump.active && f.monitor.hump.peak_m == peak);
@@ -323,7 +327,8 @@ static void right_wheel_tests (void)
         terrain_fixture_t legacy, right;
         terrain_fixture_init(&legacy, TERRAIN_HUMP_LONGITUDINAL);
         terrain_fixture_init(&right, TERRAIN_HUMP_RIGHT_WHEEL);
-        /* A smooth both-wheel pitch hump still belongs to the original profile. */
+        /* A smooth both-wheel pitch hump still belongs to the original profile.
+         */
         for (unsigned segment = 0; segment < 6; segment++)
         {
             for (unsigned i = 0; i < 20; i++)
@@ -429,7 +434,7 @@ static void level_pickup_rules_tests (void)
                TERRAIN_SAFETY_NONE);
     }
     /* This diagonal motion exceeds the horizontal limit even though each
-  * individual axis is within it. */
+     * individual axis is within it. */
     for (unsigned i = 0; i < 4; i++)
     {
         assert(terrain_accel(&f, 0.11f, 0.11f, 1.18f, 0.001f, 20000) ==
@@ -450,7 +455,8 @@ static void level_pickup_rules_tests (void)
     assert(terrain_accel(&f, 0.03f, 0, 1.11f, 0.001f, 20000) ==
            TERRAIN_SAFETY_LIFTED);
 
-    /* Run 9, using the first two recorded calibrated samples of the gentle pickup. */
+    /* Run 9, using the first two recorded calibrated samples of the gentle
+     * pickup. */
     terrain_fixture_init(&f, TERRAIN_HUMP_RIGHT_WHEEL);
     assert(terrain_accel(&f, -0.037f, 0.018f, 1.165f, 0.001f, 20000) ==
            TERRAIN_SAFETY_NONE);
@@ -473,7 +479,8 @@ static void pickup_and_overturn_tests (void)
 {
     terrain_fixture_t f;
     terrain_fixture_init(&f, TERRAIN_HUMP_RIGHT_WHEEL);
-    /* Horizontal acceleration/braking and a single vertical jolt must not end a drive. */
+    /* Horizontal acceleration/braking and a single vertical jolt must not end a
+     * drive. */
     for (unsigned i = 0; i < 10; i++)
     {
         assert(terrain_accel(&f, 0.20f, 0, 1.0f, 0.001f, 20000) ==
@@ -488,7 +495,8 @@ static void pickup_and_overturn_tests (void)
            TERRAIN_SAFETY_NONE);
     assert(terrain_step(&f, 0, 0, 0.001f, 20000) == TERRAIN_SAFETY_NONE);
 
-    /* Upward acceleration while still level and while the encoders report motion. */
+    /* Upward acceleration while still level and while the encoders report
+     * motion. */
     for (unsigned i = 0; i < 2; i++)
     {
         assert(terrain_accel(&f, 0, 0, 1.32f, 0.001f, 20000) ==
@@ -512,7 +520,8 @@ static void pickup_and_overturn_tests (void)
     terrain_step(&f, 0, 0, 0, 20000);
     assert(f.monitor.result.safety == TERRAIN_SAFETY_NONE);
 
-    /* An angled pickup and an upside-down gravity vector are distinct hazards. */
+    /* An angled pickup and an upside-down gravity vector are distinct hazards.
+     */
     for (unsigned i = 0; i < 2; i++)
     {
         assert(terrain_step(&f, 0, 30, 0.001f, 20000) == TERRAIN_SAFETY_NONE);
@@ -668,7 +677,8 @@ int main (void)
             assert(decoded.hump_completed && decoded.impact &&
                    !decoded.hump_active && (packed[11] & 0xf8U) == 0);
         }
-        /* Live climb height: 1 + 9 bits after the impact bit, 0..500 mm, zero when no hump. */
+        /* Live climb height: 1 + 9 bits after the impact bit, 0..500 mm, zero
+         * when no hump. */
         for (int mm = 0; mm <= 500; mm++)
         {
             t.result = (terrain_result_t){.hump_active = true,

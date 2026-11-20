@@ -3,10 +3,11 @@
  *
  * Use the candidate fixture against either subject checkout. Compile with
  * -I SUBJECT -I SUBJECT/app_program/subsystem2 -I testing/subsystem3 and link
- * ctrl_motion.c, motion_pack.c, motion_estimation.c and speed_pid.c from SUBJECT.
- * motion.c is included here so tests can seed otherwise unreachable boundary
- * values. Real motion_create/init/process/getter logic is still exercised.
- * Define MOTION_COMPACT_RETAINED only for the future private-storage adapter.
+ * ctrl_motion.c, motion_pack.c, motion_estimation.c and speed_pid.c from
+ * SUBJECT. motion.c is included here so tests can seed otherwise unreachable
+ * boundary values. Real motion_create/init/process/getter logic is still
+ * exercised. Define MOTION_COMPACT_RETAINED only for the future private-storage
+ * adapter.
  */
 #define main motion_existing_test_suite
 #define tk_loc_mtx motion_existing_loc_mtx
@@ -22,7 +23,7 @@ static bool g_fail_lock;
 static unsigned g_lock_calls;
 static unsigned g_unlock_calls;
 
-ER tk_loc_mtx(ID id, int timeout)
+ER tk_loc_mtx (ID id, int timeout)
 {
     g_lock_calls++;
     if (g_fail_lock)
@@ -33,7 +34,7 @@ ER tk_loc_mtx(ID id, int timeout)
     return motion_existing_loc_mtx(id, timeout);
 }
 
-ER tk_unl_mtx(ID id)
+ER tk_unl_mtx (ID id)
 {
     g_unlock_calls++;
     return motion_existing_unl_mtx(id);
@@ -43,21 +44,21 @@ ER tk_unl_mtx(ID id)
 
 static unsigned g_cases;
 
-static uint32_t float_word(float value)
+static uint32_t float_word (float value)
 {
     uint32_t word;
     memcpy(&word, &value, sizeof(word));
     return word;
 }
 
-static uint64_t double_word(double value)
+static uint64_t double_word (double value)
 {
     uint64_t word;
     memcpy(&word, &value, sizeof(word));
     return word;
 }
 
-static unsigned calibration_flags(const motion_calibration_t *value)
+static unsigned calibration_flags (const motion_calibration_t * value)
 {
     return (unsigned)value->b_valid | ((unsigned)value->b_m1_inverted << 1) |
            ((unsigned)value->b_m2_inverted << 2) |
@@ -69,7 +70,7 @@ static unsigned calibration_flags(const motion_calibration_t *value)
            ((unsigned)value->b_aborted << 8);
 }
 
-static void seed_calibration(const motion_calibration_t *value)
+static void seed_calibration (const motion_calibration_t * value)
 {
     motion_lock();
 #ifdef MOTION_COMPACT_RETAINED
@@ -81,17 +82,18 @@ static void seed_calibration(const motion_calibration_t *value)
     motion_unlock();
 }
 
-static void test_calibration_storage(void)
+static void test_calibration_storage (void)
 {
     static const uint32_t words[] = {
-        UINT32_C(0), UINT32_C(0x80000000), UINT32_C(0x00000001),
+        UINT32_C(0),          UINT32_C(0x80000000), UINT32_C(0x00000001),
         UINT32_C(0x7f7fffff), UINT32_C(0x7fc01234), UINT32_C(0xc5abcdef)};
     for (unsigned flags = 0U; flags < 512U; ++flags)
     {
         motion_calibration_t expected = {0}, actual;
-        float *fields[] = {&expected.counts_per_rev, &expected.max_speed_mps,
+        float * fields[] = {
+            &expected.counts_per_rev,   &expected.max_speed_mps,
             &expected.counts_per_rev_l, &expected.counts_per_rev_r,
-            &expected.top_speed_l_mps, &expected.top_speed_r_mps};
+            &expected.top_speed_l_mps,  &expected.top_speed_r_mps};
         expected.b_valid = (flags & 1U) != 0U;
         expected.b_m1_inverted = (flags & 2U) != 0U;
         expected.b_m2_inverted = (flags & 4U) != 0U;
@@ -112,13 +114,15 @@ static void test_calibration_storage(void)
         assert(!locked && g_lock_calls == locks_before + 1U &&
                g_unlock_calls == unlocks_before + 1U);
         assert(calibration_flags(&actual) == flags);
-        const float actual_fields[] = {actual.counts_per_rev, actual.max_speed_mps,
+        const float actual_fields[] = {
+            actual.counts_per_rev,   actual.max_speed_mps,
             actual.counts_per_rev_l, actual.counts_per_rev_r,
-            actual.top_speed_l_mps, actual.top_speed_r_mps};
+            actual.top_speed_l_mps,  actual.top_speed_r_mps};
         printf("MSTORE CAL %03x", flags);
         for (unsigned index = 0U; index < 6U; ++index)
         {
-            assert(float_word(actual_fields[index]) == float_word(*fields[index]));
+            assert(float_word(actual_fields[index]) ==
+                   float_word(*fields[index]));
             printf(" %08" PRIx32, float_word(actual_fields[index]));
         }
         putchar('\n');
@@ -126,7 +130,7 @@ static void test_calibration_storage(void)
     }
 }
 
-static void test_failure_outputs(void)
+static void test_failure_outputs (void)
 {
     motion_feedback_t feedback, feedback_before;
     motion_debug_snapshot_t debug, debug_before;
@@ -163,8 +167,8 @@ static void test_failure_outputs(void)
     g_cases++;
 }
 
-static void seed_feedback(uint32_t stamp, uint32_t epoch, uint64_t centre,
-                          uint32_t losses, unsigned flags)
+static void seed_feedback (uint32_t stamp, uint32_t epoch, uint64_t centre,
+                           uint32_t losses, unsigned flags)
 {
     motion_lock();
     g_flags = (motion_flags_t){0};
@@ -184,13 +188,20 @@ static void seed_feedback(uint32_t stamp, uint32_t epoch, uint64_t centre,
     motion_unlock();
 }
 
-static void test_feedback_storage(void)
+static void test_feedback_storage (void)
 {
-    static const uint32_t clocks[] = {0U, 1U, UINT32_C(0x7fffffff),
-        UINT32_C(0x80000000), UINT32_MAX - 1U, UINT32_MAX};
-    static const uint64_t centres[] = {UINT64_C(0), UINT64_C(0x8000000000000000),
-        UINT64_C(1), UINT64_C(0x7fefffffffffffff),
-        UINT64_C(0x7ff8000000001234), UINT64_C(0xc0fabcde12345678)};
+    static const uint32_t clocks[] = {0U,
+                                      1U,
+                                      UINT32_C(0x7fffffff),
+                                      UINT32_C(0x80000000),
+                                      UINT32_MAX - 1U,
+                                      UINT32_MAX};
+    static const uint64_t centres[] = {UINT64_C(0),
+                                       UINT64_C(0x8000000000000000),
+                                       UINT64_C(1),
+                                       UINT64_C(0x7fefffffffffffff),
+                                       UINT64_C(0x7ff8000000001234),
+                                       UINT64_C(0xc0fabcde12345678)};
     motion_init();
     encoder_running = true;
     for (unsigned flags = 0U; flags < 8U; ++flags)
@@ -203,8 +214,10 @@ static void test_feedback_storage(void)
                 motion_debug_snapshot_t debug;
                 uint32_t losses = clocks[(stamp + epoch) % 6U];
                 uint64_t centre = centres[(stamp + epoch) % 6U];
-                seed_feedback(clocks[stamp], clocks[epoch], centre, losses, flags);
-                unsigned locks_before = g_lock_calls, unlocks_before = g_unlock_calls;
+                seed_feedback(clocks[stamp], clocks[epoch], centre, losses,
+                              flags);
+                unsigned locks_before = g_lock_calls,
+                         unlocks_before = g_unlock_calls;
                 assert(motion_get_feedback(&feedback));
                 assert(motion_try_debug_snapshot(&debug));
                 assert(!locked && g_lock_calls == locks_before + 2U &&
@@ -216,35 +229,42 @@ static void test_feedback_storage(void)
                 assert(feedback.valid == ((flags & 1U) != 0U));
                 assert(debug.timestamp_us == clocks[stamp]);
                 assert(debug.valid == ((flags & 3U) == 3U));
-                assert(feedback.state == MOTION_IDLE && feedback.fault == MOTION_FAULT_NONE);
-                assert(debug.state == feedback.state && debug.fault == feedback.fault);
+                assert(feedback.state == MOTION_IDLE &&
+                       feedback.fault == MOTION_FAULT_NONE);
+                assert(debug.state == feedback.state &&
+                       debug.fault == feedback.fault);
                 assert(debug.braked == feedback.braked && !debug.busy);
                 printf("MSTORE FB %u %08" PRIx32 " %08" PRIx32 " %08" PRIx32
-                       " %016" PRIx64 " %u %u\n", flags, feedback.timestamp_us,
-                       feedback.epoch, feedback.report_loss_count,
-                       double_word(feedback.centre_m), feedback.valid, debug.valid);
+                       " %016" PRIx64 " %u %u\n",
+                       flags, feedback.timestamp_us, feedback.epoch,
+                       feedback.report_loss_count,
+                       double_word(feedback.centre_m), feedback.valid,
+                       debug.valid);
                 g_cases++;
             }
         }
     }
 }
 
-static void test_feedback_wrap(void)
+static void test_feedback_wrap (void)
 {
     motion_feedback_t feedback;
     seed_feedback(UINT32_MAX, UINT32_MAX, 0U, UINT32_MAX, 3U);
     clock_us = UINT32_MAX - 4999U;
     motion_init();
     assert(motion_get_feedback(&feedback));
-    assert(feedback.epoch == 0U && feedback.timestamp_us == UINT32_MAX && !feedback.valid);
+    assert(feedback.epoch == 0U && feedback.timestamp_us == UINT32_MAX &&
+           !feedback.valid);
     clock_us += 10000U;
     motion_process();
     assert(motion_get_feedback(&feedback));
-    assert(feedback.epoch == 0U && feedback.timestamp_us == 5000U && feedback.valid);
+    assert(feedback.epoch == 0U && feedback.timestamp_us == 5000U &&
+           feedback.valid);
     assert(double_word(feedback.centre_m) == 0U);
     motion_lock();
     queued = MOTION_REPORT_QUEUE_LEN;
-    const motion_report_t report = {255U, MOTION_OUTCOME_CANCELLED, MOTION_FAULT_NONE, false};
+    const motion_report_t report = {255U, MOTION_OUTCOME_CANCELLED,
+                                    MOTION_FAULT_NONE, false};
     report_post(&report);
     motion_unlock();
     assert(motion_get_feedback(&feedback) && feedback.report_loss_count == 0U);
@@ -257,16 +277,21 @@ static void test_feedback_wrap(void)
     g_cases++;
 }
 
-int main(void)
+int main (void)
 {
     assert(motion_existing_test_suite() == 0);
     test_calibration_storage();
     test_failure_outputs();
     test_feedback_storage();
     test_feedback_wrap();
-    fprintf(stderr, "Retained sizes: calibration=%zu feedback=%zu flags=%zu; wide calibration=%zu feedback=%zu\n",
-            sizeof(g_cal_result), sizeof(g_feedback), sizeof(g_flags),
-            sizeof(motion_calibration_t), sizeof(motion_feedback_t));
+    fprintf(
+        stderr,
+        "Retained sizes: calibration=%zu feedback=%zu flags=%zu; wide calibration=%zu feedback=%zu\n",
+        sizeof(g_cal_result), sizeof(g_feedback), sizeof(g_flags),
+        sizeof(motion_calibration_t), sizeof(motion_feedback_t));
     printf("PASS: %u motion storage characterization cases\n", g_cases);
     return 0;
 }
+
+/* End of file. */
+

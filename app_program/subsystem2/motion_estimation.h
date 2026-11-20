@@ -68,24 +68,24 @@ float32_t motion_estimation_wheel_accel (wheel_id_t wheel); /* m/s^2 */
  * @return Signed count multiplied by the current metres-per-count scale.
  * @note The count and scale are separate reads; no coherent snapshot is taken.
  */
-float32_t motion_estimation_wheel_dist (wheel_id_t wheel);  /* m     */
+float32_t motion_estimation_wheel_dist (wheel_id_t wheel); /* m     */
 /** @brief Average the two retained wheel-speed estimates.
  * @return Signed mean wheel speed in metres per second.
  * @note Reads each wheel separately without locking against an update.
  */
-float32_t motion_estimation_robot_speed (void);             /* m/s   */
+float32_t motion_estimation_robot_speed (void); /* m/s   */
 /** @brief Average the two current encoder-derived wheel distances.
  * @return Signed centre distance in metres under the current encoder scale.
  * @note Reads both wheel distances separately without taking a snapshot.
  */
-float32_t motion_estimation_robot_dist (void);              /* m     */
+float32_t motion_estimation_robot_dist (void); /* m     */
 /** @brief Calculate heading from the wheel-distance difference.
  * @return Unwrapped degrees, positive anticlockwise; zero when the configured
  * track width is nonpositive. Otherwise no finite-value validation is done.
  * @note Reads wheel distances separately and divides right minus left distance
  * by track width. Callers needing a coherent sample must serialize the reads.
  */
-float32_t motion_estimation_heading_deg (void);             /* deg   */
+float32_t motion_estimation_heading_deg (void); /* deg   */
 
 #endif /* BUDDY2_MOTION_ESTIMATION_H */
 

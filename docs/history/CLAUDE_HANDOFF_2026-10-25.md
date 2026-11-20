@@ -1,5 +1,9 @@
 # Claude handoff: autonomous robot, Buddies 1–3
 
+> Historical briefing from 25 October 2026. The original text below is retained;
+> its branch, paths, firmware state and next actions are not current instructions.
+> Use the [documentation index](../README.md) and [current status](../CURRENT_STATUS.md).
+
 Prepared by Codex for Zhaobao on **25 October 2026**, Asia/Singapore.
 This is a continuation briefing, not proof that the robot is physically ready.
 Read the current files and recheck Git status before acting: the user may have

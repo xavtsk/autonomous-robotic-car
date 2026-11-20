@@ -45,9 +45,8 @@ static void servo_to (unsigned angle)
     }
 }
 #ifndef S5_SCAN_LOG
-#define S5_SCAN_LOG                                                            \
-    1 /* TEMP (28 Oct): print every full-scan reading on USB                   \
-       */
+/* TEMP (28 Oct): print every full-scan reading on USB */
+#define S5_SCAN_LOG 1
 #endif
 static void scan_log (const s5_scan_t * p_s, const s5_profile_t * p_p)
 {

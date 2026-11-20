@@ -4,6 +4,13 @@ on:
   push:
     branches: ['codex/compliance-preserve-behaviour', 'codex/compliance-*']
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Regression scope (full also collects compliance evidence)
+        type: choice
+        required: true
+        default: quick
+        options: [quick, full]
 
 permissions:
   contents: read
@@ -19,6 +26,7 @@ env:
 
 jobs:
   audit:
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'full'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -46,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         revision: [baseline, candidate]
-        mode: [gcc, clang, sanitize]
+        mode: ${{ fromJSON(inputs.suite == 'full' && '["gcc","clang","sanitize"]' || '["gcc"]') }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -62,32 +70,32 @@ jobs:
       - name: Execute host suites
         run: /usr/bin/python3 tooling/tools/compliance/run_host.py --root subject --output evidence --mode '${{ matrix.mode }}' ${{ matrix.revision == 'candidate' && '--check-c99' || '' }}
       - name: Observe host conditional compilation
-        if: always() && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
+        if: always() && inputs.suite == 'full' && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
         run: /usr/bin/python3 tooling/tools/compliance/conditional_coverage.py --root subject --commands evidence/compile_commands.jsonl --output evidence/conditional-coverage --profile 'host-${{ matrix.mode }}'
       - name: Save host branch receipt for matrix union
-        if: always() && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
+        if: always() && inputs.suite == 'full' && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: branches-host-${{ matrix.mode }}-${{ github.sha }}
           path: evidence/conditional-coverage/results.json
           if-no-files-found: error
       - name: Observe current fixtures against the fixed baseline
-        if: always() && matrix.revision == 'baseline' && matrix.mode != 'sanitize'
+        if: always() && inputs.suite == 'full' && matrix.revision == 'baseline' && matrix.mode != 'sanitize'
         run: /usr/bin/python3 tooling/tools/compliance/conditional_coverage.py --root tooling --external-baseline subject --fixture-bindings evidence/fixture-bindings.json --module-bindings evidence/tilt-module.json --commands evidence/compile_commands.jsonl --output evidence/baseline-fixture-coverage --profile 'host-baseline-fixtures-${{ matrix.mode }}'
       - name: Save separately bound baseline-fixture branch receipt
-        if: always() && matrix.revision == 'baseline' && matrix.mode != 'sanitize'
+        if: always() && inputs.suite == 'full' && matrix.revision == 'baseline' && matrix.mode != 'sanitize'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: branches-host-baseline-fixtures-${{ matrix.mode }}-${{ github.sha }}
           path: evidence/baseline-fixture-coverage/results.json
           if-no-files-found: error
       - name: Collect actual host compiler function observations
-        if: always() && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
+        if: always() && inputs.suite == 'full' && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
         run: |
           /usr/bin/python3 -m pip install --disable-pip-version-check --target "$RUNNER_TEMP/clang-host-functions" libclang==18.1.1
           PYTHONPATH="$RUNNER_TEMP/clang-host-functions" /usr/bin/python3 tooling/tools/compliance/barr_functions.py --root subject --equivalent-root tooling --compile-db evidence/compile_commands.jsonl --recorded-only --profile-label 'host-${{ matrix.mode }}' --output evidence/function-inventory.json --jobs 4
       - name: Save actual host compiler function observations
-        if: always() && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
+        if: always() && inputs.suite == 'full' && matrix.revision == 'candidate' && matrix.mode != 'sanitize'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: function-inventory-host-${{ matrix.mode }}-${{ github.sha }}
@@ -130,7 +138,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [production, diagnostics, imu_debug, offline_motion, stationary_1, stationary_3, self_tests, motion_smoke, s4_bench, single_core, straight_test, s5_unconfirmed]
+        profile: ${{ fromJSON(inputs.suite == 'full' && '["production","diagnostics","imu_debug","offline_motion","stationary_1","stationary_3","self_tests","motion_smoke","s4_bench","single_core","straight_test","s5_unconfirmed"]' || '["production"]') }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -155,25 +163,25 @@ jobs:
       - name: Build identical baseline and candidate profiles
         run: /usr/bin/python3 candidate/tools/compliance/build_targets.py --baseline baseline --candidate candidate --sdk pico-sdk --profile '${{ matrix.profile }}' --output evidence
       - name: Observe target conditional compilation
-        if: success()
+        if: inputs.suite == 'full' && success()
         run: /usr/bin/python3 candidate/tools/compliance/conditional_coverage.py --root candidate --commands evidence/candidate/compile_commands.json --output evidence/conditional-coverage --profile 'target-${{ matrix.profile }}'
       - name: Save target branch receipt for matrix union
-        if: always()
+        if: always() && inputs.suite == 'full'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: branches-target-${{ matrix.profile }}-${{ github.sha }}
           path: evidence/conditional-coverage/results.json
           if-no-files-found: error
       - name: Collect compiler observations (partial diagnostics remain explicit)
-        if: matrix.profile == 'production' && success()
+        if: inputs.suite == 'full' && matrix.profile == 'production' && success()
         run: |
           /usr/bin/python3 -m pip install --disable-pip-version-check --target "$RUNNER_TEMP/clang-bindings" libclang==18.1.1
           PYTHONPATH="$RUNNER_TEMP/clang-bindings" /usr/bin/python3 candidate/testing/compliance/inventory_ast.py --root candidate --compile-db evidence/candidate/compile_commands.json --output evidence/inventory-ast.json --jobs 4
       - name: Collect target compiler function observations with derived public configuration
-        if: always() && matrix.profile == 'production'
+        if: always() && inputs.suite == 'full' && matrix.profile == 'production'
         run: PYTHONPATH="$RUNNER_TEMP/clang-bindings" /usr/bin/python3 candidate/tools/compliance/barr_functions.py --root candidate --compile-db evidence/candidate/compile_commands.json --public-config-output evidence/function-config --profile-label target-production --output evidence/function-inventory.json --jobs 4
       - name: Save compiler function observations for documentation comparison
-        if: always() && matrix.profile == 'production'
+        if: always() && inputs.suite == 'full' && matrix.profile == 'production'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: function-inventory-target-production-${{ github.sha }}
@@ -189,7 +197,7 @@ jobs:
   documentation:
     runs-on: ubuntu-24.04
     needs: [host, target]
-    if: always()
+    if: always() && inputs.suite == 'full'
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -227,7 +235,7 @@ jobs:
   conditional-union:
     runs-on: ubuntu-24.04
     needs: [host, target]
-    if: always()
+    if: always() && inputs.suite == 'full'
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

@@ -176,7 +176,8 @@ static unsigned int all_letters_both_directions (void)
                 const uint32_t end = frame((char)('A' + letter), reverse != 0U,
                                            boundary ? 60U : 400U, 0U, -1, 0U);
                 /* Tolerated paper must stay strictly below the primary peak
-             * prominence (15), otherwise it creates real extractor peaks. */
+                 * prominence (15), otherwise it creates real extractor peaks.
+                 */
                 noisy_tail(3000000U, boundary ? 14U : 6U, boundary ? 4U : 1U);
                 check_success((char)('A' + letter), reverse != 0U, end);
                 assert(tally.rejected == 0U);
@@ -198,7 +199,8 @@ static unsigned int weak_frames_keep_strict_paper (void)
                                        faint ? 12U : 0U, -1, 0U);
             noisy_tail(2000000U, 12U, 2U);
             /* A tentative strong-frame check must neither accept nor discard
-             * a faint scan; it still needs a genuinely clean trailing margin. */
+             * a faint scan; it still needs a genuinely clean trailing margin.
+             */
             assert(tally.decoded == 0U);
             assert(s3_barcode_record_active(&record));
             level(2500000U, 0U);
@@ -246,7 +248,7 @@ static unsigned int genuine_interruptions_are_not_bridged (void)
             (void)frame('Z', reverse != 0U, 400U, 0U, -1, 0U);
             level(1400000U, 0U);
             /* Above the amplitude bound, or longer than the duration bound.
-         * There is insufficient fresh quiet before this test's endpoint. */
+             * There is insufficient fresh quiet before this test's endpoint. */
             level(kind ? 50000U : 40000U, kind ? 12U : 15U);
             level(400000U, 0U);
             assert(tally.decoded == 0U);

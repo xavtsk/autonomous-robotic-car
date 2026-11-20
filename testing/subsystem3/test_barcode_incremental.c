@@ -116,7 +116,8 @@ static void compare_frozen_candidate (void)
         }
     }
     /* Advance only a diagnostic copy, with its frozen physical observations.
-     * This comparison is not a live decode or a substitute for fresh samples. */
+     * This comparison is not a live decode or a substitute for fresh samples.
+     */
     while (snapshot.work.phase != RW_DONE)
     {
         snapshot.work_units = 0U;

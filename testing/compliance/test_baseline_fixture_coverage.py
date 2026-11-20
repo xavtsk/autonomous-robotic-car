@@ -67,7 +67,16 @@ class BaselineFixtureCoverageTests(unittest.TestCase):
         dependency = context.observe(command, cwd, self.output, 0, self.overlay)
         self.assertEqual(dependency['errors'], [])
         self.assertEqual(dependency['returncode'], 0)
-        self.assertEqual({row['kind'] for row in dependency['dependencies']}, {'tooling', 'baseline'})
+        # Linux GCC can implicitly consume stdc-predef.h even when the fixture
+        # names no system header. Require both bound source trees and validate
+        # those real system dependencies instead of assuming Windows behavior.
+        kinds = {row['kind'] for row in dependency['dependencies']}
+        self.assertEqual(kinds-{'system'}, {'tooling', 'baseline'})
+        for row in dependency['dependencies']:
+            if row['kind'] == 'system':
+                path = Path(row['path'])
+                self.assertTrue(any(path.is_relative_to(root) for root in external.SYSTEM_ROOTS))
+                self.assertEqual(row['bytes_sha256'], external.digest(path.read_bytes()))
         changed, branches = coverage.instrument(self.fixture.read_text(), 'testing/compliance/fixture.c')
         (self.overlay/'testing/compliance/fixture.c').write_text(changed)
         process = subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=True)

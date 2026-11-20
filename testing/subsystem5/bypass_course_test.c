@@ -241,7 +241,8 @@ motion_result_t motion_request_turn (float degrees, float speed)
     return turn_deg(degrees, speed);
 }
 
-/* ---- Scenarios ------------------------------------------------------------ */
+/* ---- Scenarios ------------------------------------------------------------
+ */
 static int verbose;
 static double end_x, end_y;
 

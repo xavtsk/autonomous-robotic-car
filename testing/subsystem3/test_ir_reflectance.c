@@ -2,7 +2,8 @@
  * @brief Host tests: synthetic inputs verify software, not physical sensor
  * accuracy.
  */
-/* Host tests: synthetic inputs verify software, not physical sensor accuracy. */
+/* Host tests: synthetic inputs verify software, not physical sensor accuracy.
+ */
 #include "test_ir_reflectance.h"
 #include <assert.h>
 #include <stdio.h>
@@ -45,7 +46,8 @@ int main (void)
     expect_sample(&sensor, 4095U, 1000U, IR_SURFACE_BLACK);
     expect_sample(&sensor, 0U, 0U, IR_SURFACE_WHITE);
 
-    /* Failure/recovery must not preserve a stale colour through an ADC error. */
+    /* Failure/recovery must not preserve a stale colour through an ADC error.
+     */
     assert(!ir_reflectance_update(&sensor, 4096U, &darkness));
     assert(sensor.surface == IR_SURFACE_UNKNOWN);
     expect_sample(&sensor, 215U, 500U, IR_SURFACE_UNKNOWN);

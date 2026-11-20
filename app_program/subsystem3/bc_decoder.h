@@ -117,16 +117,13 @@ s3_barcode_status_t s3_barcode_update (s3_barcode_decoder_t * p_decoder,
 #define S3_REC_PRE_MAX (320U)    /* bounds history storage at 100/200 Hz */
 #define S3_REC_WHITE_BAND (75U)  /* within this of the paper = white       */
 #define S3_REC_PROMINENCE (100U) /* maximum/default peak prominence       */
-#define S3_REC_MIN_PROMINENCE                                                  \
-    (15U) /* minimum contrast on the 0..1000 scale        \
-                                */
+/* minimum contrast on the 0..1000 scale */
+#define S3_REC_MIN_PROMINENCE (15U)
 #define S3_REC_FAINT_BAND (5U) /* recovery noise band above near-zero paper */
-#define S3_REC_FAINT_MAX_NOISE                                                 \
-    (15U) /* refuse recovery on noisier recordings                             \
-           */
-#define S3_REC_FAINT_DIP_US                                                    \
-    (30000U) /* bridge brief low dips inside one bar          \
-                               */
+/* refuse recovery on noisier recordings */
+#define S3_REC_FAINT_MAX_NOISE (15U)
+/* bridge brief low dips inside one bar */
+#define S3_REC_FAINT_DIP_US (30000U)
 #define S3_REC_STEP_US (500U) /* time-step unit of a stored reading     */
 #define S3_REC_STEP_MAX (63U) /* 6 bits: 31.5 ms > 30 ms sample-age limit */
 /* Retain plateau ripples until the complete frame can be pruned globally.

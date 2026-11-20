@@ -533,7 +533,8 @@ static void test_clearance_persistence_and_epochs (void)
     /* Faulted calibration updates cannot clear the latch. */
     assert(!s3_navigation_apply_calibration(&rig.nav, S3_SENSOR_BARCODE, &c));
 }
-#ifndef S3_BASELINE_TRACE /* "make compare" replays only the pre-recorder tests */
+/* "make compare" replays only the pre-recorder tests. */
+#ifndef S3_BASELINE_TRACE
 /* A small barcode whose thin bars blur to grey: bars read darkness ~550 and
  * gaps ~300, so the fixed WHITE/BLACK limits never see a black bar. The
  * record-then-decide reader still reads it - once, as one barcode event. */

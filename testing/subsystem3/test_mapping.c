@@ -2,7 +2,8 @@
  * @brief Physical GPIO routing regression; independent of historical algorithm
  * traces.
  */
-/* Physical GPIO routing regression; independent of historical algorithm traces. */
+/* Physical GPIO routing regression; independent of historical algorithm traces.
+ */
 #include "test_mapping.h"
 #include <assert.h>
 #include <stdio.h>

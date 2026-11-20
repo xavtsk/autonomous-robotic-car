@@ -133,7 +133,8 @@ int main (void)
     echo = true;
     assert(!ultrasonic_sensor_trigger(140000));
     echo = false;
-    /* Path clear: pulse started (ECHO high) but nothing returned within 25 ms. */
+    /* Path clear: pulse started (ECHO high) but nothing returned within 25 ms.
+     */
     assert(ultrasonic_sensor_trigger(210000));
     echo = true;
     assert(!ultrasonic_sensor_poll(220000, &mm, &valid));

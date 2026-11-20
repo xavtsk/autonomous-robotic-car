@@ -193,7 +193,8 @@ ER tk_dly_tsk (unsigned ms)
     }
     if (scenario == 4 && stage == 1 && o.scan_done && o.scan_id == 77)
     {
-        /* One servo move, that side's clearance reported, the other side untouched. */
+        /* One servo move, that side's clearance reported, the other side
+         * untouched. */
         assert(scan_angles == 1 && o.profile.valid &&
                o.profile.right_clear_mm == 2000 &&
                o.profile.left_clear_mm == S5_RANGE_MAX_MM);

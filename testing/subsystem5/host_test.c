@@ -21,7 +21,8 @@ static s5_profile_t profile (void)
         assert(s5_sample_pack(30U + 30U * i, range[i], true, &samples[i]));
     }
     assert(s5_profile_build(samples, 5, &cfg, &p));
-    /* Edge padding scales with the farthest obstacle return: 250 mm * .173 -> 44 each side. */
+    /* Edge padding scales with the farthest obstacle return: 250 mm * .173 ->
+     * 44 each side. */
     assert(S5_EDGE_INFLATE_PERMIL == 173U && cfg.detect_mm == 250U &&
            S5_LEG_CLEAR_MM == 200U);
     assert(p.valid && p.closest_mm == 250 && p.width_mm == 88 &&
@@ -115,7 +116,8 @@ static void scans (void)
     assert(s5_profile_build(s.sample, s.count, &cfg, &p));
     s5_plan_t plan;
     assert(s5_plan(&p, &cfg, &plan) && plan.route == S5_ROUTE_LEFT);
-    /* Diagonal side readings only pick the side; too wide an offset still fails. */
+    /* Diagonal side readings only pick the side; too wide an offset still
+     * fails. */
     p.left_clear_mm = 10;
     p.right_clear_mm = 20;
     assert(s5_plan(&p, &cfg, &plan) &&
@@ -196,7 +198,8 @@ static void fsm_depth (bool see_line, bool block, bool bad_range, unsigned deep)
         in.now_us += 10000;
         in.observation.range_us = in.now_us;
         in.observation.range_valid = true;
-        /* block: after turning, the sideways path reads 150 mm (< offset + margin). */
+        /* block: after turning, the sideways path reads 150 mm (< offset +
+         * margin). */
         in.observation.range_mm =
             (block && f.leg == 1 && (!first_side_only || !f.swapped)) ? 150
                                                                       : 2000;
@@ -221,10 +224,10 @@ static void fsm_depth (bool see_line, bool block, bool bad_range, unsigned deep)
                    a.value == (f.plan.route == S5_ROUTE_LEFT ? 30 : 150));
             in.observation.scan_done = true;
             in.observation.scan_us = in.now_us;
-            unsigned side =
-                peeks++ < deep
-                    ? 97U
-                    : 2000U; /* 97 mm: beside us, at the planned gap (0.966 x 97 = 93) */
+            unsigned side = peeks++ < deep
+                                ? 97U
+                                : 2000U; /* 97 mm: beside us, at the planned gap
+                                            (0.966 x 97 = 93) */
             if (f.plan.route == S5_ROUTE_LEFT)
             {
                 in.observation.profile.right_clear_mm = (uint16_t)side;
@@ -479,7 +482,8 @@ static int fsm_aim_turn (int left_edge, int right_edge, unsigned closest,
         }
         if (a.kind == S5_ACT_SCAN)
         {
-            /* Rescan after the aim: centred now, unless the test keeps it off. */
+            /* Rescan after the aim: centred now, unless the test keeps it off.
+             */
             scans++;
             in.observation.scan_us = in.now_us + 5000;
             if (!second_off)
@@ -747,7 +751,7 @@ static void rules_17nov (void)
     const s5_config_t c = s5_defaults();
     const unsigned pad = c.half_width_mm + c.margin_mm;
     { /* Straight, line crossed on the return: stop, 135 mm, swerve back toward
-         * the bypass side, stopped on the tape, hand back. */
+       * the bypass side, stopped on the tape, hand back. */
         scr_t o = {.tape_leg = 6,
                    .tape_pass = -1,
                    .tape_leg2 = 5,
@@ -762,8 +766,8 @@ static void rules_17nov (void)
                recs[t].value == S5_SWERVE_OUT_DEG + S5_BYPASS_DEG);
     }
     { /* Converging while passing: a peek 70 mm away (gap 67 < 93 - 8) turns the
-         * car away by min(10, (93-67+1)/2) and peeks again; the turn-in then
-         * aims 45 deg off the passing heading (45 + 10). */
+       * car away by min(10, (93-67+1)/2) and peeks again; the turn-in then
+       * aims 45 deg off the passing heading (45 + 10). */
         scr_t o = {.peek_side = {70, 97},
                    .npeek_side = 2,
                    .tape_leg = 6,
@@ -789,7 +793,7 @@ static void rules_17nov (void)
         assert((70U * 966U) / 1000U + S5_SIDE_TOL_MM < pad);
     }
     { /* Drifted away while passing: the last side peek says 150 mm (gap 144):
-         * the return diagonal covers that, not just the planned offset. */
+       * the return diagonal covers that, not just the planned offset. */
         scr_t o = {.peek_side = {150},
                    .npeek_side = 1,
                    .tape_leg = 6,
@@ -804,8 +808,8 @@ static void rules_17nov (void)
                lat > f.plan.offset_mm);
     }
     { /* Bend toward the bypass side: the line comes under the car while
-         * passing (leg 3, after the front face). Stop, 135 mm to put the axle on
-         * it, then swerve toward the bypass side from the passing heading. */
+       * passing (leg 3, after the front face). Stop, 135 mm to put the axle on
+       * it, then swerve toward the bypass side from the passing heading. */
         scr_t o = {.peek_side = {97},
                    .npeek_side = 1,
                    .tape_leg = 3,
@@ -831,7 +835,7 @@ static void rules_17nov (void)
                f.state == S5_COMPLETE);
     }
     { /* Hand-back check: braking carried the IR off the tape. Turn back slowly
-         * by S5_CENTRE_DEG the way it came, stop on the tape, then hand back. */
+       * by S5_CENTRE_DEG the way it came, stop on the tape, then hand back. */
         scr_t o = {.tape_leg = 6,
                    .tape_pass = -1,
                    .tape_in_finish = true,
@@ -854,7 +858,7 @@ static void rules_17nov (void)
     }
 #if S5_ALLOW_OTHER_SIDE
     { /* One blocked reading on the left diagonal is not believed: the next two
-         * are clear, so the car stays LEFT. */
+       * are clear, so the car stays LEFT. */
         scr_t o = {.leg1_range = {150},
                    .nleg1 = 1,
                    .tape_leg = 6,
@@ -865,7 +869,7 @@ static void rules_17nov (void)
                f.plan.route == S5_ROUTE_LEFT);
     }
     { /* Blocked on S5_BLOCK_CONFIRM readings: 2 x 45 deg to the right
-         * diagonal and go round on the RIGHT (the right side is a real route). */
+       * diagonal and go round on the RIGHT (the right side is a real route). */
         scr_t o = {.leg1_range = {150, 150, 150},
                    .nleg1 = 3,
                    .tape_leg = 6,
@@ -881,9 +885,9 @@ static void rules_17nov (void)
                    150); /* looks left now */
     }
     { /* Left needs more room than reversing gives but the right fits:
-         * take the right before turning at all. Face 160 + 75 = 235 mm ahead
-         * of the axle; left edge 240 needs 90+240+30-235 = 125 > 100 mm of
-         * reversing, right edge 210 needs 95 (reverse 95, then turn right). */
+       * take the right before turning at all. Face 160 + 75 = 235 mm ahead
+       * of the axle; left edge 240 needs 90+240+30-235 = 125 > 100 mm of
+       * reversing, right edge 210 needs 95 (reverse 95, then turn right). */
         s5_config_t cc = s5_defaults();
         s5_avoidance_t f;
         s5_avoidance_init(&f, &cc);
@@ -925,7 +929,7 @@ static void rules_17nov (void)
     }
 #endif
     { /* A picture wider than 1.5 x the largest obstacle (obstacle + wall) is
-         * not aimed at. */
+       * not aimed at. */
         s5_profile_t q = profile();
         q.left_edge_mm = 250;
         q.right_edge_mm = -60;
@@ -968,7 +972,8 @@ int main (void)
     fsm(true, true, false);
     fsm(true, false, true);
     fsm(false, false, false);
-    { /* 10 cm box at 196 mm: beam smear at 60/120 must not block either side. */
+    { /* 10 cm box at 196 mm: beam smear at 60/120 must not block either side.
+       */
         unsigned ang[12] = {30, 60, 90, 120, 150, 75, 80, 85, 90, 95, 100, 105},
                  rr[12] = {4000, 215, 196, 215, 4000, 203,
                            199,  197, 196, 197, 199,  203};
@@ -1015,11 +1020,13 @@ int main (void)
             assert(a.kind !=
                    S5_ACT_DRIVE); /* never drives the blocked diagonal */
         }
-        /* Both sides would need more reversing than allowed: stop, no side swap. */
+        /* Both sides would need more reversing than allowed: stop, no side
+         * swap. */
         assert(f.state == S5_FAULT && f.fault == S5_NO_PATH && !f.swapped);
     }
 #if S5_ALLOW_OTHER_SIDE
-    /* Preferred side blocked after the turn: 2 x 45 deg, take the other side. */
+    /* Preferred side blocked after the turn: 2 x 45 deg, take the other side.
+     */
     first_side_only = true;
     fsm(true, true, false);
     first_side_only = false;
@@ -1078,15 +1085,17 @@ int main (void)
            12); /* bend: same aim, rescan, plan */
     assert(fsm_aim_turn(150, -10, 250, false, 0.05) ==
            12); /* gentle steering = straight */
-    { /* Return diagonal: straight keeps the full diagonal (tape crossing ignored);
-       * bend stops on tape, then drives IR-to-axle; bend away gets one extra drive. */
+    { /* Return diagonal: straight keeps the full diagonal (tape crossing
+       * ignored); bend stops on tape, then drives IR-to-axle; bend away gets
+       * one extra drive. */
         s5_config_t c = s5_defaults();
         s5_plan_t pl;
         s5_profile_t pp = profile();
         assert(s5_plan(&pp, &c, &pl));
         unsigned diag = (pl.offset_mm * 1414U + 999U) / 1000U, d[4], n;
         bool early;
-        /* Straight: tape stops the car too, then only IR-to-axle (never on past the line). */
+        /* Straight: tape stops the car too, then only IR-to-axle (never on past
+         * the line). */
         fsm_cross(0.0, 60, d, &n, &early);
         assert(early && n == 2 && d[0] == diag && d[1] == S5_IR_AXLE_MM);
         fsm_cross(0.0, diag - S5_IR_AXLE_MM, d, &n, &early);
@@ -1125,18 +1134,21 @@ int main (void)
            12); /* straight, car crooked: face it, rescan, then plan */
     assert(fsm_aim(150, -10, 250, true) ==
            12); /* still off after the rescan: no second aim */
-    /* Too close: 100 mm face, edge 75 (20 cm worst case: 100) -> corner needs 90+100+30=220 vs 175: back 45. */
+    /* Too close: 100 mm face, edge 75 (20 cm worst case: 100) -> corner needs
+     * 90+100+30=220 vs 175: back 45. */
     assert(fsm_backup(100, 75) == -45);
     assert(fsm_backup(250, 44) == 0); /* far enough: no reverse */
     assert(fsm_backup(60, 200) ==
            1); /* would need 185 mm > S5_BACKUP_MAX_MM: NO_PATH */
-    /* Unknown depth: 4 peeks see the obstacle (4 x 50 mm steps), the 5th is clear. */
+    /* Unknown depth: 4 peeks see the obstacle (4 x 50 mm steps), the 5th is
+     * clear. */
     fsm_depth(true, false, false, 4);
-    /* Deeper than max_depth_mm: stop with NO_PATH instead of driving on blind. */
+    /* Deeper than max_depth_mm: stop with NO_PATH instead of driving on blind.
+     */
     fsm_depth(true, false, false, 11);
-    { /* Finding the line after the return diagonal (same length as the out one).
-       * Not seen on the way (a line bending away): swerve to the line side
-       * first, -90 from the passing heading, then +80, then back to it. */
+    { /* Finding the line after the return diagonal (same length as the out
+       * one). Not seen on the way (a line bending away): swerve to the line
+       * side first, -90 from the passing heading, then +80, then back to it. */
         int sweep[4] = {0};
         unsigned back;
         s5_config_t c = s5_defaults();
@@ -1145,9 +1157,8 @@ int main (void)
         s5_plan_t pl;
         s5_profile_t pp = profile();
         assert(s5_plan(&pp, &c, &pl));
-        fsm_line(
-            -1, sweep,
-            &back); /* never: -45 (to -90), +170 (to +80), -80 (to 0), NO_LINE */
+        fsm_line(-1, sweep, &back); /* never: -45 (to -90), +170 (to +80), -80
+                                       (to 0), NO_LINE */
         assert(back == (pl.offset_mm * 1414U + 999U) / 1000U);
         assert(S5_SWERVE_IN_DEG == 90 && S5_SWERVE_OUT_DEG == 80 &&
                sweep[0] == -45 && sweep[1] == 170 && sweep[2] == -80);
@@ -1168,8 +1179,9 @@ int main (void)
         assert(c.half_width_mm == 63U && S5_SONAR_AXLE_MM == 75U &&
                S5_PEEK_STEP_MM == 25U);
         f.plan.offset_mm = 250U;
-        /* 0.577 x gap + sonar-to-axle + axle-to-rear + margin: 54 + 75 + 55 + 30 = 214 mm
-         * (the shorter 139 mm hit the obstacle on the car, 17 Nov evening). */
+        /* 0.577 x gap + sonar-to-axle + axle-to-rear + margin: 54 + 75 + 55 +
+         * 30 = 214 mm (the shorter 139 mm hit the obstacle on the car, 17 Nov
+         * evening). */
         assert(S5_PASS_EXTRA_V2 == 0 &&
                pass_extra_test(&f) == (pad * 577U + 999U) / 1000U +
                                           S5_SONAR_AXLE_MM + S5_REAR_AXLE_MM +

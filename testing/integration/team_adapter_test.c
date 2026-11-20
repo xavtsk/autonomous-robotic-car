@@ -366,7 +366,8 @@ int main (void)
     vehicle_controller_cancel_start();
     assert(!frozen && reopens == 1);
     assert(vehicle_controller_set_mapping(map));
-    /* Accepted START: the freeze belongs to the run; a stray cancel is a no-op. */
+    /* Accepted START: the freeze belongs to the run; a stray cancel is a no-op.
+     */
     assert(vehicle_controller_prep_start(&nav) && frozen);
     vehicle_controller_commit_start();
     vehicle_controller_cancel_start();
@@ -377,7 +378,8 @@ int main (void)
     assert(frozen && reopens == 1);
     assert(!vehicle_controller_set_mapping(map));
     assert(vehicle_controller_submit_nav(&runtime.navigation) == E_NOSPT);
-    /* Route pose: relative to START, 5 Hz while running, final one at the end. */
+    /* Route pose: relative to START, 5 Hz while running, final one at the end.
+     */
     runtime = (s3_integration_status_t){0};
     status = (motion_status_t){0};
     status.b_valid = true;

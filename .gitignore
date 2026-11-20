@@ -24,11 +24,7 @@ Thumbs.db
 Debug
 Release
 
-# Build artifacts
-*.elf
-*.uf2
-*.map
-*.o
+# Additional build artifacts
 *.d
 build_make/tools/elf2uf2
 build_make/tools/elf2uf2.exe
@@ -50,8 +46,7 @@ config/wifi_secrets.h
 __pycache__/
 *.pyc
 
-# macOS
-.DS_Store
+# Local barcode trace exports
 barcode_trace_*.txt
 
 # Laptop dashboard captures (including simulated test sessions)

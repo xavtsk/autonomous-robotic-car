@@ -451,7 +451,8 @@ static void simulate (void)
         counts[1] += turn_sign;
     }
     /* Off the line (white) while going round; the tape is crossed on the
-     * return diagonal and under the IR again during the swerve and hand-back. */
+     * return diagonal and under the IR again during the swerve and hand-back.
+     */
     bool tape = false, off = drive.obstacle_active &&
                              drive.obstacle.state == S5_MOVING &&
                              drive.obstacle.leg >= 1;
@@ -522,7 +523,8 @@ static void snapshot_contention (void)
     assert(drive.state == S3_DRIVE_FOLLOW);
     simulate();
     assert(drive.state == S3_DRIVE_FAULT);
-    /* Explicit negative observations and read/codec failures never use old good data. */
+    /* Explicit negative observations and read/codec failures never use old good
+     * data. */
     init(true);
     start();
     snapshot_result = S5_SNAPSHOT_BUSY;
@@ -632,7 +634,8 @@ int main (void)
     /* Actual controller applies STOP and produces its matching cancellation. */
     for (unsigned i = 0; i < 5000 && drive.state != S3_DRIVE_FAULT; i++)
     {
-        /* Exercise scan and all seven movement handoffs under intermittent contention. */
+        /* Exercise scan and all seven movement handoffs under intermittent
+         * contention. */
         snapshot_result = (i % 11U == 0U) ? S5_SNAPSHOT_BUSY : S5_SNAPSHOT_OK;
         simulate();
         if (!drive.obstacle_active)
@@ -645,12 +648,14 @@ int main (void)
            scan_calls == 1);
     assert(drive.obstacle.recovery.confirmed &&
            drive.navigation.mode == S3_MODE_TRACK);
-    /* Leg 3 measured the depth: 3 side peeks (2 still beside, 1 clear), 2 steps. */
+    /* Leg 3 measured the depth: 3 side peeks (2 still beside, 1 clear), 2
+     * steps. */
     assert(peek_calls == 3 &&
            drive.obstacle.searched_mm == 2U * S5_PEEK_STEP_MM);
-    /* Completed moves: out turn, out diagonal, turn parallel, approach, 2 steps,
-     * clearance, turn in, 135 mm onto the line = 9. The return diagonal and the
-     * swerve turn are stopped at the tape (not completed). No barcode manoeuvre. */
+    /* Completed moves: out turn, out diagonal, turn parallel, approach, 2
+     * steps, clearance, turn in, 135 mm onto the line = 9. The return diagonal
+     * and the swerve turn are stopped at the tape (not completed). No barcode
+     * manoeuvre. */
     assert(polls == 9 && turns == 0);
     s3_drive_stop(&drive);
     assert(!drive.obstacle_active && !lease);

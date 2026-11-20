@@ -279,7 +279,8 @@ static void test_barcode (void)
         assert(s3_barcode_decode_runs(reverse, 29U, 150000U, 150000U, 1000U,
                                       &cfg, &result));
         assert(result.letter == (char)('A' + c) && result.reversed);
-        /* Exercise every symbol through timestamped transitions in both directions. */
+        /* Exercise every symbol through timestamped transitions in both
+         * directions. */
         for (k = 0U; k < 2U; k++)
         {
             const uint32_t * trace = k ? reverse : runs;
@@ -296,7 +297,8 @@ static void test_barcode (void)
             assert(count == 1U && result.letter == (char)('A' + c) &&
                    result.reversed == (k != 0U));
         }
-        /* Scaled, jittered elements with locally consistent character speeds. */
+        /* Scaled, jittered elements with locally consistent character speeds.
+         */
         for (i = 0U; i < 29U; i++)
         {
             unsigned int character_index = i / 10U;

@@ -2,7 +2,8 @@
  * @brief Observe deterministic network callbacks after the concurrent producer
  * test joins.
  */
-/* Observe deterministic network callbacks after the concurrent producer test joins. */
+/* Observe deterministic network callbacks after the concurrent producer test
+ * joins. */
 static host_publish_cb trace_original_incoming;
 static host_data_cb trace_original_fragment;
 

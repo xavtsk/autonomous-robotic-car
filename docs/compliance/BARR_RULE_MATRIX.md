@@ -120,7 +120,7 @@ and [ABBREVIATIONS.md](ABBREVIATIONS.md). Generate this matrix with
 | 1.8.c.iii | example | manual | Review memory-mapped peripheral pointers for volatile qualification. | unreviewed |
 | 1.8.c.iv | example | manual | Review delay-loop counters for volatile qualification. | unreviewed |
 | 2.1.a | permission | manual | C++-style single-line comments are permitted. | unreviewed |
-| 2.1.b | mandatory | lexical | Do not place nested comment tokens or backslashes inside comment content. | unreviewed |
+| 2.1.b | mandatory | lexical | Do not place nested comment tokens or backslashes inside comment content. | verified |
 | 2.1.c | mandatory | manual | Do not retain commented-out code. | unreviewed |
 | 2.1.c.i | guidance | manual | Use conditional compilation for temporarily disabled code. | unreviewed |
 | 2.1.c.ii | mandatory | manual | Place code existing specifically for increased debug output inside NDEBUG guards. | unreviewed |
@@ -152,14 +152,14 @@ and [ABBREVIATIONS.md](ABBREVIATIONS.md). Generate this matrix with
 | 3.2.a | mandatory | formatter-review | Align names in consecutive variable declarations. | unreviewed |
 | 3.2.b | mandatory | formatter-review | Align structure and union member names. | unreviewed |
 | 3.2.c | mandatory | formatter-review | Align consecutive assignment operators. | unreviewed |
-| 3.2.d | mandatory | lexical | Place every preprocessor hash at the start of its line. | unreviewed |
+| 3.2.d | mandatory | lexical | Place every preprocessor hash at the start of its line. | verified |
 | 3.3.a | mandatory | ast-review | Place no more than one statement on a line. | unreviewed |
 | 3.3.b | mandatory | manual | Separate natural code blocks with blank lines. | unreviewed |
-| 3.3.c | mandatory | lexical | End each C source file with an end-of-file comment and a blank line. | unreviewed |
+| 3.3.c | mandatory | lexical | End each C source file with an end-of-file comment and a blank line. | verified |
 | 3.4.a | preferred | formatter-review | Prefer indentation in multiples of four columns. | unreviewed |
 | 3.4.b | mandatory | formatter-review | Align switch case labels and indent case contents one level. | unreviewed |
 | 3.4.c | guidance | manual | Indent continued lines for readability. | unreviewed |
-| 3.5.a | mandatory | lexical | Do not use literal tab characters in source files. | unreviewed |
+| 3.5.a | mandatory | lexical | Do not use literal tab characters in source files. | verified |
 | 3.6.a | qualified | lexical | Use LF line endings whenever possible. | unreviewed |
 | 3.6.b | mandatory | lexical | Permit no other control character except form feed. | unreviewed |
 | 4.1.a | mandatory | lexical | Use lowercase letters, digits and underscores in module filenames. | unreviewed |

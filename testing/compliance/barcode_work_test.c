@@ -100,8 +100,8 @@ static void trace (const char * p_name, unsigned int variant,
                    const char * p_stage, const s3_barcode_config_t * p_config)
 {
     const s3_barcode_work_t * p_work = &g_record.work;
-    printf("BWORK %u %s %u %s cfg=%" PRIu32 ",%" PRIu32 ",%" PRIu32
-           ",%" PRIu32 ",%u record=%u,%u,%u,%u,%" PRIu32 ",%u,%u",
+    printf("BWORK %u %s %u %s cfg=%" PRIu32 ",%" PRIu32 ",%" PRIu32 ",%" PRIu32
+           ",%u record=%u,%u,%u,%u,%" PRIu32 ",%u,%u",
            g_calls, p_name, variant, p_stage, p_config->max_gap_us,
            p_config->min_narrow_us, p_config->max_run_us,
            p_config->max_frame_us, (unsigned int)p_config->quiet_modules,
@@ -109,7 +109,8 @@ static void trace (const char * p_name, unsigned int variant,
            (unsigned int)g_record.paper, (unsigned int)g_record.prominence,
            g_record.leading_us, (unsigned int)g_record.work_units,
            (unsigned int)g_record.fit_ticks);
-#define TRACE_U(member) printf(" " #member "=%" PRIu32, (uint32_t)p_work->member)
+#define TRACE_U(member)                                                        \
+    printf(" " #member "=%" PRIu32, (uint32_t)p_work->member)
 #define TRACE_S(member) printf(" " #member "=%" PRId32, (int32_t)p_work->member)
     TRACE_U(total_us);
     TRACE_U(best_us);
@@ -215,8 +216,7 @@ static void advance (const char * p_name, unsigned int variant,
     assert(memcmp(&g_before, &g_record, sizeof(g_record)) == 0);
 }
 
-static void boundary (const char * p_name,
-                      const s3_barcode_config_t * p_config)
+static void boundary (const char * p_name, const s3_barcode_config_t * p_config)
 {
     static const uint16_t work_budgets[4] = {127U, 128U, 127U, 127U};
     static const uint16_t fit_budgets[4] = {0U, 0U, 31U, 32U};
@@ -235,14 +235,18 @@ static void boundary (const char * p_name,
 static void phase_boundaries (void)
 {
     s3_barcode_config_t config = s3_barcode_defaults();
-#define CASE(name, phase_value, setup) \
-    do { seed_boundary(phase_value); setup; boundary(name, &config); } while (0)
+#define CASE(name, phase_value, setup)                                         \
+    do                                                                         \
+    {                                                                          \
+        seed_boundary(phase_value);                                            \
+        setup;                                                                 \
+        boundary(name, &config);                                               \
+    } while (0)
     CASE("primary-rise", RW_PRIMARY, g_seed.work.cursor = 3U);
     CASE("primary-turn", RW_PRIMARY, (void)0);
     CASE("primary-falling-low", RW_PRIMARY, g_seed.work.rising = false);
-    CASE("primary-falling-turn", RW_PRIMARY,
-         g_seed.work.rising = false; g_seed.work.best = 0U;
-         g_seed.work.cursor = 1U);
+    CASE("primary-falling-turn", RW_PRIMARY, g_seed.work.rising = false;
+         g_seed.work.best = 0U; g_seed.work.cursor = 1U);
     CASE("primary-ext-capacity", RW_PRIMARY,
          g_seed.work.n = S3_REC_EXT_MAX - 1U);
     CASE("primary-eof-rising", RW_PRIMARY,
@@ -255,24 +259,24 @@ static void phase_boundaries (void)
          g_seed.work.cursor = g_seed.work.frozen_count);
     CASE("white-quiet", RW_FAINT_WHITE, (void)0);
     CASE("white-ink", RW_FAINT_WHITE, g_seed.work.cursor = 3U);
-    CASE("white-ext-capacity", RW_FAINT_WHITE,
-         g_seed.work.cursor = 3U; g_seed.work.n = 30U);
+    CASE("white-ext-capacity", RW_FAINT_WHITE, g_seed.work.cursor = 3U;
+         g_seed.work.n = 30U);
     CASE("ink-eof", RW_FAINT_INK,
          g_seed.work.cursor = g_seed.work.frozen_count);
-    CASE("ink-new-peak", RW_FAINT_INK,
-         g_seed.work.cursor = 3U; g_seed.work.peak = 2U;
+    CASE("ink-new-peak", RW_FAINT_INK, g_seed.work.cursor = 3U;
+         g_seed.work.peak = 2U; g_seed.work.low_us = 10000U);
+    CASE("ink-equal-peak", RW_FAINT_INK, g_seed.work.cursor = 3U;
          g_seed.work.low_us = 10000U);
-    CASE("ink-equal-peak", RW_FAINT_INK,
-         g_seed.work.cursor = 3U; g_seed.work.low_us = 10000U);
     CASE("ink-first-low", RW_FAINT_INK, (void)0);
     CASE("ink-dip-exact-limit", RW_FAINT_INK, g_seed.work.low_us = 25000U);
     CASE("ink-dip-over-limit", RW_FAINT_INK, g_seed.work.low_us = 30000U);
     CASE("valley-quiet", RW_FAINT_VALLEY, (void)0);
     CASE("valley-lower-dip", RW_FAINT_VALLEY, g_seed.work.dip = 1U);
-    CASE("valley-next-ink", RW_FAINT_VALLEY,
-         g_seed.work.cursor = 3U; g_seed.work.n = 1U);
+    CASE("valley-next-ink", RW_FAINT_VALLEY, g_seed.work.cursor = 3U;
+         g_seed.work.n = 1U);
     CASE("valley-eof", RW_FAINT_VALLEY,
-         g_seed.work.cursor = g_seed.work.frozen_count; g_seed.work.n = 1U);
+         g_seed.work.cursor = g_seed.work.frozen_count;
+         g_seed.work.n = 1U);
     CASE("prune-exact-count", RW_PRUNE_BEGIN, (void)0);
     CASE("prune-excess", RW_PRUNE_BEGIN, g_seed.work.n = 33U);
     CASE("prune-first-minimum", RW_PRUNE_SCAN, (void)0);
@@ -287,70 +291,65 @@ static void phase_boundaries (void)
     CASE("edges-wrong-count", RW_EDGES_BEGIN, g_seed.work.n = 30U);
     CASE("edge-start", RW_EDGE_BEGIN, (void)0);
     CASE("edge-equal-extrema", RW_EDGE_BEGIN, g_seed.work.ext[1] = 0U);
-    CASE("edge-end", RW_EDGE_BEGIN,
-         g_seed.work.segment = 30U; g_seed.work.edge_previous_us = 12345U);
+    CASE("edge-end", RW_EDGE_BEGIN, g_seed.work.segment = 30U;
+         g_seed.work.edge_previous_us = 12345U);
     CASE("edge-rising-cross", RW_EDGE_SCAN, (void)0);
-    CASE("edge-falling-cross", RW_EDGE_SCAN,
-         g_seed.work.segment = 1U; g_seed.work.edge_cursor = 2U;
-         g_seed.work.edges = 1U; g_seed.work.edge_previous_us = 2500U;
-         g_seed.work.segment_us = 5000U);
-    CASE("edge-core-midpoint", RW_EDGE_SCAN,
-         g_seed.work.faint = true;
+    CASE("edge-falling-cross", RW_EDGE_SCAN, g_seed.work.segment = 1U;
+         g_seed.work.edge_cursor = 2U; g_seed.work.edges = 1U;
+         g_seed.work.edge_previous_us = 2500U; g_seed.work.segment_us = 5000U);
+    CASE("edge-core-midpoint", RW_EDGE_SCAN, g_seed.work.faint = true;
          g_seed.sample[0] = (10U << 10) | 5U;
          g_seed.sample[1] = (10U << 10) | 10U);
-    CASE("edge-no-crossing", RW_EDGE_SCAN,
-         g_seed.sample[1] = g_seed.sample[0]);
-    CASE("edge-intermediate", RW_EDGE_SCAN,
-         g_seed.work.ext[1] = 3U; g_seed.work.ext_us[1] = 15000U);
-    CASE("edge-repeat-outer", RW_EDGE_SCAN,
-         g_seed.work.crossed = true; g_seed.work.edge_us = 77U);
-    CASE("edge-repeat-core", RW_EDGE_SCAN,
-         g_seed.work.faint = true; g_seed.work.crossed = true;
-         g_seed.work.edge_us = 77U; g_seed.sample[1] = (10U << 10) | 10U);
+    CASE("edge-no-crossing", RW_EDGE_SCAN, g_seed.sample[1] = g_seed.sample[0]);
+    CASE("edge-intermediate", RW_EDGE_SCAN, g_seed.work.ext[1] = 3U;
+         g_seed.work.ext_us[1] = 15000U);
+    CASE("edge-repeat-outer", RW_EDGE_SCAN, g_seed.work.crossed = true;
+         g_seed.work.edge_us = 77U);
+    CASE("edge-repeat-core", RW_EDGE_SCAN, g_seed.work.faint = true;
+         g_seed.work.crossed = true; g_seed.work.edge_us = 77U;
+         g_seed.sample[1] = (10U << 10) | 10U);
     CASE("direct-valid", RW_DIRECT, (void)0);
     CASE("direct-reversed", RW_DIRECT, fill_runs(&g_seed.work, true));
     CASE("direct-zero-width", RW_DIRECT, g_seed.work.runs[0] = 0U);
-    CASE("direct-existing-same", RW_DIRECT,
-         g_seed.work.good = true; g_seed.work.candidate.letter_code = 1U);
-    CASE("direct-conflict", RW_DIRECT,
-         g_seed.work.good = true; g_seed.work.candidate.letter_code = 2U);
+    CASE("direct-existing-same", RW_DIRECT, g_seed.work.good = true;
+         g_seed.work.candidate.letter_code = 1U);
+    CASE("direct-conflict", RW_DIRECT, g_seed.work.good = true;
+         g_seed.work.candidate.letter_code = 2U);
     CASE("fit-start-shared", RW_FIT_BEGIN, (void)0);
-    CASE("fit-start-varying-second", RW_FIT_BEGIN,
-         g_seed.work.varying = true; g_seed.work.star_index = 1U);
+    CASE("fit-start-varying-second", RW_FIT_BEGIN, g_seed.work.varying = true;
+         g_seed.work.star_index = 1U);
     CASE("fit-orientations-end", RW_FIT_BEGIN, g_seed.work.orientation = 2U);
     CASE("fit-small-minimum", RW_FIT_BEGIN,
          memset(g_seed.work.runs, 0, sizeof(g_seed.work.runs)));
-    CASE("fit-large-minimum", RW_FIT_BEGIN,
-         for (unsigned int i = 0U; i < S3_BARCODE_RUNS; i++)
-         { g_seed.work.runs[i] = config.max_run_us + 1U; });
+    CASE(
+        "fit-large-minimum", RW_FIT_BEGIN,
+        for (unsigned int i = 0U; i < S3_BARCODE_RUNS;
+             i++) { g_seed.work.runs[i] = config.max_run_us + 1U; });
     CASE("fit-tick-negative", RW_FIT_TICK, g_seed.work.tick = -64);
     CASE("fit-tick-zero", RW_FIT_TICK, (void)0);
     CASE("fit-tick-63", RW_FIT_TICK, g_seed.work.tick = 63);
     CASE("fit-tick-64-miss", RW_FIT_TICK, g_seed.work.tick = 64);
-    CASE("fit-tick-64-hit", RW_FIT_TICK,
-         g_seed.work.tick = 64; g_seed.work.best_score = 0U;
-         g_seed.work.best_bias = 2000);
-    CASE("fit-varying-first", RW_FIT_TICK,
-         g_seed.work.tick = 64; g_seed.work.varying = true;
+    CASE("fit-tick-64-hit", RW_FIT_TICK, g_seed.work.tick = 64;
          g_seed.work.best_score = 0U; g_seed.work.best_bias = 2000);
-    CASE("fit-varying-second", RW_FIT_TICK,
-         g_seed.work.tick = 64; g_seed.work.varying = true;
-         g_seed.work.star_index = 1U; g_seed.work.best_score = 0U;
-         g_seed.work.best_bias = 2000; g_seed.work.trial_bias[0] = 4000);
-    CASE("fit-varying-sign-conflict", RW_FIT_TICK,
-         g_seed.work.tick = 64; g_seed.work.varying = true;
-         g_seed.work.star_index = 1U; g_seed.work.best_score = 0U;
-         g_seed.work.best_bias = 2000; g_seed.work.trial_bias[0] = -4000);
-    CASE("fit-varying-delta-limit", RW_FIT_TICK,
-         g_seed.work.tick = 64; g_seed.work.varying = true;
-         g_seed.work.star_index = 1U; g_seed.work.best_score = 0U;
-         g_seed.work.best_bias = 15000);
-    CASE("fit-varying-delta-over", RW_FIT_TICK,
-         g_seed.work.tick = 64; g_seed.work.varying = true;
-         g_seed.work.star_index = 1U; g_seed.work.best_score = 0U;
-         g_seed.work.best_bias = 15001);
-    CASE("fit-varying-miss", RW_FIT_TICK,
-         g_seed.work.tick = 64; g_seed.work.varying = true);
+    CASE("fit-varying-first", RW_FIT_TICK, g_seed.work.tick = 64;
+         g_seed.work.varying = true; g_seed.work.best_score = 0U;
+         g_seed.work.best_bias = 2000);
+    CASE("fit-varying-second", RW_FIT_TICK, g_seed.work.tick = 64;
+         g_seed.work.varying = true; g_seed.work.star_index = 1U;
+         g_seed.work.best_score = 0U; g_seed.work.best_bias = 2000;
+         g_seed.work.trial_bias[0] = 4000);
+    CASE("fit-varying-sign-conflict", RW_FIT_TICK, g_seed.work.tick = 64;
+         g_seed.work.varying = true; g_seed.work.star_index = 1U;
+         g_seed.work.best_score = 0U; g_seed.work.best_bias = 2000;
+         g_seed.work.trial_bias[0] = -4000);
+    CASE("fit-varying-delta-limit", RW_FIT_TICK, g_seed.work.tick = 64;
+         g_seed.work.varying = true; g_seed.work.star_index = 1U;
+         g_seed.work.best_score = 0U; g_seed.work.best_bias = 15000);
+    CASE("fit-varying-delta-over", RW_FIT_TICK, g_seed.work.tick = 64;
+         g_seed.work.varying = true; g_seed.work.star_index = 1U;
+         g_seed.work.best_score = 0U; g_seed.work.best_bias = 15001);
+    CASE("fit-varying-miss", RW_FIT_TICK, g_seed.work.tick = 64;
+         g_seed.work.varying = true);
     CASE("fit-end-one", RW_FIT_END, g_seed.work.found = 1U);
     CASE("fit-end-none", RW_FIT_END, (void)0);
     CASE("fit-end-ambiguous", RW_FIT_END, g_seed.work.found = 2U);
@@ -360,36 +359,33 @@ static void phase_boundaries (void)
     CASE("apply-negative", RW_APPLY, g_seed.work.chosen[0] = -1000);
     CASE("apply-first-width-zero", RW_APPLY, g_seed.work.chosen[0] = -30000);
     CASE("apply-partial-before-zero", RW_APPLY, g_seed.work.chosen[0] = 60000);
-    CASE("apply-partial-before-maximum", RW_APPLY,
-         g_seed.work.chosen[0] = 1000; g_seed.work.runs[2] = config.max_run_us);
-    CASE("apply-varying", RW_APPLY,
-         g_seed.work.varying = true; g_seed.work.chosen[0] = 2000;
-         g_seed.work.chosen[1] = 4000);
-    CASE("apply-varying-negative-odd", RW_APPLY,
-         g_seed.work.varying = true; g_seed.work.chosen[0] = -2001;
-         g_seed.work.chosen[1] = -4001);
-    CASE("apply-varying-zero-input", RW_APPLY,
-         g_seed.work.varying = true; g_seed.work.runs[20] = 0U);
-    CASE("apply-varying-large-input", RW_APPLY,
-         g_seed.work.varying = true; g_seed.work.runs[20] = config.max_run_us + 1U);
-    CASE("apply-varying-large-frame", RW_APPLY,
-         g_seed.work.varying = true;
-         for (unsigned int i = 0U; i < S3_BARCODE_RUNS; i++)
-         { g_seed.work.runs[i] = config.max_run_us; });
-    CASE("apply-varying-partial", RW_APPLY,
-         g_seed.work.varying = true; g_seed.work.chosen[0] = 60000;
-         g_seed.work.chosen[1] = 60000);
+    CASE("apply-partial-before-maximum", RW_APPLY, g_seed.work.chosen[0] = 1000;
+         g_seed.work.runs[2] = config.max_run_us);
+    CASE("apply-varying", RW_APPLY, g_seed.work.varying = true;
+         g_seed.work.chosen[0] = 2000; g_seed.work.chosen[1] = 4000);
+    CASE("apply-varying-negative-odd", RW_APPLY, g_seed.work.varying = true;
+         g_seed.work.chosen[0] = -2001; g_seed.work.chosen[1] = -4001);
+    CASE("apply-varying-zero-input", RW_APPLY, g_seed.work.varying = true;
+         g_seed.work.runs[20] = 0U);
+    CASE("apply-varying-large-input", RW_APPLY, g_seed.work.varying = true;
+         g_seed.work.runs[20] = config.max_run_us + 1U);
+    CASE(
+        "apply-varying-large-frame", RW_APPLY, g_seed.work.varying = true;
+        for (unsigned int i = 0U; i < S3_BARCODE_RUNS;
+             i++) { g_seed.work.runs[i] = config.max_run_us; });
+    CASE("apply-varying-partial", RW_APPLY, g_seed.work.varying = true;
+         g_seed.work.chosen[0] = 60000; g_seed.work.chosen[1] = 60000);
     CASE("validate-valid", RW_VALIDATE, (void)0);
-    CASE("validate-leading-negative", RW_VALIDATE,
-         g_seed.leading_us = 0U; g_seed.work.first_us = 0U;
-         g_seed.work.chosen[0] = 1);
+    CASE("validate-leading-negative", RW_VALIDATE, g_seed.leading_us = 0U;
+         g_seed.work.first_us = 0U; g_seed.work.chosen[0] = 1);
     CASE("validate-odd-negative-bias", RW_VALIDATE, g_seed.work.chosen[0] = -3);
     CASE("validate-invalid-width", RW_VALIDATE, g_seed.work.runs[28] = 0U);
     CASE("path-primary-ineligible", RW_PATH_END, (void)0);
     CASE("path-faint-eligible", RW_PATH_END,
          g_seed.prominence = S3_REC_MIN_PROMINENCE);
     CASE("path-already-faint", RW_PATH_END,
-         g_seed.prominence = S3_REC_MIN_PROMINENCE; g_seed.work.faint = true);
+         g_seed.prominence = S3_REC_MIN_PROMINENCE;
+         g_seed.work.faint = true);
     CASE("done", RW_DONE, (void)0);
     CASE("unknown-zero", 0U, (void)0);
     CASE("unknown-255", UINT8_MAX, (void)0);
@@ -400,20 +396,21 @@ static void phase_boundaries (void)
          g_seed.work.ext_us[2] = 1000U);
     CASE("edge-time-wrap", RW_EDGE_SCAN,
          g_seed.work.segment_us = UINT32_MAX - 1000U);
-    CASE("direct-leading-saturation", RW_DIRECT,
-         g_seed.leading_us = UINT32_MAX; g_seed.work.first_us = UINT32_MAX);
+    CASE("direct-leading-saturation", RW_DIRECT, g_seed.leading_us = UINT32_MAX;
+         g_seed.work.first_us = UINT32_MAX);
     CASE("candidate-required-saturation", RW_DIRECT,
          g_seed.work.last_us = UINT32_MAX);
     /* Valid configuration boundary; wide arithmetic remains signed-safe. */
     config.max_run_us = 214748364U;
     config.max_frame_us = 2147483647U;
-    CASE("fit-large-valid-config", RW_FIT_BEGIN,
-         for (unsigned int i = 0U; i < S3_BARCODE_RUNS; i++)
-         { g_seed.work.runs[i] = 200000000U; });
-    CASE("apply-large-valid-widths", RW_APPLY,
-         g_seed.work.chosen[0] = 100000000;
-         for (unsigned int i = 0U; i < S3_BARCODE_RUNS; i++)
-         { g_seed.work.runs[i] = 100000001U; });
+    CASE(
+        "fit-large-valid-config", RW_FIT_BEGIN,
+        for (unsigned int i = 0U; i < S3_BARCODE_RUNS;
+             i++) { g_seed.work.runs[i] = 200000000U; });
+    CASE(
+        "apply-large-valid-widths", RW_APPLY, g_seed.work.chosen[0] = 100000000;
+        for (unsigned int i = 0U; i < S3_BARCODE_RUNS;
+             i++) { g_seed.work.runs[i] = 100000001U; });
 #undef CASE
 }
 
@@ -438,8 +435,8 @@ static void complete_path (unsigned int variant)
     for (unsigned int i = 0U; i < S3_BARCODE_RUNS; i++)
     {
         const bool black = (i % 2U) == 0U;
-        const uint16_t darkness = !black || variant == 4U
-                                      ? 0U : (variant == 1U ? 10U : 1000U);
+        const uint16_t darkness =
+            !black || variant == 4U ? 0U : (variant == 1U ? 10U : 1000U);
         int32_t width = (int32_t)widths[i];
         if (variant == 3U)
         {
@@ -449,12 +446,14 @@ static void complete_path (unsigned int variant)
     }
     append_samples(0U, 60U);
     g_record.leading_us = 300000U;
-    g_record.prominence = variant == 1U ? S3_REC_MIN_PROMINENCE : S3_REC_PROMINENCE;
+    g_record.prominence =
+        variant == 1U ? S3_REC_MIN_PROMINENCE : S3_REC_PROMINENCE;
     work_begin(&g_record, variant == 1U, variant == 3U);
     unsigned int calls = 0U;
     while (g_record.work.phase != RW_DONE)
     {
-        /* A guard detects nontermination; it does not dictate decoded output. */
+        /* A guard detects nontermination; it does not dictate decoded output.
+         */
         assert(calls++ < 4096U);
         g_record.work_units = 0U;
         g_record.fit_ticks = 0U;
@@ -469,9 +468,12 @@ int main (void)
     {
         complete_path(variant);
     }
-    fprintf(stderr, "barcode work: %u boundary scenarios, %u calls, %u full scratch rows\n",
-            g_boundaries, g_calls, g_calls * 2U);
+    fprintf(
+        stderr,
+        "barcode work: %u boundary scenarios, %u calls, %u full scratch rows\n",
+        g_boundaries, g_calls, g_calls * 2U);
     return 0;
 }
 
 /* End of file. */
+

@@ -1,0 +1,1552 @@
+{
+  "schema_version": 1,
+  "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+  "baseline_revision": "4ad2cc42595722cedb47102e4343298339040d40",
+  "run_id": 44612525935,
+  "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44612525935",
+  "workflow_conclusion": "failure",
+  "hosts": [
+    {
+      "name": "host-baseline-clang-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14573861276,
+      "archive_sha256": "6abdf29fde67528a5354e29d51245ed791740b6385dddd8061dd72936585b791",
+      "results_sha256": "c19d1e50dce963db5c94b52234d825bca425dfc653d44f8ae8f3426d1511c3fe",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.370.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "failed_steps": [
+        "subsystem3"
+      ],
+      "passed_steps": [
+        "environment",
+        "compiler",
+        "node",
+        "packages",
+        "subsystem1",
+        "subsystem2",
+        "subsystem4",
+        "subsystem5",
+        "barcode_fit_error_build",
+        "barcode_fit_error",
+        "barcode_incremental_build",
+        "barcode_incremental",
+        "barcode_bench_build",
+        "barcode_bench",
+        "subsystem1_sizes_build",
+        "subsystem1_sizes",
+        "subsystem2_sizes_build",
+        "subsystem2_sizes",
+        "subsystem3_sizes_build",
+        "subsystem3_sizes",
+        "course_zero_axle_build",
+        "course_zero_axle",
+        "terrain_production_build",
+        "terrain_production",
+        "integration",
+        "diagnostics",
+        "diagnostics_disabled",
+        "network_wifi",
+        "control_debug_trace_build",
+        "control_debug_trace",
+        "motion_storage_build",
+        "motion_storage",
+        "barcode_work_build",
+        "barcode_work",
+        "bcap_storage_build",
+        "bcap_storage",
+        "operator_observed_build",
+        "operator_observed",
+        "mqtt_production_build",
+        "mqtt_production",
+        "mqtt_imu_build",
+        "mqtt_imu",
+        "mqtt_receive_build",
+        "mqtt_receive",
+        "python_dashboard",
+        "python_change_requirement_1",
+        "python_diagnostics",
+        "laptop_codec",
+        "frontend",
+        "widths"
+      ],
+      "control_builder_cases": null
+    },
+    {
+      "name": "host-baseline-gcc-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14573391705,
+      "archive_sha256": "7870495701859c0dbdf17566e9e5c621bf4d3669e530aa2f080d610e5e064d55",
+      "results_sha256": "6bd64358ff9ef090983e78f5dfb137ed0260a47925a7f8da4680961fcf467124",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.127.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "failed_steps": [
+        "subsystem3"
+      ],
+      "passed_steps": [
+        "environment",
+        "compiler",
+        "node",
+        "packages",
+        "subsystem1",
+        "subsystem2",
+        "subsystem4",
+        "subsystem5",
+        "barcode_fit_error_build",
+        "barcode_fit_error",
+        "barcode_incremental_build",
+        "barcode_incremental",
+        "barcode_bench_build",
+        "barcode_bench",
+        "subsystem1_sizes_build",
+        "subsystem1_sizes",
+        "subsystem2_sizes_build",
+        "subsystem2_sizes",
+        "subsystem3_sizes_build",
+        "subsystem3_sizes",
+        "course_zero_axle_build",
+        "course_zero_axle",
+        "terrain_production_build",
+        "terrain_production",
+        "integration",
+        "diagnostics",
+        "diagnostics_disabled",
+        "network_wifi",
+        "control_debug_trace_build",
+        "control_debug_trace",
+        "motion_storage_build",
+        "motion_storage",
+        "barcode_work_build",
+        "barcode_work",
+        "bcap_storage_build",
+        "bcap_storage",
+        "operator_observed_build",
+        "operator_observed",
+        "mqtt_production_build",
+        "mqtt_production",
+        "mqtt_imu_build",
+        "mqtt_imu",
+        "mqtt_receive_build",
+        "mqtt_receive",
+        "python_dashboard",
+        "python_change_requirement_1",
+        "python_diagnostics",
+        "laptop_codec",
+        "frontend",
+        "widths"
+      ],
+      "control_builder_cases": null
+    },
+    {
+      "name": "host-baseline-sanitize-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14572702993,
+      "archive_sha256": "2501cc16b822188c15603ec652ee709269834040c28e1d90b3fb9c0d273e8433",
+      "results_sha256": "326b7a8c3bae87bcd77babfddd7ee1f2174dbb67699f2e551b2618231875c149",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.370.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "failed_steps": [
+        "subsystem3"
+      ],
+      "passed_steps": [
+        "environment",
+        "compiler",
+        "node",
+        "packages",
+        "subsystem1",
+        "subsystem2",
+        "subsystem4",
+        "subsystem5",
+        "barcode_fit_error_build",
+        "barcode_fit_error",
+        "barcode_incremental_build",
+        "barcode_incremental",
+        "barcode_bench_build",
+        "barcode_bench",
+        "subsystem1_sizes_build",
+        "subsystem1_sizes",
+        "subsystem2_sizes_build",
+        "subsystem2_sizes",
+        "subsystem3_sizes_build",
+        "subsystem3_sizes",
+        "course_zero_axle_build",
+        "course_zero_axle",
+        "terrain_production_build",
+        "terrain_production",
+        "integration",
+        "diagnostics",
+        "diagnostics_disabled",
+        "network_wifi",
+        "control_debug_trace_build",
+        "control_debug_trace",
+        "motion_storage_build",
+        "motion_storage",
+        "barcode_work_build",
+        "barcode_work",
+        "bcap_storage_build",
+        "bcap_storage",
+        "operator_observed_build",
+        "operator_observed",
+        "mqtt_production_build",
+        "mqtt_production",
+        "mqtt_imu_build",
+        "mqtt_imu",
+        "mqtt_receive_build",
+        "mqtt_receive"
+      ],
+      "control_builder_cases": null
+    },
+    {
+      "name": "host-candidate-clang-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14572852707,
+      "archive_sha256": "7b2a5b5b48ee9acc31983331b248c32cb678b58cf14ebd6296f5f3784c1ab5a3",
+      "results_sha256": "5bba0f9e9dade9c0e976a4fdd36ce703ff7a91c039057e34cf9767e82048e659",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.133.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "failed_steps": [
+        "subsystem3"
+      ],
+      "passed_steps": [
+        "environment",
+        "compiler",
+        "node",
+        "packages",
+        "subsystem1",
+        "subsystem2",
+        "subsystem4",
+        "subsystem5",
+        "barcode_fit_error_build",
+        "barcode_fit_error",
+        "barcode_incremental_build",
+        "barcode_incremental",
+        "barcode_bench_build",
+        "barcode_bench",
+        "subsystem1_sizes_build",
+        "subsystem1_sizes",
+        "subsystem2_sizes_build",
+        "subsystem2_sizes",
+        "subsystem3_sizes_build",
+        "subsystem3_sizes",
+        "course_zero_axle_build",
+        "course_zero_axle",
+        "terrain_production_build",
+        "terrain_production",
+        "integration",
+        "diagnostics",
+        "diagnostics_disabled",
+        "network_wifi",
+        "control_debug_trace_build",
+        "control_debug_trace",
+        "control_builder_build",
+        "control_builder",
+        "motion_storage_build",
+        "motion_storage",
+        "barcode_work_build",
+        "barcode_work",
+        "bcap_storage_build",
+        "bcap_storage",
+        "operator_observed_build",
+        "operator_observed",
+        "mqtt_production_build",
+        "mqtt_production",
+        "mqtt_imu_build",
+        "mqtt_imu",
+        "mqtt_receive_build",
+        "mqtt_receive",
+        "python_dashboard",
+        "python_change_requirement_1",
+        "python_diagnostics",
+        "laptop_codec",
+        "frontend",
+        "widths",
+        "application_c99"
+      ],
+      "control_builder_cases": 1141
+    },
+    {
+      "name": "host-candidate-gcc-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14573870916,
+      "archive_sha256": "4af9efb4348f7ae15ba62bb916b542e8f65bf866b11dca22348c362be2413a51",
+      "results_sha256": "b4d4ff5a43d332f157a2ed0e1006947bd276ad46510cca338217408b36730aaa",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.370.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "failed_steps": [
+        "subsystem3"
+      ],
+      "passed_steps": [
+        "environment",
+        "compiler",
+        "node",
+        "packages",
+        "subsystem1",
+        "subsystem2",
+        "subsystem4",
+        "subsystem5",
+        "barcode_fit_error_build",
+        "barcode_fit_error",
+        "barcode_incremental_build",
+        "barcode_incremental",
+        "barcode_bench_build",
+        "barcode_bench",
+        "subsystem1_sizes_build",
+        "subsystem1_sizes",
+        "subsystem2_sizes_build",
+        "subsystem2_sizes",
+        "subsystem3_sizes_build",
+        "subsystem3_sizes",
+        "course_zero_axle_build",
+        "course_zero_axle",
+        "terrain_production_build",
+        "terrain_production",
+        "integration",
+        "diagnostics",
+        "diagnostics_disabled",
+        "network_wifi",
+        "control_debug_trace_build",
+        "control_debug_trace",
+        "control_builder_build",
+        "control_builder",
+        "motion_storage_build",
+        "motion_storage",
+        "barcode_work_build",
+        "barcode_work",
+        "bcap_storage_build",
+        "bcap_storage",
+        "operator_observed_build",
+        "operator_observed",
+        "mqtt_production_build",
+        "mqtt_production",
+        "mqtt_imu_build",
+        "mqtt_imu",
+        "mqtt_receive_build",
+        "mqtt_receive",
+        "python_dashboard",
+        "python_change_requirement_1",
+        "python_diagnostics",
+        "laptop_codec",
+        "frontend",
+        "widths",
+        "application_c99"
+      ],
+      "control_builder_cases": 1141
+    },
+    {
+      "name": "host-candidate-sanitize-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14574020768,
+      "archive_sha256": "455e5f241da6ab33d5c15259c8bdd0e3b4d97b1dcb3ff06ecf6345ebb7285aff",
+      "results_sha256": "ade604d495bba80119e1b37326e17b3daab832008d226db0f19cc3382fbbf485",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.133.1",
+        "RUNNER_OS": "Linux",
+        "RUNNER_ARCH": "X64"
+      },
+      "failed_steps": [
+        "subsystem3"
+      ],
+      "passed_steps": [
+        "environment",
+        "compiler",
+        "node",
+        "packages",
+        "subsystem1",
+        "subsystem2",
+        "subsystem4",
+        "subsystem5",
+        "barcode_fit_error_build",
+        "barcode_fit_error",
+        "barcode_incremental_build",
+        "barcode_incremental",
+        "barcode_bench_build",
+        "barcode_bench",
+        "subsystem1_sizes_build",
+        "subsystem1_sizes",
+        "subsystem2_sizes_build",
+        "subsystem2_sizes",
+        "subsystem3_sizes_build",
+        "subsystem3_sizes",
+        "course_zero_axle_build",
+        "course_zero_axle",
+        "terrain_production_build",
+        "terrain_production",
+        "integration",
+        "diagnostics",
+        "diagnostics_disabled",
+        "network_wifi",
+        "control_debug_trace_build",
+        "control_debug_trace",
+        "control_builder_build",
+        "control_builder",
+        "motion_storage_build",
+        "motion_storage",
+        "barcode_work_build",
+        "barcode_work",
+        "bcap_storage_build",
+        "bcap_storage",
+        "operator_observed_build",
+        "operator_observed",
+        "mqtt_production_build",
+        "mqtt_production",
+        "mqtt_imu_build",
+        "mqtt_imu",
+        "mqtt_receive_build",
+        "mqtt_receive"
+      ],
+      "control_builder_cases": 1141
+    }
+  ],
+  "targets": [
+    {
+      "name": "target-diagnostics-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14572269916,
+      "archive_sha256": "373f9024e0f037a4df7a9b7c9f233837ac60da9696aa1633ccdf40e9f00141af",
+      "results_sha256": "1e605e51ac59d5238ef58f3e0e3c7d15ef1f617ea5c95b1dad6add5b690cfd83",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.370.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 468940,
+            "data": 688,
+            "bss": 129136,
+            "static_ram": 129824
+          },
+          "flash_sha256": "5c3eddc6168157269e2f7338fda1556952b2edc9054a2f86ea5f078f97904009",
+          "stack_usage_files": 176
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 468492,
+            "data": 696,
+            "bss": 128928,
+            "static_ram": 129624
+          },
+          "flash_sha256": "3fce0ac15edc4487bb83e393089975ecd60f37d0a363f5c8fe3d23b28c7bbd31",
+          "stack_usage_files": 176
+        }
+      }
+    },
+    {
+      "name": "target-imu_debug-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14573396450,
+      "archive_sha256": "3b119a9831274ac9ac421014f82df98535a726b3be9b3f164a7aeae9bd39f609",
+      "results_sha256": "b40157dca3d461207ab2b805548de8dbbbf0319a1e679f3600e4c149261de690",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.370.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 468308,
+            "data": 688,
+            "bss": 133712,
+            "static_ram": 134400
+          },
+          "flash_sha256": "39320eb23782af9b44ae283ad0e1b1821a8e4d482881ff2b4eb41df94448ff59",
+          "stack_usage_files": 176
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 467852,
+            "data": 696,
+            "bss": 133512,
+            "static_ram": 134208
+          },
+          "flash_sha256": "d4b7c30c462c775a8d39e00c8e4624f7de81e960ebed733ea239c74c9ea0c649",
+          "stack_usage_files": 176
+        }
+      }
+    },
+    {
+      "name": "target-motion_smoke-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14573132685,
+      "archive_sha256": "261525e0034fce3561335353fd904a39b9739e00563693b8d5d27437a7f52996",
+      "results_sha256": "0513e8458e28b60d5beca676a59ea38e4af98b2c37007e7c8d865d21cf627a43",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.133.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 85684,
+            "data": 72,
+            "bss": 22428,
+            "static_ram": 22500
+          },
+          "flash_sha256": "a252f967cf15aabb5c9b828a3e6462d6d68a16befd1864cdbcedf31890120475",
+          "stack_usage_files": 132
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 85800,
+            "data": 72,
+            "bss": 22400,
+            "static_ram": 22472
+          },
+          "flash_sha256": "403ce7f9a74dc90bb8283f0ea18079bcb6ced7904592371e0dc850c31b8baded",
+          "stack_usage_files": 132
+        }
+      }
+    },
+    {
+      "name": "target-offline_motion-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14573656375,
+      "archive_sha256": "df3c568cbf5b3445f41816d4fc541f90ddb243dbc303dfde90c3a71a9c55a2b0",
+      "results_sha256": "c0039b8db4f1b37fa9338e6dd326bc1f3d35d588dfbce17606c038863b346d54",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.127.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 193524,
+            "data": 616,
+            "bss": 68352,
+            "static_ram": 68968
+          },
+          "flash_sha256": "0ad5d5829b0e3cf8fe84d030582e80b198deda8c462f1e2ee85915f56f696dde",
+          "stack_usage_files": 132
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 193492,
+            "data": 616,
+            "bss": 68304,
+            "static_ram": 68920
+          },
+          "flash_sha256": "f5f5bc170d5452b013596e0d123223c65bdd6414ef4bff69d10504ab3f88c4e8",
+          "stack_usage_files": 132
+        }
+      }
+    },
+    {
+      "name": "target-production-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14573336957,
+      "archive_sha256": "6e43f45ac3b34c3cf2584ed7fbd1dd6866275934ce1c88eda477c786032737b6",
+      "results_sha256": "d59b440b1b82db8e44d0f9a8688ea22db326ceb4596c4249b49716a3b21b106f",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.133.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 466276,
+            "data": 688,
+            "bss": 129008,
+            "static_ram": 129696
+          },
+          "flash_sha256": "d3acb183b72825419eea84c0d09c6d86a78322d9e34fb0c3e9da2d1571704e2b",
+          "stack_usage_files": 176
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 465788,
+            "data": 696,
+            "bss": 128800,
+            "static_ram": 129496
+          },
+          "flash_sha256": "7591708ee30bf81bc0ab474004949f9899993fd44a29b774a2041e9bb2c14874",
+          "stack_usage_files": 176
+        }
+      }
+    },
+    {
+      "name": "target-s4_bench-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14572308836,
+      "archive_sha256": "f20247f02da26346041c095f9cf18f894fb728aed66a30c0dec9487a5d6d2ae3",
+      "results_sha256": "aee9be0c8e42175161b5daebcd9a5e22c69cf9a36b29806e3bf7316eea896926",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.133.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 87120,
+            "data": 552,
+            "bss": 22708,
+            "static_ram": 23260
+          },
+          "flash_sha256": "f7a6791bbcf0e7262e7eef4d0bf170aded87d8766c7e7cad968d334306b4cd83",
+          "stack_usage_files": 132
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 87120,
+            "data": 552,
+            "bss": 22708,
+            "static_ram": 23260
+          },
+          "flash_sha256": "f7a6791bbcf0e7262e7eef4d0bf170aded87d8766c7e7cad968d334306b4cd83",
+          "stack_usage_files": 132
+        }
+      }
+    },
+    {
+      "name": "target-s5_unconfirmed-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14573347022,
+      "archive_sha256": "42df979256144fb6785dfda1fe278b950f6441518ca8cba317b8cc375408b242",
+      "results_sha256": "e1d8fc4c80842f67bfa4923e10d9b6a39c50e41e3c3fe538034e9d804007c3c2",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.127.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 461068,
+            "data": 688,
+            "bss": 128904,
+            "static_ram": 129592
+          },
+          "flash_sha256": "c342efe2acbdc0731d73be694972ffa935af09176c430df47895fd56540baba6",
+          "stack_usage_files": 176
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 460572,
+            "data": 696,
+            "bss": 128696,
+            "static_ram": 129392
+          },
+          "flash_sha256": "704db8732e85eb02fdb1947af244a8eae5ba675b5e4b4b75695aa54b9ce76ba2",
+          "stack_usage_files": 176
+        }
+      }
+    },
+    {
+      "name": "target-self_tests-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14572772775,
+      "archive_sha256": "99bf5c156bd6169e0b4f60edd6817f59106fcfcf68c8f36c782329eb56a6a163",
+      "results_sha256": "38b87f5e60b382baf0818e7b148fc82e77667200f1da67a462fad97c06ce3e33",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.127.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 154472,
+            "data": 616,
+            "bss": 22788,
+            "static_ram": 23404
+          },
+          "flash_sha256": "83d3f97bf62cba435c2ea36046b245b3cf8dae6426007c2879b2b4adcf4592eb",
+          "stack_usage_files": 132
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 154560,
+            "data": 616,
+            "bss": 22760,
+            "static_ram": 23376
+          },
+          "flash_sha256": "6c0ca1942bea9ee048e034331f723fab6ac5a57a9bfdcb137a1b36c70da9ad22",
+          "stack_usage_files": 132
+        }
+      }
+    },
+    {
+      "name": "target-single_core-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14572573205,
+      "archive_sha256": "5d3f1f995d6a69d2b1efcc7cd4df8b43ed369474389285955f6e163c33cb4041",
+      "results_sha256": "f193e2a4ed552e8c955032b3d708e55637fc3d83f24968cd440992d9fe14caad",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.127.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 458652,
+            "data": 672,
+            "bss": 124856,
+            "static_ram": 125528
+          },
+          "flash_sha256": "96914f396816605d5480a82faca78dd4561e205557e9f1f343e99564d7f3aaab",
+          "stack_usage_files": 176
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 458156,
+            "data": 680,
+            "bss": 124656,
+            "static_ram": 125336
+          },
+          "flash_sha256": "ab2618a0a72bd99e517bf3573d20697fb8f5cf0a8d281f9fe0db5de0c4c0c843",
+          "stack_usage_files": 176
+        }
+      }
+    },
+    {
+      "name": "target-stationary_1-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14572088691,
+      "archive_sha256": "943c7da4a2b0159fabfa6f83a31f9bb660caaefae6ac71e16b6cadbfafba7319",
+      "results_sha256": "0c5a70610fbeb6ea9a59ffcf2092f18a69cb99d35456a58ac9da39304a56fb78",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261111.127.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 98908,
+            "data": 36,
+            "bss": 33540,
+            "static_ram": 33576
+          },
+          "flash_sha256": "39439f156c61ab1e8eb2ce872bbe9858ada1da181bb64e223a8f9dde8330aba8",
+          "stack_usage_files": 132
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 98884,
+            "data": 36,
+            "bss": 33540,
+            "static_ram": 33576
+          },
+          "flash_sha256": "1baef41bea0af057637f3a6e71fd39f9c7e14c73bf1e508ef297948263683fe0",
+          "stack_usage_files": 132
+        }
+      }
+    },
+    {
+      "name": "target-stationary_3-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14574470366,
+      "archive_sha256": "1150a22365ad9b3ec15f295c8a2fe142dd3e8a8e22d2dac6b44d1cdcb46d486c",
+      "results_sha256": "d99869945d1bb33e3e12146951ee517a96f022aaa0bdca0de1c37bcd230b68ed",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.133.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 98908,
+            "data": 36,
+            "bss": 33540,
+            "static_ram": 33576
+          },
+          "flash_sha256": "f93f16286dd7a3902438fa7898343ac6fe17504578256c46137d7dfc55e37b81",
+          "stack_usage_files": 132
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 98884,
+            "data": 36,
+            "bss": 33540,
+            "static_ram": 33576
+          },
+          "flash_sha256": "da195e23d5096e967ee6d0867485d3f81246cc5ac421bc8df67c4199a35bacb7",
+          "stack_usage_files": 132
+        }
+      }
+    },
+    {
+      "name": "target-straight_test-a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "artifact_id": 14573212363,
+      "archive_sha256": "db42f477531af52b3d7d6228b78ca79e6852bd974f265743ff30f17846f5816c",
+      "results_sha256": "cbfc1c050cbcde28f92b6cf9cd604822ef68c653b44407d4744c0e19b90abecb",
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.133.1"
+      },
+      "builds": {
+        "baseline": {
+          "revision": "4ad2cc42595722cedb47102e4343298339040d40",
+          "returncode": 0,
+          "sizes": {
+            "text": 466284,
+            "data": 688,
+            "bss": 129008,
+            "static_ram": 129696
+          },
+          "flash_sha256": "05fab79676b2851d994c982cc5630602abda73639361a88ae9c946e80940fd26",
+          "stack_usage_files": 176
+        },
+        "candidate": {
+          "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+          "returncode": 0,
+          "sizes": {
+            "text": 465788,
+            "data": 696,
+            "bss": 128800,
+            "static_ram": 129496
+          },
+          "flash_sha256": "95629d2bf86bf510fd7b95b8d5b2ca6eb11593c7adc1585d0ef80ff24867fb1d",
+          "stack_usage_files": 176
+        }
+      }
+    }
+  ],
+  "differential": {
+    "artifact_id": 14573047389,
+    "checks": [
+      {
+        "name": "motion_semantic_trace",
+        "matched": true,
+        "semantic_rows": 74,
+        "baseline_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071",
+        "candidate_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071"
+      },
+      {
+        "name": "terrain_semantic_trace",
+        "matched": true,
+        "semantic_rows": 1916,
+        "baseline_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8",
+        "candidate_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8"
+      },
+      {
+        "name": "terrain_production_semantic_trace",
+        "matched": true,
+        "semantic_rows": 1782,
+        "baseline_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a",
+        "candidate_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a"
+      },
+      {
+        "name": "obstacle_semantic_trace",
+        "matched": true,
+        "semantic_rows": 969,
+        "baseline_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5",
+        "candidate_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5"
+      },
+      {
+        "name": "runtime_semantic_trace",
+        "matched": true,
+        "semantic_rows": 2398,
+        "baseline_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907",
+        "candidate_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907"
+      },
+      {
+        "name": "mqtt_semantic_trace",
+        "matched": true,
+        "semantic_rows": 269,
+        "baseline_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665",
+        "candidate_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665"
+      },
+      {
+        "name": "mqtt_plain_semantic_trace",
+        "matched": true,
+        "semantic_rows": 99,
+        "baseline_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad",
+        "candidate_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad"
+      },
+      {
+        "name": "mqtt_production_semantic_trace",
+        "matched": true,
+        "semantic_rows": 251,
+        "baseline_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6",
+        "candidate_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6"
+      },
+      {
+        "name": "mqtt_imu_semantic_trace",
+        "matched": true,
+        "semantic_rows": 116,
+        "baseline_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643",
+        "candidate_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643"
+      },
+      {
+        "name": "mqtt_receive_semantic_trace",
+        "matched": true,
+        "semantic_rows": 2093,
+        "baseline_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e",
+        "candidate_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e"
+      },
+      {
+        "name": "motion_storage_semantic_trace",
+        "matched": true,
+        "semantic_rows": 802,
+        "baseline_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336",
+        "candidate_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336"
+      },
+      {
+        "name": "barcode_work_semantic_trace",
+        "matched": true,
+        "semantic_rows": 854,
+        "baseline_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+        "candidate_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9"
+      },
+      {
+        "name": "bcap_storage_semantic_trace",
+        "matched": true,
+        "semantic_rows": 776,
+        "baseline_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2",
+        "candidate_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2"
+      },
+      {
+        "name": "operator_semantic_trace",
+        "matched": true,
+        "semantic_rows": 8066,
+        "baseline_sha256": "5a759cfcded604288fab493d7361673ae767bf5868f163a115a0ff36a92c2a1f",
+        "candidate_sha256": "5a759cfcded604288fab493d7361673ae767bf5868f163a115a0ff36a92c2a1f"
+      },
+      {
+        "name": "control_debug_wire_and_mutation_trace",
+        "matched": true,
+        "rows": 487,
+        "baseline_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2",
+        "candidate_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2"
+      },
+      {
+        "name": "navigation_semantic_trace",
+        "matched": true,
+        "semantic_rows": 60007,
+        "baseline_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143",
+        "candidate_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143"
+      },
+      {
+        "name": "recorded_replay",
+        "cases": 1008,
+        "mismatches": 0,
+        "expectation_failures": 2,
+        "matched": true
+      }
+    ],
+    "complete_replay_gate_pass": false
+  },
+  "production": {
+    "artifact_id": 14573336957,
+    "candidate": {
+      "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+      "example_configuration_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+      "command": [
+        "make",
+        "-C",
+        "/home/runner/work/autonomous-robotic-car/autonomous-robotic-car/candidate/build_make",
+        "PICO_SDK_PATH=/home/runner/work/autonomous-robotic-car/autonomous-robotic-car/pico-sdk",
+        "GCC=/home/runner/work/autonomous-robotic-car/autonomous-robotic-car/evidence/arm-stack-gcc",
+        "SMP=1",
+        "CONSOLE=usb_cdc",
+        "CRASH_REPORT=0",
+        "WIFI=cyw43",
+        "NET=lwip",
+        "MQTT=1",
+        "TEST=0",
+        "IR_BENCH=0",
+        "IR_CHANNELS=1",
+        "S3_MOTION=1",
+        "S3_STRAIGHT_TEST=0",
+        "DIAGNOSTICS=0",
+        "MOTION_SMOKE=0",
+        "S4=1",
+        "S4_BENCH=0",
+        "S5=1",
+        "S5_HARDWARE_CONFIRMED=1",
+        "IR_DEBUG=1",
+        "IMU_DEBUG=0",
+        "-j4"
+      ],
+      "returncode": 0,
+      "sizes": {
+        "text": 465788,
+        "data": 696,
+        "bss": 128800,
+        "static_ram": 129496
+      },
+      "artifacts": {
+        "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": "6e575360b9d453f385fa3c0161a14aac2affc927c05f40025a0a8370816cf161",
+        "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": "19457bbb3747c02ad840e831db01ea57a80e6dc867c865f3853dbd97c0785268",
+        "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": "8f918c7608a61dec1336cdb066a4e26b1d9f9ce1c1f87893b25d604a2ac4c941"
+      },
+      "flash_sha256": "7591708ee30bf81bc0ab474004949f9899993fd44a29b774a2041e9bb2c14874",
+      "stack_usage_files": 176
+    },
+    "image": {
+      "ImageOS": "ubuntu24",
+      "ImageVersion": "20261116.133.1"
+    },
+    "compared_with_immutable_99b": {
+      "text_delta": -96,
+      "static_ram_delta": 0,
+      "stack_rows": 1441,
+      "stack_changes": [],
+      "symbol_size_changes": [
+        {
+          "name": "debug_builder_write",
+          "kind": "t",
+          "baseline": [
+            [
+              84
+            ]
+          ],
+          "candidate": [
+            [
+              88
+            ]
+          ]
+        },
+        {
+          "name": "g_debug_fields",
+          "kind": "t",
+          "baseline": [
+            [
+              200
+            ]
+          ],
+          "candidate": [
+            [
+              100
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "conditional_union": {
+    "artifact_id": 14571274825,
+    "status": "INCOMPLETE",
+    "received_profiles": [
+      "host-baseline-fixtures-clang",
+      "host-baseline-fixtures-gcc",
+      "host-clang",
+      "host-gcc",
+      "target-diagnostics",
+      "target-imu_debug",
+      "target-motion_smoke",
+      "target-offline_motion",
+      "target-production",
+      "target-s4_bench",
+      "target-s5_unconfirmed",
+      "target-self_tests",
+      "target-single_core",
+      "target-stationary_1",
+      "target-stationary_3",
+      "target-straight_test"
+    ],
+    "missing_profiles": [],
+    "errors": [],
+    "observed_arms": 401,
+    "total_arms": 441,
+    "missing_arms": [
+      {
+        "id": "5e72b3b3f5561d3cf81e04fa",
+        "source": "app_program/app_main.c",
+        "line": 16,
+        "kind": "if",
+        "directive": "#if APP_TEST || APP_IR_BENCH",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "8da6c6d2b4e5c6284a5d7e49",
+        "source": "app_program/controller/bc_capture.h",
+        "line": 28,
+        "kind": "if",
+        "directive": "#if BCAP_POOL > 4095U",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "b9e0fb8d6ef9a08cc966ad9b",
+        "source": "app_program/controller/bc_capture.h",
+        "line": 34,
+        "kind": "if",
+        "directive": "#if BCAP_PRE > 511U",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "879d3dc397099e89712386c3",
+        "source": "app_program/controller/course_profile.h",
+        "line": 32,
+        "kind": "if",
+        "directive": "#if S3_STRAIGHT_TEST != 0 && S3_STRAIGHT_TEST != 1",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "d03022548c7412579c1726c0",
+        "source": "app_program/controller/terr_link.c",
+        "line": 229,
+        "kind": "if",
+        "directive": "#if (200U % S3_SAMPLE_PERIOD_MS) != 0U || TERRAIN_LIVE_PERIOD == 0U ||             TERRAIN_LIVE_PERIOD > UINT8_MAX",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "84c379dbc688e943c7ed7433",
+        "source": "app_program/controller/vehicle_controller.c",
+        "line": 22,
+        "kind": "if",
+        "directive": "#if (200U % S3_SAMPLE_PERIOD_MS) != 0U || LIVE_PERIOD_CYCLES == 0U ||              LIVE_PERIOD_CYCLES > 63U",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "12beb1e5637d13e8ff21e598",
+        "source": "app_program/controller/vehicle_controller.c",
+        "line": 69,
+        "kind": "if",
+        "directive": "#if SAMPLE_PERIOD == 0U || SAMPLE_PERIOD > 15U",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "8d88f67a89a7ffd1f3f3c104",
+        "source": "app_program/diagnostics/robot_diagnostics.h",
+        "line": 12,
+        "kind": "ifndef",
+        "directive": "#ifndef APP_DIAGNOSTICS",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "14ae2159a8114b993c0b97a6",
+        "source": "app_program/subsystem2/buddy2_test.c",
+        "line": 69,
+        "kind": "if",
+        "directive": "#if S2_TEST_MOVE",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "7567a20957539d770cc6785e",
+        "source": "app_program/subsystem2/buddy2_test.c",
+        "line": 423,
+        "kind": "if",
+        "directive": "#if S2_TEST_MOVE",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "67c1cbc21ad0b97bbb8ee7d8",
+        "source": "app_program/subsystem4/buddy4.c",
+        "line": 8,
+        "kind": "ifndef",
+        "directive": "#ifndef APP_S4",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "3ee27c1ef10492aa067e5a73",
+        "source": "app_program/subsystem5/avoid_obstacle.c",
+        "line": 83,
+        "kind": "if",
+        "directive": "#if S5_PASS_EXTRA_V2",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "1bd5ce558611bee8c433b884",
+        "source": "app_program/subsystem5/scan_servo.c",
+        "line": 16,
+        "kind": "if",
+        "directive": "#if S5_SERVO_GPIO != 12U",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "653d3d02444687b4e6eca44e",
+        "source": "app_program/subsystem5/ultrasonic_sensor.c",
+        "line": 57,
+        "kind": "if",
+        "directive": "#if S5_TRIG_GPIO != 1U || S5_ECHO_GPIO != 0U",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "9760d0ae6bf5b41a76f63a92",
+        "source": "config/config_device.h",
+        "line": 29,
+        "kind": "ifndef",
+        "directive": "#ifndef APP_S4",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "d1331f638bbc9d3c4887b09f",
+        "source": "kernel/sysdepend/pico_rp2040/devinit.c",
+        "line": 72,
+        "kind": "else",
+        "directive": "#else",
+        "depth": 4,
+        "observed_profiles": []
+      },
+      {
+        "id": "62f3dc4884f255b318ec1f46",
+        "source": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+        "line": 102,
+        "kind": "if",
+        "directive": "#if TM_NET_LWIP && WIFI_DIAGNOSTIC_SCAN",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "59d5a8ec7d517f1ac5fa4f84",
+        "source": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+        "line": 204,
+        "kind": "if",
+        "directive": "#if !TM_NET_LWIP",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "55a52aab07eb1550e992502f",
+        "source": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+        "line": 229,
+        "kind": "if",
+        "directive": "#if !TM_NET_LWIP",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "b428f1ac773a8fa07086b142",
+        "source": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+        "line": 273,
+        "kind": "if",
+        "directive": "#if WIFI_DIAGNOSTIC_SCAN",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "acb9aa0283e7d6ff3e9b57d2",
+        "source": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+        "line": 281,
+        "kind": "else",
+        "directive": "#else",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "c76f9e97573de1dfdadb6a69",
+        "source": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+        "line": 292,
+        "kind": "else",
+        "directive": "#else",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "57e240489573ef9dbd468b65",
+        "source": "lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.c",
+        "line": 391,
+        "kind": "else",
+        "directive": "#else",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "a5152c60dd80e4a9bb16cdaa",
+        "source": "lib/libwifi/sysdepend/pico_rp2040/wifi_retry_policy.h",
+        "line": 23,
+        "kind": "if",
+        "directive": "#if WIFI_CONNECT_TIMEOUT_US == 0 || WIFI_REJOIN_DELAY_US == 0 ||                   WIFI_REJOIN_MAX_DELAY_US < WIFI_REJOIN_DELAY_US ||                             WIFI_REJOIN_MAX_DELAY_US > UINT32_MAX",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "b99903ae20952bf5fb3d482b",
+        "source": "testing/change_requirement_1/bend_filter_check.h",
+        "line": 7,
+        "kind": "ifndef",
+        "directive": "#ifndef TESTING_CHANGE_REQUIREMENT_1_BEND_FILTER_CHECK_H",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "4fea83009e60c1499ce3a3d6",
+        "source": "testing/compliance/barcode_replay_trace.h",
+        "line": 7,
+        "kind": "ifndef",
+        "directive": "#ifndef TESTING_COMPLIANCE_BARCODE_REPLAY_TRACE_H",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "75dc43303a23010f5f256151",
+        "source": "testing/integration/integration_storage_compat.h",
+        "line": 20,
+        "kind": "else",
+        "directive": "#else",
+        "depth": 2,
+        "observed_profiles": []
+      },
+      {
+        "id": "dc71f81ea405e447767a5c6d",
+        "source": "testing/subsystem2/fakes/tm/tmonitor.h",
+        "line": 4,
+        "kind": "ifndef",
+        "directive": "#ifndef TESTING_SUBSYSTEM2_FAKES_TM_TMONITOR_H",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "7846897c8ed20378a6aecd68",
+        "source": "testing/subsystem2/host_regression.c",
+        "line": 14,
+        "kind": "ifdef",
+        "directive": "#ifdef TEST_PACKED",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "21b3b5726a5282b01dae7bfb",
+        "source": "testing/subsystem2/host_regression.c",
+        "line": 317,
+        "kind": "ifdef",
+        "directive": "#ifdef TEST_PACKED",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "d17c874b3b6b3a3ca336936a",
+        "source": "testing/subsystem2/host_regression.c",
+        "line": 432,
+        "kind": "ifdef",
+        "directive": "#ifdef TEST_PACKED",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "5d64256ec401acbe57a44c40",
+        "source": "testing/subsystem2/host_regression.c",
+        "line": 481,
+        "kind": "ifdef",
+        "directive": "#ifdef TEST_PACKED",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "8cda6d7bb108faf6ed43a6d0",
+        "source": "testing/subsystem3/bench_trace.c",
+        "line": 193,
+        "kind": "ifdef",
+        "directive": "#ifdef S3_LEGACY_MODULE_NAMES",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "8a937f6d01ec73f8ce05353c",
+        "source": "testing/subsystem3/test_barcode_quiet.h",
+        "line": 7,
+        "kind": "ifndef",
+        "directive": "#ifndef TESTING_SUBSYSTEM3_TEST_BARCODE_QUIET_H",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "2a27cada19f3c456c741c727",
+        "source": "testing/subsystem3/test_barcode_quiet_record.h",
+        "line": 7,
+        "kind": "ifndef",
+        "directive": "#ifndef TESTING_SUBSYSTEM3_TEST_BARCODE_QUIET_RECORD_H",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "817390a6a3866f557f318b96",
+        "source": "testing/subsystem3/test_core.c",
+        "line": 14,
+        "kind": "ifdef",
+        "directive": "#ifdef S3_LEGACY_MODULE_NAMES",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "de4df1664e30d34acbc14dbc",
+        "source": "testing/subsystem3/test_motion_feedback.c",
+        "line": 5,
+        "kind": "ifdef",
+        "directive": "#ifdef S2_LEGACY_MODULE_NAMES",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "f58aad162b1447dff44b10ee",
+        "source": "tools/compliance/traces/obstacle_trace.h",
+        "line": 7,
+        "kind": "ifndef",
+        "directive": "#ifndef TOOLS_COMPLIANCE_TRACES_OBSTACLE_TRACE_H",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "716e87417a944de403329dcd",
+        "source": "tools/compliance/traces/runtime_observer.h",
+        "line": 26,
+        "kind": "if",
+        "directive": "#if APP_IR_DEBUG",
+        "depth": 1,
+        "observed_profiles": []
+      },
+      {
+        "id": "35739ed27b9d073f7dafe23e",
+        "source": "tools/compliance/traces/terrain_trace.h",
+        "line": 7,
+        "kind": "ifndef",
+        "directive": "#ifndef TOOLS_COMPLIANCE_TRACES_TERRAIN_TRACE_H",
+        "depth": 1,
+        "observed_profiles": []
+      }
+    ]
+  },
+  "function_union": {
+    "artifact_id": 14573941690,
+    "status": "OBSERVATIONS_MERGED",
+    "errors": [],
+    "definition_count": 1606,
+    "error_free_definition_count": 1562,
+    "diagnostic_translation_unit_count": 12,
+    "recovery_function_observation_count": 30,
+    "coverage_complete": false
+  },
+  "documentation": {
+    "artifact_id": 14573642495,
+    "status": "INCOMPLETE",
+    "version": "1.9.8",
+    "generation_returncode": 0,
+    "generation_diagnostic_lines": 0,
+    "warning_lines": 4135,
+    "compiler_definition_variants": 1606,
+    "compiler_recovery_variants": 44,
+    "compiler_undocumented_variants": 1408,
+    "diagnostic_translation_unit_count": 12,
+    "recovery_function_observation_count": 30,
+    "source_unchanged": true,
+    "errors": [],
+    "missing_observed_definitions": 19
+  },
+  "audit": {
+    "artifact_id": 14573346837,
+    "integrity": "PASS",
+    "tests": 267,
+    "failures": 1,
+    "skips": 0,
+    "failure": "Baseline-fixture regression incorrectly assumed GCC has no implicit system headers; Linux consumed a valid system header. Collector behavior was correct.",
+    "local_followup": "Test now requires baseline/tooling roots plus verifies each optional system dependency root and bytes hash. All10 focused tests pass locally; next Linux audit remains pending."
+  },
+  "mechanical_tilt": {
+    "run_id": 44612526005,
+    "run_url": "https://github.com/xavtsk/autonomous-robotic-car/actions/runs/44612526005",
+    "artifact_id": 14572692972,
+    "archive_sha256": "bd228e3f120cf4dc3f1fb77a01be3921796352b5879df84ecd2d9aff43fc7f13",
+    "status": "PASS",
+    "errors": [],
+    "revisions": {
+      "baseline": "55af85ce084fa0fe1fe4f8fe6444cd78e5acf007",
+      "candidate": "99b07b777559c0dd5d536f147fae15ea08f0d642"
+    },
+    "hardware_executed": false,
+    "sdk_revision": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+    "compiler": "arm-none-eabi-gcc (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+    "runner_image": {
+      "ImageOS": "ubuntu24",
+      "ImageVersion": "20261111.127.1"
+    },
+    "profile": {
+      "SMP": 1,
+      "CONSOLE": "usb_cdc",
+      "CRASH_REPORT": 0,
+      "WIFI": "cyw43",
+      "NET": "lwip",
+      "MQTT": 1,
+      "TEST": 0,
+      "IR_BENCH": 0,
+      "IR_CHANNELS": 1,
+      "S3_MOTION": 1,
+      "S3_STRAIGHT_TEST": 0,
+      "DIAGNOSTICS": 0,
+      "MOTION_SMOKE": 0,
+      "S4": 1,
+      "S4_BENCH": 0,
+      "S5": 1,
+      "S5_HARDWARE_CONFIRMED": 1,
+      "IR_DEBUG": 1,
+      "IMU_DEBUG": 0
+    },
+    "flash_sha256": "37a68de18dbbe440935264d845a6acf03b253c43c8501bb598ee5f2ba9cbd392",
+    "sizes": {
+      "text": 465884,
+      "data": 696,
+      "bss": 128800,
+      "static_ram": 129496
+    },
+    "public_configuration_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+    "flash_bytes_identical": true,
+    "link_arguments_and_object_order_identical": true,
+    "symbol_rows_identical": 1510,
+    "stack_rows_identical_after_filename_inversion": 1441,
+    "build_receipt_sha256": "11f8181320a9dc1d22c5fd03ebe8acb715d613ba1f518d3570c6cbff4e6d9a59",
+    "limits": [
+      "ELF/debug paths and raw source-location metadata may differ.",
+      "This proves the pinned production image only; no hardware timing or task high-water measurement.",
+      "Later bundled metadata changes are outside this immutable pair."
+    ],
+    "uf2_sha256": "49e430b8453854fc7d3b85bc6093eaef8eb4f2ff77bacab5f56d7625870add2a",
+    "uf2_identical": true,
+    "downloaded_hashes_verified": true
+  },
+  "limits": [
+    "No cleanup firmware was flashed or executed on hardware.",
+    "The complete replay gate remains failed by two unchanged baseline expectations.",
+    "The immutable55af\u219299b production image proof is separate from later metadata packing.",
+    "Compiler stack reports do not establish task high-water use or physical timing.",
+    "Conditional coverage and BARR/CR1/documentation closure remain incomplete."
+  ]
+}

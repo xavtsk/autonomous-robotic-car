@@ -32,7 +32,8 @@ int main (void)
         }
     }
     /* A long or stronger excursion loses all earlier quiet. Later real paper
-     * starts a new interval, rather than retroactively restoring that margin. */
+     * starts a new interval, rather than retroactively restoring that margin.
+     */
     for (unsigned int strong = 0U; strong < 2U; strong++)
     {
         s3_barcode_quiet_reset(&q);

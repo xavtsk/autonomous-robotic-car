@@ -22,9 +22,8 @@ typedef enum
  * Change ONLY here if the wiring changes;
  * the integrated controller, the bench and the operator prompts follow it. */
 #define S3_ADC_CHANNEL_LEFT (1U) /* GP27 */
-#define S3_ADC_CHANNEL_BARCODE                                                 \
-    (2U) /* GP28: check the Robo Pico VBAT jumper     \
-                                   */
+/* GP28: check the Robo Pico VBAT jumper */
+#define S3_ADC_CHANNEL_BARCODE (2U)
 #define S3_ADC_CHANNEL_RIGHT (0U) /* GP26 */
 #define S3_GPIO_FOR_CHANNEL(channel) (26U + (unsigned)(channel))
 

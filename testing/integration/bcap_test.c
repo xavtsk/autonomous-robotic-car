@@ -82,7 +82,8 @@ static void fixed_point_odometry_tests (void)
     const uint16_t crossing_mm[] = {0, 0, 1, 1, 2};
     check_positions(crossing, crossing_mm, 5);
     /* Absolute odometry can outlive many runs; it must not wrap at 32-bit
-     * millimetre or micrometre limits or lose small increments in that range. */
+     * millimetre or micrometre limits or lose small increments in that range.
+     */
     const double long_run[] = {10000000.0, 10000000.001, 10000000.100,
                                10000001.234};
     const uint16_t long_run_mm[] = {0, 1, 100, 1234};

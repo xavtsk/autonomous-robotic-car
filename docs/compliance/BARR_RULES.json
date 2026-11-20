@@ -44,7 +44,9 @@
       "enforcement": "lexical",
       "requirement": "Limit source lines to 80 characters.",
       "status": "unreviewed",
-      "evidence": []
+      "evidence": [
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
+      ]
     },
     {
       "id": "1.3.a",
@@ -52,7 +54,9 @@
       "enforcement": "ast-review",
       "requirement": "Brace all control-statement bodies, including empty bodies.",
       "status": "unreviewed",
-      "evidence": []
+      "evidence": [
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
+      ]
     },
     {
       "id": "1.3.b",
@@ -60,7 +64,9 @@
       "enforcement": "formatter-review",
       "requirement": "Place opening and closing block braces on separate aligned lines.",
       "status": "unreviewed",
-      "evidence": []
+      "evidence": [
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
+      ]
     },
     {
       "id": "1.4.a",
@@ -68,7 +74,9 @@
       "enforcement": "ast-review",
       "requirement": "Make expression evaluation order clear without depending on remembered precedence.",
       "status": "unreviewed",
-      "evidence": []
+      "evidence": [
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
+      ]
     },
     {
       "id": "1.4.b",
@@ -76,7 +84,9 @@
       "enforcement": "ast-review",
       "requirement": "Parenthesize compound operands of logical AND and OR.",
       "status": "unreviewed",
-      "evidence": []
+      "evidence": [
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
+      ]
     },
     {
       "id": "1.5.a",
@@ -239,8 +249,10 @@
       "strength": "mandatory",
       "enforcement": "lexical",
       "requirement": "Do not place nested comment tokens or backslashes inside comment content.",
-      "status": "unreviewed",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
+      ]
     },
     {
       "id": "2.1.c",
@@ -341,7 +353,8 @@
         "docs/compliance/CODEC_FUNCTION_CONTRACTS.json; 28 definitions and 14 prototypes at 0ba528b, exact rejection/output-mutation contracts and clean compiler documentation observations",
         "docs/compliance/GENERATED_REFERENCE.md; pinned generation and source-bound compiler/XML comparison, first Linux generation retained at55af85c/run44604115125; warnings and compiler-context gaps keep gate incomplete",
         "docs/compliance/CALCULATION_FUNCTION_CONTRACTS.json; 9 definitions and 9 prototypes at 4ce9b14 across 34 recorded compiler contexts; signed-zero, latching and rejection mutation preserved",
-        "docs/compliance/SENSOR_TERRAIN_FUNCTION_CONTRACTS.json; bounded comments-only batch4dd87b3:10 definitions/7 prototypes,24 compiler contexts, reviewed units, failure mutation and ownership; whole-scope review remains incomplete"
+        "docs/compliance/SENSOR_TERRAIN_FUNCTION_CONTRACTS.json; bounded comments-only batch4dd87b3:10 definitions/7 prototypes,24 compiler contexts, reviewed units, failure mutation and ownership; whole-scope review remains incomplete",
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
       ]
     },
     {
@@ -509,8 +522,10 @@
       "strength": "mandatory",
       "enforcement": "lexical",
       "requirement": "Place every preprocessor hash at the start of its line.",
-      "status": "unreviewed",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
+      ]
     },
     {
       "id": "3.3.a",
@@ -533,8 +548,10 @@
       "strength": "mandatory",
       "enforcement": "lexical",
       "requirement": "End each C source file with an end-of-file comment and a blank line.",
-      "status": "unreviewed",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
+      ]
     },
     {
       "id": "3.4.a",
@@ -565,8 +582,10 @@
       "strength": "mandatory",
       "enforcement": "lexical",
       "requirement": "Do not use literal tab characters in source files.",
-      "status": "unreviewed",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        "docs/compliance/evidence/phase2-mechanical.json; bounded Phase 2 source changes, lexical source hashes and three paired Arm object checks; no new runtime or hardware claim"
+      ]
     },
     {
       "id": "3.6.a",

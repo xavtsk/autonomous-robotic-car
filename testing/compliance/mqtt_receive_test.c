@@ -48,8 +48,8 @@ static void mqtt_receive_test_case (uint32_t case_id, uint32_t announced,
     {
         assert(result == E_TMOUT);
     }
-    printf("MQSTORE RX %" PRIu32 " %" PRIu32 " %u %u %d %u",
-           case_id, announced, (unsigned)actual, (unsigned)split, (int)result,
+    printf("MQSTORE RX %" PRIu32 " %" PRIu32 " %u %u %d %u", case_id, announced,
+           (unsigned)actual, (unsigned)split, (int)result,
            (unsigned)command.kind);
     for (unsigned index = 0U; index < sizeof(command.payload); ++index)
     {
@@ -67,8 +67,7 @@ int main (void)
 {
     static uint8_t bytes[UINT16_MAX];
     static const uint32_t announced[] = {
-        0U, 1U, 3U, 4U, 5U, 16U, 17U, 18U, 31U, UINT16_MAX, UINT32_MAX
-    };
+        0U, 1U, 3U, 4U, 5U, 16U, 17U, 18U, 31U, UINT16_MAX, UINT32_MAX};
     buddy1_barcode_map_t map = {'A', 'B', 'C', 'D'};
     uint8_t expected[4];
     uint32_t case_id = 0U;

@@ -1,3 +1,8 @@
+/** @file motion.c
+ * @brief Provide synchronized motion requests and calibrated robot settings.
+ * @note Requests update the statechart under the Buddy 2 mutex. Only the
+ * motion task writes motor outputs.
+ */
 /*
  * File: motion.c
  * Owner: Buddy 2 - Motion Control
@@ -151,9 +156,8 @@ static uint32_t g_navigation_refresh_us;
 
 /* Both converters run with the motion mutex held. They only copy values;
  * floating-point precision and the wide caller-visible fields are unchanged. */
-static void motion_calibration_store (
-    motion_stored_calibration_t * p_stored,
-    const motion_calibration_t * p_value)
+static void motion_calibration_store (motion_stored_calibration_t * p_stored,
+                                      const motion_calibration_t * p_value)
 {
     p_stored->counts_per_rev = p_value->counts_per_rev;
     p_stored->max_speed_mps = p_value->max_speed_mps;
@@ -172,9 +176,9 @@ static void motion_calibration_store (
     p_stored->b_aborted = p_value->b_aborted;
 }
 
-static void motion_calibration_expand (
-    const motion_stored_calibration_t * p_stored,
-    motion_calibration_t * p_value)
+static void
+motion_calibration_expand (const motion_stored_calibration_t * p_stored,
+                           motion_calibration_t * p_value)
 {
     p_value->b_valid = p_stored->b_valid;
     p_value->counts_per_rev = p_stored->counts_per_rev;
@@ -426,21 +430,23 @@ void motion_process (void)
     {
         uint32_t bits = wheel_encoder_bits((wheel_id_t)wheel);
         g_feedback.centre_m +=
-            0.5 * (float64_t)wheel_encoder_delta(bits, g_feedback_count[wheel]) *
+            0.5 *
+            (float64_t)wheel_encoder_delta(bits, g_feedback_count[wheel]) *
             (float64_t)motion_estimation_scale();
         g_feedback_count[wheel] = bits;
     }
     g_feedback.timestamp_us = now;
-    g_flags.b_feedback_valid =
-        g_flags.b_feedback_ready && wheel_encoder_is_running() &&
-        motion_is_calibrated() && !g_flags.b_cal_running &&
-        !g_flags.b_cal_request;
+    g_flags.b_feedback_valid = g_flags.b_feedback_ready &&
+                               wheel_encoder_is_running() &&
+                               motion_is_calibrated() &&
+                               !g_flags.b_cal_running && !g_flags.b_cal_request;
     motion_unlock();
 }
 
 /* ---- Requests ------------------------------------------------------------ */
 
-motion_result_t motion_request_velocity (float32_t left_mps, float32_t right_mps)
+motion_result_t motion_request_velocity (float32_t left_mps,
+                                         float32_t right_mps)
 {
     motion_result_t res;
 
@@ -764,8 +770,8 @@ bool motion_try_debug_snapshot (motion_debug_snapshot_t * p_out)
     p_out->state = motion_controller_state();
     p_out->fault = motion_controller_fault();
     p_out->busy = motion_controller_is_busy();
-    p_out->valid = g_flags.b_feedback_ready && g_flags.b_feedback_valid &&
-                   !p_out->busy;
+    p_out->valid =
+        g_flags.b_feedback_ready && g_flags.b_feedback_valid && !p_out->busy;
     p_out->braked = motion_controller_is_stopped();
     for (unsigned int value_i = 0U; value_i < 2U; ++value_i)
     {
@@ -1220,3 +1226,6 @@ static void run_calibration (motion_calibration_t * p_out)
                      (p_out->top_speed_l_mps >= CAL_MIN_SPEED_MPS) &&
                      (p_out->top_speed_r_mps >= CAL_MIN_SPEED_MPS);
 }
+
+/* End of file. */
+

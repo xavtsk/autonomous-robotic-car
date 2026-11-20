@@ -6,6 +6,7 @@ Records named for an earlier date retain their original results and assumptions.
 | Read first | Purpose |
 | --- | --- |
 | [Current status](CURRENT_STATUS.md) | Deployed preservation baseline, online evidence and remaining validation. |
+| [Repository cleanup](REPOSITORY_CLEANUP.md) | Bounded housekeeping decisions and verification; remaining cleanup phases. |
 | [Build and test](BUILD_AND_TEST.md) | Explicit build profiles, host commands and result interpretation. |
 | [Team ownership](../TEAM.md) | Pins, peripherals, tasks and module owners. |
 | [Testing guide](../testing/README.md) | Recording host, integration and physical results. |
@@ -41,7 +42,8 @@ Subsystem guides: [Buddy 1](../app_program/subsystem1/README.md),
 [Buddy 5](../app_program/subsystem5/README.md),
 [controller](../app_program/controller/README.md).
 
-The [19 November cleanup record](COMPLIANCE_CLEANUP.md), October integration
+The [25 October handover](history/CLAUDE_HANDOFF_2026-10-25.md),
+[19 November cleanup record](COMPLIANCE_CLEANUP.md), October integration
 notes, dated fix/review reports, saved logs and upstream/migration documents are
 historical evidence. A later status banner does not replace their original body
 or turn compile-only/simulated results into execution or physical evidence.

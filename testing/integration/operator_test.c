@@ -15,7 +15,8 @@
 #define APP_TEST 0
 #define S3_BUILTIN_CALIBRATION 0 /* these tests start uncalibrated */
 /* Original Buddy 3 line/junction behaviour; the course profile (tape between
- * the sensors, straight across unannounced crossings) is tested in course_test.c */
+ * the sensors, straight across unannounced crossings) is tested in
+ * course_test.c */
 #define S3_LINE_BETWEEN 0
 #define S3_CROSS_STRAIGHT 0
 #define S3_COURSE_PENDING_WAIT_US (5000000U)
@@ -43,8 +44,8 @@ static unsigned sleeps, locked, starts_requested, stops;
 static uint32_t clock_value;
 static uint16_t raw[3] = {150, 150, 150};
 static bool fb_braked = true;
-static uint8_t
-    fb_command_id; /* last accepted velocity command, echoed back like Buddy 2 */
+static uint8_t fb_command_id; /* last accepted velocity command, echoed back
+                                 like Buddy 2 */
 static bool fb_fault;
 
 ID tk_cre_mtx (const T_CMTX * m)

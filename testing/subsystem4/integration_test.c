@@ -212,7 +212,8 @@ static void test_hump_report_retry (void)
     assert(reports == attempts + 2U);
 
     /* START requests a new-run reset: a blocked old run must not leak into
-     * that run while waiting for acknowledgement or after its empty snapshot. */
+     * that run while waiting for acknowledgement or after its empty snapshot.
+     */
     hump_report_result = E_TMOUT;
     peak_sample(7, 0.190f);
     attempts = reports;
@@ -452,7 +453,8 @@ int main (void)
             terrain_control_report();
         assert(tilt_pitch == 9999 && tilt_state == TERRAIN_UNKNOWN &&
                !last_terrain.on_hump); /* stale */
-        /* Live climb height and this run's highest hump, with or without a run. */
+        /* Live climb height and this run's highest hump, with or without a run.
+         */
         fresh();
         imu.hump_active = true;
         imu.hump_height_m = 0.0234f;

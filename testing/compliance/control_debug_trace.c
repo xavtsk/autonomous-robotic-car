@@ -43,7 +43,8 @@ static void debug_trace_packet (const control_debug_packet_t * p_packet)
     }
 }
 
-/** Print all public output values as their exact 32-bit object representations. */
+/** Print all public output values as their exact 32-bit object representations.
+ */
 static void debug_trace_sample (const control_debug_sample_t * p_sample)
 {
     size_t index = 0U;

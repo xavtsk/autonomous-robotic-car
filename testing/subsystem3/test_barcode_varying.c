@@ -268,7 +268,8 @@ static void test_measured_stars_and_quiet (void)
     assert(feed_measured(measured_a, 2200000U, 2000000U, false, &elapsed) ==
            1U);
     /* End star's narrow mean is ~159 ms. Its expansion consumes additional
-     * trailing white; a candidate must not emit as soon as one second passes. */
+     * trailing white; a candidate must not emit as soon as one second passes.
+     */
     assert(elapsed >= 1600000U);
     /* These margins exceed ten observed narrow modules, but not ten modules
      * plus the outward movement of the corresponding outer edge. */

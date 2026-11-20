@@ -3,20 +3,20 @@
  * task.
  */
 /*
- *	mqtt_utk.c
- *	MQTT client wiring for micro T-Kernel (RP2040, NO_SYS=1)
+ *  mqtt_utk.c
+ *  MQTT client wiring for micro T-Kernel (RP2040, NO_SYS=1)
  *
- *	Runs entirely on the single processor-1-owned task that already owns
- *	the CYW43439 and the rest of lwIP (docs/RELEASE.md safety rule 6):
- *	cyw43_utk_task() (cyw43_utk.c) calls mqtt_utk_start() once, the first
- *	time it observes CYW43_LINK_UP. mqtt.c's own keepalive/ping/retry
- *	timers, and the heartbeat below, both ride the same sys_check_timeouts()
- *	polling that task already does for DHCP and TCP -- nothing extra runs
- *	on any other task or core.
+ *  Runs entirely on the single processor-1-owned task that already owns
+ *  the CYW43439 and the rest of lwIP (docs/RELEASE.md safety rule 6):
+ *  cyw43_utk_task() (cyw43_utk.c) calls mqtt_utk_start() once, the first
+ *  time it observes CYW43_LINK_UP. mqtt.c's own keepalive/ping/retry
+ *  timers, and the heartbeat below, both ride the same sys_check_timeouts()
+ *  polling that task already does for DHCP and TCP -- nothing extra runs
+ *  on any other task or core.
  *
- *	The lwIP clock declaration needs lwip/sys.h. Keep the toolchain size_t
- *	definition alongside the kernel's monitor types, as in sys_arch.c.
- *	No kernel or GPIO work is done by publish callbacks.
+ *  The lwIP clock declaration needs lwip/sys.h. Keep the toolchain size_t
+ *  definition alongside the kernel's monitor types, as in sys_arch.c.
+ *  No kernel or GPIO work is done by publish callbacks.
  */
 
 #define PROHIBIT_DEF_SIZE_T
@@ -200,11 +200,15 @@ static void data_publish_completed (void)
 {
 #if APP_IR_DEBUG
     if (g_mqtt_state.control_data_since < MQTT_UTK_CONTROL_DATA_GAP)
+    {
         ++g_mqtt_state.control_data_since;
+    }
 #endif
 #if APP_IMU_DEBUG
     if (g_mqtt_state.imu_data_since < MQTT_UTK_IMU_DATA_GAP)
+    {
         ++g_mqtt_state.imu_data_since;
+    }
 #endif
 }
 
@@ -223,7 +227,8 @@ static void application_publish_done_cb (void * arg, err_t result)
     else
     {
         /* A request timeout is not proof that the broker never received it.
-		 * Retry is at-least-once best effort; consumers must tolerate repeats. */
+         * Retry is at-least-once best effort; consumers must tolerate repeats.
+         */
         warn_pending(result);
         pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
     }
@@ -294,7 +299,9 @@ static void publish_preview (const char * topic, unsigned int size)
     err_t err = mqtt_publish(client, topic, preview_line, (u16_t)size, 0, 0,
                              preview_publish_done_cb, NULL);
     if (err != ERR_OK)
+    {
         g_mqtt_state.b_pending_inflight = 0;
+    }
 }
 #endif
 
@@ -317,7 +324,9 @@ __attribute__((weak)) unsigned short
 mqtt_utk_app_status (unsigned char * payload, unsigned short capacity)
 {
     if (capacity < 2)
+    {
         return 0;
+    }
     payload[0] = MQTT_UTK_APP_WIRE_VERSION;
     payload[1] = 1; /* alive, faults unknown */
     return 2;
@@ -377,7 +386,9 @@ static void incoming_data_cb (void * arg, const u8_t * data, u16_t len,
     if ((flags & MQTT_DATA_FLAG_LAST) != 0)
     {
         if (g_mqtt_state.rx_len != g_mqtt_state.rx_expected)
+        {
             g_mqtt_state.b_rx_truncated = 1;
+        }
         tm_printf((UB *)"mqtt: RX [%s] %u binary bytes%s\n", rx_topic,
                   (unsigned)g_mqtt_state.rx_len,
                   g_mqtt_state.b_rx_truncated ? " (rejected)" : "");
@@ -435,14 +446,16 @@ static void heartbeat_timeout (void * arg)
     {
         len = mqtt_utk_app_status(payload, sizeof(payload));
         if (len > 0 && len <= sizeof(payload))
+        {
             (void)mqtt_publish(client, MQTT_TOPIC, payload, (u16_t)len,
                                0 /* qos */, 0 /* retain */, publish_done_cb,
                                NULL);
+        }
     }
 
     /* Re-arms itself every call -- mqtt.c's connection callback (below)
-	 * only starts this chain once, on the transition into MQTT_CONNECT_
-	 * ACCEPTED, so there is exactly one heartbeat chain alive at a time. */
+     * only starts this chain once, on the transition into MQTT_CONNECT_
+     * ACCEPTED, so there is exactly one heartbeat chain alive at a time. */
     sys_timeout(MQTT_UTK_HEARTBEAT_MS, heartbeat_timeout, NULL);
 }
 
@@ -465,20 +478,20 @@ static void connection_cb (mqtt_client_t * c, void * arg,
         mqtt_utk_app_connection(1);
 
         /* No longer *connecting* -- clear the guard so that if this
-		 * connection later drops, the poll loop's mqtt_utk_start() call
-		 * is allowed to reconnect. Leaving it set would wedge the client
-		 * permanently after the first disconnect. */
+         * connection later drops, the poll loop's mqtt_utk_start() call
+         * is allowed to reconnect. Leaving it set would wedge the client
+         * permanently after the first disconnect. */
         g_mqtt_state.b_connecting = 0;
         g_mqtt_state.b_pending_inflight = 0;
 
         tm_printf((UB *)"mqtt: connected to " MQTT_BROKER_IP "\n");
 
         /* Subscribe to the same topic this client publishes to, so every
-		 * heartbeat comes back from the broker and is printed by
-		 * incoming_data_cb(). A matching RX for each TX is end-to-end
-		 * proof of the round trip without needing mosquitto_sub on the
-		 * broker host. Callbacks must be registered before subscribing,
-		 * or the first delivery has nowhere to go. */
+         * heartbeat comes back from the broker and is printed by
+         * incoming_data_cb(). A matching RX for each TX is end-to-end
+         * proof of the round trip without needing mosquitto_sub on the
+         * broker host. Callbacks must be registered before subscribing,
+         * or the first delivery has nowhere to go. */
         mqtt_set_inpub_callback(client, incoming_publish_cb, incoming_data_cb,
                                 NULL);
 
@@ -499,9 +512,9 @@ static void connection_cb (mqtt_client_t * c, void * arg,
         }
 
         /* Drop any chain left over from a previous connection before
-		 * arming a new one. Each reconnect would otherwise add another
-		 * self-perpetuating heartbeat, and every one of them holds a
-		 * MEMP_SYS_TIMEOUT slot until the pool is exhausted. */
+         * arming a new one. Each reconnect would otherwise add another
+         * self-perpetuating heartbeat, and every one of them holds a
+         * MEMP_SYS_TIMEOUT slot until the pool is exhausted. */
         sys_untimeout(heartbeat_timeout, NULL);
         sys_timeout(MQTT_UTK_HEARTBEAT_MS, heartbeat_timeout, NULL);
     }
@@ -509,8 +522,8 @@ static void connection_cb (mqtt_client_t * c, void * arg,
     {
         mqtt_utk_app_connection(0);
         /* lwIP clears requests without completion callbacks on close.
-		 * Keep our application packet for the next connection and schedule
-		 * the existing connection retry without adding a publish timer. */
+         * Keep our application packet for the next connection and schedule
+         * the existing connection retry without adding a publish timer. */
         tm_printf((UB *)"mqtt: connection status %d, retrying in %ds\n",
                   (int)status, MQTT_UTK_RETRY_MS / 1000);
         g_mqtt_state.b_pending_inflight = 0;
@@ -578,11 +591,15 @@ void mqtt_utk_poll (void)
     }
 
     /* A timeout/disconnect can leave delivery ambiguous. Finish the exact
-	 * attempted packet before taking another packet from either source. */
+     * attempted packet before taking another packet from either source. */
     if (g_mqtt_state.retry_source == PUBLISH_APPLICATION)
+    {
         goto publish_application;
+    }
     if (g_mqtt_state.retry_source == PUBLISH_CAPTURE)
+    {
         goto publish_capture;
+    }
 
     if (!g_mqtt_state.b_pending_valid)
     {
@@ -605,19 +622,24 @@ void mqtt_utk_poll (void)
     }
 
     /* Do not reorder the application FIFO. Its head event/reply takes
-	 * priority, while recurring samples share slots one-for-one with BCAP.
-	 * Urgent events behind a held sample still wait for the existing FIFO. */
+     * priority, while recurring samples share slots one-for-one with BCAP.
+     * Urgent events behind a held sample still wait for the existing FIFO. */
     if (g_mqtt_state.b_pending_valid && !pending.routine)
+    {
         goto publish_application;
+    }
 #if APP_IR_DEBUG || APP_IMU_DEBUG
     /* With no queued application packet, check for BCAP before treating the
-	 * link as idle. Diagnostics use separate storage from the staged capture. */
+     * link as idle. Diagnostics use separate storage from the staged capture.
+     */
     if (!g_mqtt_state.b_pending_valid && !g_mqtt_state.b_debug_valid)
     {
         n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
         capture_checked = 1;
         if (n > sizeof debug_line)
+        {
             return;
+        }
         if (n != 0U)
         {
             g_mqtt_state.debug_len = (u16_t)n;
@@ -634,7 +656,9 @@ void mqtt_utk_poll (void)
         n = mqtt_utk_control_debug_take(preview_line,
                                         MQTT_UTK_CONTROL_DEBUG_MAX);
         if (n > MQTT_UTK_CONTROL_DEBUG_MAX)
+        {
             return;
+        }
         if (n != 0U)
         {
             last_control_ms = sys_now();
@@ -651,7 +675,9 @@ void mqtt_utk_poll (void)
     {
         n = mqtt_utk_imu_debug_take(preview_line, MQTT_UTK_IMU_DEBUG_MAX);
         if (n > MQTT_UTK_IMU_DEBUG_MAX)
+        {
             return;
+        }
         if (n != 0U)
         {
             g_mqtt_state.imu_data_since = 0;
@@ -661,12 +687,16 @@ void mqtt_utk_poll (void)
     }
 #endif
     if (g_mqtt_state.b_pending_valid && !g_mqtt_state.b_capture_turn)
+    {
         goto publish_application;
+    }
     if (!g_mqtt_state.b_debug_valid && !capture_checked)
     {
         n = mqtt_utk_debug_take(debug_line, sizeof debug_line);
         if (n > sizeof debug_line)
+        {
             return;
+        }
         if (n != 0U)
         {
             g_mqtt_state.debug_len = (u16_t)n;
@@ -674,15 +704,21 @@ void mqtt_utk_poll (void)
         }
     }
     if (g_mqtt_state.b_debug_valid)
+    {
         goto publish_capture;
+    }
     if (g_mqtt_state.b_pending_valid)
+    {
         goto publish_application;
+    }
 
 #if APP_IR_DEBUG
     /* IR remains spare-capacity only. */
     n = mqtt_utk_ir_debug_take(preview_line, MQTT_UTK_IR_DEBUG_MAX);
     if (n != 0U && n <= MQTT_UTK_IR_DEBUG_MAX)
+    {
         publish_preview(MQTT_UTK_IR_DEBUG_TOPIC, n);
+    }
 #endif
     return;
 
@@ -711,7 +747,8 @@ publish_capture:
 
 publish_application:
     /* Set state before calling lwIP; test ports may complete synchronously.
-	 * The next packet cannot overtake this one or consume another request slot. */
+     * The next packet cannot overtake this one or consume another request slot.
+     */
     g_mqtt_state.retry_source = PUBLISH_APPLICATION;
     g_mqtt_state.b_pending_inflight = 1;
     pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
@@ -729,7 +766,7 @@ publish_application:
         else
         {
             /* Bad arguments cannot improve with a retry. Drop this one packet
-			 * explicitly, then allow the next FIFO item on a later poll. */
+             * explicitly, then allow the next FIFO item on a later poll. */
             tm_printf((UB *)"mqtt: application packet discarded, err=%d\n",
                       (int)err);
             g_mqtt_state.b_pending_valid = 0;
@@ -740,3 +777,4 @@ publish_application:
 }
 
 /* End of file. */
+

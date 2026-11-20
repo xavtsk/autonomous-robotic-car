@@ -83,9 +83,8 @@
 #define S3_BARCODE_WHITE_LIMIT (400U) /* was 400; 28 Oct: Y thin bars */
 #endif
 #ifndef S3_BARCODE_BLACK_LIMIT
-#define S3_BARCODE_BLACK_LIMIT                                                 \
-    (600U) /* was 600; Y's faint bars peak 480/512                             \
-            */
+/* was 600; Y's faint bars peak 480/512 */
+#define S3_BARCODE_BLACK_LIMIT (600U)
 #endif
 
 /* After a turn that ends off the line: sweep up to +/- this many degrees

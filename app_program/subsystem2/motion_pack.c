@@ -61,7 +61,7 @@
  */
 static float32_t abs_f (float32_t value_x)
 {
-    return (value_x < 0.0f) ? -value_x : value_x;
+    return ((value_x < 0.0f) ? -value_x : value_x);
 }
 
 /** @brief Create a low-bit mask without shifting by 32 or more.
@@ -71,7 +71,7 @@ static float32_t abs_f (float32_t value_x)
  */
 static uint32_t mask_of (uint32_t bits)
 {
-    return (bits >= 32U) ? 0xFFFFFFFFU : ((1UL << bits) - 1U);
+    return ((bits >= 32U) ? 0xFFFFFFFFU : ((1UL << bits) - 1U));
 }
 
 /** @brief Extract a field from a packed 64-bit value.
@@ -83,7 +83,7 @@ static uint32_t mask_of (uint32_t bits)
  */
 static uint32_t field_get (uint64_t word, uint32_t lsb, uint32_t bits)
 {
-    return (uint32_t)(word >> lsb) & mask_of(bits);
+    return ((uint32_t)(word >> lsb) & mask_of(bits));
 }
 
 /** @brief Position the masked portion of a field in a 64-bit value.
@@ -95,7 +95,7 @@ static uint32_t field_get (uint64_t word, uint32_t lsb, uint32_t bits)
  */
 static uint64_t field_put (uint32_t value, uint32_t lsb, uint32_t bits)
 {
-    return (uint64_t)(value & mask_of(bits)) << lsb;
+    return ((uint64_t)(value & mask_of(bits)) << lsb);
 }
 
 /** @brief Test finiteness using the retained floating arithmetic checks.

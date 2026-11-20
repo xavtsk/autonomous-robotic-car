@@ -2,14 +2,16 @@
  * @brief Execute the production runtime with fake task/ADC boundaries.
  */
 /* Execute the production runtime with fake task/ADC boundaries. This proves
- * queue/snapshot ownership, not scheduling deadlines or physical calibration. */
+ * queue/snapshot ownership, not scheduling deadlines or physical calibration.
+ */
 #define APP_H
 #define APP_S3_MOTION 1
 #define APP_DIAGNOSTICS 0
 #define APP_TEST 0
 #define S3_BUILTIN_CALIBRATION 0 /* these tests start uncalibrated */
 /* Original Buddy 3 line/junction behaviour; the course profile (tape between
- * the sensors, straight across unannounced crossings) is tested in course_test.c */
+ * the sensors, straight across unannounced crossings) is tested in
+ * course_test.c */
 #define S3_LINE_BETWEEN 0
 #define S3_CROSS_STRAIGHT 0
 #define S3_COURSE_PENDING_WAIT_US (5000000U)
@@ -556,7 +558,7 @@ int main (void)
            !g_shared.reset_pending);
 #if defined(TM_MQTT) && TM_MQTT
     { /* After the run ended, the barcode trace goes out over Wi-Fi once,
-         * binary summary first and binary end last; then nothing more. */
+       * binary summary first and binary end last; then nothing more. */
         unsigned char line[MQTT_UTK_DEBUG_PAYLOAD_MAX];
         unsigned n, lines = 0U;
         unsigned first_kind = 99, last_kind = 99;

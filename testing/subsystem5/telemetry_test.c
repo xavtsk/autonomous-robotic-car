@@ -253,7 +253,8 @@ int baseline (void)
     vehicle_controller_cancel_start();
     assert(!frozen && reopens == 1);
     assert(vehicle_controller_set_mapping(map));
-    /* Accepted START: the freeze belongs to the run; a stray cancel is a no-op. */
+    /* Accepted START: the freeze belongs to the run; a stray cancel is a no-op.
+     */
     assert(vehicle_controller_prep_start(&nav) && frozen);
     vehicle_controller_commit_start();
     vehicle_controller_cancel_start();
@@ -315,7 +316,8 @@ ER buddy1_report_scan (const buddy1_scan_t * q)
     return scan_result;
 }
 
-/* Raw readings kept by Buddy 5 for the last scan (car/telemetry/scan_sample). */
+/* Raw readings kept by Buddy 5 for the last scan (car/telemetry/scan_sample).
+ */
 static s5_sample_t kept[S5_SAMPLES_MAX];
 static unsigned kept_count, sample_reports, busy_reads;
 static uint16_t kept_id;
@@ -429,7 +431,8 @@ int main (void)
         available = true;
         obstacle.no_echo = false;
     }
-    /* Full FR6 profile once per finished scan / side peek, incl. a failed one. */
+    /* Full FR6 profile once per finished scan / side peek, incl. a failed one.
+     */
     {
         unsigned before = scan_reports;
         obstacle.scan_id = 7;

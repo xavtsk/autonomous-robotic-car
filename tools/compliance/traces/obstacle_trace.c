@@ -2,7 +2,8 @@
  * @brief Existing avoidance scenarios/assertions, with every requested action
  * and state.
  */
-/* Existing avoidance scenarios/assertions, with every requested action and state. */
+/* Existing avoidance scenarios/assertions, with every requested action and
+ * state. */
 #include "obstacle_trace.h"
 #include "avoid_obstacle.h"
 #include <inttypes.h>

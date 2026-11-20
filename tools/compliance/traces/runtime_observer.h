@@ -2,7 +2,8 @@
  * @brief Print controller state and queued replies from the generated runtime
  * harness.
  */
-/* Included only in the generated host harness, after its production C include. */
+/* Included only in the generated host harness, after its production C include.
+ */
 static void trace_runtime (const char * point)
 {
     printf(

@@ -67,11 +67,11 @@ EXPORT ER knl_start_device( void )
 
 	/* I2C unit.0 "iica" */
 	#if DEVCNF_USE_IIC
-		#if APP_S4
+#if APP_S4
         err = dev_init_i2c(1); /* Buddy 4 only: never claim I2C0 motor pins. */
-        #else
+#else
         err = dev_init_i2c(0);
-        #endif
+#endif
 		if(err < E_OK) return err;
 	#endif
 

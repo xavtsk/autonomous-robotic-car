@@ -50,7 +50,8 @@ static void check (const uint32_t adjusted[9], uint16_t star, uint32_t narrow,
 static void exact_boundaries (void)
 {
     /* Includes minimum operational widths, non-divisible references,
-     * and large widths whose 35% deviations still fit the legal max_run bound. */
+     * and large widths whose 35% deviations still fit the legal max_run bound.
+     */
     const uint32_t narrow[] = {30000U, 30001U, 100003U, 50000000U};
     unsigned int checks = 0U;
     for (unsigned int reverse = 0U; reverse < 2U; reverse++)

@@ -329,7 +329,8 @@ int main (void)
     send(&value);
     polled_state = MOTION_IDLE;
 
-    /* Rejection occurs before narrowing/publication and does not mutate state. */
+    /* Rejection occurs before narrowing/publication and does not mutate state.
+     */
     value = observation();
     value.sensor[0].darkness = 1001;
     assert(vehicle_controller_submit_nav(&value) == E_PAR);

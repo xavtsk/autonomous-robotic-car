@@ -49,7 +49,8 @@ int main (void)
         packets++;
     }
     assert(packets == 4 && cur.end_done);
-    /* Max-length summary, header timestamp and all 24 maximum-valued samples. */
+    /* Max-length summary, header timestamp and all 24 maximum-valued samples.
+     */
     cap.letter_count = 8;
     memcpy(cap.letters, "ABCDEFGZ", 8);
     cap.used = 24;
@@ -92,7 +93,8 @@ int main (void)
     cap.letter_count = 9;
     cur = (bcap_cursor_t){0};
     assert(!bcap_binary_next(&cap, &cur, packet, sizeof packet));
-    /* Multiple batches and episodes retain every sample, including short tails. */
+    /* Multiple batches and episodes retain every sample, including short tails.
+     */
     memset(&cap, 0, sizeof cap);
     cap.run_start_us = 123;
     cap.episodes = 2;

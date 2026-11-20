@@ -6,7 +6,8 @@
 #include "../app_types.h"
 #include <float.h>
 
-/* Compile-time guarantee: shared steering requires the existing binary32 float format. */
+/* Compile-time guarantee: shared steering requires the existing binary32 float
+ * format. */
 BUILD_ASSERT(sizeof(float32_t) == 4 && FLT_RADIX == 2 && FLT_MANT_DIG == 24,
              navigation_codec_c_check_a_t);
 /* Compile-time guarantee: navigation packet layout. */

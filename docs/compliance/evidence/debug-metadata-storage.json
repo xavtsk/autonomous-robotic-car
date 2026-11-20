@@ -887,17 +887,118 @@
     }
   ],
   "linux_gate": {
-    "status": "pending",
-    "required": [
-      "All1141 unchanged builder acceptance/byte/failure comparisons",
-      "Existing control packet tests and detailed runtime2398/operator8066 traces",
-      "All six GCC/Clang/sanitizer host modes",
-      "Linked Arm flash/RAM and complete normalized stack delta"
-    ]
+    "status": "EXERCISED_HOST_AND_TARGET_GATES_PASS_COMPLETE_REPLAY_GATE_REMAINS_FAILED",
+    "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+    "run_id": 44612525935,
+    "checkpoint": "checkpoint-a3de92a-linux.json",
+    "candidate_builder_modes": [
+      "gcc",
+      "clang",
+      "sanitize"
+    ],
+    "cases_per_candidate_builder_mode": 1141,
+    "host_modes": 6,
+    "sanitizer_reports": 0,
+    "debug_trace_rows": 487,
+    "runtime_trace_rows": 2398,
+    "operator_trace_rows": 8066,
+    "all_differential_rows_identical": true,
+    "target_profiles": 12,
+    "production": {
+      "artifact_id": 14573336957,
+      "candidate": {
+        "revision": "a3de92a3465749f962540bcb75c275959e1a9ef0",
+        "example_configuration_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+        "command": [
+          "make",
+          "-C",
+          "/home/runner/work/autonomous-robotic-car/autonomous-robotic-car/candidate/build_make",
+          "PICO_SDK_PATH=/home/runner/work/autonomous-robotic-car/autonomous-robotic-car/pico-sdk",
+          "GCC=/home/runner/work/autonomous-robotic-car/autonomous-robotic-car/evidence/arm-stack-gcc",
+          "SMP=1",
+          "CONSOLE=usb_cdc",
+          "CRASH_REPORT=0",
+          "WIFI=cyw43",
+          "NET=lwip",
+          "MQTT=1",
+          "TEST=0",
+          "IR_BENCH=0",
+          "IR_CHANNELS=1",
+          "S3_MOTION=1",
+          "S3_STRAIGHT_TEST=0",
+          "DIAGNOSTICS=0",
+          "MOTION_SMOKE=0",
+          "S4=1",
+          "S4_BENCH=0",
+          "S5=1",
+          "S5_HARDWARE_CONFIRMED=1",
+          "IR_DEBUG=1",
+          "IMU_DEBUG=0",
+          "-j4"
+        ],
+        "returncode": 0,
+        "sizes": {
+          "text": 465788,
+          "data": 696,
+          "bss": 128800,
+          "static_ram": 129496
+        },
+        "artifacts": {
+          "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf": "6e575360b9d453f385fa3c0161a14aac2affc927c05f40025a0a8370816cf161",
+          "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.uf2": "19457bbb3747c02ad840e831db01ea57a80e6dc867c865f3853dbd97c0785268",
+          "mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.map": "8f918c7608a61dec1336cdb066a4e26b1d9f9ce1c1f87893b25d604a2ac4c941"
+        },
+        "flash_sha256": "7591708ee30bf81bc0ab474004949f9899993fd44a29b774a2041e9bb2c14874",
+        "stack_usage_files": 176
+      },
+      "image": {
+        "ImageOS": "ubuntu24",
+        "ImageVersion": "20261116.133.1"
+      },
+      "compared_with_immutable_99b": {
+        "text_delta": -96,
+        "static_ram_delta": 0,
+        "stack_rows": 1441,
+        "stack_changes": [],
+        "symbol_size_changes": [
+          {
+            "name": "debug_builder_write",
+            "kind": "t",
+            "baseline": [
+              [
+                84
+              ]
+            ],
+            "candidate": [
+              [
+                88
+              ]
+            ]
+          },
+          {
+            "name": "g_debug_fields",
+            "kind": "t",
+            "baseline": [
+              [
+                200
+              ]
+            ],
+            "candidate": [
+              [
+                100
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    "known_replay_expectation_failures": 2,
+    "replay_mismatches": 0,
+    "physical_timing_verified": false
   },
   "limits": [
     "All local C checks are compiler/object/compile-link evidence. No native Windows project executable was run.",
-    "Arm object allocation is measured with GCC14.3.1; whole-firmware linked flash change awaits Linux target build.",
+    "Arm object allocation is measured with GCC14.3.1; the later linked Linux comparison is recorded separately in linux_gate.",
     "Private bitfield allocation is ABI-specific; the two-byte assertion is Arm-only.",
     "No RTOS scheduling, timing or hardware equivalence is inferred."
   ],

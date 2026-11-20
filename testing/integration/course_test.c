@@ -83,7 +83,8 @@ static void fake_heartbeat (bool on)
 
 #if S3_STRAIGHT_TEST
 /* Exercise production navigation/drive with valid synthetic feedback, not a
- * physics simulation. Extreme IR contrast must not request differential speed. */
+ * physics simulation. Extreme IR contrast must not request differential speed.
+ */
 static s3_drive_t straight_drive;
 static uint32_t straight_now;
 

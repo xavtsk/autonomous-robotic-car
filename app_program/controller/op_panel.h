@@ -8,9 +8,8 @@
 #ifndef OPERATOR_PANEL_H
 #define OPERATOR_PANEL_H
 #include "../app.h"
-#define OP_PRI_PANEL                                                           \
-    (24) /* below every subsystem band and diagnostics (23)                    \
-          */
+/* below every subsystem band and diagnostics (23) */
+#define OP_PRI_PANEL (24)
 ER operator_panel_start (void);
 #endif
 

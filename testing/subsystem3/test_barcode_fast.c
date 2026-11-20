@@ -164,7 +164,8 @@ static void test_fast_frames (void)
                     {
                         /* At 25 ms,20 ms would exceed the existing 75% bias
                          * bound.15 ms remains within that unchanged model.
-                         * At 30 ms,20 ms erosion leaves a 10 ms optical core. */
+                         * At 30 ms,20 ms erosion leaves a 10 ms optical core.
+                         */
                         const uint32_t erosion =
                             optical ? (narrow[n] < 30000U ? narrow[n] - 10000U
                                                           : 20000U)
@@ -264,7 +265,8 @@ static void test_early_analysis_preserves_quiet_and_large_frames (void)
             assert(weak.decode_delay_us >= 300000U &&
                    weak.decode_delay_us < 1000000U);
             /* 450 ms internal white elements exceed the early-work trigger.
-             * Neither a failed partial fit nor new ink may discard the frame. */
+             * Neither a failed partial fit nor new ink may discard the frame.
+             */
             const tally_t large = scan(letters[c], reverse != 0U, 150000U, 3U,
                                        60000U, 0U, INTACT);
             assert(large.decoded == 1U && large.last.letter == letters[c]);

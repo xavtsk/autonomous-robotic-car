@@ -100,7 +100,30 @@ changes using current target and host compile databases:
 python tools/compliance/barr_functions.py --compile-db <target.json> --compile-db <host.json> --output <function-report.json>
 ```
 
+## Retained operator contracts
+
+The interrupted operator documentation batch is retained in the working tree.
+Its [source-bound receipt](OPERATOR_FUNCTION_CONTRACTS.json) covers 23 definitions
+and eight prototypes in `op_logic.c`/`.h`, including STOP precedence, startup
+button arming, callback lifetime, rejected requests and timeout behaviour.
+The existing comment-batch verifier confirms unchanged C tokens, preprocessing
+directives and original comment order against `a3de92a`. The recorded six parser
+contexts have no documentation diagnostics. This is not new Linux execution or
+physical evidence; a published commit is not yet assigned to this batch.
+
+```sh
+python tools/compliance/verify_comment_batch.py --manifest docs/compliance/OPERATOR_FUNCTION_CONTRACTS.json --candidate WORKTREE
+```
+
 ## Next review batches
+
+The Phase 2 [mechanical source receipt](evidence/phase2-mechanical.json) also
+records contracts for three inline helpers and six remote-control prototypes.
+The review covers full-range little-endian values, the half-range sequence
+comparison, invalid input, STOP precedence, lock failures and disabled stubs.
+The corresponding target consumers compile without documentation diagnostics;
+paired Arm object/relocation/stack comparisons are unchanged. This is bounded
+interface documentation, not completion of the controller's function contracts.
 
 1. Reconcile the completed codec/calculation/sensor batches above with the
    current compiler inventory. Keep any remaining pure helpers and public

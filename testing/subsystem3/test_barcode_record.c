@@ -377,7 +377,8 @@ static void test_faint_recording_start (void)
 
 /* The complete opening star is visible at only 40 units above paper, below
  * the new start gate. Recording begins on the payload's first stronger bar.
- * fault: 0 normal, 1 invalid sample, 2 missing sample immediately beforehand. */
+ * fault: 0 normal, 1 invalid sample, 2 missing sample immediately beforehand.
+ */
 static tally_t feed_weak_opening (s3_barcode_record_t * r, uint32_t * clock,
                                   const shape_t * s, const uint32_t runs[29],
                                   unsigned int fault)
@@ -1321,7 +1322,8 @@ static void test_adaptive_peaks_and_quiet (void)
             s3_barcode_result_t result;
             s3_barcode_status_t status;
             /* Two genuinely faint bars, including the final bar: the fixed
-             * 100-unit prominence loses them, the quiet-paper gate sees them. */
+             * 100-unit prominence loses them, the quiet-paper gate sees them.
+             */
             for (i = 0U; i < 29U; i++)
             {
                 if ((t >= edge) && (t < edge + runs[i]) &&

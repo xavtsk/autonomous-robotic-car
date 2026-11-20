@@ -3,8 +3,8 @@
  * interface.
  */
 /*
- *	mqtt_utk.h
- *	MQTT client wiring for micro T-Kernel (RP2040, NO_SYS=1)
+ *  mqtt_utk.h
+ *  MQTT client wiring for micro T-Kernel (RP2040, NO_SYS=1)
  */
 
 #ifndef MQTT_UTK_H
@@ -22,7 +22,7 @@ typedef struct
     unsigned char qos;
     unsigned char retain;
     /* Local scheduling metadata, never transmitted. Zero preserves priority
-	 * for events/replies; recurring samples may share slots with captures. */
+     * for events/replies; recurring samples may share slots with captures. */
     unsigned char routine;
 } T_MQTT_UTK_APP_MSG;
 

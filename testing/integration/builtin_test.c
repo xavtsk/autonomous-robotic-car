@@ -4,7 +4,8 @@
  */
 /* Built-in calibration at boot (S3_BUILTIN_CALIBRATION=1), through the
  * production runtime and operator logic. Derived from operator_test.c.
- * Original header: End-to-end host test of the operator controls: simulated GP20/GP21 presses
+ * Original header: End-to-end host test of the operator controls: simulated
+ * GP20/GP21 presses
  * -> operator_logic -> the PRODUCTION s3_integration runtime (fake ADC/motion
  * boundaries, as in runtime_test.c) -> published status -> operator_logic.
  * Proves the button walkthrough really calibrates, starts and stops through
@@ -39,8 +40,8 @@ static unsigned sleeps, locked, starts_requested, stops;
 static uint32_t clock_value;
 static uint16_t raw[3] = {150, 150, 150};
 static bool fb_braked = true;
-static uint8_t
-    fb_command_id; /* last accepted velocity command, echoed back like Buddy 2 */
+static uint8_t fb_command_id; /* last accepted velocity command, echoed back
+                                 like Buddy 2 */
 static bool fb_fault;
 
 ID tk_cre_mtx (const T_CMTX * m)

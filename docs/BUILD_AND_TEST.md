@@ -65,8 +65,21 @@ Do not substitute a test image for the integrated deployment profile.
 ## Executed host regressions
 
 Use the [Linux GitHub Actions workflow](../.github/workflows/compliance.yml) for
-the reproducible baseline/candidate compiler and sanitizer runs. These direct
-commands are useful on a Linux machine that permits native test execution:
+the reproducible baseline/candidate runs. Pushes to cleanup branches and manual
+dispatch with `suite=quick` run four jobs: baseline GCC, candidate GCC with the
+owned C99 check, semantic differential comparison, and paired production builds.
+This uses the same pinned tools, public configuration and existing runners.
+Failed baseline expectations remain failures; quick does not mean full compliance.
+
+Select `suite=full` in **Actions -> Compliance regression -> Run workflow** for
+the original six host modes, twelve target profiles, audit, documentation and
+conditional-coverage collection. Sanitizers and the additional profiles are
+part of full mode. Their historical evidence is retained, but quick runs do not
+claim to have repeated them. Final-candidate verification requires the affected
+sanitizer checks and diagnostics build as described in the cleanup plan.
+
+These direct commands are useful on a Linux machine that permits native test
+execution:
 
 ```sh
 make -C testing/subsystem1 test
@@ -92,7 +105,8 @@ including increases, removed functions and duplicate local symbol names.
 Information-bit counts in CR1 tables are separate from these padded target
 allocations. Compiler stack reports are not physical task high-water values.
 
-The conditional-coverage collector preprocesses a disposable copy using the
+In full mode, the conditional-coverage collector preprocesses a disposable copy
+using the
 recorded compiler definitions and public example network settings. Original
 sources are hashed before and after observation. Missing arms, preprocessing
 failures and host-only paths remain explicit; a successful collector invocation

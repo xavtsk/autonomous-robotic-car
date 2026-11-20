@@ -512,7 +512,8 @@ static void test_capture_mixed_retries (void)
     assert(!strcmp(published_topic, "car/telemetry/heading"));
 
     /* Capture rejection retains all 164 bytes; a newly arrived event cannot
-     * replace it. Retry pacing and only one request apply across both sources. */
+     * replace it. Retry pacing and only one request apply across both sources.
+     */
     assert(buddy1_report_motion(60, 62) == E_OK);
     publish_result = ERR_MEM;
     poll_after(20);
@@ -929,7 +930,8 @@ static void test_publish_backpressure (void)
     unsigned count, attempts, logs, i;
 
     /* ERR_MEM keeps the exact QoS 1 reply, rather than popping and losing it.
-     * Retry rate/logging are bounded and the following FIFO item stays queued. */
+     * Retry rate/logging are bounded and the following FIFO item stays queued.
+     */
     empty_outbox();
     assert(buddy1_snapshot_packet(expected));
     assert(buddy1_command_process(&command) == E_OK);
@@ -966,7 +968,8 @@ static void test_publish_backpressure (void)
                          &decoded) &&
            decoded.heading_deg == 47);
 
-    /* A rejected packet survives a disconnected period and is first on reconnect. */
+    /* A rejected packet survives a disconnected period and is first on
+     * reconnect. */
     assert(buddy1_report_motion(156, -74) == E_OK);
     assert(buddy1_report_heading(88) == E_OK);
     publish_result = ERR_CONN;
@@ -1016,7 +1019,8 @@ static void test_publish_backpressure (void)
 
     /* Real lwIP drops in-flight callback registrations on disconnect. Do not
      * get stuck waiting forever or lose that packet. Duplicate delivery after
-     * an ambiguous disconnect is possible and intentionally not "exactly once". */
+     * an ambiguous disconnect is possible and intentionally not "exactly once".
+     */
     assert(buddy1_report_motion(60, -62) == E_OK);
     assert(buddy1_report_heading(90) == E_OK);
     defer_completion = 1;
@@ -1826,7 +1830,8 @@ int main (void)
     fake_client.connected = 1;
     connected(&fake_client, NULL, MQTT_CONNECT_ACCEPTED);
     assert(buddy1_map_pack(&map, map_packet));
-    /* Force zero bytes and fragmented delivery through the ACTUAL mqtt_utk.c. */
+    /* Force zero bytes and fragmented delivery through the ACTUAL mqtt_utk.c.
+     */
     incoming(NULL, "car/cmd/barcode_map", 4);
     fragment(NULL, map_packet, 2, 0);
     fragment(NULL, map_packet + 2, 2, MQTT_DATA_FLAG_LAST);

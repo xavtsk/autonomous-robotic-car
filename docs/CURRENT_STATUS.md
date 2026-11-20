@@ -1,5 +1,15 @@
 # Current status and preservation baseline
 
+> Housekeeping checkpoint, 20 November 2026: the latest retained Linux receipt
+> is [revision a3de92a](compliance/evidence/checkpoint-a3de92a-linux.json).
+> Its affected checks pass in six host modes and twelve target profiles; the
+> two original replay expectation failures remain. The detailed 55af85c summary
+> below is the previous checkpoint and has not yet been consolidated for the
+> final candidate. Subsequent working-tree edits have separate bounded checks
+> in the [cleanup record](REPOSITORY_CLEANUP.md), not a new firmware execution claim.
+> Phase 2's first source batch is now implemented locally; Linux regression
+> execution and the remaining BARR work are still pending.
+
 The cleanup baseline is `4ad2cc42595722cedb47102e4343298339040d40`.
 The local firmware `build/compliance-review-20261119/compliance-wifi.uf2` has
 SHA-256 `690d145ba1a5c3b9771e0af191f01632697306d41274cc9a113a8d00fb1cbffa`.

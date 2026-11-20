@@ -69,7 +69,8 @@ static void barcode_trace_feed (uint32_t elapsed_us, uint16_t darkness)
         (unsigned int)g_record.candidate.reversed);
 }
 
-/** Parse bounded padding and samples; invalid inputs return 2 without replay. */
+/** Parse bounded padding and samples; invalid inputs return 2 without replay.
+ */
 int main (int argc, char ** pp_argv)
 {
     uint32_t elapsed_us = 0U;

@@ -109,8 +109,9 @@ void hump_update (hump_detector_t * p_h, float32_t pitch, float32_t distance_m,
  * @param now Wrapping microsecond clock; active crossings expire after 10 s.
  * @note Clears completed each call and retains the highest completed peak on
  * rejection. Level samples arm/rearm the detector; completion also requires
- * forward travel while raised. Read results from p_h. With APP_IMU_DEBUG, reason,
- * travel and transition flags are updated after the same state-machine step.
+ * forward travel while raised. Read results from p_h. With APP_IMU_DEBUG,
+ * reason, travel and transition flags are updated after the same state-machine
+ * step.
  */
 void hump_update_right_wheel (hump_detector_t * p_h, float32_t pitch,
                               float32_t roll, float32_t track_m,

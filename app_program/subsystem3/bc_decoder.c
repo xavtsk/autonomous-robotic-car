@@ -3,7 +3,7 @@
  * samples.
  */
 /* Code 39 symbol facts cross-checked against ZXing Code39Reader encodings:
- * Repository: https://github.com/zxing/zxing
+ * Repository: github.com/zxing/zxing
  * Source: core/src/main/java/com/google/zxing/oned/Code39Reader.java
  * This decoder uses its own bounded duration/sampling validation algorithm. */
 #include "bc_decoder.h"

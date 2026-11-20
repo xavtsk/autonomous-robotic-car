@@ -2,7 +2,8 @@
  * @brief Shared harness: observe actual production feedback without consuming
  * extra reports.
  */
-/* Shared harness: observe actual production feedback without consuming extra reports. */
+/* Shared harness: observe actual production feedback without consuming extra
+ * reports. */
 #include "motion.h"
 #include <inttypes.h>
 #include <stdio.h>

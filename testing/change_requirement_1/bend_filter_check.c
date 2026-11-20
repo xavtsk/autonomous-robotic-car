@@ -7,7 +7,8 @@
  * wheel-speed sequences through the OLD float filter and the NEW fixed-point
  * filter (copied from s3_drive.c) and compares the bend decision Buddy 5 makes
  * (|turn| >= 20 %). Build and run:
- *   cc -O2 testing/change_requirement_1/bend_filter_check.c -o /tmp/bend && /tmp/bend
+ *   cc -O2 testing/change_requirement_1/bend_filter_check.c -o /tmp/bend &&
+ * /tmp/bend
  */
 #include "bend_filter_check.h"
 #include <stdio.h>
