@@ -64,12 +64,11 @@ required enforcement method, not a claim that its implementation is complete.
 Compiler/profile coverage, promotions, casts, ownership, ISR classification,
 function organization, documentation meaning and other manual rows remain open.
 
-The JSON ledger also records bounded partial evidence while a rule remains
-**unreviewed** across the whole scope. The [first 20 test header pairs](HEADER_PAIRS_BATCH1.md)
-provide such evidence for 4.2.a-c and 4.3.c; the [remaining header plan](HEADER_CLOSURE_PLAN.md)
-keeps unresolved pairs, guards, names and ABI boundaries explicit. A separate
-source/include directory is a compiler-resolution question, not automatic proof
-of a missing header or a second module with a colliding name.
+The [header review](HEADER_CLOSURE_PLAN.md) records the direct header checks
+for all 129 wholly owned sources and the enclosing guard checks for all 174
+headers in scope. The [first 20 host pairs](HEADER_PAIRS_BATCH1.md) retain
+the evidence for that earlier batch. The export and prototype review,
+filename collisions and external callback constraints remain open.
 
 For AST input, pass `--ast-manifest path/to/manifest.json`. The manifest has
 `schema_version: 1`, a `source_sha256` mapping for **every owned C/header file**,

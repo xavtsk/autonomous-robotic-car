@@ -46,11 +46,52 @@ def text_errors(path):
 
 
 def canonical_format(text):
-    """BARR 3.3.c keeps an extra blank line after the end-of-file comment.
+    """Apply the few BARR spacing rules not expressed by clang-format 18."""
+    from tools.compliance.barr_check import GROUPED_POINTER_DECLARATOR, mask_noncode
 
-    clang-format 18 removes that final blank line. Normalize its proposed output
-    to the selected project rule; do not suppress other formatting differences.
-    """
+    # clang-format pads '?' in consecutive arms of a conditional expression.
+    # Preserve leading indentation, comments and every character of a literal.
+    if "  ?" in text:
+        code = mask_noncode(text)
+        text = re.sub(r"(?<=\S) {2,}(?=\?)",
+                      lambda gap: " " if code[gap.end()] == "?" else gap[0],
+                      text)
+    if "(*" in text:
+        # Separate the pointer star in a grouped declaration. Explicit
+        # dereferences such as (*callback)(arg) keep unary operator spacing.
+        code = mask_noncode(text)
+        for match in reversed(list(GROUPED_POINTER_DECLARATOR.finditer(code))):
+            if text[match.start():match.end()] != match[0]:
+                continue
+            start, end = match.span("group")
+            line_start = text.rfind("\n", 0, start) + 1
+            line_end = text.find("\n", end)
+            if line_end < 0:
+                line_end = len(text)
+            if line_end - line_start + len("( * ") - (end - start) > 80:
+                start = match.start("space")
+                text = text[:start] + " ( * " + text[end:]
+            else:
+                text = text[:start] + "( * " + text[end:]
+    if "break;" in text and "switch" in text:
+        lines = text.split("\n")
+        blocks = [None]
+        continued_directive = False
+        for index, code in enumerate(mask_noncode(text).split("\n")):
+            if continued_directive or code.lstrip().startswith("#"):
+                continued_directive = code.rstrip().endswith("\\")
+                continue
+            label = re.match(r"^( *)(?:case\b|default\s*:)", code)
+            if label:
+                blocks[-1] = label[1]
+            if blocks[-1] is not None and re.match(r"^ *break\s*;", code):
+                lines[index] = blocks[-1] + lines[index].lstrip(" ")
+            for brace in re.finditer(r"[{}]", code):
+                if brace[0] == "{":
+                    blocks.append(None)
+                elif len(blocks) > 1:
+                    blocks.pop()
+        text = "\n".join(lines)
     return text.rstrip() + "\n\n"
 
 
@@ -62,7 +103,8 @@ def check(paths, formatter):
         return 2, errors + ["INCOMPLETE: clang-format is unavailable; use --formatter."]
     for path in paths:
         result = subprocess.run([formatter, "--style=file", str(path)],
-                                cwd=ROOT, capture_output=True, text=True, check=False)
+                                cwd=ROOT, capture_output=True, encoding="utf-8",
+                                check=False)
         if result.returncode:
             errors.append(f"{path}: formatter failed: " + result.stderr)
             continue
@@ -72,7 +114,7 @@ def check(paths, formatter):
             old, new = current.splitlines(), expected.splitlines()
             first = next((index+1 for index, pair in enumerate(zip(old, new))
                           if pair[0] != pair[1]), min(len(old), len(new))+1)
-            errors.append(f"{path}:{first}: differs from clang-format plus BARR end-of-file blank line")
+            errors.append(f"{path}:{first}: differs from the repository's BARR formatting")
     return (1 if errors else 0), errors
 
 

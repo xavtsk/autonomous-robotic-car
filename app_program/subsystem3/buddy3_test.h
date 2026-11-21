@@ -7,7 +7,7 @@
 #include "buddy3.h"
 
 #if APP_TEST
-/** Run Buddy 3's built-in checks and report their results to the console. */
+/** @brief Print the on-device skip and identify the host navigation suite. */
 void subsystem3_test (void);
 #endif
 

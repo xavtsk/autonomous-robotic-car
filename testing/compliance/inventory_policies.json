@@ -543,8 +543,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -577,9 +577,9 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215",
-        "testing/compliance/barcode_work_test.c:408-416"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217",
+        "testing/compliance/decode_work_main.c:406-413"
       ]
     },
     {
@@ -613,9 +613,9 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215",
-        "testing/compliance/barcode_work_test.c:396-406"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217",
+        "testing/compliance/decode_work_main.c:397-405"
       ]
     },
     {
@@ -647,9 +647,9 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215",
-        "testing/compliance/barcode_work_test.c:408-416"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217",
+        "testing/compliance/decode_work_main.c:406-413"
       ]
     },
     {
@@ -681,8 +681,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -714,8 +714,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -747,9 +747,9 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215",
-        "testing/compliance/barcode_work_test.c:396-406"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217",
+        "testing/compliance/decode_work_main.c:397-405"
       ]
     },
     {
@@ -781,8 +781,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -813,8 +813,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -848,8 +848,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -881,8 +881,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -914,8 +914,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -947,9 +947,9 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215",
-        "testing/compliance/barcode_work_test.c:408-416"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217",
+        "testing/compliance/decode_work_main.c:406-413"
       ]
     },
     {
@@ -980,8 +980,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -1012,9 +1012,9 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215",
-        "testing/compliance/barcode_work_test.c:393-395",
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217",
+        "testing/compliance/decode_work_main.c:392-396",
         "app_program/subsystem3/bc_decoder.c:2035-2037"
       ]
     },
@@ -1048,8 +1048,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -1082,8 +1082,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -1116,9 +1116,9 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215",
-        "testing/compliance/barcode_work_test.c:408-416"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217",
+        "testing/compliance/decode_work_main.c:406-413"
       ]
     },
     {
@@ -1149,8 +1149,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -1181,8 +1181,8 @@
         "app_program/subsystem3/bc_decoder.h:138-169",
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1737-1748",
-        "testing/compliance/barcode_work_test.c:98-183",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:99-185",
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -1209,7 +1209,7 @@
       ],
       "reason": "The direct-leading-saturation fixture seeds UINT32_MAX, then the decoder applies existing saturation/validation. The initialized waiting-path envelope does not license truncation of this exposed field.",
       "evidence": [
-        "testing/compliance/barcode_work_test.c:403-404",
+        "testing/compliance/decode_work_main.c:404-405",
         "app_program/subsystem3/bc_decoder.c:1877-1881"
       ]
     },
@@ -1233,7 +1233,7 @@
       "evidence": [
         "app_program/subsystem3/bc_decoder.h:209",
         "app_program/subsystem3/bc_decoder.c:1336-1343",
-        "testing/compliance/barcode_work_test.c:189-215"
+        "testing/compliance/decode_work_main.c:187-217"
       ]
     },
     {
@@ -4806,7 +4806,7 @@
       ],
       "evidence": [
         "app_program/controller/control_debug.c:43-66",
-        "testing/integration/control_debug_test.c:24-28"
+        "testing/integration/cmd_wire_main.c:24-28"
       ],
       "reason": "Public debug pack inputs remain full width so invalid values cannot truncate before validation. Compact capture_control_debug retained scratch independently.",
       "owner": "control_debug_sample_t",
@@ -4846,7 +4846,7 @@
       ],
       "evidence": [
         "app_program/subsystem1/telemetry_codec.c",
-        "testing/subsystem1/host_test.c"
+        "testing/subsystem1/host_main.c"
       ],
       "reason": "Wide public codec view preserves invalid-input rejection and pointer-taking members; only compact validated forms may be retained.",
       "owner": "buddy1_snapshot_t|buddy1_terrain_t|buddy1_avoidance_t|buddy1_scan_t|buddy1_scan_sample_t|buddy1_barcode_map_t",
@@ -4865,7 +4865,7 @@
       ],
       "evidence": [
         "app_program/subsystem3/ir_acquisition.c:48-66",
-        "testing/subsystem3/host_trace.c:93-116"
+        "testing/subsystem3/host_trace_main.c:93-116"
       ],
       "reason": "The ADC callback writes a full uint16 value before validity checks; 4096..65535 must remain detectable and normalize to invalid exactly as before.",
       "owner": "s3_raw_sample_t",

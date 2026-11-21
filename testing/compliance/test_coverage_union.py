@@ -1,5 +1,6 @@
 """Evidence union must never turn stale, missing or failed data into coverage."""
 from copy import deepcopy
+import json
 from pathlib import Path
 import re
 import unittest
@@ -127,9 +128,14 @@ class CoverageUnionTests(unittest.TestCase):
 
     def test_required_target_profiles_match_the_explicit_workflow_matrix(self):
         workflow = (Path(__file__).resolve().parents[2]/'.github/workflows/compliance.yml').read_text()
-        declarations = re.findall(r'^\s+profile: \[([a-z0-9_, ]+)\]\s*$', workflow, re.MULTILINE)
+        declarations = re.findall(
+            r"""^[ \t]+profile:[ \t]*\$\{\{\s*fromJSON\(inputs\.suite == 'full' && '([^']+)' \|\| '([^']+)'\)\s*\}\}[ \t]*$""",
+            workflow, re.MULTILINE)
         self.assertEqual(len(declarations), 1, 'A changed matrix format requires explicit audit review')
-        actual = {'target-' + name.strip() for name in declarations[0].split(',')}
+        full, routine = (json.loads(value) for value in declarations[0])
+        self.assertEqual(routine, ['production'])
+        self.assertCountEqual(full, set(full), 'The full matrix lists a target more than once')
+        actual = {'target-' + name for name in full}
         self.assertEqual(actual | {'host-gcc', 'host-clang', 'host-baseline-fixtures-gcc',
                                    'host-baseline-fixtures-clang'}, EXPECTED_PROFILES)
 

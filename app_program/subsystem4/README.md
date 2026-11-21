@@ -31,7 +31,13 @@ No firmware has been flashed or physically verified by this change.
 
 ## Processing and integration
 
-`terrain_monitor_process()` is portable and receives sensor samples plus coherent
+```text
+IMU samples ----> tilt and terrain processing -> protected snapshot
+Wheel odometry --^                    |
+                                      +------> protected terrain event queue
+```
+
+`terr_data_process()` is portable and receives sensor samples plus coherent
 odometry. The runtime explicitly selects the **right-wheel-only** obstacle used
 on this car: the left wheel stays on the flat surface while the right wheel
 crosses the bump. `S4_HUMP_GEOMETRY` selects this profile and
@@ -49,7 +55,7 @@ separate `on_hump` flag and live height report a right-wheel crossing.
 
 The portable monitor defaults to `TERRAIN_HUMP_LONGITUDINAL`, which retains the
 existing distance-times-sine-of-pitch method for a hump crossed by both wheels.
-`terrain_monitor_set_geometry()` selects the geometry explicitly; a new run
+`terr_data_set_geometry()` selects the geometry explicitly; a new run
 retains that selection. Do not use the right-wheel formula for a general slope,
 both-wheel hump, left-wheel-only obstacle, or a lifted chassis.
 
@@ -67,7 +73,7 @@ START requires a fresh calibrated IMU sample. After the normal navigation/motion
 checks pass, the controller requests a new run token. Navigation continues sampling
 while motors are held stopped until S4 publishes a sample for that token (maximum
 500 ms). The run clears hump count/peak but retains stationary calibration.
-`subsystem4_read()` copies the packed sample, 16-bit run token and saturated 16-bit
+`buddy4_read()` copies the packed sample, 16-bit run token and saturated 16-bit
 completed-hump count under one mutex. A reset request alone is not acknowledgement.
 
 While driving, a sample older than 150 ms, sensor fault, loss of calibration,
@@ -134,9 +140,9 @@ of a degree, turn rate, count, peak and impact. Since 19 Nov 2026 the live
 `car/telemetry/terrain` packet also carries the compass turn rate (with its
 validity) and lifted/overturned, so they are on Wi-Fi too. The existing heading
 packet remains unavailable: compass-derived turn rate is not an absolute heading
-measurement. Turn rate is valid only after `subsystem4_set_mag_calibration()`.
+measurement. Turn rate is valid only after `buddy4_set_mag_calibration()`.
 
-`subsystem4_set_mag_calibration()` accepts measured vehicle-axis hard-iron
+`buddy4_set_mag_calibration()` accepts measured vehicle-axis hard-iron
 bias and diagonal soft-iron scale. Identity coefficients must not be used as a
 claim that calibration was done. Compass turn rate is an estimate, not gyro data;
 motor magnetic interference must be measured. Stationary offset calibration does

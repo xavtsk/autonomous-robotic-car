@@ -50,7 +50,7 @@ class WidthCheckTests(unittest.TestCase):
         errors = self.changed_sources(
             "app_program/subsystem4/terr_data.c",
             lambda text: re.sub(r"\bput_bits\s*\([^;]*?->safety\s*,\s*2\s*\);", "", text))
-        self.assertTrue(any("terrain_pack" in error for error in errors))
+        self.assertTrue(any("terr_data_pack" in error for error in errors))
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@
 #include "../app_types.h"
 #include "imu_sensor.h"
 /** @brief Estimate pitch and roll from a near-1 g acceleration vector.
- * @param[in] p_a Stable three-element acceleration in g, ordered vehicle
+ * @param[in] p_accel Stable three-element acceleration in g, ordered vehicle
  * X forward, Y left, Z up; use bias-corrected values for calibrated tilt.
  * @param[out] p_pitch_deg Pitch in degrees, positive nose up.
  * @param[out] p_roll_deg Roll in degrees, positive right side up.
@@ -19,11 +19,11 @@
  * with no tolerance. atan2f/sqrtf determine precision and signed-zero results;
  * accepted vectors produce nominal pitch/roll between -90 and +90 degrees.
  */
-bool tilt_estimation (const float32_t p_a[3], float32_t * p_pitch_deg,
+bool tilt_estimation (const float32_t p_accel[3], float32_t * p_pitch_deg,
                       float32_t * p_roll_deg);
 /** @brief Estimate magnetic heading in the plane normal to acceleration.
- * @param[in] p_a Stable acceleration in g on vehicle X-forward/Y-left/Z-up.
- * @param[in] p_m Stable magnetic field in gauss on the same axes; calibration
+ * @param[in] p_accel Stable acceleration in g on vehicle X-forward/Y-left/Z-up.
+ * @param[in] p_mag Stable magnetic field in gauss on the same axes; calibration
  * offsets/scales and any sample-validity checks are the caller's work.
  * @param[out] p_heading_deg Caller-owned heading in degrees, increasing
  * anticlockwise; unchanged on failure.
@@ -38,7 +38,7 @@ bool tilt_estimation (const float32_t p_a[3], float32_t * p_pitch_deg,
  * for a strictly negative result. Its nominal range is one revolution;
  * signed zero and a value rounded to 360 are not normalized further.
  */
-bool tilt_heading (const float32_t p_a[3], const float32_t p_m[3],
+bool tilt_heading (const float32_t p_accel[3], const float32_t p_mag[3],
                    float32_t * p_heading_deg);
 /** @brief Subtract two headings and apply at most one revolution correction.
  * @param[in] now Current heading in degrees.

@@ -1,44 +1,44 @@
 /** @file motion_estimation.c
  * @brief Encoder-based speed and distance estimation.
- */
-/*
- * File: motion_estimation.c
- * Owner: Buddy 2 - Motion Control
- * Purpose: Encoder-based speed and distance estimation.
+ *
+ * @par Ownership
+ * Buddy 2 owns the motion estimates.
  */
 
 #include "motion_estimation.h"
 #include "../app_types.h"
 
-#define SPEED_FILTER (0.4f) /* 0..1, 1 = no smoothing */
+#define SPEED_FILTER (0.4f) /* A gain of one disables smoothing. */
 #define RAD_TO_DEG (57.2957795f)
 
-/* Speeds stay float: control precision (DATA_FORMAT.md, internal fields) */
+/* Retain floating-point speed precision. See DATA_FORMAT.md. */
 typedef struct
 {
-    uint32_t last_count : WHEEL_COUNT_BITS;
+    uint32_t           last_count : WHEEL_COUNT_BITS;
     volatile float32_t speed_mps;
     volatile float32_t accel_mps2;
 } wheel_estimate_t;
 
-static wheel_estimate_t g_wheel[WHEEL_COUNT];
-static volatile float32_t g_m_per_count = 0.0f;
-static float32_t g_track_width_m = 0.0f;
+static wheel_estimate_t   g_wheel[WHEEL_COUNT];
+static volatile float32_t g_m_per_count   = 0.0f;
+static float32_t          g_track_width_m = 0.0f;
 
 /** @brief Reset scales, encoder history, speed and acceleration estimates.
  * @see motion_estimation.h for the initialization and ownership contract.
  */
 void motion_estimation_init (float32_t m_per_count, float32_t track_width_m)
 {
-    uint32_t value_i;
 
-    g_m_per_count = m_per_count;
+    g_m_per_count   = m_per_count;
     g_track_width_m = track_width_m;
-    for (value_i = 0U; value_i < (uint32_t)WHEEL_COUNT; value_i++)
+
+    uint32_t wheel_index;
+    for (wheel_index = 0U; wheel_index < (uint32_t)WHEEL_COUNT; wheel_index++)
     {
-        g_wheel[value_i].last_count = wheel_encoder_bits((wheel_id_t)value_i);
-        g_wheel[value_i].speed_mps = 0.0f;
-        g_wheel[value_i].accel_mps2 = 0.0f;
+        g_wheel[wheel_index].last_count =
+            wheel_encoder_bits((wheel_encoder_id_t)wheel_index);
+        g_wheel[wheel_index].speed_mps  = 0.0f;
+        g_wheel[wheel_index].accel_mps2 = 0.0f;
     }
 }
 
@@ -61,37 +61,42 @@ float32_t motion_estimation_scale (void)
  */
 void motion_estimation_update (float32_t dt_s)
 {
-    uint32_t value_i;
+    uint32_t wheel_index;
 
-    for (value_i = 0U; value_i < (uint32_t)WHEEL_COUNT; value_i++)
+    for (wheel_index = 0U; wheel_index < (uint32_t)WHEEL_COUNT; wheel_index++)
     {
-        wheel_estimate_t * p_w = &g_wheel[value_i];
-        uint32_t count = wheel_encoder_bits((wheel_id_t)value_i);
-        float32_t raw = (float32_t)wheel_encoder_delta(count, p_w->last_count) *
-                        g_m_per_count / dt_s;
-        float32_t prev = p_w->speed_mps;
+        /* The index names one of the two wheels. Its signed 20-bit delta
+         * converts exactly to float32_t before computing speed. */
+        wheel_estimate_t * p_wheel = &g_wheel[wheel_index];
+        const uint32_t     count =
+            wheel_encoder_bits((wheel_encoder_id_t)wheel_index);
+        const float32_t raw =
+            (float32_t)wheel_encoder_delta(count, p_wheel->last_count) *
+            g_m_per_count / dt_s;
+        const float32_t prev = p_wheel->speed_mps;
 
-        p_w->last_count = count;
-        p_w->speed_mps = prev + (SPEED_FILTER * (raw - prev));
-        p_w->accel_mps2 = (p_w->speed_mps - prev) / dt_s;
+        p_wheel->last_count = count;
+        p_wheel->speed_mps  = prev + (SPEED_FILTER * (raw - prev));
+        p_wheel->accel_mps2 = (p_wheel->speed_mps - prev) / dt_s;
     }
 }
 
 /** @brief Return a valid wheel index's retained speed in metres per second. */
-float32_t motion_estimation_wheel_speed (wheel_id_t wheel)
+float32_t motion_estimation_wheel_speed (wheel_encoder_id_t wheel)
 {
     return g_wheel[wheel].speed_mps;
 }
 
 /** @brief Return a valid wheel index's retained acceleration in m/s squared. */
-float32_t motion_estimation_wheel_accel (wheel_id_t wheel)
+float32_t motion_estimation_wheel_accel (wheel_encoder_id_t wheel)
 {
     return g_wheel[wheel].accel_mps2;
 }
 
 /** @brief Return current signed encoder counts scaled to metres. */
-float32_t motion_estimation_wheel_dist (wheel_id_t wheel)
+float32_t motion_estimation_wheel_dist (wheel_encoder_id_t wheel)
 {
+    /* The signed 20-bit count is exact in float32_t before scaling. */
     return (float32_t)wheel_encoder_count(wheel) * g_m_per_count;
 }
 

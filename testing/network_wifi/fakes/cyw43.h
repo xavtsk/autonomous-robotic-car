@@ -23,29 +23,30 @@ typedef struct
     uint32_t addr;
 } ip4_addr_t;
 
-struct netif
+typedef struct netif
 {
     ip4_addr_t address;
-};
+} cyw43_test_netif_t;
 
 typedef struct
 {
-    unsigned itf_state;
-    struct netif netif[1];
+    unsigned           itf_state;
+    cyw43_test_netif_t netif[1];
 } cyw43_t;
 
 extern cyw43_t cyw43_state;
-extern void (*cyw43_poll)(void);
-void cyw43_init (cyw43_t * state);
-void cyw43_thread_enter (void);
-void cyw43_thread_exit (void);
-void cyw43_wifi_set_up (cyw43_t * state, int itf, bool up, unsigned country);
-int cyw43_wifi_get_mac (cyw43_t * state, int itf, uint8_t mac[6]);
-int cyw43_wifi_join (cyw43_t * state, size_t ssid_len, const uint8_t * ssid,
-                     size_t key_len, const uint8_t * key, uint32_t auth,
-                     const uint8_t * bssid, uint32_t channel);
-int cyw43_wifi_leave (cyw43_t * state, int itf);
-int cyw43_tcpip_link_status (cyw43_t * state, int itf);
+extern void    ( * cyw43_poll)(void);
+void           cyw43_init (cyw43_t * p_state);
+void           cyw43_thread_enter (void);
+void           cyw43_thread_exit (void);
+void           cyw43_wifi_set_up (cyw43_t * p_state, int itf, bool b_is_up,
+                                  unsigned country);
+int            cyw43_wifi_get_mac (cyw43_t * p_state, int itf, uint8_t mac[6]);
+int cyw43_wifi_join (cyw43_t * p_state, size_t ssid_len, const uint8_t * p_ssid,
+                     size_t key_len, const uint8_t * p_key, uint32_t auth,
+                     const uint8_t * p_bssid, uint32_t channel);
+int cyw43_wifi_leave (cyw43_t * p_state, int itf);
+int cyw43_tcpip_link_status (cyw43_t * p_state, int itf);
 #endif
 
 /* End of file. */

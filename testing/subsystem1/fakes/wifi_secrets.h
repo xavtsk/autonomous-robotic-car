@@ -2,7 +2,6 @@
  * @brief Deliberately public compile/test placeholders; never a real
  * connection.
  */
-/* Deliberately public compile/test placeholders; never a real connection. */
 #ifndef TESTING_SUBSYSTEM1_FAKES_WIFI_SECRETS_H
 #define TESTING_SUBSYSTEM1_FAKES_WIFI_SECRETS_H
 

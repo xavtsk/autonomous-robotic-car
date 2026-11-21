@@ -20,7 +20,7 @@ try {
     $testExe = Join-Path $testDir 'test_buddy3.exe'
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
         "-I$repoRoot\app_program\subsystem3" @sources `
-        "$repoRoot\testing\subsystem3\test_core.c" `
+        "$repoRoot\testing\subsystem3\test_core_main.c" `
         "$repoRoot\testing\subsystem3\test_navigation.c" -o $testExe
     if ($HostTestExitCode -ne 0) { throw 'Buddy 3 host compilation failed.' }
     Invoke-RecordedHostExecutable $testExe
@@ -29,7 +29,7 @@ try {
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
         "$repoRoot\app_program\subsystem3\bc_decoder.c" `
-        "$repoRoot\testing\subsystem3\test_barcode_record.c" -o $recordExe
+        "$repoRoot\testing\subsystem3\scan_record_main.c" -o $recordExe
     if ($HostTestExitCode -ne 0) { throw 'Barcode record test compilation failed.' }
     Invoke-RecordedHostExecutable $recordExe
     if ($HostTestExitCode -ne 0) { throw 'Barcode record tests failed.' }
@@ -37,7 +37,7 @@ try {
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
         "$repoRoot\app_program\subsystem3\bc_decoder.c" `
-        "$repoRoot\testing\subsystem3\test_barcode_fast.c" -o $fastExe
+        "$repoRoot\testing\subsystem3\fast_scan_main.c" -o $fastExe
     if ($HostTestExitCode -ne 0) { throw 'Fast barcode test compilation failed.' }
     Invoke-RecordedHostExecutable $fastExe
     if ($HostTestExitCode -ne 0) { throw 'Fast barcode tests failed.' }
@@ -45,7 +45,7 @@ try {
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
         "$repoRoot\app_program\subsystem3\bc_decoder.c" `
-        "$repoRoot\testing\subsystem3\test_barcode_faint.c" -o $faintExe
+        "$repoRoot\testing\subsystem3\test_barcode_faint_main.c" -o $faintExe
     if ($HostTestExitCode -ne 0) { throw 'Faint barcode test compilation failed.' }
     Invoke-RecordedHostExecutable $faintExe
     if ($HostTestExitCode -ne 0) { throw 'Faint barcode tests failed.' }
@@ -53,21 +53,22 @@ try {
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
         "$repoRoot\app_program\subsystem3\bc_decoder.c" `
-        "$repoRoot\testing\subsystem3\test_barcode_varying.c" -o $varyingExe
+        "$repoRoot\testing\subsystem3\variable_scan_main.c" -o $varyingExe
     if ($HostTestExitCode -ne 0) { throw 'Varying barcode correction test compilation failed.' }
     Invoke-RecordedHostExecutable $varyingExe
     if ($HostTestExitCode -ne 0) { throw 'Varying barcode correction tests failed.' }
     $scoreExe = Join-Path $testDir 'test_barcode_fit_error.exe'
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
-        "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\testing\subsystem3\test_barcode_fit_error.c" -o $scoreExe
+        -DBC_DECODER_FIT_TEST "-I$repoRoot\app_program\subsystem3" `
+        "-I$repoRoot\testing\subsystem3" "$repoRoot\app_program\subsystem3\bc_decoder.c" `
+        "$repoRoot\testing\subsystem3\fit_score_main.c" -o $scoreExe
     if ($HostTestExitCode -ne 0) { throw 'Barcode fit-score test compilation failed.' }
     Invoke-RecordedHostExecutable $scoreExe
     if ($HostTestExitCode -ne 0) { throw 'Barcode fit-score tests failed.' }
     $quietExe = Join-Path $testDir 'test_barcode_quiet.exe'
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\testing\subsystem3\test_barcode_quiet.c" -o $quietExe
+        "$repoRoot\testing\subsystem3\quiet_zone_main.c" -o $quietExe
     if ($HostTestExitCode -ne 0) { throw 'Barcode quiet-clock test compilation failed.' }
     Invoke-RecordedHostExecutable $quietExe
     if ($HostTestExitCode -ne 0) { throw 'Barcode quiet-clock tests failed.' }
@@ -75,14 +76,16 @@ try {
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
         "$repoRoot\app_program\subsystem3\bc_decoder.c" `
-        "$repoRoot\testing\subsystem3\test_barcode_quiet_record.c" -o $quietRecordExe
+        "$repoRoot\testing\subsystem3\record_zone_main.c" -o $quietRecordExe
     if ($HostTestExitCode -ne 0) { throw 'Barcode quiet-record test compilation failed.' }
     Invoke-RecordedHostExecutable $quietRecordExe
     if ($HostTestExitCode -ne 0) { throw 'Barcode quiet-record tests failed.' }
     $incrementalExe = Join-Path $testDir 'test_barcode_incremental.exe'
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
+        -DBC_DECODER_WORK_TEST -DS3_BARCODE_SYNC_REFERENCE `
         "-I$repoRoot\app_program\subsystem3" `
-        "$repoRoot\testing\subsystem3\test_barcode_incremental.c" -o $incrementalExe
+        "-I$repoRoot\testing\subsystem3" "$repoRoot\app_program\subsystem3\bc_decoder.c" `
+        "$repoRoot\testing\subsystem3\work_quota_main.c" -o $incrementalExe
     if ($HostTestExitCode -ne 0) { throw 'Incremental barcode test compilation failed.' }
     Invoke-RecordedHostExecutable $incrementalExe
     if ($HostTestExitCode -ne 0) { throw 'Incremental barcode tests failed.' }
@@ -90,7 +93,7 @@ try {
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
         "$repoRoot\app_program\subsystem3\bc_decoder.c" `
-        "$repoRoot\testing\subsystem3\test_barcode_wide.c" -o $wideExe
+        "$repoRoot\testing\subsystem3\wide_bar_main.c" -o $wideExe
     if ($HostTestExitCode -ne 0) { throw 'Wide barcode test compilation failed.' }
     Invoke-RecordedHostExecutable $wideExe
     if ($HostTestExitCode -ne 0) { throw 'Wide barcode tests failed.' }
@@ -98,12 +101,12 @@ try {
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -O2 `
         "-I$repoRoot\app_program\subsystem3" `
         "$repoRoot\app_program\subsystem3\bc_decoder.c" `
-        "$repoRoot\testing\subsystem3\replay_barcode_record.c" -o $replayExe
+        "$repoRoot\testing\subsystem3\replay_barcode_record_main.c" -o $replayExe
     if ($HostTestExitCode -ne 0) { throw 'Barcode replay compilation failed.' }
     $mappingExe = Join-Path $testDir 'test_ir_mapping.exe'
     Invoke-RecordedHostCompiler -std=c11 -Wall -Wextra -Werror -pedantic -g `
         "-I$repoRoot\app_program\subsystem3" @sources `
-        "$repoRoot\testing\subsystem3\test_mapping.c" -o $mappingExe
+        "$repoRoot\testing\subsystem3\test_mapping_main.c" -o $mappingExe
     if ($HostTestExitCode -ne 0) { throw 'IR mapping test compilation failed.' }
     Invoke-RecordedHostExecutable $mappingExe
     if ($HostTestExitCode -ne 0) { throw 'IR mapping tests failed.' }
@@ -115,7 +118,7 @@ try {
         "$repoRoot\app_program\subsystem2\motion_pack.c" `
         "$repoRoot\app_program\subsystem2\motion_estimation.c" `
         "$repoRoot\app_program\subsystem2\speed_pid.c" `
-        "$repoRoot\testing\subsystem3\test_drive.c" -o $driveExe
+        "$repoRoot\testing\subsystem3\test_drive_main.c" -o $driveExe
     if ($HostTestExitCode -ne 0) { throw 'Integration test compilation failed.' }
     Invoke-RecordedHostExecutable $driveExe
     if ($HostTestExitCode -ne 0) { throw 'Integration tests failed.' }
@@ -128,7 +131,7 @@ try {
         "$repoRoot\app_program\subsystem2\motion_pack.c" `
         "$repoRoot\app_program\subsystem2\motion_estimation.c" `
         "$repoRoot\app_program\subsystem2\speed_pid.c" `
-        "$repoRoot\testing\subsystem3\test_motion_feedback.c" -o $feedbackExe
+        "$repoRoot\testing\subsystem3\test_motion_feedback_main.c" -o $feedbackExe
     if ($HostTestExitCode -ne 0) { throw 'Motion feedback test compilation failed.' }
     Invoke-RecordedHostExecutable $feedbackExe
     if ($HostTestExitCode -ne 0) { throw 'Motion feedback tests failed.' }

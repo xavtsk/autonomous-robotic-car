@@ -1,0 +1,298 @@
+{
+  "date": "2026-11-22",
+  "branch": "codex/compliance-preserve-behaviour",
+  "behaviour_baseline": "4ad2cc42595722cedb47102e4343298339040d40",
+  "comparison_scope": "RAM and message sizes use immediately pre-Phase 3 and Phase 3 snapshots. Semantic and replay checks use the fixed behaviour baseline.",
+  "arm_gnu_toolchain": "14.3.1",
+  "pico_sdk": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+  "changed_firmware_source_sha256": {
+    "before": {
+      "app_program/controller/s3_drive.h": "5890ddad1cb77f3dfefc495aa8aaa8d907184d687e47c18b629599918973555c",
+      "app_program/controller/terr_link.c": "078f4386185357524b6f30738b31676d32a83b50d6b08db1b40c31f830635922"
+    },
+    "after": {
+      "app_program/controller/s3_drive.h": "f279abf3ac7c7ee0ccd444a7021d3b83bc2924e5fd4973ea1c7597a20e7e16b6",
+      "app_program/controller/terr_link.c": "4dddb52bf67898af355a9b2c48bd72f91bb18d143a4c017410eda891052dc128"
+    }
+  },
+  "width_checker_sha256": "a07f3138fbf45d06fc9be139c858cec82effab16d3c575c4ccf717c516a6e53a",
+  "arm_builds": {
+    "before": {
+      "exit": 0,
+      "command": [
+        "C:/msys64/usr/bin/make.exe",
+        "PICO_SDK_PATH=../../../tooling/pico-sdk",
+        "E2U=",
+        "SMP=1",
+        "CONSOLE=usb_cdc",
+        "CRASH_REPORT=0",
+        "WIFI=cyw43",
+        "NET=lwip",
+        "MQTT=1",
+        "S3_MOTION=1",
+        "S3_STRAIGHT_TEST=0",
+        "S4=1",
+        "S4_BENCH=0",
+        "S5=1",
+        "S5_HARDWARE_CONFIRMED=1",
+        "IR_DEBUG=1",
+        "IMU_DEBUG=0",
+        "TEST=0",
+        "IR_BENCH=0",
+        "IR_CHANNELS=1",
+        "DIAGNOSTICS=0",
+        "MOTION_SMOKE=0",
+        "-j4"
+      ],
+      "snapshot_sha256": "fee0dc8bc64649700e23a286c5b6f1727053f5fc827e59c382b35cca5254bb68",
+      "common_build_inputs_sha256": "e95e47dffc9c67a2a2c8ab24e1dbd71455bdcd25cf04a721ffe52534e0e5637c",
+      "public_example_config_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+      "elf": "build/cr1-20261122/before/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf",
+      "elf_sha256": "9d8a9f48d2dca601af65b53040fbfd877d050dfcf71a37806d93d97e07f0c55e",
+      "text_bytes": 465756,
+      "data_bytes": 696,
+      "bss_bytes": 128800,
+      "static_ram_bytes": 129496,
+      "symbol_bytes": {
+        "g_control": 60,
+        "g_drive": 10840,
+        "gb_has_unreported_impact": 1,
+        "s3_drive_process": 3568,
+        "terr_link_poll": 480,
+        "terr_link_report": 1060
+      }
+    },
+    "after": {
+      "exit": 0,
+      "command": [
+        "C:/msys64/usr/bin/make.exe",
+        "PICO_SDK_PATH=../../../tooling/pico-sdk",
+        "E2U=",
+        "SMP=1",
+        "CONSOLE=usb_cdc",
+        "CRASH_REPORT=0",
+        "WIFI=cyw43",
+        "NET=lwip",
+        "MQTT=1",
+        "S3_MOTION=1",
+        "S3_STRAIGHT_TEST=0",
+        "S4=1",
+        "S4_BENCH=0",
+        "S5=1",
+        "S5_HARDWARE_CONFIRMED=1",
+        "IR_DEBUG=1",
+        "IMU_DEBUG=0",
+        "TEST=0",
+        "IR_BENCH=0",
+        "IR_CHANNELS=1",
+        "DIAGNOSTICS=0",
+        "MOTION_SMOKE=0",
+        "-j4"
+      ],
+      "snapshot_sha256": "70b84e71615783d761a58faec2bd776754ed29275a2089f80229605123c5a11c",
+      "common_build_inputs_sha256": "e95e47dffc9c67a2a2c8ab24e1dbd71455bdcd25cf04a721ffe52534e0e5637c",
+      "public_example_config_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+      "elf": "build/cr1-20261122/after/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf",
+      "elf_sha256": "58d98646295cdd5737601f17323a1cc1eeebe828b441f29ba2be259af49a2c2d",
+      "text_bytes": 465748,
+      "data_bytes": 696,
+      "bss_bytes": 128784,
+      "static_ram_bytes": 129480,
+      "symbol_bytes": {
+        "g_control": 56,
+        "g_drive": 10832,
+        "s3_drive_process": 3568,
+        "terr_link_poll": 500,
+        "terr_link_report": 1060
+      }
+    }
+  },
+  "arm_message_bytes": {
+    "before": {
+      "buddy1_command_slot": 5,
+      "buddy1_max_telemetry_payload": 17,
+      "buddy1_outbox_slot": 18,
+      "control_debug": 70,
+      "dashboard_reply": 10,
+      "dashboard_request": 14,
+      "dashboard_status": 14,
+      "motion_snapshot": 4,
+      "navigation_result": 60,
+      "obstacle_snapshot": 23,
+      "terrain_event": 12
+    },
+    "after": {
+      "buddy1_command_slot": 5,
+      "buddy1_max_telemetry_payload": 17,
+      "buddy1_outbox_slot": 18,
+      "control_debug": 70,
+      "dashboard_reply": 10,
+      "dashboard_request": 14,
+      "dashboard_status": 14,
+      "motion_snapshot": 4,
+      "navigation_result": 60,
+      "obstacle_snapshot": 23,
+      "terrain_event": 12
+    }
+  },
+  "semantic_trace_sets": 16,
+  "semantic_and_wire_rows": 80959,
+  "existing_differential_runner_exit": 1,
+  "differential_checks": [
+    {
+      "name": "motion_semantic_trace",
+      "matched": true,
+      "semantic_rows": 74,
+      "baseline_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071",
+      "candidate_sha256": "f6bde6334238345a161d70ddd5b1d10d67a8c676ba031d3ac528acb391cad071"
+    },
+    {
+      "name": "terrain_semantic_trace",
+      "matched": true,
+      "semantic_rows": 1916,
+      "baseline_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8",
+      "candidate_sha256": "a718c877347bfb6e1db0a173adca2383395e1d2b310f329d11ed87e59f119dc8"
+    },
+    {
+      "name": "terrain_production_semantic_trace",
+      "matched": true,
+      "semantic_rows": 1782,
+      "baseline_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a",
+      "candidate_sha256": "72e3318cbd13636ffe4b39bb67efb257da0b67cf6148785e1f8bc6811d675f6a"
+    },
+    {
+      "name": "obstacle_semantic_trace",
+      "matched": true,
+      "semantic_rows": 969,
+      "baseline_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5",
+      "candidate_sha256": "2ba064a0077542cc976686cf0a9339ebeeb0f61bcc99dad7aacff209563005a5"
+    },
+    {
+      "name": "runtime_semantic_trace",
+      "matched": true,
+      "semantic_rows": 2398,
+      "baseline_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907",
+      "candidate_sha256": "3bb365a659c9f738f2006781cc7c3598cfa66256bd79649413202a334aa12907"
+    },
+    {
+      "name": "mqtt_semantic_trace",
+      "matched": true,
+      "semantic_rows": 269,
+      "baseline_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665",
+      "candidate_sha256": "e8535a142ad6b18f8b9c26a828074d68011e801de666de367f72b3478bdc4665"
+    },
+    {
+      "name": "mqtt_plain_semantic_trace",
+      "matched": true,
+      "semantic_rows": 99,
+      "baseline_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad",
+      "candidate_sha256": "fea1e8e5b96104a93beb9517041d6b3bcb1420951ed032fb1238ce7b2670c6ad"
+    },
+    {
+      "name": "mqtt_production_semantic_trace",
+      "matched": true,
+      "semantic_rows": 251,
+      "baseline_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6",
+      "candidate_sha256": "3e11a9b5c3ae568a1c7f6a3da42fb9907b6fd920ef3a1aeed0ea14b4c3d4c3a6"
+    },
+    {
+      "name": "mqtt_imu_semantic_trace",
+      "matched": true,
+      "semantic_rows": 116,
+      "baseline_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643",
+      "candidate_sha256": "8fbf9a233a18d477734043ec15fc3926b3d65e0ffed6da2c74b338164f83f643"
+    },
+    {
+      "name": "mqtt_receive_semantic_trace",
+      "matched": true,
+      "semantic_rows": 2093,
+      "baseline_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e",
+      "candidate_sha256": "db9d92afee98f5df1fb015c6dc4b3fbcae866a5816a82bec8149abe93de9f79e"
+    },
+    {
+      "name": "motion_storage_semantic_trace",
+      "matched": true,
+      "semantic_rows": 802,
+      "baseline_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336",
+      "candidate_sha256": "813caf704e2ebcad82199a684561893cebd6b94932c8ade4d567cfd7cdd3a336"
+    },
+    {
+      "name": "barcode_work_semantic_trace",
+      "matched": true,
+      "semantic_rows": 854,
+      "baseline_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9",
+      "candidate_sha256": "70542091b6ad0e173d68bb0644b3ad987e6f53b9fc56a2fb1fc9a51edc3d7bd9"
+    },
+    {
+      "name": "bcap_storage_semantic_trace",
+      "matched": true,
+      "semantic_rows": 776,
+      "baseline_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2",
+      "candidate_sha256": "59ee5c8856f69311c491593119095fd109a04628fe8f218540e36d398b4d7ea2"
+    },
+    {
+      "name": "operator_semantic_trace",
+      "matched": true,
+      "semantic_rows": 8066,
+      "baseline_sha256": "5a759cfcded604288fab493d7361673ae767bf5868f163a115a0ff36a92c2a1f",
+      "candidate_sha256": "5a759cfcded604288fab493d7361673ae767bf5868f163a115a0ff36a92c2a1f"
+    },
+    {
+      "name": "control_debug_wire_and_mutation_trace",
+      "matched": true,
+      "rows": 487,
+      "baseline_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2",
+      "candidate_sha256": "f4886c3e20856b61e74b548c995057b174d9a45bbaa3767f027e201afcccf5a2"
+    },
+    {
+      "name": "navigation_semantic_trace",
+      "matched": true,
+      "semantic_rows": 60007,
+      "baseline_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143",
+      "candidate_sha256": "8c8f5154935b9e704164ea723d5e3dfc6e1232b62dcee8ec434afb63705bc143"
+    },
+    {
+      "name": "recorded_replay",
+      "cases": 1008,
+      "mismatches": 0,
+      "expectation_failures": 2,
+      "matched": true
+    }
+  ],
+  "width_check": {
+    "bound_fields": 155,
+    "codec_totals": 18,
+    "result": "pass"
+  },
+  "unit_tests": {
+    "width_and_timing_analysis": 14,
+    "result": "pass"
+  },
+  "timing_counter_fixture": {
+    "fixed": "testing/integration/timing_test.c",
+    "candidate": "testing/integration/timing_main.c",
+    "result": "matched passing output",
+    "measures_mcu_latency": false
+  },
+  "style_check": {
+    "owned_firmware_files": 2,
+    "result": "pass"
+  },
+  "on_car_timing": "pending",
+  "local_receipt_sha256": {
+    "build/cr1-20261122/builds.json": "fbc659a53a128ea2b8af1df321f3ef089adb688d3d7c6a374d9084d77008282c",
+    "build/cr1-20261122/common-inputs.json": "e95e47dffc9c67a2a2c8ab24e1dbd71455bdcd25cf04a721ffe52534e0e5637c",
+    "build/cr1-20261122/before-build.log": "ed7e60ce15916d65544ed751a4490efbab365667e38133a57435465d5f673ce7",
+    "build/cr1-20261122/after-build.log": "16f579b9661dca3fffcace87a07110b3ca39168413ae171763a305f0d8836342",
+    "build/cr1-20261122/message_sizes.c": "fd9a70450d36d38748e9d98abce10f7272e2fa3442c6ddb58c6be508adecef83",
+    "build/cr1-20261122/message-sizes.json": "11bb898ee1cdaf9e8256987eb37963c51648cb2f7dba7d164d7abb54f1f5774f",
+    "build/cr1-20261122/before-message_sizes.log": "5061ac30410272854f7acd35567300d830c8abb1a0773d952f882f7559945c9d",
+    "build/cr1-20261122/after-message_sizes.log": "0ccae1052e6889d54f70fdba258a93178c1c3804e3b5a1d4a780cc4c1f5b535a",
+    "build/cr1-20261122/widths-current.log": "5527ad6276d7fc3a673b353e07ad0baf5106c818acf229fd528243b9d4192658",
+    "build/cr1-20261122/python-unit-checks.log": "2c988f74ef1b16b2fe56e56ba91e045792f3d1d56a81b03e439a16171fa4c532",
+    "build/cr1-20261122/linux/checks.json": "29656e747d245a02d57ff2c6cc1804d5c382eaa7ef62f509c942311440584d45",
+    "build/cr1-20261122/linux/cr1-after-20261122-differential/results.json": "842d434f709f221b876832e474dfdf8a602fceb838bf1124cedada05e6fa4eac",
+    "build/cr1-20261122/linux/fixed-timing-recovered.log": "d07cdee80072d6b58f8466d5e680fc999ecad1a78934b5fbcd883a78eac9d9db",
+    "build/cr1-20261122/linux/candidate-timing.log": "d07cdee80072d6b58f8466d5e680fc999ecad1a78934b5fbcd883a78eac9d9db"
+  }
+}

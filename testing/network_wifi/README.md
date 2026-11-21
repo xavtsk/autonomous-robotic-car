@@ -8,8 +8,8 @@ Run from the repository root:
 make -C testing/network_wifi test sanitize
 ```
 
-`policy_test.c` exercises the same `wifi_retry_policy.h` used by the radio
-service. `runtime_test.c` runs the production `cyw43_utk_task()` with fake
+`policy_main.c` exercises the same `wifi_retry_policy.h` used by the radio
+service. `wifi_service_main.c` runs the production `cyw43_utk_task()` with fake
 CYW43/lwIP/MQTT APIs and a virtual clock. No hotspot, robot, real credentials or
 real-time sleeps are involved. The fakes belong only to host tests; do not add
 their include path to deployment firmware.

@@ -17,23 +17,25 @@
 typedef struct
 {
     uint8_t bytes[MOTION_SNAPSHOT_BYTES];
-} motion_snapshot_t;
+} codec_motion_snapshot_t;
 
-bool motion_snapshot_pack (motion_snapshot_t * p_out, motion_state_t state,
-                           motion_fault_t fault, bool busy, bool speed_valid,
-                           int32_t left_mms, int32_t right_mms);
-bool motion_snapshot_valid (const motion_snapshot_t * p_value);
-motion_state_t motion_snapshot_state (const motion_snapshot_t * p_value);
-motion_fault_t motion_snapshot_fault (const motion_snapshot_t * p_value);
-bool motion_snapshot_busy (const motion_snapshot_t * p_value);
-bool motion_snapshot_speed_valid (const motion_snapshot_t * p_value);
-int16_t motion_snapshot_left_mms (const motion_snapshot_t * p_value);
-int16_t motion_snapshot_right_mms (const motion_snapshot_t * p_value);
+bool codec_motion_pack (codec_motion_snapshot_t * p_out, motion_state_t state,
+                        motion_fault_t fault, bool b_is_busy,
+                        bool b_is_speed_valid, int32_t left_mms,
+                        int32_t right_mms);
+
+bool           codec_motion_valid (const codec_motion_snapshot_t * p_value);
+motion_state_t codec_motion_state (const codec_motion_snapshot_t * p_value);
+motion_fault_t codec_motion_fault (const codec_motion_snapshot_t * p_value);
+bool           codec_motion_busy (const codec_motion_snapshot_t * p_value);
+bool    codec_motion_speed_valid (const codec_motion_snapshot_t * p_value);
+int16_t codec_motion_left_mms (const codec_motion_snapshot_t * p_value);
+int16_t codec_motion_right_mms (const codec_motion_snapshot_t * p_value);
 
 /* Task context only. Copies under the existing motion mutex, releases it,
  * then packs. Does NOT consume MOTION_COMPLETE or change any control state.
  * False: invalid output pointer, kernel object absent, or lock failure. */
-bool motion_read_snapshot (motion_snapshot_t * p_out);
+bool snapshot_motion_read (codec_motion_snapshot_t * p_out);
 
 #endif
 

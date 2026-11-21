@@ -1,31 +1,69 @@
 /** @file op_logic.c
  * @brief Operator controls: calibration walkthrough, START/STOP/RESET.
+ *
+ * See header.
+ * Every request goes through port.p_submit(); results are read back from the
+ * published status (command_sequence/command_ok), never assumed.
+ * Validated enum limits are nonnegative. Casts make the unsigned
+ * comparison domain explicit while retaining the original limits.
  */
-/* Operator controls: calibration walkthrough, START/STOP/RESET. See header.
- * Every request goes through port.submit(); results are read back from the
- * published status (command_sequence/command_ok), never assumed. */
 #include "op_logic.h"
 
 #define OP_TAG "[OP] "
 
-static const struct
+typedef struct
 {
-    s3_sensor_id_t sensor;
-    const char * name;
-    unsigned gpio; /* from the single wiring definition in ir_acquisition.h */
-} g_k_order[S3_SENSOR_COUNT] = {{S3_SENSOR_LEFT, "front-LEFT line sensor",
-                                 S3_GPIO_FOR_CHANNEL(S3_ADC_CHANNEL_LEFT)},
-                                {S3_SENSOR_RIGHT, "front-RIGHT line sensor",
-                                 S3_GPIO_FOR_CHANNEL(S3_ADC_CHANNEL_RIGHT)},
-                                {S3_SENSOR_BARCODE, "BARCODE sensor",
-                                 S3_GPIO_FOR_CHANNEL(S3_ADC_CHANNEL_BARCODE)}};
+    const ir_acquisition_sensor_id_t sensor;
+    const char * const               p_name;
+
+    const unsigned gpio; /* Use the sensor mapping from ir_acquisition.h. */
+} op_sensor_pin_t;
+
+static const op_sensor_pin_t g_k_order[S3_SENSOR_COUNT] = {
+    {S3_SENSOR_LEFT, "front-LEFT line sensor",
+     S3_GPIO_FOR_CHANNEL(S3_ADC_CHANNEL_LEFT)},
+    {S3_SENSOR_RIGHT, "front-RIGHT line sensor",
+     S3_GPIO_FOR_CHANNEL(S3_ADC_CHANNEL_RIGHT)},
+    {S3_SENSOR_BARCODE, "BARCODE sensor",
+     S3_GPIO_FOR_CHANNEL(S3_ADC_CHANNEL_BARCODE)}};
+
+static void enter_phase (op_logic_t * p_op, op_logic_phase_t phase,
+                         uint32_t now);
+static void print_status (op_logic_t * p_op, const char * p_text);
+static bool submit_request (op_logic_t * p_op, s3_integration_kind_t kind,
+                            ir_acquisition_sensor_id_t      sensor,
+                            const s3_integration_status_t * p_st, uint32_t now);
+static bool replied (const op_logic_t *              p_op,
+                     const s3_integration_status_t * p_st,
+                     bool *                          pb_did_succeed);
+static bool deadline_reached (op_logic_t * p_op, uint32_t now);
+static bool drive_is_running (s3_drive_state_t state);
+static void print_range (op_logic_t * p_op, const char * p_what,
+                         const ir_calibration_summary_t * p_summary);
+static void cal_prompt (op_logic_t * p_op, uint32_t now,
+                        op_logic_press_t                value_go,
+                        const s3_integration_status_t * p_st);
+static void cal_collect (op_logic_t * p_op, uint32_t now,
+                         const s3_integration_status_t * p_st);
+static void cal_apply (op_logic_t * p_op, uint32_t now,
+                       const s3_integration_status_t * p_st);
+static void handle_ready (op_logic_t * p_op, uint32_t now,
+                          op_logic_press_t                value_go,
+                          const s3_integration_status_t * p_st);
+static void reset_wait (op_logic_t * p_op, uint32_t now,
+                        const s3_integration_status_t * p_st);
+static void countdown (op_logic_t * p_op, uint32_t now,
+                       const s3_integration_status_t * p_st);
+static void start_wait (op_logic_t * p_op, uint32_t now,
+                        const s3_integration_status_t * p_st);
+static void stop_pressed (op_logic_t * p_op, uint32_t now_ms);
 
 /**
  * @brief Apply the static state-label contract in op_logic.h.
  * @param state Native state code; unknown codes select "?".
  * @return Immutable static string; no state or callback is used.
  */
-const char * op_drive_state_name (s3_drive_state_t state)
+const char * op_logic_drive_state_name (s3_drive_state_t state)
 {
     switch (state)
     {
@@ -53,7 +91,7 @@ const char * op_drive_state_name (s3_drive_state_t state)
  * @param reason Native reason code; unknown codes select "?".
  * @return Immutable static string; no state or callback is used.
  */
-const char * op_drive_reason_name (s3_drive_reason_t reason)
+const char * op_logic_drive_reason_name (s3_drive_reason_t reason)
 {
     switch (reason)
     {
@@ -88,67 +126,82 @@ const char * op_drive_reason_name (s3_drive_reason_t reason)
  * @brief Clear debounce state without accessing hardware.
  * @param[out] p_button Exclusively owned state; NULL is a no-op.
  */
-void op_button_init (op_button_t * p_button)
+void op_logic_button_init (op_logic_button_t * p_button)
 {
     if (p_button != 0)
     {
-        *p_button = (op_button_t){0};
+        *p_button = (op_logic_button_t){0};
     }
 }
 
 /**
  * @brief Apply the debounce and startup-arming contract in op_logic.h.
- * @param[in,out] p_b Initialized button state; NULL returns NONE.
- * @param down Raw pressed level after caller polarity conversion.
+ * @param[in,out] p_button Initialized button state; NULL returns NONE.
+ * @param b_is_down Raw pressed level after caller polarity conversion.
  * @param now_ms Wrapping millisecond time, with unsigned elapsed arithmetic.
- * @param[out] p_edge Optional separate press-edge output, always cleared first.
+ * @param[out] pb_has_press_edge Optional separate press-edge output, always
+ * cleared first.
  * @return Release classification; no clock or callback is invoked.
  */
-op_press_t op_button_update (op_button_t * p_b, bool down, uint32_t now_ms,
-                             bool * p_edge)
+op_logic_press_t op_logic_button_update (op_logic_button_t * p_button,
+                                         bool b_is_down, uint32_t now_ms,
+                                         bool * pb_has_press_edge)
 {
-    op_press_t press = OP_PRESS_NONE;
-    if (p_edge != 0)
+    op_logic_press_t press = OP_PRESS_NONE;
+
+    if (pb_has_press_edge != 0)
     {
-        *p_edge = false;
+        *pb_has_press_edge = false;
     }
-    if (p_b == 0)
+
+    if (0 == p_button)
     {
         return OP_PRESS_NONE;
     }
-    if (!p_b->seen || (down != p_b->raw))
+
+    if ((!p_button->b_has_input_level) ||
+        (b_is_down != p_button->b_is_raw_pressed))
     {
-        p_b->seen = true;
-        p_b->raw = down;
-        p_b->since_ms = now_ms;
+        p_button->b_has_input_level = true;
+        p_button->b_is_raw_pressed  = b_is_down;
+        p_button->since_ms          = now_ms;
         return OP_PRESS_NONE;
     }
-    if ((p_b->raw != p_b->stable) &&
-        ((uint32_t)(now_ms - p_b->since_ms) >= OP_DEBOUNCE_MS))
+
+    if ((p_button->b_is_raw_pressed != p_button->b_is_stable_pressed) &&
+        ((now_ms - p_button->since_ms) >= OP_DEBOUNCE_MS))
     {
-        p_b->stable = p_b->raw;
-        if (p_b->stable)
+        p_button->b_is_stable_pressed = p_button->b_is_raw_pressed;
+
+        if (p_button->b_is_stable_pressed)
         {
-            p_b->pressed_ms = p_b->since_ms;
-            if (p_b->armed && (p_edge != 0))
+            p_button->pressed_ms = p_button->since_ms;
+
+            if ((p_button->b_is_press_armed) && (pb_has_press_edge != 0))
             {
-                *p_edge = true;
+                *pb_has_press_edge = true;
             }
         }
-        else if (p_b->armed)
+        else if (p_button->b_is_press_armed)
         {
-            press = ((uint32_t)(p_b->since_ms - p_b->pressed_ms) >=
+            press = ((p_button->since_ms - p_button->pressed_ms) >=
                      OP_LONG_PRESS_MS)
                         ? OP_PRESS_LONG
                         : OP_PRESS_SHORT;
         }
+        else
+        {
+            /* An unarmed release produces no button event. */
+        }
     }
     /* A button held at power-up is ignored until seen released for 100 ms. */
-    if (!p_b->armed && !p_b->raw && !p_b->stable &&
-        ((uint32_t)(now_ms - p_b->since_ms) >= OP_RELEASE_MS))
+    if ((((!p_button->b_is_press_armed) && (!p_button->b_is_raw_pressed)) &&
+         (!p_button->b_is_stable_pressed)) &&
+        ((now_ms - p_button->since_ms) >= OP_RELEASE_MS))
     {
-        p_b->armed = true;
+        p_button->b_is_press_armed = true;
     }
+
     return press;
 }
 
@@ -157,9 +210,9 @@ op_press_t op_button_update (op_button_t * p_b, bool down, uint32_t now_ms,
  * @param[in] p_button Borrowed state; NULL returns false.
  * @return The stored stable level, even if press events are not yet armed.
  */
-bool op_button_held (const op_button_t * p_button)
+bool op_logic_button_held (const op_logic_button_t * p_button)
 {
-    return (p_button != 0) && p_button->stable;
+    return (p_button != 0) && (p_button->b_is_stable_pressed);
 }
 
 /**
@@ -169,17 +222,174 @@ bool op_button_held (const op_button_t * p_button)
  * protection against overlap with p_op.
  * @return True after initialization; false for a NULL pointer or callback.
  */
-bool operator_init (operator_t * p_op, const op_port_t * p_port)
+bool op_logic_init (op_logic_t * p_op, const op_logic_port_t * p_port)
 {
-    if ((p_op == 0) || (p_port == 0) || (p_port->submit == 0) ||
-        (p_port->print == 0))
+    if ((((0 == p_op) || (0 == p_port)) || (0 == p_port->p_submit)) ||
+        (0 == p_port->p_print))
     {
         return false;
     }
-    *p_op = (operator_t){0};
-    p_op->port = *p_port;
+
+    *p_op       = (op_logic_t){0};
+    p_op->port  = *p_port;
     p_op->phase = OP_PHASE_WAIT_STATUS;
     return true;
+}
+
+/**
+ * @brief Apply the remote-STOP cancellation contract in op_logic.h.
+ * @param[in,out] p_op Initialized owned state; NULL is a no-op.
+ * @param now_ms Wrapping millisecond timestamp for cancellation transitions.
+ * @note Sets local inhibition and never submits a duplicate STOP.
+ */
+void op_logic_remote_stop (op_logic_t * p_op, uint32_t now_ms)
+{
+    if (0 == p_op)
+    {
+        return;
+    }
+
+    p_op->b_is_go_inhibited = true;
+    stop_pressed(p_op, now_ms);
+}
+
+/**
+ * @brief Apply STOP precedence and the operator-phase contract in op_logic.h.
+ * @param[in,out] p_op Initialized exclusively accessed state; NULL is a no-op.
+ * @param now_ms Wrapping millisecond time used by the selected phase.
+ * @param value_go Debounced GO event; inhibition can discard this event.
+ * @param b_is_stop_held Debounced STOP level, serviced before consulting
+ * status.
+ * @param b_is_go_held Debounced GO level, used for the both-released gate.
+ * @param[in] p_status Optional coherent snapshot, borrowed only for this call.
+ * @note Missing status prevents phase processing, not STOP/inhibition. Invalid
+ * phase values fall back to READY. Synchronous submit/print effects and exact
+ * sequence-based acknowledgement remain as specified by the public contract.
+ */
+void op_logic_step (op_logic_t * p_op, uint32_t now_ms,
+                    op_logic_press_t value_go, bool b_is_stop_held,
+                    bool b_is_go_held, const s3_integration_status_t * p_status)
+{
+    if (0 == p_op)
+    {
+        return;
+    }
+    /* STOP first, in every phase, without waiting for status. Level-based:
+     * a GP21 held since power-up, or held before GP20, still counts. */
+    if (b_is_stop_held)
+    {
+        p_op->b_is_go_inhibited = true;
+
+        if (!p_op->b_has_handled_stop)
+        {
+            const s3_integration_request_t request = {.kind = S3_CONTROL_STOP};
+
+            if (p_op->port.p_submit(&request))
+            {
+                p_op->b_has_handled_stop = true;
+                print_status(p_op, "STOP sent.");
+            }
+            else if (!p_op->b_has_warned_stop)
+            {
+                /* Retried every poll while held; reported once per hold. */
+                print_status(p_op,
+                             "STOP not accepted yet, retrying. Use the power "
+                             "switch if the car moves.");
+                p_op->b_has_warned_stop = true;
+            }
+            else
+            {
+                /* The operator has already received the stop warning. */
+            }
+
+            stop_pressed(p_op, now_ms);
+        }
+    }
+    else
+    {
+        p_op->b_has_handled_stop = false;
+        p_op->b_has_warned_stop  = false;
+    }
+
+    if (p_op->b_is_go_inhibited)
+    {
+        if ((value_go != (unsigned int)OP_PRESS_NONE) &&
+            (!p_op->b_has_warned_ignore))
+        {
+            print_status(p_op, "Ignored GP20: release GP21 first.");
+            p_op->b_has_warned_ignore = true;
+        }
+
+        value_go =
+            OP_PRESS_NONE; /* Discard the press or release on this poll. */
+        if ((!b_is_stop_held) && (!b_is_go_held))
+        {
+            p_op->b_is_go_inhibited   = false;
+            p_op->b_has_warned_ignore = false;
+        }
+    }
+
+    if (0 == p_status)
+    {
+        return;
+    }
+
+    switch (p_op->phase)
+    {
+    case OP_PHASE_WAIT_STATUS:
+        print_status(p_op,
+                     "Operator controls: GP20 = next/start, GP21 = STOP.");
+        p_op->step = 0U;
+
+        if (S3_ALL_SENSORS == p_status->navigation.accepted_calibration)
+        {
+            /* Built-in calibration was accepted at boot: no walkthrough. */
+            print_status(
+                p_op, "Using built-in calibration. Hold GP20 2 s at READY to "
+                      "recalibrate by hand.");
+            enter_phase(p_op, OP_PHASE_READY, now_ms);
+        }
+        else
+        {
+            enter_phase(p_op, OP_PHASE_CAL_PROMPT, now_ms);
+        }
+
+    break;
+    case OP_PHASE_CAL_PROMPT:
+        cal_prompt(p_op, now_ms, value_go, p_status);
+    break;
+    case OP_PHASE_CAL_COLLECT:
+        cal_collect(p_op, now_ms, p_status);
+    break;
+    case OP_PHASE_CAL_APPLY:
+        cal_apply(p_op, now_ms, p_status);
+    break;
+    case OP_PHASE_READY:
+        handle_ready(p_op, now_ms, value_go, p_status);
+    break;
+    case OP_PHASE_RESET:
+        reset_wait(p_op, now_ms, p_status);
+    break;
+    case OP_PHASE_COUNTDOWN:
+        countdown(p_op, now_ms, p_status);
+    break;
+    case OP_PHASE_START:
+        start_wait(p_op, now_ms, p_status);
+    break;
+    case OP_PHASE_RUN:
+        if (!drive_is_running(p_status->state))
+        {
+            (void)p_op->port.p_print(
+                (const unsigned char *)"%sRun ended: %s - %s.\n", OP_TAG,
+                op_logic_drive_state_name(p_status->state),
+                op_logic_drive_reason_name(p_status->reason));
+            enter_phase(p_op, OP_PHASE_READY, now_ms);
+        }
+    break;
+    default:
+        enter_phase(p_op, OP_PHASE_READY, now_ms);
+    break;
+    }
 }
 
 /**
@@ -189,13 +399,14 @@ bool operator_init (operator_t * p_op, const op_port_t * p_port)
  * @param now Wrapping millisecond phase-entry timestamp.
  * @note Leaves calibration step, sequence and STOP/inhibition flags intact.
  */
-static void enter (operator_t * p_op, op_phase_t phase, uint32_t now)
+static void enter_phase (op_logic_t * p_op, op_logic_phase_t phase,
+                         uint32_t now)
 {
-    p_op->phase = phase;
-    p_op->phase_ms = now;
-    p_op->prompted = false;
-    p_op->awaiting_reply = false;
-    p_op->countdown_shown = 0U;
+    p_op->phase               = phase;
+    p_op->phase_ms            = now;
+    p_op->b_has_prompted      = false;
+    p_op->b_is_awaiting_reply = false;
+    p_op->countdown_shown     = 0U;
 }
 
 /**
@@ -204,9 +415,9 @@ static void enter (operator_t * p_op, op_phase_t phase, uint32_t now)
  * @param[in] p_text Borrowed NUL-terminated text, valid through the callback.
  * @note Invokes print synchronously and ignores its return value.
  */
-static void say (operator_t * p_op, const char * p_text)
+static void print_status (op_logic_t * p_op, const char * p_text)
 {
-    (void)p_op->port.print((const unsigned char *)"%s%s\n", OP_TAG, p_text);
+    (void)p_op->port.p_print((const unsigned char *)"%s%s\n", OP_TAG, p_text);
 }
 
 /**
@@ -218,21 +429,24 @@ static void say (operator_t * p_op, const char * p_text)
  * @param now Wrapping millisecond request timestamp.
  * @return Callback acceptance; false prints the existing busy message.
  * @note Sequence and phase time change even on rejection. The callback must
- * consume/copy the request before returning; acceptance does not imply execution.
+ * consume/copy the request before returning; acceptance does not imply
+ * execution.
  */
-static bool send (operator_t * p_op, s3_control_kind_t kind,
-                  s3_sensor_id_t sensor, const s3_integration_status_t * p_st,
-                  uint32_t now)
+static bool submit_request (op_logic_t * p_op, s3_integration_kind_t kind,
+                            ir_acquisition_sensor_id_t      sensor,
+                            const s3_integration_status_t * p_st, uint32_t now)
 {
-    const s3_control_request_t request = {.kind = kind, .sensor = sensor};
-    p_op->sequence = p_st->command_sequence;
-    p_op->phase_ms = now;
-    p_op->awaiting_reply = p_op->port.submit(&request);
-    if (!p_op->awaiting_reply)
+    const s3_integration_request_t request = {.kind = kind, .sensor = sensor};
+    p_op->sequence                         = p_st->command_sequence;
+    p_op->phase_ms                         = now;
+    p_op->b_is_awaiting_reply              = p_op->port.p_submit(&request);
+
+    if (!p_op->b_is_awaiting_reply)
     {
-        say(p_op, "Controller busy; press GP20 again.");
+        print_status(p_op, "Controller busy; press GP20 again.");
     }
-    return p_op->awaiting_reply;
+
+    return p_op->b_is_awaiting_reply;
 }
 
 /* True once the controller has executed our request; *ok is its result. */
@@ -240,19 +454,24 @@ static bool send (operator_t * p_op, s3_control_kind_t kind,
  * @brief Recognize changed controller sequence while a reply is awaited.
  * @param[in] p_op Non-NULL operator state, read without mutation.
  * @param[in] p_st Non-NULL coherent controller snapshot.
- * @param[out] p_ok Non-NULL output; written only when a changed sequence is seen.
- * @return True after copying command_ok, otherwise false with p_ok unchanged.
- * @note Does not clear awaiting_reply or identify a command beyond the existing
- * sequence comparison; it performs no callback or synchronization.
+ * @param[out] pb_did_succeed Non-NULL output; written only when a changed
+ * sequence is seen.
+ * @return True after copying command_ok, otherwise false with pb_did_succeed
+ * unchanged.
+ * @note Does not clear b_is_awaiting_reply or identify a command beyond the
+ * existing sequence comparison; it performs no callback or synchronization.
  */
-static bool replied (const operator_t * p_op,
-                     const s3_integration_status_t * p_st, bool * p_ok)
+static bool replied (const op_logic_t *              p_op,
+                     const s3_integration_status_t * p_st,
+                     bool *                          pb_did_succeed)
 {
-    if (!p_op->awaiting_reply || (p_st->command_sequence == p_op->sequence))
+    if ((!p_op->b_is_awaiting_reply) ||
+        (p_st->command_sequence == p_op->sequence))
     {
         return false;
     }
-    *p_ok = p_st->command_ok;
+
+    *pb_did_succeed = p_st->b_did_command_succeed;
     return true;
 }
 
@@ -261,17 +480,19 @@ static bool replied (const operator_t * p_op,
  * @param[in,out] p_op Non-NULL state owned by this update.
  * @param now Wrapping millisecond time.
  * @return True for the first prompt or after OP_PROMPT_REPEAT_MS, updating
- * prompted/prompt_ms; false leaves both unchanged. Does not print by itself.
+ * b_has_prompted/prompt_ms; false leaves both unchanged. Does not print by
+ * itself.
  */
-static bool due (operator_t * p_op, uint32_t now)
+static bool deadline_reached (op_logic_t * p_op, uint32_t now)
 {
-    if (!p_op->prompted ||
-        ((uint32_t)(now - p_op->prompt_ms) >= OP_PROMPT_REPEAT_MS))
+    if ((!p_op->b_has_prompted) ||
+        ((now - p_op->prompt_ms) >= OP_PROMPT_REPEAT_MS))
     {
-        p_op->prompted = true;
-        p_op->prompt_ms = now;
+        p_op->b_has_prompted = true;
+        p_op->prompt_ms      = now;
         return true;
     }
+
     return false;
 }
 
@@ -280,27 +501,28 @@ static bool due (operator_t * p_op, uint32_t now)
  * @param state Native drive-state code; no enum normalization is performed.
  * @return True from FOLLOW through REACQUIRE, otherwise false; no side effects.
  */
-static bool running (s3_drive_state_t state)
+static bool drive_is_running (s3_drive_state_t state)
 {
-    return (state >= S3_DRIVE_FOLLOW) && (state <= S3_DRIVE_REACQUIRE);
+    return (state >= (unsigned int)S3_DRIVE_FOLLOW) &&
+           (state <= (unsigned int)S3_DRIVE_REACQUIRE);
 }
 
 /**
  * @brief Print one calibration range using count as the validity discriminator.
  * @param[in] p_op Initialized state with a callable synchronous print port.
  * @param[in] p_what Borrowed NUL-terminated label.
- * @param[in] p_r Non-NULL summary of raw ADC values and sample count.
+ * @param[in] p_summary Non-NULL summary of raw ADC values and sample count.
  * @note Prints zero minimum/maximum when count is zero; changes no stored
  * values and ignores the callback's return value.
  */
-static void print_range (operator_t * p_op, const char * p_what,
-                         const s3_calibration_summary_t * p_r)
+static void print_range (op_logic_t * p_op, const char * p_what,
+                         const ir_calibration_summary_t * p_summary)
 {
-    (void)p_op->port.print(
+    (void)p_op->port.p_print(
         (const unsigned char *)"%s  %s: %u samples, raw %u..%u\n", OP_TAG,
-        p_what, (unsigned)p_r->count,
-        (unsigned)(p_r->count ? p_r->minimum : 0U),
-        (unsigned)(p_r->count ? p_r->maximum : 0U));
+        p_what, (unsigned)p_summary->count,
+        (unsigned)(p_summary->count ? p_summary->minimum : 0U),
+        (unsigned)(p_summary->count ? p_summary->maximum : 0U));
 }
 
 /**
@@ -310,47 +532,55 @@ static void print_range (operator_t * p_op, const char * p_what,
  * @param value_go Any non-NONE value can submit the phase's request.
  * @param[in] p_st Non-NULL snapshot; FAULT takes precedence over calibration.
  * @note Successful submission changes phase; rejection retains the prompt
- * phase while send updates its bookkeeping. Console/callback effects are direct.
+ * phase while send updates its bookkeeping. Console/callback effects are
+ * direct.
  */
-static void cal_prompt (operator_t * p_op, uint32_t now, op_press_t value_go,
+static void cal_prompt (op_logic_t * p_op, uint32_t now,
+                        op_logic_press_t                value_go,
                         const s3_integration_status_t * p_st)
 {
-    const unsigned index = p_op->step / 2U;
-    const bool black = (p_op->step % 2U) != 0U;
-    if (p_st->state == S3_DRIVE_FAULT)
+    const unsigned index      = p_op->step / 2U;
+    const bool     b_is_black = (p_op->step % 2U) != 0U;
+
+    if ((unsigned int)S3_DRIVE_FAULT == p_st->state)
     {
         /* Calibration is refused while faulted: offer RESET, never a loop of
          * refused sampling attempts. */
-        if (due(p_op, now))
+        if (deadline_reached(p_op, now))
         {
-            (void)p_op->port.print(
+            (void)p_op->port.p_print(
                 (const unsigned char *)"%sFAULT: %s. Calibration is blocked. "
                                        "Press GP20 to reset (or power-cycle "
                                        "the car).\n",
-                OP_TAG, op_drive_reason_name(p_st->reason));
+                OP_TAG, op_logic_drive_reason_name(p_st->reason));
         }
-        if ((value_go != OP_PRESS_NONE) &&
-            send(p_op, S3_CONTROL_RESET, S3_SENSOR_BARCODE, p_st, now))
+
+        if ((value_go != (unsigned int)OP_PRESS_NONE) &&
+            (submit_request(p_op, S3_CONTROL_RESET, S3_SENSOR_BARCODE, p_st,
+                            now)))
         {
-            p_op->reset_to_cal = true;
-            p_op->phase = OP_PHASE_RESET;
+            p_op->b_should_reset_to_cal = true;
+            p_op->phase                 = OP_PHASE_RESET;
         }
+
         return;
     }
-    if (due(p_op, now))
+
+    if (deadline_reached(p_op, now))
     {
-        (void)p_op->port.print(
+        (void)p_op->port.p_print(
             (const unsigned char *)"%sCalibration %u/%u: put the %s (GP%u) "
                                    "over %s. "
                                    "Keep the car still, then press GP20.\n",
-            OP_TAG, p_op->step + 1U, OP_CAL_STEPS, g_k_order[index].name,
+            OP_TAG, p_op->step + 1U, OP_CAL_STEPS, g_k_order[index].p_name,
             g_k_order[index].gpio,
-            black ? "the BLACK line (sensor centred on the tape)"
-                  : "plain WHITE mat");
+            b_is_black ? "the BLACK line (sensor centred on the tape)"
+                       : "plain WHITE mat");
     }
-    if ((value_go != OP_PRESS_NONE) &&
-        send(p_op, black ? S3_CONTROL_BLACK : S3_CONTROL_WHITE,
-             g_k_order[index].sensor, p_st, now))
+
+    if ((value_go != (unsigned int)OP_PRESS_NONE) &&
+        (submit_request(p_op, b_is_black ? S3_CONTROL_BLACK : S3_CONTROL_WHITE,
+                        g_k_order[index].sensor, p_st, now)))
     {
         p_op->phase = OP_PHASE_CAL_COLLECT;
     }
@@ -360,66 +590,80 @@ static void cal_prompt (operator_t * p_op, uint32_t now, op_press_t value_go,
  * @brief Await sampling acknowledgement/completion, then advance or apply.
  * @param[in,out] p_op Owned initialized state with a valid calibration step.
  * @param now Wrapping millisecond time; deadlines use the request timestamp.
- * @param[in] p_st Non-NULL snapshot supplying reply, sensor and sample summaries.
+ * @param[in] p_st Non-NULL snapshot supplying reply, sensor and sample
+ * summaries.
  * @note A rejected/timed-out reply returns to the prompt. Completion prints
  * the selected range; WHITE advances the step, BLACK submits APPLY. No wait
  * loop or motor call is performed; callback acceptance remains distinct from
  * controller execution.
  */
-static void cal_collect (operator_t * p_op, uint32_t now,
+static void cal_collect (op_logic_t * p_op, uint32_t now,
                          const s3_integration_status_t * p_st)
 {
-    const unsigned index = p_op->step / 2U;
-    const bool black = (p_op->step % 2U) != 0U;
-    bool value_ok = false;
-    if (p_op->awaiting_reply)
+    const unsigned index         = p_op->step / 2U;
+    const bool     b_is_black    = (p_op->step % 2U) != 0U;
+    bool           b_did_succeed = false;
+
+    if (p_op->b_is_awaiting_reply)
     {
-        if (replied(p_op, p_st, &value_ok))
+        if (replied(p_op, p_st, &b_did_succeed))
         {
-            p_op->awaiting_reply = false;
-            if (!value_ok)
+            p_op->b_is_awaiting_reply = false;
+
+            if (!b_did_succeed)
             {
-                (void)p_op->port.print(
+                (void)p_op->port.p_print(
                     (const unsigned char *)"%sSampling refused (state=%s). "
                                            "Press GP20 to retry.\n",
-                    OP_TAG, op_drive_state_name(p_st->state));
-                enter(p_op, OP_PHASE_CAL_PROMPT, now);
+                    OP_TAG, op_logic_drive_state_name(p_st->state));
+                enter_phase(p_op, OP_PHASE_CAL_PROMPT, now);
                 return;
             }
-            say(p_op, "Sampling for 1 s - keep still...");
+
+            print_status(p_op, "Sampling for 1 s - keep still...");
         }
-        else if ((uint32_t)(now - p_op->phase_ms) >= OP_REPLY_TIMEOUT_MS)
+        else if ((now - p_op->phase_ms) >= OP_REPLY_TIMEOUT_MS)
         {
-            say(p_op, "No reply from controller. Press GP20 to retry.");
-            enter(p_op, OP_PHASE_CAL_PROMPT, now);
+            print_status(p_op,
+                         "No reply from controller. Press GP20 to retry.");
+            enter_phase(p_op, OP_PHASE_CAL_PROMPT, now);
         }
+        else
+        {
+            /* Keep waiting for the controller's calibration reply. */
+        }
+
         return;
     }
-    if (p_st->collecting ||
+
+    if ((p_st->b_is_collecting) ||
         (p_st->calibration_sensor != g_k_order[index].sensor))
     {
-        if ((uint32_t)(now - p_op->phase_ms) >= OP_COLLECT_TIMEOUT_MS)
+        if ((now - p_op->phase_ms) >= OP_COLLECT_TIMEOUT_MS)
         {
-            say(p_op, "Sampling did not finish. Press GP20 to retry.");
-            enter(p_op, OP_PHASE_CAL_PROMPT, now);
+            print_status(p_op, "Sampling did not finish. Press GP20 to retry.");
+            enter_phase(p_op, OP_PHASE_CAL_PROMPT, now);
         }
+
         return;
     }
-    print_range(p_op, black ? "BLACK" : "WHITE",
-                black ? &p_st->black : &p_st->white);
-    if (!black)
+
+    print_range(p_op, b_is_black ? "BLACK" : "WHITE",
+                b_is_black ? &p_st->black : &p_st->white);
+
+    if (!b_is_black)
     {
         p_op->step++;
-        enter(p_op, OP_PHASE_CAL_PROMPT, now);
+        enter_phase(p_op, OP_PHASE_CAL_PROMPT, now);
     }
-    else if (send(p_op, S3_CONTROL_APPLY_CALIBRATION, g_k_order[index].sensor,
-                  p_st, now))
+    else if (submit_request(p_op, S3_CONTROL_APPLY_CALIBRATION,
+                            g_k_order[index].sensor, p_st, now))
     {
         p_op->phase = OP_PHASE_CAL_APPLY;
     }
     else
     {
-        enter(p_op, OP_PHASE_CAL_PROMPT, now);
+        enter_phase(p_op, OP_PHASE_CAL_PROMPT, now);
     }
 }
 
@@ -427,52 +671,59 @@ static void cal_collect (operator_t * p_op, uint32_t now,
  * @brief Await APPLY and retain the existing retry/next-sensor transitions.
  * @param[in,out] p_op Owned initialized state at a valid BLACK step.
  * @param now Wrapping millisecond time for reply timeout and phase entry.
- * @param[in] p_st Non-NULL snapshot supplying sequence, result and sample ranges.
+ * @param[in] p_st Non-NULL snapshot supplying sequence, result and sample
+ * ranges.
  * @note Timeout retries BLACK; rejection retries both surfaces for this sensor.
  * Success advances the step, reaching READY after the final sensor. Prints
  * through the existing callback without changing calibration directly.
  */
-static void cal_apply (operator_t * p_op, uint32_t now,
+static void cal_apply (op_logic_t * p_op, uint32_t now,
                        const s3_integration_status_t * p_st)
 {
-    const unsigned index = p_op->step / 2U;
-    bool value_ok = false;
-    if (!replied(p_op, p_st, &value_ok))
+    const unsigned index         = p_op->step / 2U;
+    bool           b_did_succeed = false;
+
+    if (!replied(p_op, p_st, &b_did_succeed))
     {
-        if ((uint32_t)(now - p_op->phase_ms) >= OP_REPLY_TIMEOUT_MS)
+        if ((now - p_op->phase_ms) >= OP_REPLY_TIMEOUT_MS)
         {
-            say(p_op, "No reply from controller. Redo BLACK for this sensor.");
-            enter(p_op, OP_PHASE_CAL_PROMPT, now);
+            print_status(
+                p_op, "No reply from controller. Redo BLACK for this sensor.");
+            enter_phase(p_op, OP_PHASE_CAL_PROMPT, now);
         }
+
         return;
     }
-    if (!value_ok)
+
+    if (!b_did_succeed)
     {
-        (void)p_op->port.print(
+        (void)p_op->port.p_print(
             (const unsigned char *)"%s%s (GP%u) REJECTED: white and black "
                                    "readings "
                                    "overlap (or too few samples). Redo this "
                                    "sensor; check its height and the "
                                    "surface.\n",
-            OP_TAG, g_k_order[index].name, g_k_order[index].gpio);
+            OP_TAG, g_k_order[index].p_name, g_k_order[index].gpio);
         print_range(p_op, "WHITE", &p_st->white);
         print_range(p_op, "BLACK", &p_st->black);
         p_op->step = index * 2U;
-        enter(p_op, OP_PHASE_CAL_PROMPT, now);
+        enter_phase(p_op, OP_PHASE_CAL_PROMPT, now);
         return;
     }
-    (void)p_op->port.print((const unsigned char *)"%s%s (GP%u) calibrated.\n",
-                           OP_TAG, g_k_order[index].name,
-                           g_k_order[index].gpio);
+
+    (void)p_op->port.p_print((const unsigned char *)"%s%s (GP%u) calibrated.\n",
+                             OP_TAG, g_k_order[index].p_name,
+                             g_k_order[index].gpio);
     p_op->step++;
+
     if (p_op->step >= OP_CAL_STEPS)
     {
-        say(p_op, "All 3 sensors calibrated.");
-        enter(p_op, OP_PHASE_READY, now);
+        print_status(p_op, "All 3 sensors calibrated.");
+        enter_phase(p_op, OP_PHASE_READY, now);
     }
     else
     {
-        enter(p_op, OP_PHASE_CAL_PROMPT, now);
+        enter_phase(p_op, OP_PHASE_CAL_PROMPT, now);
     }
 }
 
@@ -484,70 +735,82 @@ static void cal_apply (operator_t * p_op, uint32_t now,
  * @param[in] p_st Non-NULL snapshot; any non-NONE GO requests RESET in FAULT.
  * @note Prints prompts through the port; a countdown alone submits no START.
  */
-static void ready (operator_t * p_op, uint32_t now, op_press_t value_go,
-                   const s3_integration_status_t * p_st)
+static void handle_ready (op_logic_t * p_op, uint32_t now,
+                          op_logic_press_t                value_go,
+                          const s3_integration_status_t * p_st)
 {
-    const bool fault = p_st->state == S3_DRIVE_FAULT;
-    if (due(p_op, now))
+    const bool b_has_fault = (unsigned int)S3_DRIVE_FAULT == p_st->state;
+
+    if (deadline_reached(p_op, now))
     {
-        if (fault)
+        if (b_has_fault)
         {
-            (void)p_op->port.print(
+            (void)p_op->port.p_print(
                 (const unsigned char *)"%sFAULT: %s. Fix the cause, then press "
                                        "GP20 to reset. If reset keeps failing, "
                                        "power-cycle the car.\n",
-                OP_TAG, op_drive_reason_name(p_st->reason));
+                OP_TAG, op_logic_drive_reason_name(p_st->reason));
         }
         else
         {
-            say(p_op,
+            print_status(
+                p_op,
                 "READY: put the car on the line, then press GP20 to start "
                 "(3 s countdown). Hold GP20 2 s to recalibrate. GP21 = STOP.");
         }
     }
-    if (fault && (value_go != OP_PRESS_NONE))
+
+    if (b_has_fault && (value_go != (unsigned int)OP_PRESS_NONE))
     {
         /* The controller refuses calibration while faulted, so every press
          * (short or long) means RESET here; recalibrate after the reset. */
-        p_op->reset_to_cal = false;
-        if (send(p_op, S3_CONTROL_RESET, S3_SENSOR_BARCODE, p_st, now))
+        p_op->b_should_reset_to_cal = false;
+
+        if (submit_request(p_op, S3_CONTROL_RESET, S3_SENSOR_BARCODE, p_st,
+                           now))
         {
             p_op->phase = OP_PHASE_RESET;
         }
     }
-    else if (value_go == OP_PRESS_LONG)
+    else if ((unsigned int)OP_PRESS_LONG == value_go)
     {
-        say(p_op, "Recalibrating all sensors.");
+        print_status(p_op, "Recalibrating all sensors.");
         p_op->step = 0U;
-        enter(p_op, OP_PHASE_CAL_PROMPT, now);
+        enter_phase(p_op, OP_PHASE_CAL_PROMPT, now);
     }
-    else if (value_go == OP_PRESS_SHORT)
+    else if ((unsigned int)OP_PRESS_SHORT == value_go)
     {
-        enter(p_op, OP_PHASE_COUNTDOWN, now);
+        enter_phase(p_op, OP_PHASE_COUNTDOWN, now);
+    }
+    else
+    {
+        /* Wait in READY for the next button event. */
     }
 }
 
 /**
  * @brief Await RESET result or timeout and return to the selected retry phase.
- * @param[in,out] p_op Owned initialized state with reset_to_cal already chosen.
+ * @param[in,out] p_op Owned initialized state with the reset destination
+ * chosen.
  * @param now Wrapping millisecond time for OP_REPLY_TIMEOUT_MS.
  * @param[in] p_st Non-NULL snapshot providing sequence/result/readiness.
  * @note Reply or timeout returns to CAL_PROMPT or READY and clears reply
  * bookkeeping through enter. It prints the outcome but submits no new request.
  */
-static void reset_wait (operator_t * p_op, uint32_t now,
+static void reset_wait (op_logic_t * p_op, uint32_t now,
                         const s3_integration_status_t * p_st)
 {
-    bool value_ok = false;
-    if (replied(p_op, p_st, &value_ok))
+    bool b_did_succeed = false;
+
+    if (replied(p_op, p_st, &b_did_succeed))
     {
-        if (value_ok)
+        if (b_did_succeed)
         {
-            say(p_op, "Fault reset.");
+            print_status(p_op, "Fault reset.");
         }
         else
         {
-            (void)p_op->port.print(
+            (void)p_op->port.p_print(
                 (const unsigned char *)"%sReset refused: motors must be "
                                        "stopped "
                                        "and sensors healthy (ready=0x%x). "
@@ -556,14 +819,23 @@ static void reset_wait (operator_t * p_op, uint32_t now,
                                        "car.\n",
                 OP_TAG, (unsigned)p_st->navigation.readiness_blockers);
         }
-        enter(p_op, p_op->reset_to_cal ? OP_PHASE_CAL_PROMPT : OP_PHASE_READY,
-              now);
+
+        enter_phase(p_op,
+                    p_op->b_should_reset_to_cal ? OP_PHASE_CAL_PROMPT
+                                                : OP_PHASE_READY,
+                    now);
     }
-    else if ((uint32_t)(now - p_op->phase_ms) >= OP_REPLY_TIMEOUT_MS)
+    else if ((now - p_op->phase_ms) >= OP_REPLY_TIMEOUT_MS)
     {
-        say(p_op, "No reply from controller.");
-        enter(p_op, p_op->reset_to_cal ? OP_PHASE_CAL_PROMPT : OP_PHASE_READY,
-              now);
+        print_status(p_op, "No reply from controller.");
+        enter_phase(p_op,
+                    p_op->b_should_reset_to_cal ? OP_PHASE_CAL_PROMPT
+                                                : OP_PHASE_READY,
+                    now);
+    }
+    else
+    {
+        /* The reset request is still awaiting a reply. */
     }
 }
 
@@ -575,28 +847,34 @@ static void reset_wait (operator_t * p_op, uint32_t now,
  * @note Rejected submission returns to READY. Accepted submission enters START
  * to await execution; delayed polls can skip intermediate printed seconds.
  */
-static void countdown (operator_t * p_op, uint32_t now,
+static void countdown (op_logic_t * p_op, uint32_t now,
                        const s3_integration_status_t * p_st)
 {
     const uint32_t elapsed = now - p_op->phase_ms;
-    const unsigned second = (unsigned)(elapsed / 1000U);
+    const unsigned second  = (unsigned)(elapsed / 1000U);
+
     if (elapsed >= OP_COUNTDOWN_MS)
     {
-        if (send(p_op, S3_CONTROL_START, S3_SENSOR_BARCODE, p_st, now))
+        if (submit_request(p_op, S3_CONTROL_START, S3_SENSOR_BARCODE, p_st,
+                           now))
         {
             p_op->phase = OP_PHASE_START;
         }
         else
         {
-            enter(p_op, OP_PHASE_READY, now);
+            enter_phase(p_op, OP_PHASE_READY, now);
         }
     }
     else if (second >= p_op->countdown_shown)
     {
-        (void)p_op->port.print(
+        (void)p_op->port.p_print(
             (const unsigned char *)"%sStarting in %u... (GP21 cancels)\n",
             OP_TAG, (unsigned)(OP_COUNTDOWN_MS / 1000U) - second);
         p_op->countdown_shown = second + 1U;
+    }
+    else
+    {
+        /* This countdown second has already been displayed. */
     }
 }
 
@@ -608,202 +886,80 @@ static void countdown (operator_t * p_op, uint32_t now,
  * @note An accepted execution enters RUN; rejection or timeout returns to
  * READY. Both transitions clear waiting state and print through the port.
  */
-static void start_wait (operator_t * p_op, uint32_t now,
+static void start_wait (op_logic_t * p_op, uint32_t now,
                         const s3_integration_status_t * p_st)
 {
-    bool value_ok = false;
-    if (replied(p_op, p_st, &value_ok))
+    bool b_did_succeed = false;
+
+    if (replied(p_op, p_st, &b_did_succeed))
     {
-        if (value_ok)
+        if (b_did_succeed)
         {
-            say(p_op, "RUNNING. GP21 = STOP.");
-            enter(p_op, OP_PHASE_RUN, now);
+            print_status(p_op, "RUNNING. GP21 = STOP.");
+            enter_phase(p_op, OP_PHASE_RUN, now);
         }
         else
         {
-            (void)p_op->port.print(
+            (void)p_op->port.p_print(
                 (const unsigned char *)"%sSTART refused: state=%s ready=0x%x "
                                        "(1 channels, 2 calibration, 4 sensors, "
                                        "8 odometry, 16 fault). Motors must be "
                                        "stopped and braked.\n",
-                OP_TAG, op_drive_state_name(p_st->state),
+                OP_TAG, op_logic_drive_state_name(p_st->state),
                 (unsigned)p_st->navigation.readiness_blockers);
-            enter(p_op, OP_PHASE_READY, now);
+            enter_phase(p_op, OP_PHASE_READY, now);
         }
     }
-    else if ((uint32_t)(now - p_op->phase_ms) >= OP_REPLY_TIMEOUT_MS)
+    else if ((now - p_op->phase_ms) >= OP_REPLY_TIMEOUT_MS)
     {
-        say(p_op, "No reply from controller.");
-        enter(p_op, OP_PHASE_READY, now);
+        print_status(p_op, "No reply from controller.");
+        enter_phase(p_op, OP_PHASE_READY, now);
+    }
+    else
+    {
+        /* Keep waiting for the controller's start reply. */
     }
 }
 
 /**
  * @brief Cancel phase-local work after a STOP event without submitting STOP.
- * @param[in,out] p_op Owned initialized state; phase-specific fields may change.
+ * @param[in,out] p_op Owned initialized state; phase-specific fields may
+ * change.
  * @param now_ms Wrapping millisecond phase-entry time.
  * @note Sampling/apply returns to its prompt (APPLY retries BLACK); pending
  * start returns to READY and prints cancellation; RESET returns to its retry
- * phase. Other phases are unchanged. The caller owns STOP submission/inhibition.
+ * phase. Other phases are unchanged. The caller owns STOP
+ * submission/inhibition.
  */
-static void stop_pressed (operator_t * p_op, uint32_t now_ms)
+static void stop_pressed (op_logic_t * p_op, uint32_t now_ms)
 {
-    if ((p_op->phase == OP_PHASE_CAL_COLLECT) ||
-        (p_op->phase == OP_PHASE_CAL_APPLY))
+    if (((unsigned int)OP_PHASE_CAL_COLLECT == p_op->phase) ||
+        ((unsigned int)OP_PHASE_CAL_APPLY == p_op->phase))
     {
-        if (p_op->phase == OP_PHASE_CAL_APPLY)
+        if ((unsigned int)OP_PHASE_CAL_APPLY == p_op->phase)
         {
-            p_op->step = (p_op->step / 2U) * 2U + 1U; /* redo BLACK */
+            p_op->step = ((p_op->step / 2U) * 2U) +
+                         1U; /* Repeat the black calibration step. */
         }
-        enter(p_op, OP_PHASE_CAL_PROMPT, now_ms);
-    }
-    else if ((p_op->phase == OP_PHASE_COUNTDOWN) ||
-             (p_op->phase == OP_PHASE_START))
-    {
-        say(p_op, "Start cancelled.");
-        enter(p_op, OP_PHASE_READY, now_ms);
-    }
-    else if (p_op->phase == OP_PHASE_RESET)
-    {
-        enter(p_op, p_op->reset_to_cal ? OP_PHASE_CAL_PROMPT : OP_PHASE_READY,
-              now_ms);
-    }
-}
 
-/**
- * @brief Apply the remote-STOP cancellation contract in op_logic.h.
- * @param[in,out] p_op Initialized owned state; NULL is a no-op.
- * @param now_ms Wrapping millisecond timestamp for cancellation transitions.
- * @note Sets local inhibition and never submits a duplicate STOP.
- */
-void operator_remote_stop (operator_t * p_op, uint32_t now_ms)
-{
-    if (!p_op)
-    {
-        return;
+        enter_phase(p_op, OP_PHASE_CAL_PROMPT, now_ms);
     }
-    p_op->inhibit = true;
-    stop_pressed(p_op, now_ms);
-}
-
-/**
- * @brief Apply STOP precedence and the operator-phase contract in op_logic.h.
- * @param[in,out] p_op Initialized exclusively accessed state; NULL is a no-op.
- * @param now_ms Wrapping millisecond time used by the selected phase.
- * @param value_go Debounced GO event; inhibition can discard this event.
- * @param stop_held Debounced STOP level, serviced before consulting status.
- * @param go_held Debounced GO level, used for the both-released gate.
- * @param[in] p_st Optional coherent snapshot, borrowed only for this call.
- * @note Missing status prevents phase processing, not STOP/inhibition. Invalid
- * phase values fall back to READY. Synchronous submit/print effects and exact
- * sequence-based acknowledgement remain as specified by the public contract.
- */
-void operator_step (operator_t * p_op, uint32_t now_ms, op_press_t value_go,
-                    bool stop_held, bool go_held,
-                    const s3_integration_status_t * p_st)
-{
-    if (p_op == 0)
+    else if (((unsigned int)OP_PHASE_COUNTDOWN == p_op->phase) ||
+             ((unsigned int)OP_PHASE_START == p_op->phase))
     {
-        return;
+        print_status(p_op, "Start cancelled.");
+        enter_phase(p_op, OP_PHASE_READY, now_ms);
     }
-    /* STOP first, in every phase, without waiting for status. Level-based:
-     * a GP21 held since power-up, or held before GP20, still counts. */
-    if (stop_held)
+    else if ((unsigned int)OP_PHASE_RESET == p_op->phase)
     {
-        p_op->inhibit = true;
-        if (!p_op->stop_handled)
-        {
-            const s3_control_request_t request = {.kind = S3_CONTROL_STOP};
-            if (p_op->port.submit(&request))
-            {
-                p_op->stop_handled = true;
-                say(p_op, "STOP sent.");
-            }
-            else if (!p_op->stop_warned)
-            {
-                /* Retried every poll while held; reported once per hold. */
-                say(p_op, "STOP not accepted yet, retrying. Use the power "
-                          "switch if the car moves.");
-                p_op->stop_warned = true;
-            }
-            stop_pressed(p_op, now_ms);
-        }
+        enter_phase(p_op,
+                    p_op->b_should_reset_to_cal ? OP_PHASE_CAL_PROMPT
+                                                : OP_PHASE_READY,
+                    now_ms);
     }
     else
     {
-        p_op->stop_handled = false;
-        p_op->stop_warned = false;
-    }
-    if (p_op->inhibit)
-    {
-        if ((value_go != OP_PRESS_NONE) && !p_op->ignore_warned)
-        {
-            say(p_op, "Ignored GP20: release GP21 first.");
-            p_op->ignore_warned = true;
-        }
-        value_go =
-            OP_PRESS_NONE; /* discard, including a release on this poll */
-        if (!stop_held && !go_held)
-        {
-            p_op->inhibit = false;
-            p_op->ignore_warned = false;
-        }
-    }
-    if (p_st == 0)
-    {
-        return;
-    }
-    switch (p_op->phase)
-    {
-    case OP_PHASE_WAIT_STATUS:
-        say(p_op, "Operator controls: GP20 = next/start, GP21 = STOP.");
-        p_op->step = 0U;
-        if (p_st->navigation.accepted_calibration == S3_ALL_SENSORS)
-        {
-            /* Built-in calibration was accepted at boot: no walkthrough. */
-            say(p_op, "Using built-in calibration. Hold GP20 2 s at READY to "
-                      "recalibrate by hand.");
-            enter(p_op, OP_PHASE_READY, now_ms);
-        }
-        else
-        {
-            enter(p_op, OP_PHASE_CAL_PROMPT, now_ms);
-        }
-        break;
-    case OP_PHASE_CAL_PROMPT:
-        cal_prompt(p_op, now_ms, value_go, p_st);
-        break;
-    case OP_PHASE_CAL_COLLECT:
-        cal_collect(p_op, now_ms, p_st);
-        break;
-    case OP_PHASE_CAL_APPLY:
-        cal_apply(p_op, now_ms, p_st);
-        break;
-    case OP_PHASE_READY:
-        ready(p_op, now_ms, value_go, p_st);
-        break;
-    case OP_PHASE_RESET:
-        reset_wait(p_op, now_ms, p_st);
-        break;
-    case OP_PHASE_COUNTDOWN:
-        countdown(p_op, now_ms, p_st);
-        break;
-    case OP_PHASE_START:
-        start_wait(p_op, now_ms, p_st);
-        break;
-    case OP_PHASE_RUN:
-        if (!running(p_st->state))
-        {
-            (void)p_op->port.print(
-                (const unsigned char *)"%sRun ended: %s - %s.\n", OP_TAG,
-                op_drive_state_name(p_st->state),
-                op_drive_reason_name(p_st->reason));
-            enter(p_op, OP_PHASE_READY, now_ms);
-        }
-        break;
-    default:
-        enter(p_op, OP_PHASE_READY, now_ms);
-        break;
+        /* STOP needs no phase transition here. */
     }
 }
 

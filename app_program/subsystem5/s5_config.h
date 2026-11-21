@@ -3,17 +3,13 @@
  */
 #ifndef S5_CONFIG_H
 #define S5_CONFIG_H
-#include <stdbool.h>
-#include <stdint.h>
 #ifndef APP_S5
 #define APP_S5 0
 #endif
-/* User-confirmed HC-SR04: TRIG GP1, ECHO GP0 (27 Oct 2026).
- * User also confirmed servo signal GP12. Activation stays opt-in; pulse
- * limits, ECHO level protection and route geometry need physical validation.
- * Enable after checking the actual sensor, level
- * protection, servo supply/travel and robot geometry. No automatic motor start.
- */
+/* The 27 October wiring check identified HC-SR04 TRIG on GP1, ECHO on GP0,
+ * and the servo signal on GP12. See app_program/subsystem5/README.md for
+ * the sensor datasheet and wiring. Hardware validation covers the echo
+ * interface, pulse limits, servo travel and course clearance. */
 #ifndef S5_HARDWARE_CONFIRMED
 #define S5_HARDWARE_CONFIRMED 0
 #endif
@@ -50,12 +46,13 @@
 /* 25 mm (was 50): stop closer to the obstacle's real rear edge. */
 #define S5_PEEK_STEP_MM 25U
 /* Car geometry from the team's measurements (Gin, 11 Nov 2026): 125 mm wide
- * (half width 63 in s5_defaults), ultrasonic 75 mm ahead of the wheel axle,
- * body 55 mm behind it. Was 100 mm / half width 90 (placeholders). */
+ * (half width 63 in s5_config_defaults), ultrasonic 75 mm ahead of the wheel
+ * axle, body 55 mm behind it. Was 100 mm / half width 90 (placeholders). */
 #define S5_SONAR_AXLE_MM 75U
 #define S5_REAR_AXLE_MM 55U
-/* Finding the line again (17 Nov 2026, calibrated in bypass_course_test.c on
- * a straight and on bends of radius 20 and 30 cm before/after the obstacle):
+/* Track return was exercised on a straight and on 20 cm and 30 cm bends
+ * before and after an obstacle in testing/subsystem5/bypass_course_main.c.
+ * The controller uses the following sequence:
  * 1. The line is watched for while passing the obstacle (leg 3, after the
  *    front face) and on the return diagonal (leg 5). On a bend toward the
  *    bypass side the line comes under the car early; on a straight it is
@@ -109,16 +106,15 @@
  * scans again and plans from that square-on view. */
 #define S5_AIM_MIN_DEG 5
 #define S5_AIM_MAX_DEG 30
-/* BEND ONLY (13 Nov run 5). The controller measures how hard the line
- * follower was turning just before the obstacle: (right - left) / (right +
- * left) wheel speed, averaged over ~0.5 s, passed as a whole percent
- * (int8_t, -100..100). At or above S5_BEND_PCT the car is on a bend; below it
- * everything stays exactly as on the straight. On a bend only:
- * - the aim turn is S5_BEND_AIM_PCT of the bearing (now 100 = the same aim,
- *   see below), cap S5_BEND_AIM_MAX_DEG;
- * (17 Nov: finding the line again is the same on a straight and a bend, see
- * S5_SWERVE_*; the controller cannot know about a bend that starts after the
- * obstacle, so that part no longer depends on this flag.) */
+/* The bend rule was introduced after the 13 November run 5.
+ * The controller estimates the pre-obstacle steering from (right - left) /
+ * (right + left) averaged over about half a second and expressed as an
+ * integer from -100 to 100 percent. S5_BEND_PCT selects the bend route. A
+ * bend uses S5_BEND_AIM_PCT of the bearing, currently 100 percent, capped by
+ * S5_BEND_AIM_MAX_DEG. Since 17 November, the return-side S5_SWERVE settings
+ * are shared because steering before the obstacle cannot show a bend that
+ * starts after it.
+ */
 /* 20 % (run 7, was 10 %): line-follower wobble on a straight must not count as
  * a bend. The course bends (radius 12..20 cm) give ~30..50 %. */
 #ifndef S5_BEND_PCT
@@ -131,7 +127,7 @@
 #define S5_BEND_AIM_PCT 100
 #endif
 #define S5_BEND_AIM_MAX_DEG 40
-#define S5_IR_AXLE_MM 135U /* S3_SENSOR_TO_AXLE_MM, course_profile.h */
+#define S5_IR_AXLE_MM 135U /* Use the sensor offset from course_profile.h. */
 /* 0 (17 Nov 2026, was 100): driving on past the end of the diagonal moved
  * the car away from a line bending away; the measured return distance
  * (avoid_obstacle.c return_lat) and the swerve find it instead. */
@@ -181,13 +177,22 @@
  */
 typedef struct
 {
-    unsigned detect_mm : 12, emergency_mm : 12, profile_mm : 12;
-    unsigned half_width_mm : 12, margin_mm : 12, max_depth_mm : 12;
-    unsigned recovery_gate_mm : 12, max_offset_mm : 12, sensor_axle_mm : 12;
+    unsigned detect_mm : 12;
+    unsigned emergency_mm : 12;
+    unsigned profile_mm : 12;
+    unsigned half_width_mm : 12;
+    unsigned margin_mm : 12;
+    unsigned max_depth_mm : 12;
+    unsigned recovery_gate_mm : 12;
+    unsigned max_offset_mm : 12;
+    unsigned sensor_axle_mm : 12;
     unsigned speed_mms : 9;
 } s5_config_t;
 
-static inline s5_config_t s5_defaults (void)
+/** @brief Return the configured obstacle detection, scan and bypass geometry
+ * for the car. Clearance and range distances use millimetres.
+ */
+static inline s5_config_t s5_config_defaults (void)
 {
     /* detect 250 mm (13 Nov run 3, was 200; 350 before that): more room for the
      * 45-degree out-leg when the car is not square to the obstacle.

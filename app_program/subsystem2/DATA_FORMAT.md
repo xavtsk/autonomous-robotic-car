@@ -6,7 +6,7 @@ if the team agrees other values). Ranges marked *to agree* still need a team
 decision.
 
 **Fault bits are implemented.** Buddy 2's faults are 5 individual bits
-(`motion_fault_bit()`, `motion_get_fault_bits()`), carried in the status word.
+(`motion_pack_fault_bit()`, `motion_get_fault_bits()`), carried in the status word.
 Where these 5 bits sit in the team's shared fault mask, and who owns the
 mask, is still a team decision.
 
@@ -155,7 +155,7 @@ direction), and `wheel_encoder_delta()` stays correct when a count wraps.
 Manoeuvre codes: LEFT 0, RIGHT 1, STRAIGHT 2, U_TURN 3 (as `manoeuvre_t`).
 
 The fault **bits** above are Buddy 2's part of the shared fault mask
-(`motion_fault_bit(f)` = bit f − 1). Only the motion task sets them and only
+(`motion_pack_fault_bit(f)` = bit f − 1). Only the motion task sets them and only
 `motion_reset()` clears them, both with the Buddy 2 mutex held. A fault on
 each wheel in the same period latches both bits. Where the 5 bits sit in the
 team's mask, and who owns it, is a team decision.
@@ -164,7 +164,7 @@ team's mask, and who owns it, is a team decision.
 
 ### Status / telemetry — 64 bits (was 28 bytes as floats and ints)
 
-`motion_get_status_packed()`; unpack with `motion_unpack_status()`.
+`motion_get_status_packed()`; unpack with `motion_pack_read_status()`.
 
 | Bits | Field | Width |
 | --- | --- | --- |
@@ -206,9 +206,9 @@ memory: 8 × (4-byte kernel header + 4-byte rounded message) = 64 bytes (was
 | 3–… | left speed (10), right speed (10) | distance (14), speed (9) | angle (10), speed (9) | manoeuvre (2) | command ID (8) | — |
 | Used bits | 23 | 26 | 22 | 5 | 11 | 3 |
 
-Build a word with `motion_cmd_velocity()`, `motion_cmd_drive()`,
-`motion_cmd_turn()`, `motion_cmd_manoeuvre()`, `motion_cmd_stop()`,
-`motion_cmd_cancel()` or `motion_cmd_reset()`, and run it with
+Build a word with `motion_pack_velocity()`, `motion_pack_drive()`,
+`motion_pack_turn()`, `motion_pack_manoeuvre()`, `motion_pack_stop()`,
+`motion_cmd_cancel()` or `motion_pack_reset()`, and run it with
 `motion_request_packed()`. The existing functions (`moveForward()`,
 `turnLeft()`, `stop()`, …) stay.
 
@@ -219,7 +219,7 @@ Command validation (no undefined behaviour, no unintended command):
   Anything else (NaN, infinity, a negative or zero move speed, a value out
   of range) returns `MOTION_CMD_INVALID_WORD` (type 7) instead of a clipped
   or different command.
-- `motion_unpack_cmd()` rejects type 7, any bit set outside the type's used
+- `motion_pack_decode()` rejects type 7, any bit set outside the type's used
   bits (row *Used bits*), and a drive or turn with speed 0.
   `motion_request_packed()` then returns `MOTION_ERR_BAD_ARG`.
 - Moves whose allowed time (distance / speed × 3 + 2 s) is over 600 s are

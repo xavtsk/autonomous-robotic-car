@@ -19,7 +19,7 @@ From PowerShell in the repository root:
 No car or IMU is needed. Uses the installed MSYS2 UCRT64 GCC at
 `C:\msys64\ucrt64\bin\gcc.exe`; override with `-MsysRoot` if necessary.
 The script compiles the actual six portable Buddy 4 C modules with mocked I2C
-registers, then executes assertions in `host_test.c`. It does not flash firmware,
+registers, then executes assertions in `imu_host_main.c`. It does not flash firmware,
 run motors or change security settings. Assertions remain enabled.
 
 Results appear on screen and in `build/host-tests/buddy4/latest.log`.

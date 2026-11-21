@@ -1,12 +1,10 @@
 /** @file motion_estimation.h
  * @brief Encoder-based speed and distance estimation.
- */
-/*
- * File: motion_estimation.h
- * Owner: Buddy 2 - Motion Control
- * Purpose: Encoder-based speed and distance estimation.
  *
- *   distance = encoder counts x metres per count
+ * @par Ownership
+ * Buddy 2 - Motion Control
+ *
+ * distance = encoder counts x metres per count
  *   speed    = change in distance over each control period, lightly smoothed
  *   heading  = (right distance - left distance) / track width
  *
@@ -18,10 +16,12 @@
 #define BUDDY2_MOTION_ESTIMATION_H
 
 #include "../app_types.h"
-#include "wheel_encoder.h" /* wheel_id_t */
+#include "wheel_encoder.h" /* wheel_encoder_id_t */
 
-/* m_per_count = pi x wheel diameter / encoder counts per wheel turn
- * (0 = not calibrated: all estimates read 0) */
+/* Metres per count equal pi times the wheel diameter divided by counts per
+ * wheel turn. With zero as the uncalibrated scale, every estimate returns
+ * zero.
+ */
 /** @brief Reset the estimator using the current encoder counts.
  * @param m_per_count Metres per encoder count; zero represents no calibration.
  * @param track_width_m Wheel separation in metres, used by heading estimation.
@@ -41,7 +41,7 @@ void motion_estimation_set_scale (float32_t m_per_count);
  */
 float32_t motion_estimation_scale (void);
 
-/* Read the encoders and update the speeds; once per control period */
+/* Update encoder speed estimates each period. */
 /** @brief Update filtered wheel speed and acceleration from encoder deltas.
  * @param dt_s Positive, finite elapsed control time in seconds.
  * @pre Initialize the estimator and supply a nonzero dt_s; no validation is
@@ -56,19 +56,19 @@ void motion_estimation_update (float32_t dt_s);
  * @return Signed wheel speed in metres per second, positive forward.
  * @note Reads the live stored value without locking or taking a pair snapshot.
  */
-float32_t motion_estimation_wheel_speed (wheel_id_t wheel); /* m/s   */
+float32_t motion_estimation_wheel_speed (wheel_encoder_id_t wheel); /* m/s   */
 /** @brief Read one wheel's retained acceleration estimate.
  * @param wheel Valid WHEEL_LEFT or WHEEL_RIGHT index; it is not range-checked.
  * @return Change in filtered speed per second, in metres per second squared.
  * @note Reads the live stored value without locking.
  */
-float32_t motion_estimation_wheel_accel (wheel_id_t wheel); /* m/s^2 */
+float32_t motion_estimation_wheel_accel (wheel_encoder_id_t wheel); /* m/s^2 */
 /** @brief Convert one wheel's current signed encoder count to distance.
  * @param wheel Valid WHEEL_LEFT or WHEEL_RIGHT encoder index.
  * @return Signed count multiplied by the current metres-per-count scale.
  * @note The count and scale are separate reads; no coherent snapshot is taken.
  */
-float32_t motion_estimation_wheel_dist (wheel_id_t wheel); /* m     */
+float32_t motion_estimation_wheel_dist (wheel_encoder_id_t wheel); /* m     */
 /** @brief Average the two retained wheel-speed estimates.
  * @return Signed mean wheel speed in metres per second.
  * @note Reads each wheel separately without locking against an update.

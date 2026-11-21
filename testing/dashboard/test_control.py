@@ -20,7 +20,7 @@ class ControllerTests(unittest.TestCase):
     def setUpClass(cls):
         folder=tempfile.TemporaryDirectory();cls.addClassCleanup(folder.cleanup)
         binary=Path(folder.name)/"control_test"
-        subprocess.run(["cc","-std=c11","-Wall","-Wextra","-Werror",str(ROOT/"testing/integration/control_debug_test.c"),
+        subprocess.run(["cc","-std=c11","-Wall","-Wextra","-Werror",str(ROOT/"testing/integration/cmd_wire_main.c"),
                         str(ROOT/"app_program/controller/control_debug.c"),"-o",str(binary)],check=True)
         output=subprocess.check_output([str(binary)],text=True)
         cls.vector=bytes.fromhex(next(line.split()[1] for line in output.splitlines() if line.startswith("CONTROL_VECTOR ")))

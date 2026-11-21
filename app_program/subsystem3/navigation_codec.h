@@ -16,20 +16,21 @@
 typedef struct
 {
     uint8_t bytes[S3_NAVIGATION_BYTES];
-} s3_navigation_packet_t;
+} navigation_codec_packet_t;
 
 typedef struct
 {
     uint8_t bytes[S3_BARCODE_BYTES];
-} s3_barcode_packet_t;
+} navigation_codec_barcode_t;
 
-#define S3_RAW_FRAME_BYTES                                                     \
-    34U /* frame32 + 3*(timestamp32+raw12+error32+2 flags) */
+/* Store a 32-bit frame timestamp. Each of the three sensors adds a
+ * 32-bit timestamp, 12-bit ADC value, 32-bit error and two flags. */
+#define S3_RAW_FRAME_BYTES 34U
 
 typedef struct
 {
     uint8_t bytes[S3_RAW_FRAME_BYTES];
-} s3_raw_frame_packet_t;
+} navigation_codec_raw_frame_t;
 
 /* False on invalid ranges/nulls; output is unchanged on failure. Floats and
  * timestamps are copied bit-for-bit, including invalid diagnostic float data.
@@ -50,20 +51,20 @@ typedef struct
  * @pre The caller owns the output and keeps the input stable for the call.
  * No lock is acquired and no pointer is retained.
  */
-bool s3_navigation_pack (const s3_navigation_output_t * p_value,
-                         s3_navigation_packet_t * p_out);
+bool navigation_codec_pack (const line_navigation_output_t * p_value,
+                            navigation_codec_packet_t *      p_out);
 /** @brief Decode a navigation packet after checking ranges and padding.
  * @param[in] p_packet Readable, stable 60-byte packet in the packer's layout.
  * @param[out] p_out Caller-owned result; replaced only on success.
  * @return False for a null pointer, nonzero final padding bit, invalid enum,
  * barcode code, darkness or line-error code; true for an accepted packet.
  * @details Output is first assembled locally. Float/double representations
- * and integer units follow s3_navigation_pack; NaNs and infinities are not
+ * and integer units follow navigation_codec_pack; NaNs and infinities are not
  * rejected. Checks enforce field domains, not consistency between validity
  * flags, events and diagnostic values. No pointer is retained or lock taken.
  */
-bool s3_navigation_unpack (const s3_navigation_packet_t * p_packet,
-                           s3_navigation_output_t * p_out);
+bool navigation_codec_unpack (const navigation_codec_packet_t * p_packet,
+                              line_navigation_output_t *        p_out);
 /** @brief Encode a barcode result as 38 bits with zero high padding.
  * @param[in] p_value Stable result with letter NUL or A..Z.
  * @param[out] p_out Caller-owned five-byte packet; unchanged on failure.
@@ -72,8 +73,8 @@ bool s3_navigation_unpack (const s3_navigation_packet_t * p_packet,
  * bit, then the unchanged 32-bit microsecond timestamp, all low bit first.
  * No pointer is retained; the caller supplies synchronization if needed.
  */
-bool s3_barcode_pack (const s3_barcode_result_t * p_value,
-                      s3_barcode_packet_t * p_out);
+bool navigation_codec_barcode_pack (const bc_decoder_result_t *  p_value,
+                                    navigation_codec_barcode_t * p_out);
 /** @brief Decode a barcode result while rejecting reserved codes and bits.
  * @param[in] p_packet Readable, stable five-byte barcode packet.
  * @param[out] p_out Caller-owned result; unchanged on failure.
@@ -82,8 +83,8 @@ bool s3_barcode_pack (const s3_barcode_result_t * p_value,
  * @details Code zero means NUL; 1..26 mean A..Z. Timestamps are not checked
  * for age or order. The function neither locks nor retains caller pointers.
  */
-bool s3_barcode_unpack (const s3_barcode_packet_t * p_packet,
-                        s3_barcode_result_t * p_out);
+bool navigation_codec_barcode_unpack (
+    const navigation_codec_barcode_t * p_packet, bc_decoder_result_t * p_out);
 /* For the existing stationary diagnostic snapshot. Driver error codes stay
  * signed 32-bit; an ADC failure is not collapsed into a healthy raw zero. */
 /** @brief Encode a complete three-sensor frame into 266 meaningful bits.
@@ -97,19 +98,19 @@ bool s3_barcode_unpack (const s3_barcode_packet_t * p_packet,
  * all error bits are retained. Six final padding bits are zero. The caller
  * provides any required locking; no pointer is retained.
  */
-bool s3_raw_frame_pack (const s3_sensor_frame_t * p_value,
-                        s3_raw_frame_packet_t * p_out);
+bool navigation_codec_raw_pack (const ir_acquisition_frame_t * p_value,
+                                navigation_codec_raw_frame_t * p_out);
 /** @brief Decode a raw frame without discarding failed ADC sample details.
  * @param[in] p_packet Readable, stable 34-byte frame packet.
  * @param[out] p_out Caller-owned frame; replaced only on success.
  * @return False for nulls or nonzero final six padding bits; otherwise true.
  * @details All 32-bit timestamps and signed error patterns are accepted.
  * Flags do not suppress raw/error values. Units and field order follow
- * s3_raw_frame_pack. There is no timestamp freshness or error-code lookup,
- * synchronization, allocation or retention of caller pointers.
+ * navigation_codec_raw_pack. There is no timestamp freshness or error-code
+ * lookup, synchronization, allocation or retention of caller pointers.
  */
-bool s3_raw_frame_unpack (const s3_raw_frame_packet_t * p_packet,
-                          s3_sensor_frame_t * p_out);
+bool navigation_codec_raw_unpack (const navigation_codec_raw_frame_t * p_packet,
+                                  ir_acquisition_frame_t *             p_out);
 
 #endif
 

@@ -1,8 +1,11 @@
 /** @file ir_calibration.c
  * @brief Collect labelled reflectance samples and derive validated sensor
  * calibration.
+ * Validated enum limits are nonnegative. Casts make the unsigned
+ * comparison domain explicit while retaining the original limits.
  */
 #include "ir_calibration.h"
+#include <stddef.h>
 #include "../app_types.h"
 
 /** @brief Clear both labelled ranges for a new calibration collection.
@@ -11,11 +14,11 @@
  * @note No active sensor calibration changes. The sampling owner serializes
  * all access to the collector; this function acquires no lock.
  */
-void s3_calibration_begin (s3_calibration_collector_t * p_collector)
+void ir_calibration_begin (ir_calibration_collector_t * p_collector)
 {
     if (p_collector != 0)
     {
-        *p_collector = (s3_calibration_collector_t){0};
+        *p_collector               = (ir_calibration_collector_t){0};
         p_collector->white.minimum = 4095U;
         p_collector->black.minimum = 4095U;
     }
@@ -30,32 +33,41 @@ void s3_calibration_begin (s3_calibration_collector_t * p_collector)
  * @note The caller serializes access. The other labelled range is untouched;
  * counters stop accepting samples rather than wrapping or replacing history.
  */
-bool s3_calibration_add (s3_calibration_collector_t * p_collector,
-                         ir_surface_t labelled_surface, uint16_t raw)
+bool ir_calibration_add (ir_calibration_collector_t * p_collector,
+                         ir_reflectance_surface_t     labelled_surface,
+                         uint16_t                     raw)
 {
-    s3_calibration_range_t * p_range;
-    if ((p_collector == 0) || (raw > 4095U) ||
-        ((labelled_surface != IR_SURFACE_WHITE) &&
-         (labelled_surface != IR_SURFACE_BLACK)))
+    ir_calibration_range_t * p_range = NULL;
+
+    if (((0 == p_collector) || (raw > 4095U)) ||
+        ((labelled_surface != (unsigned int)IR_SURFACE_WHITE) &&
+         (labelled_surface != (unsigned int)IR_SURFACE_BLACK)))
     {
         return false;
     }
-    p_range = (labelled_surface == IR_SURFACE_WHITE) ? &p_collector->white
-                                                     : &p_collector->black;
+
+    p_range = ((unsigned int)IR_SURFACE_WHITE == labelled_surface)
+                  ? &p_collector->white
+                  : &p_collector->black;
+
     if (p_range->count >= 65535U)
     {
         return false;
     }
+
     p_range->count++;
     p_range->sum += raw;
+
     if (raw < p_range->minimum)
     {
         p_range->minimum = raw;
     }
+
     if (raw > p_range->maximum)
     {
         p_range->maximum = raw;
     }
+
     return true;
 }
 
@@ -69,30 +81,39 @@ bool s3_calibration_add (s3_calibration_collector_t * p_collector,
  * No sensor state is installed here; the owner applies success through
  * ir_reflectance_init and serializes collector/calibration access.
  */
-bool s3_calibration_finish (const s3_calibration_collector_t * p_collector,
-                            ir_calibration_t * p_active)
+bool ir_calibration_finish (const ir_calibration_collector_t * p_collector,
+                            ir_reflectance_calibration_t *     p_active)
 {
-    ir_calibration_t candidate;
-    ir_reflectance_t check;
-    if ((p_collector == 0) || (p_active == 0) ||
-        (p_collector->white.count < 10U) || (p_collector->black.count < 10U))
+
+    if ((((0 == p_collector) || (0 == p_active)) ||
+         (p_collector->white.count < 10U)) ||
+        (p_collector->black.count < 10U))
     {
         return false;
     }
+
     if (!((p_collector->white.maximum < p_collector->black.minimum) ||
           (p_collector->black.maximum < p_collector->white.minimum)))
     {
         return false;
     }
+
+    ir_reflectance_calibration_t candidate;
     candidate = *p_active;
+
+    /* Each nonempty range contains 12-bit readings. The truncated mean
+     * stays in 0..4095 and fits in uint16_t. */
     candidate.white_raw =
         (uint16_t)(p_collector->white.sum / p_collector->white.count);
     candidate.black_raw =
         (uint16_t)(p_collector->black.sum / p_collector->black.count);
+
+    ir_reflectance_t check;
     if (!ir_reflectance_init(&check, &candidate))
     {
         return false;
     }
+
     *p_active = candidate;
     return true;
 }
@@ -104,18 +125,26 @@ bool s3_calibration_finish (const s3_calibration_collector_t * p_collector,
  * @note No range validation or mutation. Caller ensures a stable snapshot;
  * this function neither locks nor commits an active calibration.
  */
-s3_calibration_summary_t
-s3_calibration_summary (const s3_calibration_range_t * p_range)
+ir_calibration_summary_t
+ir_calibration_summary (const ir_calibration_range_t * p_range)
 {
-    s3_calibration_summary_t summary = {0};
+    ir_calibration_summary_t summary = {0};
+
     if ((p_range != 0) && (p_range->count > 0U))
     {
-        summary.count = p_range->count;
+        summary.count   = p_range->count;
         summary.minimum = p_range->minimum;
         summary.maximum = p_range->maximum;
-        summary.average = (float32_t)p_range->sum / (float32_t)p_range->count;
-        summary.available = true;
+
+        /* Use float32 division to retain the fractional mean. The 16-bit
+         * count converts exactly. Large 28-bit sums round to float32. */
+        /* clang-format off */
+        summary.average        =
+            (float32_t)p_range->sum / (float32_t)p_range->count;
+        summary.b_is_available = true;
+        /* clang-format on */
     }
+
     return summary;
 }
 

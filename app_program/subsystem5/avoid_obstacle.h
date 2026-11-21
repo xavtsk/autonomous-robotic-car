@@ -18,7 +18,7 @@ typedef enum
     S5_FINISH,
     S5_COMPLETE,
     S5_FAULT
-} s5_state_t;
+} avoid_obstacle_state_t;
 
 typedef enum
 {
@@ -30,7 +30,7 @@ typedef enum
     S5_NO_LINE,
     S5_MOTION_ERROR,
     S5_INTERRUPTED
-} s5_fault_t;
+} avoid_obstacle_fault_t;
 
 /* S5_ACT_PEEK: value = servo angle for one side reading while stopped. */
 typedef enum
@@ -42,7 +42,7 @@ typedef enum
     S5_ACT_TURN,
     S5_ACT_RESUME,
     S5_ACT_PEEK
-} s5_action_kind_t;
+} avoid_obstacle_action_kind_t;
 
 /* Leg 3 (passing the obstacle) sub-steps: drive to the front face, then
  * peek / step until the side is clear, then clear the car body. */
@@ -53,56 +53,77 @@ typedef enum
     S5_PASS_PEEKING,
     S5_PASS_STEP,
     S5_PASS_EXTRA
-} s5_pass_t;
+} avoid_obstacle_pass_t;
 
 typedef struct
 {
-    s5_action_kind_t kind;
-    int16_t value;
-    uint16_t speed_mms;
-} s5_action_t;
+    avoid_obstacle_action_kind_t kind;
+    int16_t                      value;
+    uint16_t                     speed_mms;
+} avoid_obstacle_action_t;
 
 typedef struct
 {
-    uint32_t now_us;
+    uint32_t  now_us;
     float64_t centre_m;
-    bool stopped, motion_done, healthy, tape, junction, line_ready;
-    int8_t turn_pct; /* line follower's turning just before the stop, %, + =
-                        left, -100..100 */
-    s5_observation_t observation;
-} s5_input_t;
+    bool      b_is_stopped;
+    bool      b_is_motion_done;
+    bool      b_is_healthy;
+    bool      b_has_tape;
+    bool      b_has_junction;
+    bool      b_is_line_ready;
+    int8_t    turn_pct; /* The pre-stop steering average ranges from -100 to
+                         * 100 percent. Positive means left.
+                         */
+    s5_codec_observation_t observation;
+} avoid_obstacle_input_t;
 
 typedef struct
 {
-    s5_config_t config;
-    s5_plan_t plan;
-    s5_recovery_t recovery;
-    unsigned state : 3, fault : 3, leg : 4, issued : 1, pass : 3, swapped : 1;
-    unsigned backed : 1,
-        backing : 1; /* leg 0: reverse-before-turn checked / running */
-    unsigned aimed : 1,
-        aiming : 1;    /* scanning: face-the-obstacle turn done / running */
-    unsigned bend : 1; /* stopped on a bend (latched at the first scan) */
-    unsigned tail : 1,
-        extended : 1; /* line seen, axle-onto-line drive / extra return drive */
-    unsigned rel_bits : 8; /* Two's-complement heading; use s5_rel_get/set. */
-    unsigned side_turn : 4,
-        side_turns : 2; /* leg 3: pending turn away (deg), turns made */
-    unsigned centre_dir : 1, centre_tries : 2; /* finish: last swerve was toward
-                                                  the bypass side, tries */
-    unsigned blocked_reads : 2; /* leg 1: consecutive blocked readings so far */
-    unsigned aim_bits : 7;      /* Two's-complement aim; use s5_aim_get/set. */
-    uint16_t searched_mm;       /* leg 3 distance stepped beside the obstacle */
-    unsigned lat_mm : 9; /* leg 3 sideways travel after turning away, 0..511 mm
-                            (saturates) */
-    unsigned peek_lat_mm : 12; /* leg 3: distance from the original line, last
-                                  side peek, mm */
-    uint32_t phase_us, started_us;
+    s5_config_t              config;
+    avoidance_planner_plan_t plan;
+    line_recovery_t          recovery;
+    unsigned                 state : 3;
+    unsigned                 fault : 3;
+    unsigned                 leg : 4;
+    unsigned                 b_has_issued : 1;
+    unsigned                 pass : 3;
+    unsigned                 b_has_swapped : 1;
+    unsigned                 b_has_backed : 1;
+
+    unsigned b_is_backing : 1; /* Leg zero is reversing before the turn. */
+    unsigned b_has_aimed : 1;
+    unsigned b_is_aiming : 1;  /* Wait for the aiming turn to settle before
+                                  scanning. */
+    unsigned b_is_on_bend : 1; /* Latch the bend estimate at the first scan. */
+    unsigned b_is_after_tape : 1;
+    unsigned b_has_extended : 1; /* Track whether the line was seen during
+                                  * axle placement or the extra return drive.
+                                  */
+    unsigned rel_bits : 8;       /* Two's-complement heading; use
+                                    avoid_obstacle_relative_get/set. */
+    unsigned side_turn : 4;
+    unsigned side_turns : 2;          /* Count the turns away on leg 3. */
+    unsigned b_was_toward_bypass : 1; /* Last centring swerve direction. */
+    unsigned centre_tries : 2;        /* Number of centring attempts. */
+    unsigned blocked_reads : 2; /* Count blocked readings in a row on leg 1. */
+    unsigned aim_bits : 7;      /* Two's-complement aim; use
+                                   avoid_obstacle_aim_get/set. */
+    uint16_t searched_mm; /* Measure travel beside the obstacle on leg 3. */
+    unsigned lat_mm : 9;  /* Saturate sideways leg 3 travel after turning
+                           * away at 511 mm.
+                           */
+    unsigned peek_lat_mm : 12; /* Store the distance from the original line
+                                * in millimetres at the last leg 3 side peek.
+                                */
+    uint32_t  phase_us;
+    uint32_t  started_us;
     float64_t leg_start_m;
-} s5_avoidance_t;
+} avoid_obstacle_t;
 
 /** Read the relative heading in degrees, positive toward the bypass side. */
-static inline int s5_rel_get (const s5_avoidance_t * p_avoidance)
+static inline int
+avoid_obstacle_relative_get (const avoid_obstacle_t * p_avoidance)
 {
     /* Each masked quantity fits int; subtraction sign-extends without a
      * signed bit-field or a bitwise operation on signed data. */
@@ -111,7 +132,8 @@ static inline int s5_rel_get (const s5_avoidance_t * p_avoidance)
 }
 
 /** Store the relative heading using the existing eight-bit representation. */
-static inline void s5_rel_set (s5_avoidance_t * p_avoidance, int degrees)
+static inline void avoid_obstacle_relative_set (avoid_obstacle_t * p_avoidance,
+                                                int                degrees)
 {
     /* Conversion to unsigned is modulo 2^N, so the low eight bits preserve
      * the previous target representation, including negative angles. */
@@ -119,7 +141,7 @@ static inline void s5_rel_set (s5_avoidance_t * p_avoidance, int degrees)
 }
 
 /** Read the aimed turn in degrees; the planner uses -40 through +40. */
-static inline int s5_aim_get (const s5_avoidance_t * p_avoidance)
+static inline int avoid_obstacle_aim_get (const avoid_obstacle_t * p_avoidance)
 {
     /* Both masks fit int; subtraction restores the signed seven-bit value. */
     return (int)(p_avoidance->aim_bits & 0x3fU) -
@@ -127,24 +149,76 @@ static inline int s5_aim_get (const s5_avoidance_t * p_avoidance)
 }
 
 /** Store the aimed turn without a signed bit-field. Zero remains zero. */
-static inline void s5_aim_set (s5_avoidance_t * p_avoidance, int degrees)
+static inline void avoid_obstacle_aim_set (avoid_obstacle_t * p_avoidance,
+                                           int                degrees)
 {
     /* The low seven bits retain the existing signed target representation. */
     p_avoidance->aim_bits = (unsigned int)degrees & 0x7fU;
 }
 
-void s5_avoidance_init (s5_avoidance_t * p_a, const s5_config_t * p_config);
-bool s5_range_ready (const s5_observation_t * p_o, uint32_t now);
-void s5_avoidance_begin (s5_avoidance_t * p_a, uint32_t now);
-void s5_avoidance_abort (s5_avoidance_t * p_a);
-s5_action_t s5_avoidance_step (s5_avoidance_t * p_a,
-                               const s5_input_t * p_input);
-/* Turn (deg, + = left) that faces the obstacle centre seen in the profile,
- * from the wheel axle; 0 below S5_AIM_MIN_DEG, clamped to S5_AIM_MAX_DEG. */
-int s5_aim_deg (const s5_profile_t * p_p);
-/* Same, on a bend turning turn_pct (%, + = left): bigger aim (see s5_config.h).
+/** @brief Clear an avoidance controller and copy its configuration.
+ * @param p_detour Nonnull writable state. The controller task serializes
+ * updates.
+ * @param p_config Nonnull configuration to copy, including speed in mm/s
+ * and chassis dimensions in mm. The caller supplies validated values.
  */
-int s5_aim_deg_bend (const s5_profile_t * p_p, int turn_pct, bool * p_bend);
+void avoid_obstacle_init (avoid_obstacle_t *  p_detour,
+                          const s5_config_t * p_config);
+
+/** @brief Check whether the current ultrasonic range can be used.
+ * @param p_range_observation Observation to check, or null.
+ * @param now Current microsecond clock, using the observation's time base.
+ * @return True for a valid echo from 30 through 4000 mm whose unsigned age
+ * is at most S5_RANGE_FRESH_US.
+ */
+bool avoid_obstacle_range_ready (
+    const s5_codec_observation_t * p_range_observation, uint32_t now);
+
+/** @brief Start a new bypass by waiting for the vehicle to stop.
+ * @param p_detour Nonnull initialized state. Resets the plan, recovery and
+ * fault.
+ * @param now Start of the run and first phase in microseconds.
+ */
+void avoid_obstacle_begin (avoid_obstacle_t * p_detour, uint32_t now);
+
+/** @brief Set the controller idle and reset its line-recovery state.
+ * @param p_detour Nonnull writable state. Clears the outstanding-action flag.
+ */
+void avoid_obstacle_abort (avoid_obstacle_t * p_detour);
+
+/** @brief Advance one controller update and return its motion proposal.
+ * @param p_detour Initialized, caller-owned state, updated in place.
+ * @param p_in Current observations, including time in microseconds and
+ * centre travel in metres. The caller passes a consistent snapshot.
+ * @return One action. A missing argument requests STOP. When active, motion
+ * or scan faults and expired deadlines can latch a fault and request STOP.
+ */
+avoid_obstacle_action_t
+avoid_obstacle_step (avoid_obstacle_t *             p_detour,
+                     const avoid_obstacle_input_t * p_in);
+#ifdef S5_HOST_TEST
+/** @brief Read extra clearance in millimetres from a valid test plan. */
+unsigned pass_extra_test (const avoid_obstacle_t * p_detour);
+#endif
+/** @brief Calculate a straight-track aim from the axle to the obstacle centre.
+ * @param p_scan_profile Scanned obstacle profile with edges and front range in
+ * mm.
+ * @return Degrees, positive left and limited to S5_AIM_MAX_DEG in magnitude.
+ * Null, invalid, over-wide or below-threshold profiles produce zero.
+ */
+int avoid_obstacle_aim_deg (const profile_obstacle_t * p_scan_profile);
+
+/** @brief Calculate the aiming turn using the last line-following command.
+ * @param p_scan_profile Scanned profile or null, with the same rejection as
+ * avoid_obstacle_aim_deg.
+ * @param turn_pct Last commanded turn in percent, positive left.
+ * @param pb_is_bend Nonnull output, set from turn_pct even if the scan is
+ * invalid.
+ * @return Signed degrees. A bend toward the detected bearing uses the bend
+ * gain and cap. A bend in the opposite direction uses the straight cap.
+ */
+int avoid_obstacle_aim_deg_bend (const profile_obstacle_t * p_scan_profile,
+                                 int turn_pct, bool * pb_is_bend);
 #endif
 
 /* End of file. */

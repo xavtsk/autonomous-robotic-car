@@ -382,7 +382,7 @@ class DiscoveryTests(unittest.TestCase):
             self.assertEqual(result["required_bits"], width)
             self.assertEqual(result["domain"]["initialized_domain"]["max"], initialized_max)
             self.assertNotIn("step", result["domain"])
-            self.assertTrue(any("barcode_work_test.c:" in source for source in result["evidence"]))
+            self.assertTrue(any("decode_work_main.c:" in source for source in result["evidence"]))
 
     def test_public_workspace_boundaries_do_not_certify_retained_instances(self):
         policies = inventory.read_json(HERE / "inventory_policies.json")

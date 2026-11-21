@@ -16,6 +16,13 @@ AllowShortCaseLabelsOnASingleLine: false
 IndentCaseLabels: false
 PointerAlignment: Middle
 DerivePointerAlignment: false
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AlignFunctionPointers: true
+AlignConsecutiveAssignments:
+  Enabled: true
+  AlignCompound: true
+  PadOperators: false
 SpaceBeforeParens: Custom
 SpaceBeforeParensOptions:
   AfterControlStatements: true

@@ -21,47 +21,60 @@ typedef struct
      * centred state, so the line is never reported lost while following;
      * signal_floor is then a per-sensor "touching the tape" level. Steering
      * error and junction detection are identical in both modes. */
-    bool between;
-} s3_line_config_t;
+    bool b_is_tape_between;
+} line_detection_config_t;
 
 typedef struct
 {
-    uint8_t active : 1;
+    uint8_t  b_is_active : 1;
     uint32_t since_us;
-} s3_persistence_t;
+} line_detection_persistence_t;
 
 typedef struct
 {
-    bool valid;
-    bool present;
-    bool
-        junction_candidate; /* Includes a pending, not yet reported junction. */
-    int16_t error;          /* -100..100, negative = line left. */
-    bool lost_event;
-    bool reacquired_event;
-    bool junction_event;
-    bool touching; /* between mode: a sensor is at/above signal_floor */
-} s3_line_observation_t;
+    bool b_is_valid;
+    bool b_is_line_present;
+    bool b_has_junction_candidate; /* Includes a pending, not yet reported
+                                      junction. */
+    int16_t error;                 /* -100..100, negative = line left. */
+    bool    b_has_lost_event;
+    bool    b_has_reacquired_event;
+    bool    b_has_junction_event;
+    bool    b_is_touching_tape; /* In between-line mode, the sensor is active at
+                                 * or above signal_floor.
+                                 */
+} line_detection_observation_t;
 
 typedef struct
 {
-    s3_line_config_t config;
-    s3_persistence_t lost, acquired, junction, clear;
-    uint32_t last_us;
-    uint8_t configured : 1;
-    uint8_t seen_sample : 1;
-    uint8_t present : 1;
-    uint8_t junction_latched : 1;
-    uint8_t loss_reported : 1;
-} s3_line_detector_t;
+    line_detection_config_t      config;
+    line_detection_persistence_t lost;
+    line_detection_persistence_t acquired;
+    line_detection_persistence_t junction;
+    line_detection_persistence_t clear;
+    uint32_t                     last_us;
+    uint8_t                      b_is_configured : 1;
+    uint8_t                      b_has_seen_sample : 1;
+    uint8_t                      b_is_line_present : 1;
+    uint8_t                      b_is_junction_latched : 1;
+    uint8_t                      b_was_loss_reported : 1;
+} line_detection_t;
 
-s3_line_config_t s3_line_defaults (void);
-bool s3_line_init (s3_line_detector_t * p_detector,
-                   const s3_line_config_t * p_config);
-void s3_line_reset (s3_line_detector_t * p_detector);
-s3_line_observation_t s3_line_update (s3_line_detector_t * p_detector,
-                                      uint32_t timestamp_us, bool inputs_valid,
-                                      uint16_t left_dark, uint16_t right_dark);
+/** @brief Return default darkness thresholds and persistence settings. */
+line_detection_config_t line_detection_defaults (void);
+
+/** @brief Initialize the detector with the borrowed thresholds and timing. */
+bool line_detection_init (line_detection_t *              p_detector,
+                          const line_detection_config_t * p_config);
+
+/** @brief Clear observation history while retaining the configured inputs. */
+void line_detection_reset (line_detection_t * p_detector);
+
+/** @brief Observe 0..1000 darkness readings at a wrapping microsecond time. */
+line_detection_observation_t
+line_detection_update (line_detection_t * p_detector, uint32_t timestamp_us,
+                       bool b_are_inputs_valid, uint16_t left_dark,
+                       uint16_t right_dark);
 #endif
 
 /* End of file. */

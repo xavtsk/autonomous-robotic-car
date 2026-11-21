@@ -2,7 +2,9 @@
  * @brief Configure bench IR channel routing, measured reflectance references
  * and timing.
  */
-/* Measured 2026-10-27; remeasure after height/material/lighting changes. */
+/* These reflectance values were measured on 27 October 2026 at the
+ * bench sensor height and lighting. Changing the height, paper or light
+ * can change the measured endpoints. */
 #ifndef BUDDY3_IR_BENCH_CONFIG_H
 #define BUDDY3_IR_BENCH_CONFIG_H
 #include "ir_acquisition.h"
@@ -21,7 +23,7 @@
 #define IR_BENCH_LEFT_CHANNEL S3_ADC_CHANNEL_LEFT       /* GP27 */
 #define IR_BENCH_RIGHT_CHANNEL S3_ADC_CHANNEL_RIGHT     /* GP26 */
 /* Midpoints of controller/builtin_calibration.h measured ranges.
- * builtin_test.c checks that boot and bench references remain identical. */
+ * testing/integration/cal_defaults_main.c checks these midpoints. */
 #define IR_BENCH_WHITE_RAW (215U)
 #define IR_BENCH_BLACK_RAW (3550U)
 #define IR_BENCH_LEFT_WHITE_RAW (144U)

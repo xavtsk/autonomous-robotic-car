@@ -1,10 +1,8 @@
 /** @file buddy2.h
  * @brief RTOS lifecycle interface.
- */
-/*
- * File: buddy2.h
- * Owner: Buddy 2 - Motion control using motors and wheel encoders.
- * Purpose: RTOS lifecycle interface.
+ *
+ * @par Ownership
+ * Buddy 2 - Motion control using motors and wheel encoders.
  *
  * Kernel objects (TEAM.md section 6): 1 task, 1 mutex, 1 message buffer
  * (report queue), 1 cyclic handler.
@@ -16,9 +14,9 @@
 
 #include "../app.h"
 
-#define S2_PRI_MAIN (14)         /* motion task: highest application band */
+#define S2_PRI_MAIN (14) /* Use the highest application priority band. */
 #define S2_MOTION_CORE (TP_PRC1) /* core 0                                */
-#define S2_PERIOD_MS (10U)       /* control period                        */
+#define S2_PERIOD_MS (10U)       /* Set the control period in milliseconds. */
 
 /* Initialization creates objects only; start launches the motion task. */
 ER subsystem2_init (void);

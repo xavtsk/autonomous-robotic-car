@@ -3,138 +3,196 @@
  */
 #include "line_detection.h"
 
-s3_line_config_t s3_line_defaults (void)
+static bool persisted (line_detection_persistence_t * p_timer,
+                       bool b_is_condition_met, uint32_t now,
+                       uint32_t duration);
+
+/** @brief Return the line detector's default darkness thresholds, persistence
+ * durations in microseconds and line geometry selection.
+ */
+line_detection_config_t line_detection_defaults (void)
 {
-    return (s3_line_config_t){200U,   600U,    100000U, 30000U,
-                              30000U, 100000U, 30000U,  false};
+    return (line_detection_config_t){200U,   600U,    100000U, 30000U,
+                                     30000U, 100000U, 30000U,  false};
 }
 
-void s3_line_reset (s3_line_detector_t * p_detector)
+/** @brief Clear detector history and latches while retaining the current
+ * configuration and configured flag. A null pointer is ignored.
+ */
+void line_detection_reset (line_detection_t * p_detector)
 {
     if (p_detector != 0)
     {
-        s3_line_config_t cfg = p_detector->config;
-        bool configured = p_detector->configured;
-        *p_detector = (s3_line_detector_t){0};
-        p_detector->config = cfg;
-        p_detector->configured = configured;
+        line_detection_config_t cfg              = p_detector->config;
+        const bool              b_was_configured = p_detector->b_is_configured;
+        *p_detector                              = (line_detection_t){0};
+        p_detector->config                       = cfg;
+        p_detector->b_is_configured              = b_was_configured;
     }
 }
 
-bool s3_line_init (s3_line_detector_t * p_detector,
-                   const s3_line_config_t * p_config)
+/** @brief Clear the supplied detector, validate the thresholds and timing
+ * settings, then store an accepted configuration. Invalid settings
+ * leave the detector unconfigured.
+ */
+bool line_detection_init (line_detection_t *              p_detector,
+                          const line_detection_config_t * p_config)
 {
-    if (p_detector == 0)
+    if (0 == p_detector)
     {
         return false;
     }
-    *p_detector = (s3_line_detector_t){0};
-    if ((p_config == 0) || (p_config->signal_floor == 0U) ||
-        (p_config->signal_floor > 2000U) || (p_config->junction_dark == 0U) ||
-        (p_config->junction_dark > 1000U) || (p_config->lost_us == 0U) ||
-        (p_config->reacquire_us == 0U) || (p_config->junction_us == 0U) ||
-        (p_config->rearm_us == 0U) || (p_config->max_gap_us == 0U) ||
-        (p_config->max_gap_us >= 0x80000000U) ||
-        (p_config->lost_us >= 0x80000000U) ||
-        (p_config->reacquire_us >= 0x80000000U) ||
-        (p_config->junction_us >= 0x80000000U) ||
-        (p_config->rearm_us >= 0x80000000U) ||
-        (p_config->between && (p_config->signal_floor > 1000U)))
+
+    *p_detector = (line_detection_t){0};
+
+    if ((((((((((((((((0 == p_config) || (0U == p_config->signal_floor)) ||
+                     (p_config->signal_floor > 2000U)) ||
+                    (0U == p_config->junction_dark)) ||
+                   (p_config->junction_dark > 1000U)) ||
+                  (0U == p_config->lost_us)) ||
+                 (0U == p_config->reacquire_us)) ||
+                (0U == p_config->junction_us)) ||
+               (0U == p_config->rearm_us)) ||
+              (0U == p_config->max_gap_us)) ||
+             (p_config->max_gap_us >= 0x80000000U)) ||
+            (p_config->lost_us >= 0x80000000U)) ||
+           (p_config->reacquire_us >= 0x80000000U)) ||
+          (p_config->junction_us >= 0x80000000U)) ||
+         (p_config->rearm_us >= 0x80000000U)) ||
+        ((p_config->b_is_tape_between) && (p_config->signal_floor > 1000U)))
     {
         return false;
     }
-    p_detector->config = *p_config;
-    p_detector->configured = true;
+
+    p_detector->config          = *p_config;
+    p_detector->b_is_configured = true;
     return true;
 }
 
-static bool persisted (s3_persistence_t * p_timer, bool condition, uint32_t now,
-                       uint32_t duration)
+/** @brief Evaluate left and right darkness in the range 0 to 1000 at the given
+ * microsecond timestamp. Invalid input or a bad sample gap clears
+ * history. Return line error, presence and timed junction or loss
+ * events according to configured geometry.
+ */
+line_detection_observation_t
+line_detection_update (line_detection_t * p_detector, uint32_t timestamp_us,
+                       bool b_are_inputs_valid, uint16_t left_dark,
+                       uint16_t right_dark)
 {
-    if (!condition)
-    {
-        p_timer->active = false;
-        return false;
-    }
-    if (!p_timer->active)
-    {
-        p_timer->active = true;
-        p_timer->since_us = now;
-    }
-    return (uint32_t)(now - p_timer->since_us) >= duration;
-}
+    line_detection_observation_t out = {false};
 
-s3_line_observation_t s3_line_update (s3_line_detector_t * p_detector,
-                                      uint32_t timestamp_us, bool inputs_valid,
-                                      uint16_t left_dark, uint16_t right_dark)
-{
-    s3_line_observation_t out = {0};
-    bool signal, both_black, gap_bad;
-    if ((p_detector == 0) || !p_detector->configured)
+    if ((0 == p_detector) || (!p_detector->b_is_configured))
     {
         return out;
     }
-    gap_bad = p_detector->seen_sample &&
-              (((uint32_t)(timestamp_us - p_detector->last_us) >
-                p_detector->config.max_gap_us) ||
-               (timestamp_us == p_detector->last_us));
-    if (!inputs_valid || (left_dark > 1000U) || (right_dark > 1000U) || gap_bad)
+
+    const bool b_is_gap_invalid = (p_detector->b_has_seen_sample) &&
+                                  (((timestamp_us - p_detector->last_us) >
+                                    p_detector->config.max_gap_us) ||
+                                   (timestamp_us == p_detector->last_us));
+
+    if ((((!b_are_inputs_valid) || (left_dark > 1000U)) ||
+         (right_dark > 1000U)) ||
+        b_is_gap_invalid)
     {
-        s3_line_reset(p_detector);
+        line_detection_reset(p_detector);
         return out;
     }
-    p_detector->last_us = timestamp_us;
-    p_detector->seen_sample = true;
-    out.valid = true;
-    out.error = (int16_t)(((int32_t)right_dark - (int32_t)left_dark) / 10);
-    both_black = (left_dark >= p_detector->config.junction_dark) &&
-                 (right_dark >= p_detector->config.junction_dark);
-    if (p_detector->config.between)
+
+    /* Both validated darkness inputs fit int32_t. Their signed difference
+     * is in -1000..1000, so division by ten fits the retained int16_t. */
+    /* clang-format off */
+    p_detector->last_us           = timestamp_us;
+    p_detector->b_has_seen_sample = true;
+    out.b_is_valid                = true;
+    out.error                     =
+        (int16_t)(((int32_t)right_dark - (int32_t)left_dark) / 10);
+    /* clang-format on */
+    const bool b_are_both_black =
+        (left_dark >= p_detector->config.junction_dark) &&
+        (right_dark >= p_detector->config.junction_dark);
+
+    bool b_has_signal;
+    if (p_detector->config.b_is_tape_between)
     {
         /* The tape lies between the sensors: both white = centred. There is
          * no "line lost" while following; a sensor touching the tape is
          * steered away from by the unchanged error term below. */
-        out.touching = (left_dark >= p_detector->config.signal_floor) ||
-                       (right_dark >= p_detector->config.signal_floor);
-        signal = true;
-        p_detector->present = true;
+        /* clang-format off */
+        out.b_is_touching_tape        =
+            (left_dark >= p_detector->config.signal_floor) ||
+            (right_dark >= p_detector->config.signal_floor);
+        b_has_signal                  = true;
+        p_detector->b_is_line_present = true;
+        /* clang-format on */
     }
     else
     {
-        signal = ((uint32_t)left_dark + right_dark) >=
-                 p_detector->config.signal_floor;
-        if (persisted(&p_detector->lost, !signal, timestamp_us,
-                      p_detector->config.lost_us) &&
-            !p_detector->loss_reported)
+        b_has_signal = ((uint32_t)left_dark + right_dark) >=
+                       p_detector->config.signal_floor;
+
+        if ((persisted(&p_detector->lost, !b_has_signal, timestamp_us,
+                       p_detector->config.lost_us)) &&
+            (!p_detector->b_was_loss_reported))
         {
-            p_detector->present = false;
-            out.lost_event = true;
-            p_detector->loss_reported = true;
+            p_detector->b_is_line_present   = false;
+            out.b_has_lost_event            = true;
+            p_detector->b_was_loss_reported = true;
         }
-        if (persisted(&p_detector->acquired, signal, timestamp_us,
-                      p_detector->config.reacquire_us) &&
-            !p_detector->present)
+
+        if ((persisted(&p_detector->acquired, b_has_signal, timestamp_us,
+                       p_detector->config.reacquire_us)) &&
+            (!p_detector->b_is_line_present))
         {
-            p_detector->present = true;
-            p_detector->loss_reported = false;
-            out.reacquired_event = true;
+            p_detector->b_is_line_present   = true;
+            p_detector->b_was_loss_reported = false;
+            out.b_has_reacquired_event      = true;
         }
     }
-    if (persisted(&p_detector->junction, both_black, timestamp_us,
-                  p_detector->config.junction_us) &&
-        !p_detector->junction_latched)
+
+    if ((persisted(&p_detector->junction, b_are_both_black, timestamp_us,
+                   p_detector->config.junction_us)) &&
+        (!p_detector->b_is_junction_latched))
     {
-        p_detector->junction_latched = true;
-        out.junction_event = true;
+        p_detector->b_is_junction_latched = true;
+        out.b_has_junction_event          = true;
     }
-    if (persisted(&p_detector->clear, !both_black, timestamp_us,
+
+    if (persisted(&p_detector->clear, !b_are_both_black, timestamp_us,
                   p_detector->config.rearm_us))
     {
-        p_detector->junction_latched = false;
+        p_detector->b_is_junction_latched = false;
     }
-    out.present = p_detector->present && signal;
-    out.junction_candidate = both_black || p_detector->junction_latched;
+
+    /* clang-format off */
+    out.b_is_line_present        =
+        (p_detector->b_is_line_present) && b_has_signal;
+    out.b_has_junction_candidate =
+        b_are_both_black || (p_detector->b_is_junction_latched);
+    /* clang-format on */
     return out;
+}
+
+/** @brief Measure continuous assertion in wrapping microseconds. A false
+ * condition clears tracking. A newly true condition starts the
+ * interval at now.
+ */
+static bool persisted (line_detection_persistence_t * p_timer,
+                       bool b_is_condition_met, uint32_t now, uint32_t duration)
+{
+    if (!b_is_condition_met)
+    {
+        p_timer->b_is_active = false;
+        return false;
+    }
+
+    if (!p_timer->b_is_active)
+    {
+        p_timer->b_is_active = true;
+        p_timer->since_us    = now;
+    }
+
+    return (now - p_timer->since_us) >= duration;
 }
 
 /* End of file. */

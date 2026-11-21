@@ -5,8 +5,7 @@ Records named for an earlier date retain their original results and assumptions.
 
 | Read first | Purpose |
 | --- | --- |
-| [Current status](CURRENT_STATUS.md) | Deployed preservation baseline, online evidence and remaining validation. |
-| [Repository cleanup](REPOSITORY_CLEANUP.md) | Bounded housekeeping decisions and verification; remaining cleanup phases. |
+| [Current status](CURRENT_STATUS.md) | Release images, rollback hash, test results and remaining physical checks. |
 | [Build and test](BUILD_AND_TEST.md) | Explicit build profiles, host commands and result interpretation. |
 | [Team ownership](../TEAM.md) | Pins, peripherals, tasks and module owners. |
 | [Testing guide](../testing/README.md) | Recording host, integration and physical results. |
@@ -17,8 +16,19 @@ Records named for an earlier date retain their original results and assumptions.
 | --- | --- |
 | [BARR-C matrix](compliance/BARR_RULE_MATRIX.md) | Complete chapter/subclause ledger and exact checker limitations. |
 | [Pending BARR cases](compliance/BARR_EXCEPTIONS.md) | Specific preservation conflicts; none automatically approved. |
-| [CR1 field inventory](compliance/CR1_FIELD_INVENTORY.md) | Owned data domains, widths, precision and coverage status. |
-| [CR1 evidence](CHANGE_REQUIREMENT_1_EVIDENCE.md) | Earlier matched-size and timing evidence, with its recorded limits. |
+| [CR1 data representation table](compliance/CR1_SUBMISSION_WIDTHS.md) | Current scoped widths, valid ranges and codec totals. |
+| [CR1 evidence](CHANGE_REQUIREMENT_1_EVIDENCE.md#phase-3-submission-results) | Current matched RAM and message sizes, baseline comparison and timing limits. |
+| [MQTT protocol](../app_program/subsystem1/MQTT_PROTOCOL.md) | Topic and byte contracts. |
+| [Remote control](REMOTE_CONTROL_PROTOCOL.md) | START/STOP/RESET request, reply and ownership contracts. |
+| [Barcode capture protocol](BARCODE_WIRE_PROTOCOL.md) | Trace transfer and replay data. |
+
+## Supporting and historical records
+
+| Record | Purpose |
+| --- | --- |
+| [Repository cleanup](REPOSITORY_CLEANUP.md) | Phase 1 housekeeping decisions and earlier Phase 2 verification. |
+| [Cleanup checkpoints through Phase 3](history/2026-11-22-compliance-checkpoints.md) | Earlier status reports with their original scope and results. |
+| [Broader CR1 declaration inventory](compliance/CR1_FIELD_INVENTORY.md) | Earlier inventory snapshot and open coverage. |
 | [Abbreviations](compliance/ABBREVIATIONS.md) | Shared terminology. |
 | [Module templates](compliance/templates/README.md) | Header/source structure and documentation. |
 | [Alias/assertion batch](compliance/ALIAS_ASSERT_BATCH.md) | Exact type-alias/assertion transformation and verification limits. |
@@ -31,9 +41,6 @@ Records named for an earlier date retain their original results and assumptions.
 | [Conditional compilation](compliance/CONDITIONAL_COVERAGE.md) | Matching profile receipts, full matrix union and remaining arm coverage. |
 | [Motion contracts](compliance/MOTION_FUNCTION_CONTRACTS.md) | Exact PID, packed motion-word and failed-output semantics. |
 | [Sensor and terrain contracts](compliance/SENSOR_TERRAIN_FUNCTION_CONTRACTS.md) | IMU transaction failures, hump state and classification priority. |
-| [MQTT protocol](../app_program/subsystem1/MQTT_PROTOCOL.md) | Topic and byte contracts. |
-| [Remote control](REMOTE_CONTROL_PROTOCOL.md) | START/STOP/RESET request, reply and ownership contracts. |
-| [Barcode capture protocol](BARCODE_WIRE_PROTOCOL.md) | Trace transfer and replay data. |
 
 Subsystem guides: [Buddy 1](../app_program/subsystem1/README.md),
 [Buddy 2](../app_program/subsystem2/README.md),

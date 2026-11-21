@@ -1,10 +1,8 @@
 /** @file buddy3.h
  * @brief RTOS lifecycle interface for the opt-in IR bench diagnostic.
- */
-/*
- * File: buddy3.h
- * Owner: Buddy 3 - IR line following and barcode decoding.
- * Purpose: RTOS lifecycle interface for the opt-in IR bench diagnostic.
+ *
+ * @par Ownership
+ * Buddy 3 - IR line following and barcode decoding.
  */
 
 #ifndef SUBSYSTEM3_H

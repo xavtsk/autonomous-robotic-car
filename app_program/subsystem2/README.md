@@ -27,6 +27,12 @@ from the current documentation index.
 
 ## How it runs
 
+```text
+Request API -> mutex-protected motion state -> motor task -> PWM
+Encoder PIO -> wheel feedback ------------^         |
+Controller <- bounded completion queue <------------+
+```
+
 - `subsystem2_init()` creates one mutex, one message buffer (report queue)
   and one cyclic handler (10 ms).
 - `subsystem2_start()` starts the **motion** task (priority 14, core 0). The task
@@ -61,7 +67,7 @@ Requests return immediately; the Vehicle Controller follows progress with
 | `motion_get_status(&status)`, `motion_get_status_packed()` | snapshot of the shared data (telemetry), full precision or packed in 64 bits |
 | `motion_request_packed(word)` with `motion_cmd_...()` | same requests as above, as a packed 32-bit command word |
 | `motion_is_stopped()` | stopped acknowledgement: no command running, both wheels still |
-| `wheel_speed_*_mps()`, `wheel_distance_*_m()`, `robot_speed_mps()`, `robot_distance_m()`, `robot_heading_deg()`, `enc_l_count()`, `enc_r_count()` | estimates (FR4), safe from any task |
+| `wheel_speed_*_mps()`, `wheel_distance_*_m()`, `motion_robot_speed_mps()`, `robot_distance_m()`, `robot_heading_deg()`, `enc_l_count()`, `enc_r_count()` | estimates (FR4), safe from any task |
 
 Faults (motors braked, latched until `motion_reset()`): stall / no encoder
 progress, stale velocity command, wheel turning against its command,

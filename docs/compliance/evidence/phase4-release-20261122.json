@@ -1,0 +1,251 @@
+{
+  "date": "2026-11-22",
+  "branch": "codex/compliance-preserve-behaviour",
+  "working_tree_base_commit": "888d744f87b8d6958cf4e0769f94d368c0a7f09d",
+  "release_source_sha256": "8925530d6ee9a2cc9df04666944e8d22da143f4fafbc45c1fff8ef91a41ff197",
+  "arm_gnu_toolchain": "14.3.1",
+  "pico_sdk": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+  "network_configuration": "Public example settings for all three new review builds",
+  "builds": {
+    "checked_production_inputs": 832,
+    "checked_rollback_sha256": "690d145ba1a5c3b9771e0af191f01632697306d41274cc9a113a8d00fb1cbffa",
+    "rollback_path": "build/compliance-review-20261119/compliance-wifi.uf2",
+    "production": {
+      "exit": 0,
+      "command": [
+        "C:/msys64/usr/bin/make.exe",
+        "PICO_SDK_PATH=../../../tooling/pico-sdk",
+        "E2U=",
+        "SMP=1",
+        "CONSOLE=usb_cdc",
+        "CRASH_REPORT=0",
+        "WIFI=cyw43",
+        "NET=lwip",
+        "MQTT=1",
+        "S3_MOTION=1",
+        "S3_STRAIGHT_TEST=0",
+        "S4=1",
+        "S4_BENCH=0",
+        "S5=1",
+        "S5_HARDWARE_CONFIRMED=1",
+        "IR_DEBUG=1",
+        "IMU_DEBUG=0",
+        "TEST=0",
+        "IR_BENCH=0",
+        "IR_CHANNELS=1",
+        "DIAGNOSTICS=0",
+        "MOTION_SMOKE=0",
+        "-j4"
+      ],
+      "snapshot_sha256": "70b84e71615783d761a58faec2bd776754ed29275a2089f80229605123c5a11c",
+      "common_build_inputs_sha256": "e95e47dffc9c67a2a2c8ab24e1dbd71455bdcd25cf04a721ffe52534e0e5637c",
+      "public_example_config_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+      "elf": "build/cr1-20261122/after/build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_s4_s5_ir_debug.elf",
+      "elf_sha256": "58d98646295cdd5737601f17323a1cc1eeebe828b441f29ba2be259af49a2c2d",
+      "text_bytes": 465748,
+      "data_bytes": 696,
+      "bss_bytes": 128784,
+      "static_ram_bytes": 129480,
+      "symbol_bytes": {
+        "g_control": 56,
+        "g_drive": 10832,
+        "s3_drive_process": 3568,
+        "terr_link_poll": 500,
+        "terr_link_report": 1060
+      }
+    },
+    "diagnostics": {
+      "baseline-diagnostics": {
+        "command": [
+          "C:/msys64/usr/bin/make.exe",
+          "PICO_SDK_PATH=../../../tooling/pico-sdk",
+          "E2U=",
+          "SMP=1",
+          "CONSOLE=usb_cdc",
+          "CRASH_REPORT=0",
+          "WIFI=cyw43",
+          "NET=lwip",
+          "MQTT=1",
+          "S3_MOTION=1",
+          "S3_STRAIGHT_TEST=0",
+          "S4=1",
+          "S4_BENCH=0",
+          "S5=1",
+          "S5_HARDWARE_CONFIRMED=1",
+          "IR_DEBUG=1",
+          "IMU_DEBUG=0",
+          "TEST=0",
+          "IR_BENCH=0",
+          "IR_CHANNELS=1",
+          "DIAGNOSTICS=1",
+          "MOTION_SMOKE=0",
+          "-j4"
+        ],
+        "returncode": 0,
+        "source_archive_sha256": "39b81e7506e379a904e44a6eebc646f1c7e89315cda63b9665758ffaea45de26",
+        "public_example_config_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+        "log_sha256": "5ffdbc09df82e706a1cf6aacdc78fe74438cebe09ec424b543f28cd5c0866f34",
+        "text_bytes": 468940,
+        "data_bytes": 688,
+        "bss_bytes": 129136,
+        "static_ram_bytes": 129824
+      },
+      "candidate-diagnostics": {
+        "command": [
+          "C:/msys64/usr/bin/make.exe",
+          "PICO_SDK_PATH=../../../tooling/pico-sdk",
+          "E2U=",
+          "SMP=1",
+          "CONSOLE=usb_cdc",
+          "CRASH_REPORT=0",
+          "WIFI=cyw43",
+          "NET=lwip",
+          "MQTT=1",
+          "S3_MOTION=1",
+          "S3_STRAIGHT_TEST=0",
+          "S4=1",
+          "S4_BENCH=0",
+          "S5=1",
+          "S5_HARDWARE_CONFIRMED=1",
+          "IR_DEBUG=1",
+          "IMU_DEBUG=0",
+          "TEST=0",
+          "IR_BENCH=0",
+          "IR_CHANNELS=1",
+          "DIAGNOSTICS=1",
+          "MOTION_SMOKE=0",
+          "-j4"
+        ],
+        "returncode": 0,
+        "source_archive_sha256": "8925530d6ee9a2cc9df04666944e8d22da143f4fafbc45c1fff8ef91a41ff197",
+        "public_example_config_sha256": "93c50298819ad2b30394a56c75fe35c819ef18c19f334bac88c4ea28f4d233db",
+        "log_sha256": "7f2974a395205a6080277b84154b262e671073eea44c9cb9a339fba6e164a101",
+        "text_bytes": 468452,
+        "data_bytes": 696,
+        "bss_bytes": 128920,
+        "static_ram_bytes": 129616
+      }
+    }
+  },
+  "firmware": {
+    "images": {
+      "candidate-production": {
+        "files": {
+          "uf2": {
+            "path": "build/release-candidate-20261122/firmware/candidate-production.uf2",
+            "sha256": "a0d825059d036822268bfb936ea1c4e0d3be79b4998842fc21bfcd1ade7cd7b4",
+            "bytes": 933376
+          },
+          "elf": {
+            "path": "build/release-candidate-20261122/firmware/candidate-production.elf",
+            "sha256": "58d98646295cdd5737601f17323a1cc1eeebe828b441f29ba2be259af49a2c2d",
+            "bytes": 4053112
+          },
+          "map": {
+            "path": "build/release-candidate-20261122/firmware/candidate-production.map",
+            "sha256": "b9967c886099323d0284e6a3ff3b41093c3d4afff4550d0e085a1a7f5e1546e9",
+            "bytes": 1579371
+          }
+        },
+        "rp2040_uf2_blocks": 1823,
+        "elf_flash_bytes_verified": 466444
+      },
+      "candidate-diagnostics": {
+        "files": {
+          "uf2": {
+            "path": "build/release-candidate-20261122/firmware/candidate-diagnostics.uf2",
+            "sha256": "0b9967d97ae06716a8d821da0e75cf4e0b95fe72bef5c71c6e96d4497ee74b28",
+            "bytes": 938496
+          },
+          "elf": {
+            "path": "build/release-candidate-20261122/firmware/candidate-diagnostics.elf",
+            "sha256": "18e35aaf677f0ecfd6c97ee051b21922d7072b0f7f4f363fffe3e8c97729ed98",
+            "bytes": 4077800
+          },
+          "map": {
+            "path": "build/release-candidate-20261122/firmware/candidate-diagnostics.map",
+            "sha256": "c33830c3304ebaab715b8b2a979d6a66461328ecc7c03312d99f1ba35230fba8",
+            "bytes": 1582507
+          }
+        },
+        "rp2040_uf2_blocks": 1833,
+        "elf_flash_bytes_verified": 469148
+      },
+      "baseline-diagnostics": {
+        "files": {
+          "uf2": {
+            "path": "build/release-candidate-20261122/firmware/baseline-diagnostics.uf2",
+            "sha256": "9234348e21a8a04ac4999cae4b0ef414cedb13f3e2f2f286d8b524abe1fd88fc",
+            "bytes": 939520
+          },
+          "elf": {
+            "path": "build/release-candidate-20261122/firmware/baseline-diagnostics.elf",
+            "sha256": "012f4d0c7ffe08f5186d19bff7ebbc424df6de4c4103de33195757b7c27f3d2e",
+            "bytes": 4059484
+          },
+          "map": {
+            "path": "build/release-candidate-20261122/firmware/baseline-diagnostics.map",
+            "sha256": "ca4b4f35427b11f498f14916f91e38d5ea298d569b7fbe588306c692dd4a4fab",
+            "bytes": 1575246
+          }
+        },
+        "rp2040_uf2_blocks": 1835,
+        "elf_flash_bytes_verified": 469628
+      }
+    },
+    "converter_sha256": "1fddef6eefbe744b026a2c9aa600f9abc83ede092c8985ffd7a13945605a37ac"
+  },
+  "baseline_comparison": {
+    "phase3_receipt": "docs/compliance/evidence/phase3-submission-20261122.json",
+    "phase3_production_inputs_verified": 832,
+    "trace_sets": 16,
+    "semantic_and_wire_rows": 80959,
+    "barcode_replays": 1008,
+    "inherited_replay_expectation_failures": 2
+  },
+  "linux_gcc": {
+    "runner_exit": 1,
+    "steps": 53,
+    "passed_steps": 48,
+    "failed_steps": {
+      "node": 125,
+      "packages": 1,
+      "subsystem3": 2,
+      "python_dashboard": 1,
+      "frontend": 125
+    },
+    "known_failure": "Subsystem 3 barcode replays reproduce the inherited expectation failure.",
+    "environment_limits": "The offline image lacks Node and CI package dependencies. Its source archive omits dashboard assets.",
+    "sanitizer_passed": [
+      "Buddy 3 drive",
+      "Buddy 4, including the terrain-to-drive integration fixture"
+    ]
+  },
+  "windows_followup": {
+    "frontend_passed": 13,
+    "dashboard_service_passed": 10,
+    "service_includes_local_mqtt": true,
+    "initial_full_dashboard_attempt": "Application Control blocked generated C fixtures; sandbox sockets and the standard interpreter also prevented service execution.",
+    "resolved_service_and_frontend_with_existing_local_runtime": true
+  },
+  "period_ms": {
+    "integrated_ir": 5,
+    "motion": 10,
+    "stationary_ir_bench": 10
+  },
+  "physical_validation": "Pending for the candidate",
+  "local_receipt_sha256": {
+    "build/release-candidate-20261122/target-builds.json": "39229dc47312cab14e3b3cfe8010a506829ee7cbb36c85058913d56bd15c2e25",
+    "build/release-candidate-20261122/firmware-verified.json": "78f9f09efb3ff02273f0885e7f0218d3e5b4015ea27100245684f5f6b0d04548",
+    "build/release-candidate-20261122/candidate-build-inputs.json": "d9da3a2b3241300624fc6df0c04b275299ecbe81e222c8063cb6e964b7aa8204",
+    "build/release-candidate-20261122/candidate-diagnostics-build.log": "7f2974a395205a6080277b84154b262e671073eea44c9cb9a339fba6e164a101",
+    "build/release-candidate-20261122/baseline-diagnostics-build.log": "5ffdbc09df82e706a1cf6aacdc78fe74438cebe09ec424b543f28cd5c0866f34",
+    "build/release-candidate-20261122/linux/checks.json": "6846007cf65ce1cccade688caa7e7ab21850664a6b36fc8c1a3aba3406f25a5d",
+    "build/release-candidate-20261122/linux/gcc/results.json": "5714b4f33772ff429e536a32acdc48dd0a90d7d8c85339e108798c11cff6c2eb",
+    "build/release-candidate-20261122/linux/subsystem3-sanitizers.log": "882d084c067aa14fe2b54de3e39dd9b8e108b0273cf8dbeac255ebd2b1879aad",
+    "build/release-candidate-20261122/linux/subsystem4-sanitizers.log": "a63de356181bf7bf1a5d26e2c9785e211c457d6fec8cd73ad91c7ef2c1cb53d0",
+    "build/release-candidate-20261122/windows-dashboard.log": "0d8429adae3c206c7338fbd2c95c5fea9e75217b678e54557e7cdfadd2da82e3",
+    "build/release-candidate-20261122/windows-frontend.log": "4232e238b4afc430e2426565949d225f6992d5b3c10cf1b356002d2b5fa89c38",
+    "build/release-candidate-20261122/windows-service.log": "a56c186a48d6b16c66d367f4a5e649cc1de288a2ca30ea5cbcecee8b19344974"
+  }
+}

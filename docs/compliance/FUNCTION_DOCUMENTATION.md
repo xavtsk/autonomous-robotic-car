@@ -69,6 +69,26 @@ rearming, preserved historical peaks and classification precedence. Twenty-four
 recorded compiler contexts have unchanged interfaces and no documentation
 warnings. None of these bounded batches establishes whole-project completion.
 
+The local Phase 2 MQTT interface follow-up documents 17 definitions and eleven
+public prototypes in `mqtt_bridge.c` and `mqtt_utk.c/.h`. Contracts describe the
+actual queue selection, failure/output effects, ownership and weak defaults.
+Six target parser contexts have no documentation diagnostics. Unlike the
+earlier comments-only batches, it also renames three private helpers and uses
+an equivalent fixed-width type; the
+[grouped source receipt](evidence/phase2-mechanical.json) records token changes,
+canonical-type compatibility and six matching Arm object/stack comparisons.
+No generated-reference output, Linux runtime check or whole-project coverage is
+claimed for this local follow-up.
+
+The subsequent Wi-Fi owner/policy batch covers all eleven definitions in
+`cyw43_utk.c` and `wifi_retry_policy.h` across eight core/network/scan contexts.
+Contracts explain request acceptance versus connection, lock ownership,
+scan completion, backoff, clock wrap and status-copy coherence limits.
+The same [grouped receipt](evidence/phase2-mechanical.json) records unchanged
+target object contents and stack usage. There are no documentation diagnostics
+in the edited files; two imported SDK warnings remain recorded. This is bounded
+compiler coverage, not a new generated-reference or runtime validation result.
+
 ## Earlier observed workload snapshot
 
 `tools/compliance/barr_functions.py` reuses the compiler contexts and six profile
@@ -115,6 +135,22 @@ contexts have no documentation diagnostics. The later four-job Linux run for
 python tools/compliance/verify_comment_batch.py --manifest docs/compliance/OPERATOR_FUNCTION_CONTRACTS.json --candidate 903057d35ecc1c8551f58c357ae1517c58bd16f5
 ```
 
+## Local obstacle acquisition and recovery contracts
+
+The [grouped Phase 2 receipt](evidence/phase2-mechanical.json) includes
+`obstacle_contract_followup`: eight files covering `scan_obstacle`,
+`ultrasonic_sensor`, `scan_servo` and `line_recovery`. All 22 definition variants
+and 15 public prototypes have reviewed contracts, including APP_S5=0 stubs.
+They describe actual caller ownership, range/rounding, timeout precedence,
+failure output writes, partial hardware setup and latched line confirmation.
+No new validation or behavior change is implied by these descriptions.
+
+The comment-only verifier preserves all C tokens/directives and original
+comments. Six Arm object/relocation/stack comparisons match, six documentation
+contexts have no diagnostics, and nine existing host-test translation units
+compile. Runtime and physical validation are not claimed. These bounded results
+do not refresh the historical whole-project inventory above or close rule 2.2.h.
+
 ## Next review batches
 
 The Phase 2 [mechanical source receipt](evidence/phase2-mechanical.json) also
@@ -143,15 +179,78 @@ undocumented variants), `ctrl_motion.c` (43), `s3_integration.c` (41),
 `bc_decoder.c` and `buddy4.c` (30 each), `buddy5.c` (29), and `s3_drive.c` (28).
 Line movements and conditional definitions can change those counts.
 
+The later working-tree review added contracts to all 43 definitions in
+[`ctrl_motion.c`](../../app_program/subsystem2/ctrl_motion.c). These cover
+the nonzero command ID, request rejection and stop priority, fault ordering,
+encoder units, brake ownership and completion acknowledgement. The motion
+controller produced matching allocated Arm object sections, relocations and
+compiler stack estimates before and after these comment edits. The figures
+above describe the earlier compiler inventory.
+
+The same review documented all 28 definitions in
+[`s3_drive.c`](../../app_program/controller/s3_drive.c), covering barcode
+actions at junctions, braking acknowledgement, motion-report ownership,
+obstacle arbitration and fault/reset precedence. Clang 18.1.1 attached
+function comments to all 28 definitions with avoidance enabled, all 23
+active with avoidance disabled, and all 43 motion-controller definitions.
+Both navigation configurations retained their Arm sections, relocations
+and compiler stack estimates. [Source review and compiler evidence](evidence/phase2-mechanical.json)
+
 The [separate module rename](MOTION_MODULE_RENAME.md) aligns the estimator's
 filenames with its ten existing `motion_estimation_*` functions (BARR 6.1.i).
 It preserves the public API names and uses revision-specific source lookup in
 the shared runners. No API symbol rename is included in the documentation batch.
 
-Prototype review candidates include `usermain`, the two MQTT debug-take callbacks
-in `s3_integration.c`, and `pass_extra_test` under `S5_HOST_TEST`. A canonical
-declaration first seen in a C file is only a candidate, not proof of a violation
-in every profile. Check module headers and external contracts before adding a
-declaration or changing visibility. Public-before-private body order (4.3.b)
-remains a separate review: moving definitions may affect optimizer decisions,
-link layout and stack evidence even when C operations remain the same.
+The kernel declares `usermain` in `kernel/knlinc/kernel.h`. Its application
+implementation and host startup fixture now share the matching declaration in
+[app_main.h](../../app_program/app_main.h). The IR and control debug callbacks
+see the existing [MQTT declarations](../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h)
+before either definition, including when barcode capture is disabled. The
+obstacle header declares `pass_extra_test` only for `S5_HOST_TEST`. The host
+fixture retains a matching declaration for runs against the older headers.
+The [grouped evidence](evidence/phase2-mechanical.json) records eight matched
+Arm compilation contexts for this prototype review. Source ordering and
+whole-project contract coverage remain open.
+
+The owner-task review covers every definition of the terrain and ultrasonic
+tasks and their disabled implementations, the motion owner, both barcode
+decoder profiles and the sampling/reporting integration module. The compiler
+associated a function contract with each active definition in 14 Arm compilation
+contexts. These contracts describe queue overflow, STOP/reset precedence,
+sensor freshness, caller outputs on failure and task ownership where applicable.
+The per-profile counts appear under `phase2_owner_review` in the
+[comparison receipt](evidence/phase2-mechanical.json).
+
+### Function coverage on 20 November
+
+The source review identified 1,761 owned function definitions, including nine
+weak callbacks. Each has a contract on its definition or declaration. All
+300 wholly owned source and header files have a file-level documentation
+marker. The four mixed-ownership files contain team edits to directives or
+calls and contribute no team-owned function definitions.
+
+Clang associated documentation with all 786 distinct host-test definitions
+in 52 compiler configurations and all 672 production definitions in 61 Arm
+translation units. These counts establish rule 2.2.h documentation coverage.
+The generated reference and the accuracy of every individual contract still
+need separate review. [Coverage and source bindings](evidence/phase2-mechanical.json)
+
+### Earlier interface checkpoint
+
+The interface checkpoint added 159 contracts covering diagnostics, course
+and navigation simulation, decoder fixtures and existing test helpers.
+In 52 Linux host-test compiler configurations, Clang attached documentation
+to 432 of 786 distinct fixture definitions. All 672 production definitions
+had compiler-associated documentation in the 61 inspected Arm translation
+units. The host count includes the fixture headers selected by each test.
+Subsequent fixture and conditional-source review produced the totals above.
+[Configuration and source hashes](evidence/phase2-mechanical.json)
+
+In the production compiler profile, Clang attached documentation to all 672
+unique owned function definitions in 64 source and header files across 61
+translation units. This includes application functions, header-defined
+functions and network integration. The production count excludes host-only
+functions and code disabled in that profile. Separate diagnostics builds
+exercise the startup and motion smoke-test code. The counts and source
+bindings are under `phase2_runtime_and_header_review` in the
+[comparison receipt](evidence/phase2-mechanical.json).

@@ -1,78 +1,117 @@
 /** @file avoidance_planner.c
  * @brief Select a bounded bypass plan from the measured obstacle profile.
+ * The selected unsigned bit fields fit in int before promotion.
  */
 #include "avoidance_planner.h"
 
-bool s5_plan (const s5_profile_t * p_p, const s5_config_t * p_c,
-              s5_plan_t * p_out)
+/** @brief Evaluate the available clearance on each side of the measured
+ * obstacle in millimetres. Choose a permitted route under the
+ * configured preference and fill the forward and lateral distances.
+ * Return false when validation fails or neither side fits.
+ */
+bool avoidance_planner_build (const profile_obstacle_t * p_profile,
+                              const s5_config_t *        p_cfg,
+                              avoidance_planner_plan_t * p_out)
 {
-    unsigned left, right, forward, pad;
-    bool value_l, value_r;
-    if (!p_out)
+    unsigned left_offset_mm;
+    unsigned right_offset_mm;
+
+    if (0 == p_out)
     {
         return false;
     }
-    *p_out = (s5_plan_t){0};
-    if (!p_p || !p_c || !p_p->valid || !p_c->half_width_mm || !p_c->margin_mm ||
-        !p_c->max_depth_mm)
+
+    *p_out = (avoidance_planner_plan_t){0};
+
+    if ((((((0 == p_profile) || (0 == p_cfg)) || (!p_profile->b_is_valid)) ||
+          (!p_cfg->half_width_mm)) ||
+         (!p_cfg->margin_mm)) ||
+        (!p_cfg->max_depth_mm))
     {
         return false;
     }
-    pad = p_c->half_width_mm + p_c->margin_mm;
-    { /* Worst case: at least a S5_OBSTACLE_MAX_MM wide obstacle about the
-       * centre the scan saw (it can read a 20 cm object narrower). */
-        const int centre =
-                      ((int)p_p->left_edge_mm + (int)p_p->right_edge_mm) / 2,
-                  half = S5_OBSTACLE_MAX_MM / 2;
-        const int value_le = p_p->left_edge_mm > centre + half
-                                 ? p_p->left_edge_mm
-                                 : centre + half;
-        const int value_re = p_p->right_edge_mm < centre - half
-                                 ? p_p->right_edge_mm
-                                 : centre - half;
-        left = (value_le > 0 ? (unsigned)value_le : 0U) + pad;
-        right = (value_re < 0 ? (unsigned)-value_re : 0U) + pad;
+
+    const unsigned lateral_pad_mm = p_cfg->half_width_mm + p_cfg->margin_mm;
+    {
+        /* Expand a narrow-looking obstacle about the measured centre to
+         * at least S5_OBSTACLE_MAX_MM. The scan can underestimate width.
+         * Both signed 16-bit edges and their sum fit the target int. */
+        const int centre_mm =
+            ((int)p_profile->left_edge_mm + (int)p_profile->right_edge_mm) / 2;
+        const int obstacle_half_mm = S5_OBSTACLE_MAX_MM / 2;
+        const int left_edge_mm =
+            p_profile->left_edge_mm > (centre_mm + obstacle_half_mm)
+                ? p_profile->left_edge_mm
+                : centre_mm + obstacle_half_mm;
+        const int right_edge_mm =
+            p_profile->right_edge_mm < (centre_mm - obstacle_half_mm)
+                ? p_profile->right_edge_mm
+                : centre_mm - obstacle_half_mm;
+        /* Keep only distances on the selected side. The sign checks
+         * bound the unsigned conversions to nonnegative values. */
+        /* clang-format off */
+        left_offset_mm  =
+            (left_edge_mm > 0 ? (unsigned)left_edge_mm : 0U) + lateral_pad_mm;
+        right_offset_mm =
+            (right_edge_mm < 0 ? (unsigned)-right_edge_mm : 0U) +
+            lateral_pad_mm;
+        /* clang-format on */
     }
-    /* Approach to the visible front face only; the unknown depth is measured
-     * afterwards by side peeks, bounded by max_depth_mm (avoid_obstacle.c).
-     */
-    forward = p_p->forward_mm;
-    /* Diagonal 30/150 deg readings only choose the side (they also catch the
-     * car's own wheels / track edges). The real check is leg 1: after turning,
-     * the sensor faces the sideways path and must read past offset + margin. */
-    value_l = left <= p_c->max_offset_mm;
-    value_r = right <= p_c->max_offset_mm;
-    if ((!value_l && !value_r) || forward == 0U || forward > 3000U)
+    /* Use the visible front face for the approach. The bypass controller
+     * measures depth later with side peeks, bounded by max_depth_mm.
+     * See avoid_obstacle.c for the clearance sequence. */
+    const unsigned front_distance_mm = p_profile->forward_mm;
+    /* The 30- and 150-degree readings can include a wheel or track edge,
+     * so they rank the two sides. The first diagonal leg needs its own
+     * forward reading beyond the required travel and margin. */
+    const bool b_does_left_route_fit  = left_offset_mm <= p_cfg->max_offset_mm;
+    const bool b_does_right_route_fit = right_offset_mm <= p_cfg->max_offset_mm;
+
+    if ((((!b_does_left_route_fit) && (!b_does_right_route_fit)) ||
+         (0U == front_distance_mm)) ||
+        (front_distance_mm > 3000U))
     {
         return false;
     }
     /* Preferred side only: never fall back to the other side. */
-    if (!S5_ALLOW_OTHER_SIDE && ((S5_PREFER_ROUTE == 1U && !value_l) ||
-                                 (S5_PREFER_ROUTE == 2U && !value_r)))
+    if ((!S5_ALLOW_OTHER_SIDE) &&
+        (((S5_PREFER_ROUTE == 1U) && (!b_does_left_route_fit)) ||
+         ((S5_PREFER_ROUTE == 2U) && (!b_does_right_route_fit))))
     {
         return false;
     }
+
     if (S5_PREFER_ROUTE == 1U)
     {
-        p_out->route = value_l ? S5_ROUTE_LEFT : S5_ROUTE_RIGHT;
+        p_out->route = b_does_left_route_fit ? S5_ROUTE_LEFT : S5_ROUTE_RIGHT;
     }
     else if (S5_PREFER_ROUTE == 2U)
     {
-        p_out->route = value_r ? S5_ROUTE_RIGHT : S5_ROUTE_LEFT;
+        p_out->route = b_does_right_route_fit ? S5_ROUTE_RIGHT : S5_ROUTE_LEFT;
     }
     else
     {
         p_out->route =
-            (value_l && (!value_r || p_p->left_clear_mm >= p_p->right_clear_mm))
+            (b_does_left_route_fit &&
+             ((!b_does_right_route_fit) ||
+              (p_profile->left_clear_mm >= p_profile->right_clear_mm)))
                 ? S5_ROUTE_LEFT
                 : S5_ROUTE_RIGHT;
     }
-    p_out->offset_mm = p_out->route == S5_ROUTE_LEFT ? left : right;
-    p_out->alt_ok = S5_ALLOW_OTHER_SIDE &&
-                    (p_out->route == S5_ROUTE_LEFT ? value_r : value_l);
-    p_out->alt_offset_mm = p_out->route == S5_ROUTE_LEFT ? right : left;
-    p_out->forward_mm = forward;
-    p_out->closest_mm = p_p->closest_mm > 4095U ? 4095U : p_p->closest_mm;
+
+    /* clang-format off */
+    p_out->offset_mm       =
+        S5_ROUTE_LEFT == (int)p_out->route ? left_offset_mm : right_offset_mm;
+    p_out->b_has_alt_route =
+        S5_ALLOW_OTHER_SIDE &&
+        (S5_ROUTE_LEFT == (int)p_out->route ? b_does_right_route_fit
+        : b_does_left_route_fit);
+    p_out->alt_offset_mm   =
+        S5_ROUTE_LEFT == (int)p_out->route ? right_offset_mm : left_offset_mm;
+    p_out->forward_mm      = front_distance_mm;
+    p_out->closest_mm      =
+        p_profile->closest_mm > 4095U ? 4095U : p_profile->closest_mm;
+    /* clang-format on */
     return true;
 }
 

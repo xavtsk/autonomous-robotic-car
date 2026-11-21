@@ -7,7 +7,11 @@
 #include "buddy2.h"
 
 #if APP_TEST
-/** Run Buddy 2's built-in checks and report their results to the console. */
+/** @brief Run the selected motion self-test or calibration after startup.
+ * The S2_TEST_MOVE profile includes physical moves. S2_TEST_CALIBRATE runs
+ * the calibration routine in place of the unit tests. Results go to the
+ * device console.
+ */
 void subsystem2_test (void);
 #endif
 

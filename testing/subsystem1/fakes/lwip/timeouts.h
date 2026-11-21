@@ -4,8 +4,9 @@
 #ifndef TESTING_SUBSYSTEM1_FAKES_LWIP_TIMEOUTS_H
 #define TESTING_SUBSYSTEM1_FAKES_LWIP_TIMEOUTS_H
 
-void sys_timeout (unsigned ms, void (*callback)(void *), void * arg);
-void sys_untimeout (void (*callback)(void *), void * arg);
+void sys_timeout (unsigned ms, void ( * p_callback)(void * p_context),
+                  void * p_argument);
+void sys_untimeout (void ( * p_callback)(void * p_context), void * p_argument);
 
 #endif /* TESTING_SUBSYSTEM1_FAKES_LWIP_TIMEOUTS_H */
 

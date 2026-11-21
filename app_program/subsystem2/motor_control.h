@@ -1,12 +1,11 @@
 /** @file motor_control.h
  * @brief Motor actuation through the Robo Pico motor driver (PWM).
- */
-/*
- * File: motor_control.h
- * Owner: Buddy 2 - Motion Control
- * Purpose: Motor actuation through the Robo Pico motor driver (PWM).
  *
- * Driver truth table (Robo Pico datasheet): A low + B low = brake (the safe
+ * @par Ownership
+ * Buddy 2 - Motion Control
+ *
+ * The course reference "Robo Pico Board Datasheet.pdf" supplies the driver
+ * truth table. A low + B low = brake (the safe
  * output state), A PWM + B low = forward, A low + B PWM = backward.
  * Only the motion task may call these functions (single PWM owner).
  */
@@ -16,19 +15,20 @@
 
 #include "../app_types.h"
 #include <stdbool.h>
-#include "wheel_encoder.h" /* wheel_id_t */
+#include "wheel_encoder.h" /* wheel_encoder_id_t */
 
-/* Set up M1A/M1B (left) and M2A/M2B (right) for 10 kHz PWM, both braked */
-void motor_control_init (bool b_m1_inverted, bool b_m2_inverted);
+/* Set up both motor channels at 10 kHz and apply the brakes. */
+void motor_control_init (bool b_is_left_motor_inverted,
+                         bool b_is_right_motor_inverted);
 
-/* duty: -1.0 (full backward) .. 0.0 (brake) .. +1.0 (full forward) */
-void motor_control_set (wheel_id_t wheel, float32_t duty);
+/* Accept duty from full reverse (-1) to full forward (+1). Zero brakes. */
+void motor_control_set (wheel_encoder_id_t wheel, float32_t duty);
 
-/* Safe output state: both driver inputs low (brake) on both motors */
+/* Brake both motors by clearing both channel inputs. */
 void motor_control_brake_all (void);
 
-/* Last duty sent to a motor (after inversion is undone), for diagnostics */
-float32_t motor_control_duty (wheel_id_t wheel);
+/* Return the last duty before applying hardware polarity. */
+float32_t motor_control_duty (wheel_encoder_id_t wheel);
 
 #endif /* BUDDY2_MOTOR_CONTROL_H */
 

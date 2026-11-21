@@ -1,19 +1,24 @@
 /** @file host_kernel.h
  * @brief Host-only model of the small RTOS surface used by Buddy 1.
+ *
+ * Build with
+ * -DAPP_H -include host_kernel.h; production builds use the real kernel.
  */
-/* Host-only model of the small RTOS surface used by Buddy 1. Build with
- * -DAPP_H -include host_kernel.h; production builds use the real kernel. */
 #ifndef BUDDY1_HOST_KERNEL_H
 #define BUDDY1_HOST_KERNEL_H
 #include <stdint.h>
-#include <stddef.h>
-typedef unsigned char UB;
-typedef unsigned short UH;
-typedef short H;
-typedef uint32_t UW;
-typedef int INT;
-typedef unsigned int UINT, BOOL;
-typedef int ID, ER, PRI, TMO;
+#include <stddef.h> /* Supply NULL for command and MQTT bridge sources. */
+typedef uint8_t      UB;
+typedef uint16_t     UH;
+typedef int16_t      H;
+typedef uint32_t     UW;
+typedef int          INT;
+typedef unsigned int UINT;
+typedef unsigned int BOOL;
+typedef int          ID;
+typedef int          ER;
+typedef int          PRI;
+typedef int          TMO;
 #define IMPORT extern
 #define EXPORT
 #define LOCAL static
@@ -32,7 +37,8 @@ typedef int ID, ER, PRI, TMO;
 typedef struct
 {
     unsigned mbfatr;
-    int bufsz, maxmsz;
+    int      bufsz;
+    int      maxmsz;
 } T_CMBF;
 
 typedef struct
@@ -43,25 +49,27 @@ typedef struct
 typedef struct
 {
     void * exinf;
-    ID wtsk, stsk;
-    INT msgsz;
-    int frbufsz;
-    INT maxmsz;
+    ID     wtsk;
+    ID     stsk;
+    INT    msgsz;
+    int    frbufsz;
+    INT    maxmsz;
 } T_RMBF;
 
-ID tk_cre_mbf (const T_CMBF * p);
-ER tk_del_mbf (ID id);
-ID tk_cre_mtx (const T_CMTX * p);
-ER tk_snd_mbf (ID id, const void * data, INT length, TMO timeout);
-INT tk_rcv_mbf (ID id, void * data, TMO timeout);
-ER tk_ref_mbf (ID id, T_RMBF * ref);
-ER tk_dly_tsk (TMO time);
-ER tk_loc_mtx (ID id, TMO timeout);
-ER tk_unl_mtx (ID id);
-ID app_start_task (void (*entry)(INT, void *), PRI priority, UW core,
-                   const char * name);
-int tm_printf (const UB * format, ...);
-ER subsystem1_init (void);
+ID   tk_cre_mbf (const T_CMBF * p_message_buffer_config);
+ER   tk_del_mbf (ID h_message_buffer);
+ID   tk_cre_mtx (const T_CMTX * p_mutex_config);
+ER   tk_snd_mbf (ID h_message_buffer, const void * p_data, INT length,
+                 TMO timeout);
+INT  tk_rcv_mbf (ID h_message_buffer, void * p_data, TMO timeout);
+ER   tk_ref_mbf (ID h_message_buffer, T_RMBF * p_reference);
+ER   tk_dly_tsk (TMO time);
+ER   tk_loc_mtx (ID h_mutex, TMO timeout);
+ER   tk_unl_mtx (ID h_mutex);
+ID   app_start_task (void ( * p_entry)(INT start_code, void * p_extra_info),
+                     PRI priority, UW core, const char * p_name);
+int  tm_printf (const UB * p_format, ...);
+ER   subsystem1_init (void);
 void subsystem1_test (void);
 #endif
 

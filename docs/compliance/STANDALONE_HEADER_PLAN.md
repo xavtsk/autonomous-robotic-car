@@ -33,19 +33,19 @@ Every existing assertion, function and expression stays unchanged.
 
 | Source | Context evidence | Later filename proposal |
 | --- | --- | --- |
-| `testing/change_requirement_1/bend_filter_check.c` | `run_all.sh` bend-check recipe | `bend_filter_main` |
-| `testing/compliance/barcode_replay_trace.c` | Differential replay recipe | `replay_trace_main` |
-| `testing/compliance/control_builder_test.c` | GCC, Clang and sanitizer CI commands | `builder_main` |
-| `testing/compliance/control_debug_trace.c` | GCC, Clang and sanitizer CI commands | `ctrl_trace_main` |
-| `testing/subsystem1/size_report.c` | Subsystem 1 `sizes` recipe | `s1_sizes_main` |
-| `testing/subsystem2/size_report.c` | Subsystem 2 `sizes` recipe | `s2_sizes_main` |
-| `testing/subsystem3/replay_barcode_record.c` | GCC, Clang and sanitizer CI commands | `record_replay_main` |
-| `testing/subsystem3/size_report.c` | Subsystem 3 `sizes` recipe | `s3_sizes_main` |
-| `testing/subsystem3/test_barcode_quiet.c` | `test-buddy3.ps1` recipe | `quiet_clock_main` |
-| `testing/subsystem3/test_barcode_quiet_record.c` | `test-buddy3.ps1` recipe | `quiet_record_main` |
-| `testing/subsystem3/test_codec.c` | GCC, Clang and sanitizer CI commands | `codec_main` |
-| `tools/compliance/traces/obstacle_trace.c` | Differential obstacle recipe | `obstacle_trace_main` |
-| `tools/compliance/traces/terrain_trace.c` | Differential terrain recipes, debug on/off | `terrain_trace_main` |
+| `testing/change_requirement_1/bend_filter_check_main.c` | `run_all.sh` bend-check recipe | `bend_filter_main` |
+| `testing/compliance/barcode_replay_trace_main.c` | Differential replay recipe | `replay_trace_main` |
+| `testing/compliance/packet_builder_main.c` | GCC, Clang and sanitizer CI commands | `builder_main` |
+| `testing/compliance/debug_wire_trace_main.c` | GCC, Clang and sanitizer CI commands | `ctrl_trace_main` |
+| `testing/subsystem1/size_report_main.c` | Subsystem 1 `sizes` recipe | `s1_sizes_main` |
+| `testing/subsystem2/size_report_main.c` | Subsystem 2 `sizes` recipe | `s2_sizes_main` |
+| `testing/subsystem3/replay_barcode_record_main.c` | GCC, Clang and sanitizer CI commands | `record_replay_main` |
+| `testing/subsystem3/size_report_main.c` | Subsystem 3 `sizes` recipe | `s3_sizes_main` |
+| `testing/subsystem3/quiet_zone_main.c` | `test-buddy3.ps1` recipe | `quiet_clock_main` |
+| `testing/subsystem3/record_zone_main.c` | `test-buddy3.ps1` recipe | `quiet_record_main` |
+| `testing/subsystem3/test_codec_main.c` | GCC, Clang and sanitizer CI commands | `codec_main` |
+| `tools/compliance/traces/obstacle_trace_main.c` | Differential obstacle recipe | `obstacle_trace_main` |
+| `tools/compliance/traces/terrain_trace_main.c` | Differential terrain recipes, debug on/off | `terrain_trace_main` |
 
 The last two wrappers obtain their sole `main` definition from the included
 subsystem host test. They have no additional external definitions, but their
@@ -69,17 +69,17 @@ for a later caller/interface review. The target-only `struct_sizes.c` is one
 of these: it defines external `size_*` arrays and no `main`. No empty-interface
 header is proposed for these sources.
 
-`testing/compliance/barcode_work_test.c` defines only `main` in its own text,
+`testing/compliance/decode_work_main.c` defines only `main` in its own text,
 but its included `bc_decoder.c` adds eleven production external definitions.
 It is separately classified as an included-production-interface case rather
 than counted as a strictly standalone translation unit. Existing production
 headers and inclusion behavior need review before selecting its paired header.
 
-`testing/subsystem2/host_regression.c` fails its existing `legacy-test`
+`testing/subsystem2/host_regression_main.c` fails its existing `legacy-test`
 context: the call at line 375 passes three arguments to a four-argument
 function. This audit does not repair or silently omit that error.
-`testing/integration/controller_test.c` and
-`testing/subsystem2/controller_adapter_test.c` have no identified current
+`testing/integration/controller_main.c` and
+`testing/subsystem2/wheel_adapter_main.c` have no identified current
 compiler command or repository build recipe and remain unobserved.
 
 ## Bounded application and checks

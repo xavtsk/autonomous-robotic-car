@@ -19,45 +19,65 @@
 #define TEST_DISTANCE_M 0.10f
 #define TEST_SPEED_MPS 0.05f
 
-static bool now_ms (uint32_t * out)
+/** @brief Read the low word of the kernel operating time in milliseconds.
+ * Leave the caller's output untouched if the time request fails.
+ */
+static bool now_ms (uint32_t * p_out)
 {
     SYSTIM time;
     if (tk_get_otm(&time) != E_OK)
     {
         return false;
     }
-    *out = time.lo;
+    *p_out = time.lo;
     return true;
 }
 
+/** @brief Read the selected active-low GPIO. Return true when the button is
+ * pressed.
+ */
 static bool pressed (unsigned pin)
 {
     return gpio_get_val(pin) == 0U;
 }
 
+/** @brief Delay one polling interval and report whether the kernel accepted
+ * the delay.
+ */
 static bool pause_poll (void)
 {
     return tk_dly_tsk(POLL_MS) == E_OK;
 }
 
-static void finish (const char * reason)
+/** @brief Request a stop through the motion owner, delay for the final
+ * readings and print the reason, encoder counts and fault.
+ */
+static void finish (const char * p_reason)
 {
     /* Output changes stay with Buddy 2's motion task. No direct PWM writes. */
     stop();
     (void)tk_dly_tsk(50U);
-    tm_printf((const UB *)"[SMOKE] %s; left=%d right=%d fault=%u\n", reason,
+    tm_printf((const UB *)"[SMOKE] %s; left=%d right=%d fault=%u\n", p_reason,
               (int)enc_l_count(), (int)enc_r_count(),
               (unsigned)motion_get_fault());
     tm_printf((const UB *)"[SMOKE] FINISHED: no automatic retry; power off "
                           "before repositioning.\n");
 }
 
+/** @brief Run a single manually armed 100 mm drive at 50 mm/s. Check
+ * readiness, button release, countdown and stop conditions before and
+ * during motion. Print the result without automatically starting a
+ * second run.
+ */
 void motion_smoke_run (void)
 {
-    uint32_t now, since;
-    unsigned released = 0U, held = 0U, waiting = 0U;
-    motion_snapshot_t snapshot;
-    const char * result = "software timeout";
+    uint32_t                now;
+    uint32_t                since;
+    unsigned                released = 0U;
+    unsigned                held     = 0U;
+    unsigned                waiting  = 0U;
+    codec_motion_snapshot_t snapshot;
+    const char *            p_result = "software timeout";
 
     /* Initial task otherwise has priority 1. Let motion (14) run first. */
     if (tk_chg_pri(TSK_SELF, 15) != E_OK)
@@ -80,11 +100,10 @@ void motion_smoke_run (void)
     }
     stop();
     if (!now_ms(&now) || !motion_is_calibrated() ||
-        !motion_read_snapshot(&snapshot) || !motion_snapshot_valid(&snapshot) ||
-        motion_snapshot_state(&snapshot) != MOTION_IDLE ||
-        motion_snapshot_fault(&snapshot) != MOTION_FAULT_NONE ||
-        motion_snapshot_busy(&snapshot) ||
-        !motion_snapshot_speed_valid(&snapshot))
+        !snapshot_motion_read(&snapshot) || !codec_motion_valid(&snapshot) ||
+        codec_motion_state(&snapshot) != MOTION_IDLE ||
+        codec_motion_fault(&snapshot) != MOTION_FAULT_NONE ||
+        codec_motion_busy(&snapshot) || !codec_motion_speed_valid(&snapshot))
     {
         finish("not ready: no drive requested");
         return;
@@ -151,7 +170,7 @@ void motion_smoke_run (void)
             finish("clock/wait failed");
             return;
         }
-    } while ((uint32_t)(now - since) < COUNTDOWN_MS);
+    } while ((now - since) < COUNTDOWN_MS);
 
     if (pressed(STOP_PIN) || !now_ms(&since))
     {
@@ -171,42 +190,45 @@ void motion_smoke_run (void)
         motion_state_t state;
         if (pressed(STOP_PIN))
         {
-            result = "GP21 stop requested";
+            p_result = "GP21 stop requested";
             break;
         }
         if (!now_ms(&now))
         {
-            result = "clock failed";
+            p_result = "clock failed";
             break;
         }
-        if ((uint32_t)(now - since) >= LIMIT_MS)
+        if ((now - since) >= LIMIT_MS)
         {
             break;
         }
         state = motion_poll();
-        if (state == MOTION_COMPLETE)
+        if (MOTION_COMPLETE == state)
         {
-            result = "encoder target reached (not ruler-verified distance)";
+            p_result = "encoder target reached (not ruler-verified distance)";
             break;
         }
-        if (state == MOTION_FAULT)
+        if (MOTION_FAULT == state)
         {
-            result = "Buddy 2 fault";
+            p_result = "Buddy 2 fault";
             break;
         }
         if (state != MOTION_DRIVE)
         {
-            result = "unexpected motion state";
+            p_result = "unexpected motion state";
             break;
         }
         if (!pause_poll())
         {
-            result = "wait failed";
+            p_result = "wait failed";
             break;
         }
     }
-    finish(result);
+    finish(p_result);
 }
+#else
+/* ISO C requires a declaration even when this hardware test is disabled. */
+typedef void smoke_motion_disabled_t;
 #endif
 
 /* End of file. */

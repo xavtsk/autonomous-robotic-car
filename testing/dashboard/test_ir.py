@@ -21,7 +21,7 @@ class IRTests(unittest.TestCase):
         cls.addClassCleanup(folder.cleanup)
         binary = Path(folder.name) / "ir_test"
         subprocess.run(["cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2",
-                        str(ROOT / "testing/integration/ir_debug_test.c"),
+                        str(ROOT / "testing/integration/ir_wire_main.c"),
                         str(ROOT / "app_program/controller/ir_debug.c"), "-o", str(binary)], check=True)
         output = subprocess.check_output([str(binary)], text=True)
         cls.vector = bytes.fromhex(next(line.split()[1] for line in output.splitlines() if line.startswith("IR_VECTOR ")))

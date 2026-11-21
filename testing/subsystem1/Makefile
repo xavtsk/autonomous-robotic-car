@@ -6,7 +6,7 @@ MQTT = $(ROOT)/lib/liblwip/sysdepend/pico_rp2040
 BUILD = $(ROOT)/build/buddy1
 CPPFLAGS = -DAPP_H -DAPP_TEST=1 -DTM_MQTT=1 -include host_kernel.h -I. -Ifakes -I$(APP) -I$(MQTT)
 CFLAGS = -std=c11 -Wall -Wextra -Werror -O2 -g -pthread
-SOURCES = host_test.c $(APP)/telemetry_codec.c $(APP)/buddy1.c \
+SOURCES = host_main.c $(APP)/telemetry_codec.c $(APP)/buddy1.c \
           $(APP)/command.c $(APP)/mqtt_bridge.c $(APP)/buddy1_test.c $(MQTT)/mqtt_utk.c
 
 .PHONY: test sanitize sizes ir-debug
@@ -31,5 +31,5 @@ sanitize:
 
 sizes:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -fshort-enums -Wno-type-limits size_report.c $(APP)/telemetry_codec.c -o $(BUILD)/size_report
+	$(CC) $(CPPFLAGS) $(CFLAGS) -fshort-enums -Wno-type-limits size_report_main.c $(APP)/telemetry_codec.c -o $(BUILD)/size_report
 	$(BUILD)/size_report

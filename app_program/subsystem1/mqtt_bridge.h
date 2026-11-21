@@ -1,7 +1,8 @@
 /** @file mqtt_bridge.h
  * @brief Adapter between the kernel-owned MQTT port and Buddy 1 queues.
  *
- * MQTT callback names and signatures are defined by the upstream port.
+ * The team-owned mqtt_utk.h declares the shared callback interface. Its public
+ * names connect these strong implementations to the network port's weak hooks.
  */
 #ifndef BUDDY1_MQTT_BRIDGE_H
 #define BUDDY1_MQTT_BRIDGE_H

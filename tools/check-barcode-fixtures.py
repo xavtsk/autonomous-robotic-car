@@ -6,8 +6,10 @@ from pathlib import Path
 import fitz
 
 source = Path(sys.argv[1])
-header = (Path(__file__).resolve().parents[1] / "testing/subsystem3/barcode_fixtures.h").read_text()
-expected_hash = re.search(r"SHA256 ([a-f0-9]{64})", header).group(1)
+fixtures = Path(__file__).resolve().parents[1] / "testing/subsystem3"
+header = (fixtures / "pdf_patterns.h").read_text()
+widths_source = (fixtures / "test_core_main.c").read_text()
+expected_hash = re.search(r"\bSHA256\s+(?:\*\s+)?([a-f0-9]{64})\b", header).group(1)
 assert hashlib.sha256(source.read_bytes()).hexdigest() == expected_hash, "PDF differs from fixture source"
 with fitz.open(source) as document:
     assert len(document) == 4
@@ -24,7 +26,9 @@ with fitz.open(source) as document:
                 state, width = colour, 0
             width += 1
         widths.append(width)
-        match = re.search(r"g_pdf_page_" + str(index) + r"\[29\] = \{([^}]+)\}", header)
+        match = re.search(r"g_pdf_page_" + str(index) +
+                          r"\[PDF_PATTERN_RUNS\]\s*=\s*\{([^}]+)\}", widths_source)
+        assert match, f"Missing width fixture for page {index}"
         expected = [int(value) for value in re.findall(r"(\d+)U", match.group(1))]
         assert widths == expected, f"Page {index}: extracted bars differ"
 print("PASS: all four independent A/Z PDF fixtures match the supplied document")

@@ -65,7 +65,7 @@ barcode decoder, motion, navigation, calibration or capture-trigger logic change
   as before. The laptop keeps its partial evidence and never fills gaps with zeros.
 - ASCII `.txt` imports remain accepted locally. Network payloads are binary only.
 
-Tests: `testing/integration/bcap_wire_test.c` emits real-C vectors, including
+Tests: `testing/integration/bcap_wire_main.c` emits real-C vectors, including
 24-sample maxima, multiple batches/episodes and the final pool slice; it also
 checks undersized-buffer cursor safety and unchanged USB batching. Independent
 Python roundtrips, original-C v1 fixtures, malformed/boundary/loss/duplicate tests

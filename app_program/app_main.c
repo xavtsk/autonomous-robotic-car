@@ -1,8 +1,7 @@
 /** @file app_main.c
  * @brief Application entry point, adapted from INF2004_ProjectTemplate.
- */
-/*
- * Application entry point, adapted from INF2004_ProjectTemplate.
+ * @see docs/TEMPLATE_MIGRATION.md for the original project and revisions.
+ *
  * The kernel starts usermain() in its initial task. Initialize all subsystem
  * objects before starting any tasks, since the second core may run immediately.
  * IR_BENCH builds start only subsystem 3 for stationary sensor setup.
@@ -22,65 +21,82 @@
 #define ROBOT_DIAG_REPORT_MS (1000U)
 #endif
 
+static inline void app_log_failure (INT result, const char * p_name);
+
 /*
  * Create and start one task (declared in app.h for every subsystem).
  *   prc = TP_PRC1 (core 0), TP_PRC2 (core 1), or 0 for "any core".
  */
-EXPORT ID app_start_task (FP p_entry, PRI pri, UW prc, const char * p_name)
+/** @brief Create and start a kernel task with the supplied entry point,
+ * priority and optional core affinity. Use the name for error
+ * reporting. Return its handle on success. Delete a newly created task
+ * if startup fails.
+ */
+ID app_start_task (FP p_entry, PRI pri, UW prc, const char * p_name)
 {
     T_CTSK ctsk = {0};
-    ID tid;
-    ER value_er;
+    ID     h_task;
+    ER     value_er;
 
-    ctsk.task = p_entry;          /* function the task runs */
-    ctsk.itskpri = pri;           /* initial priority (1 = highest) */
-    ctsk.stksz = TASK_STACK_SIZE; /* kernel allocates the stack */
-    ctsk.tskatr = TA_HLNG         /* written in a high-level language (C) */
-                  | TA_RNG3;      /* runs at user protection level */
+    ctsk.task    = p_entry;         /* Set the task entry point. */
+    ctsk.itskpri = pri;             /* Priority one is highest. */
+    ctsk.stksz   = TASK_STACK_SIZE; /* The kernel allocates the stack. */
+    ctsk.tskatr  = TA_HLNG          /* Use the high-level task entry. */
+                  | TA_RNG3;        /* Run at user protection level. */
 #if TK_SUPPORT_SMP
-    if (prc != 0)
+    if (prc != 0U)
     {
-        ctsk.tskatr |= TA_ASSPRC; /* honour the affinity below */
-        ctsk.assprc = prc;        /* which core(s) it may run on */
+        ctsk.tskatr |= TA_ASSPRC; /* Use the configured core affinity. */
+        ctsk.assprc  = prc;       /* Select the allowed processor set. */
     }
 #else
-    (void)prc; /* single-core build: no affinity */
+    (void)prc; /* Single-core builds omit affinity. */
 #endif
 
     /* tk_cre_tsk: create the task.  It starts in the DORMANT state. */
-    tid = tk_cre_tsk(&ctsk);
-    if (tid < E_OK)
+    h_task = tk_cre_tsk(&ctsk);
+
+    if (h_task < E_OK)
     {
-        CHECK(tid, p_name);
-        return tid;
+        app_log_failure(h_task, p_name);
+        return h_task;
     }
 
     /* tk_sta_tsk: DORMANT -> READY.  The int is passed as stacd. */
-    value_er = tk_sta_tsk(tid, 0);
-    CHECK(value_er, p_name);
+    value_er = tk_sta_tsk(h_task, 0);
+    app_log_failure(value_er, p_name);
+
     if (value_er < E_OK)
     {
-        (void)tk_del_tsk(tid);
+        (void)tk_del_tsk(h_task);
         return (ID)value_er;
     }
-    return tid;
+
+    return h_task;
 }
 
-EXPORT INT usermain (void)
+/** @brief Start the configured subsystem profile in the kernel startup task.
+ * @details The integrated profile stops its startup sequence on the first
+ * error. The compatibility profile calls every initialization hook before
+ * calling its start hooks and logs each failure. The IR bench uses its own
+ * startup path. When enabled, diagnostics reuse this task at a lower priority
+ * to observe subsystem timing. The initial task otherwise sleeps forever.
+ */
+INT usermain (void)
 {
     T_RVER ver;
 #if APP_DIAGNOSTICS
     ER diagnostic_status;
 #endif
 
-    /* tk_ref_ver: ask the kernel who it is */
+    /* Read the kernel version for the boot report. */
     tk_ref_ver(&ver);
     tm_printf((UB *)"\n=== micro T-Kernel on Raspberry Pi Pico W"
                     " (spec 0x%04x, product 0x%04x) ===\n",
               ver.spver, ver.prver);
 #if TK_SUPPORT_SMP
     tm_printf((UB *)"dual-core (SMP) build, usermain on core %d\n",
-              tk_get_prc() - 1); /* tk_get_prc() counts from 1 */
+              tk_get_prc() - 1); /* Processor numbers start at one. */
 #else
     tm_printf((UB *)"single-core build\n");
 #endif
@@ -89,17 +105,17 @@ EXPORT INT usermain (void)
     /* Create before either timing producer starts. A diagnostic failure must
      * not prevent ordinary subsystem startup or change motor behaviour. */
     diagnostic_status = robot_diagnostics_init();
-    CHECK(diagnostic_status, "robot_diagnostics_init");
+    app_log_failure(diagnostic_status, "robot_diagnostics_init");
 #endif
 
 #if APP_S4_BENCH
     {
         ER er = subsystem4_init();
-        if (er == E_OK)
+        if (E_OK == er)
         {
             er = subsystem4_start();
         }
-        CHECK(er, "S4 bench startup");
+        app_log_failure(er, "S4 bench startup");
         tm_printf((UB *)"S4 BENCH: keep board level/still for calibration; "
                         "other application tasks disabled.\n");
     }
@@ -107,12 +123,12 @@ EXPORT INT usermain (void)
     /* No Vehicle Controller, IR, networking or other application tasks. */
     {
         ER er = subsystem2_init();
-        CHECK(er, "smoke subsystem2_init");
-        if (er == E_OK)
+        app_log_failure(er, "smoke subsystem2_init");
+        if (E_OK == er)
         {
             er = subsystem2_start();
-            CHECK(er, "smoke subsystem2_start");
-            if (er == E_OK)
+            app_log_failure(er, "smoke subsystem2_start");
+            if (E_OK == er)
             {
                 motion_smoke_run();
             }
@@ -122,10 +138,10 @@ EXPORT INT usermain (void)
     /* Isolated bench profile: never initialise/start the motion subsystem. */
     {
         ER er = subsystem3_init();
-        CHECK(er, "subsystem3_init");
-        if (er == E_OK)
+        app_log_failure(er, "subsystem3_init");
+        if (E_OK == er)
         {
-            CHECK(subsystem3_start(), "subsystem3_start");
+            app_log_failure(subsystem3_start(), "subsystem3_start");
         }
     }
     tm_printf((UB *)"IR BENCH: other application tasks and tests disabled.\n");
@@ -133,89 +149,97 @@ EXPORT INT usermain (void)
     /* Explicit team profile: one upstream controller owner, Buddy 1 mirror. */
     {
         ER value_er = subsystem1_init();
-        CHECK(value_er, "telemetry init");
-        if (value_er == E_OK)
+        app_log_failure(value_er, "telemetry init");
+
+        if (E_OK == value_er)
         {
             value_er = vehicle_controller_init();
         }
-        if (value_er == E_OK)
+
+        if (E_OK == value_er)
         {
             value_er = subsystem2_init();
         }
-        CHECK(value_er, "motion init");
-        if (value_er == E_OK)
+
+        app_log_failure(value_er, "motion init");
+
+        if (E_OK == value_er)
         {
             value_er = subsystem3_init();
-            CHECK(value_er, "integration init");
+            app_log_failure(value_er, "integration init");
         }
 #if APP_S4
-        if (value_er == E_OK)
+        if (E_OK == value_er)
         {
             value_er = subsystem4_init();
-            CHECK(value_er, "IMU init");
+            app_log_failure(value_er, "IMU init");
         }
 #endif
 #if APP_S5
-        if (value_er == E_OK)
+        if (E_OK == value_er)
         {
             value_er = subsystem5_init();
-            CHECK(value_er, "obstacle init (confirm hardware configuration)");
+            app_log_failure(value_er,
+                            "obstacle init (confirm hardware configuration)");
         }
 #endif
-        if (value_er == E_OK)
+        if (E_OK == value_er)
         {
             value_er = subsystem1_start();
-            CHECK(value_er, "telemetry start");
+            app_log_failure(value_er, "telemetry start");
         }
-        if (value_er == E_OK)
+
+        if (E_OK == value_er)
         {
             value_er = subsystem2_start();
-            CHECK(value_er, "motion start");
+            app_log_failure(value_er, "motion start");
         }
-        if (value_er == E_OK)
+
+        if (E_OK == value_er)
         {
             value_er = subsystem3_start();
-            CHECK(value_er, "integration start");
+            app_log_failure(value_er, "integration start");
         }
 #if APP_S4
-        if (value_er == E_OK)
+        if (E_OK == value_er)
         {
             value_er = subsystem4_start();
-            CHECK(value_er, "IMU start");
+            app_log_failure(value_er, "IMU start");
         }
 #endif
 #if APP_S5
-        if (value_er == E_OK)
+        if (E_OK == value_er)
         {
             value_er = subsystem5_start();
-            CHECK(value_er, "obstacle start");
+            app_log_failure(value_er, "obstacle start");
         }
 #endif
-        if (value_er == E_OK)
+        if (E_OK == value_er)
         {
-            value_er = operator_panel_start();
-            CHECK(value_er, "operator panel start");
+            value_er = op_panel_start();
+            app_log_failure(value_er, "operator panel start");
         }
+
         tm_printf((UB *)"Integrated controller: DISARMED; calibrate with GP20, "
                         "then GP20 = START, GP21 = STOP. status=%d\n",
                   (int)value_er);
     }
 #else
-    /* Phase 1: every subsystem creates its kernel objects */
-    CHECK(subsystem1_init(), "subsystem1_init");
-    CHECK(subsystem2_init(), "subsystem2_init");
-    CHECK(subsystem3_init(), "subsystem3_init");
-    CHECK(subsystem4_init(), "subsystem4_init");
-    CHECK(subsystem5_init(), "subsystem5_init");
-    CHECK(vehicle_controller_init(), "vehicle_controller_init");
+    /* Create all subsystem kernel objects before starting their tasks. */
+    app_log_failure(subsystem1_init(), "subsystem1_init");
+    app_log_failure(subsystem2_init(), "subsystem2_init");
+    app_log_failure(subsystem3_init(), "subsystem3_init");
+    app_log_failure(subsystem4_init(), "subsystem4_init");
+    app_log_failure(subsystem5_init(), "subsystem5_init");
+    app_log_failure(vehicle_controller_init(), "vehicle_controller_init");
 
     /* Compatibility facade has no task; navigation is opt-in S3_MOTION=1. */
-    CHECK(subsystem1_start(), "subsystem1_start");
-    CHECK(subsystem2_start(), "subsystem2_start");
-    CHECK(vehicle_controller_start(), "vehicle_controller_start");
-    CHECK(subsystem3_start(), "subsystem3_start");
-    CHECK(subsystem4_start(), "subsystem4_start");
-    CHECK(subsystem5_start(), "subsystem5_start");
+    app_log_failure(subsystem1_start(), "subsystem1_start");
+    app_log_failure(subsystem2_start(), "subsystem2_start");
+    app_log_failure(vehicle_controller_start(), "vehicle_controller_start");
+    app_log_failure(subsystem3_start(), "subsystem3_start");
+    app_log_failure(subsystem4_start(), "subsystem4_start");
+    app_log_failure(subsystem5_start(), "subsystem5_start");
 
     tm_printf((UB *)"All subsystem startup hooks called.\n\n");
 
@@ -234,13 +258,13 @@ EXPORT INT usermain (void)
 #endif /* APP_IR_BENCH */
 
 #if APP_DIAGNOSTICS
-    if (diagnostic_status == E_OK)
+    if (E_OK == diagnostic_status)
     {
         /* Reuse this otherwise-sleeping initial task, not an extra task/stack.
          * Never print periodic diagnostics at its initial priority of 1. */
         ER error = tk_chg_pri(TSK_SELF, ROBOT_DIAG_REPORT_PRIORITY);
-        CHECK(error, "diagnostic reporter priority");
-        if (error == E_OK)
+        app_log_failure(error, "diagnostic reporter priority");
+        if (E_OK == error)
         {
             tm_printf((UB *)"[DIAG] mode=observation_only motion_period_ms=%u "
                             "ir_period_ms=%u reporter_priority=%u\n",
@@ -261,6 +285,15 @@ EXPORT INT usermain (void)
     /* Sleep forever.  Returning from usermain() would shut down. */
     tk_slp_tsk(TMO_FEVR);
     return 0;
+}
+
+/** @brief Print the startup result only when a kernel call fails. */
+static inline void app_log_failure (INT result, const char * p_name)
+{
+    if (result < E_OK)
+    {
+        tm_printf((UB *)"ERROR %s: %d\n", p_name, result);
+    }
 }
 
 /* End of file. */

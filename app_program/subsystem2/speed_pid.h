@@ -1,10 +1,8 @@
 /** @file speed_pid.h
  * @brief Motor speed PID control (one controller per wheel).
- */
-/*
- * File: speed_pid.h
- * Owner: Buddy 2 - Motion Control
- * Purpose: Motor speed PID control (one controller per wheel).
+ *
+ * @par Ownership
+ * Buddy 2 - Motion Control
  *
  * Output duty = feed-forward + P + I + D, limited to -1.0 .. +1.0.
  * The setpoint is ramped at a fixed acceleration so the wheels never get a
@@ -19,35 +17,38 @@
 
 typedef struct
 {
-    float32_t kp;           /* duty per m/s of speed error              */
-    float32_t ki;           /* duty per m of accumulated speed error    */
-    float32_t kd;           /* duty per m/s^2 of measured acceleration  */
-    float32_t kff;          /* duty per m/s of setpoint (1 / top speed) */
-    float32_t accel_mps2;   /* setpoint ramp rate                       */
-    float32_t setpoint_mps; /* ramped setpoint                          */
-    float32_t integral;     /* integral term, duty                      */
+    float32_t proportional_gain; /* Scale proportional duty per m/s of error. */
+    float32_t integral_gain;     /* Scale integral duty per metre of error. */
+    float32_t derivative_gain;   /* Scale derivative duty per m/s^2. */
+    float32_t feedforward_gain; /* Scale feedforward by reciprocal top speed. */
+    float32_t accel_mps2;       /* Limit the setpoint's rate of change. */
+    float32_t setpoint_mps;     /* Retain the current ramped setpoint. */
+    float32_t integral;         /* Retain the integral term as duty. */
 } speed_pid_t;
 
 /** @brief Initialize one wheel controller with the supplied gains.
  * @param p_pid Non-null writable controller, exclusively owned by the caller.
- * @param value_kp Proportional gain in duty per metre-per-second error.
- * @param value_ki Integral gain in duty per metre of accumulated speed error.
- * @param value_kd Gain in duty per metre-per-second-squared acceleration.
- * @param kff Feed-forward duty per metre-per-second setpoint.
+ * @param proportional_gain Proportional gain in duty per metre-per-second
+ * error.
+ * @param integral_gain Integral gain in duty per metre of accumulated speed
+ * error.
+ * @param derivative_gain Gain in duty per metre-per-second-squared
+ * acceleration.
+ * @param feedforward_gain Feed-forward duty per metre-per-second setpoint.
  * @param accel_mps2 Setpoint ramp rate in metres per second squared.
  * @post Stores every gain verbatim and clears setpoint and integral to zero.
  * @note No range/finite checks or locking; the motion controller calls this
  * under its ownership boundary, with a separate instance for each wheel.
  */
-void speed_pid_init (speed_pid_t * p_pid, float32_t value_kp,
-                     float32_t value_ki, float32_t value_kd, float32_t kff,
-                     float32_t accel_mps2);
+void speed_pid_init (speed_pid_t * p_pid, float32_t proportional_gain,
+                     float32_t integral_gain, float32_t derivative_gain,
+                     float32_t feedforward_gain, float32_t accel_mps2);
 
-/* Clear the setpoint and integral (used whenever the motor is braked) */
+/* Clear the setpoint and integral when applying the brake. */
 /** @brief Clear the ramped setpoint and integral without changing gains.
  * @param p_pid Non-null writable controller, exclusively owned by the caller.
  * @post Setpoint and integral become positive zero; all tuning fields remain.
- * @note Does not drive hardware. The caller applies the brake separately.
+ * @note The caller owns the separate hardware brake operation.
  */
 void speed_pid_reset (speed_pid_t * p_pid);
 
@@ -75,7 +76,7 @@ float32_t speed_pid_update (speed_pid_t * p_pid, float32_t target_mps,
                             float32_t speed_mps, float32_t accel_mps2,
                             float32_t dt_s);
 
-/* Current ramped setpoint, m/s */
+/* Return the current ramped setpoint in m/s. */
 /** @brief Read the current ramped wheel-speed setpoint.
  * @param p_pid Non-null readable controller with caller-synchronized access.
  * @return Stored setpoint in metres per second, forward positive.

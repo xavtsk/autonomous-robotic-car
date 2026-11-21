@@ -14,7 +14,7 @@ from dashboard.traces import parse_trace
 
 
 def main():
-    exe = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "build/host-tests/replay_barcode_record.exe"
+    exe = replay_executable()
     # The synchronous reader published on the final retained sample of these
     # captures. Its bounded worker can legitimately still be processing at EOF.
     # Permit only clean PROCESSING for these exact midpoint/observed variants;
@@ -252,5 +252,40 @@ def main():
     print(f"PASS: {checks} recorded replay checks; padded results are conditional on synthetic quiet margins.")
 
 
+def replay_executable():
+    if len(sys.argv) > 1:
+        return Path(sys.argv[1]).resolve()
+    return ROOT / "build/host-tests/replay_barcode_record.exe"
+
+
+def check_padding_arguments(exe):
+    """Preserve the native strtoul base-10 rules and the 10000 ms cap."""
+    from ctypes import c_ulong, sizeof
+
+    # A representable negative magnitude is negated in the parser's native
+    # unsigned type. Using a wider parser changes this case on Windows.
+    native_max = (1 << (8 * sizeof(c_ulong))) - 1
+    for args, expected in (
+        ([], (0, 0)),
+        (["no digits", " +09tail"], (0, 9)),
+        ([str(-native_max), "10000"], (1, 10000)),
+        (["10001"], None),
+        (["0", "-1"], None),
+        ([str(native_max + 1)], None),
+    ):
+        result = subprocess.run([str(exe), *args], input="", text=True,
+                                capture_output=True)
+        if expected is None:
+            assert (result.returncode, result.stdout) == (2, ""), (args, result)
+        else:
+            lead, trail = expected
+            header = f"synthetic_leading_ms={lead} synthetic_trailing_ms={trail}"
+            assert result.returncode == 0, (args, result)
+            assert result.stdout.splitlines()[:1] == [header], (args, result)
+
+
 if __name__ == "__main__":
+    # The differential waveform runner calls main() with an instrumented
+    # decoder. Padding-argument parsing belongs to the user-facing CLI.
+    check_padding_arguments(replay_executable())
     main()

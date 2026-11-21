@@ -29,7 +29,7 @@ ER vehicle_controller_start (void);
 
 /* Legacy entry point: returns E_NOSPT; no second sensor producer is accepted.
  */
-ER vehicle_controller_submit_nav (const s3_navigation_output_t * p_output);
+ER vehicle_controller_submit_nav (const line_navigation_output_t * p_output);
 
 /* Queue START/STOP to the sampling owner. E_OK means queued, not executed.
  * Read status for readiness/calibration gates and execution outcome. No
@@ -39,14 +39,15 @@ ER vehicle_controller_request_stop (void);
 
 vehicle_controller_state_t vehicle_controller_state (void);
 /* Sole sampling-owner adapters, not additional tasks or motion callers. */
-bool vehicle_controller_prep_start (s3_navigation_t * p_navigation);
+bool vehicle_controller_prep_start (line_navigation_t * p_navigation);
 /* START was rejected after prepare_start(): undo the map freeze only if that
  * prepare_start() newly took it (no run ever used the map). A freeze from an
  * earlier accepted run is kept until reboot. */
 void vehicle_controller_cancel_start (void);
 /* START was accepted: the freeze now belongs to the run. */
 void vehicle_controller_commit_start (void);
-bool vehicle_controller_set_mapping (const s3_nav_action_t p_map[26]);
+bool vehicle_controller_set_mapping (
+    const line_navigation_action_t p_map[S3_BARCODE_LETTERS]);
 void vehicle_controller_observe (const s3_integration_status_t * p_status);
 
 #endif /* VEHICLE_CONTROLLER_H */

@@ -3,24 +3,15 @@
 INF2004 Embedded Systems Programming project for Raspberry Pi Pico W and Cytron
 Robo Pico, implemented in C on micro T-Kernel 3.0 by five subsystem teams.
 
-Start with the [documentation index](docs/README.md),
-[current status and evidence limits](docs/CURRENT_STATUS.md), and
-[build and test commands](docs/BUILD_AND_TEST.md).
+Start with [release status and evidence](docs/CURRENT_STATUS.md),
+[build and test commands](docs/BUILD_AND_TEST.md), or the
+[documentation index](docs/README.md).
 
-The preservation baseline is commit `4ad2cc4`. Its recorded firmware was copied
-on 19 November 2026, booted, and produced valid online telemetry. The accepted
-barcode map was **A = forward, F = left, Y = right, Z = U-turn**; the recorded
-controller was stopped. This establishes deployment and online communication,
-not a successful physical course run. Subsequent cleanup candidates need their
-own evidence; a successful baseline does not validate a later revision.
-
-The ongoing cleanup covers all team-owned C/header code, tests and explicitly
-listed platform adapters. Imported kernel/SDK code stays unchanged. The
-[BARR-C rule matrix](docs/compliance/BARR_RULE_MATRIX.md) and
-[CR1 field inventory](docs/compliance/CR1_FIELD_INVENTORY.md) distinguish verified
-evidence, incomplete review and specific pending exceptions. Formatting checks
-alone do not establish full compliance. Control algorithms, calibration,
-accepted inputs, protocol interpretation and timing contracts are preserved.
+The coursework candidate uses `4ad2cc4` as its fixed behaviour baseline.
+The [BARR-C ledger](docs/compliance/BARR_RULE_MATRIX.md) records reviewed rules
+and pending findings. The [Change Requirement 1 results](docs/CHANGE_REQUIREMENT_1_EVIDENCE.md#phase-3-submission-results)
+record field widths, matched Arm RAM and message sizes, and regression scope.
+On-car timing and full-course validation remain pending.
 
 ## Subsystems and ownership
 
@@ -41,9 +32,9 @@ pin, peripheral and task ownership.
 
 ## Build and verification
 
-The project uses Make, not CMake. Building requires an Arm GCC toolchain, a host
-C++ compiler and a Pico SDK checkout with its required submodules. Network builds
-also use a private `config/wifi_secrets.h`; never commit credentials.
+The project uses Make. Building requires an Arm GCC toolchain, a host C++
+compiler and a Pico SDK checkout with its required submodules. Keep network
+credentials in the ignored `config/wifi_secrets.h`.
 
 ```sh
 make -C build_make PICO_SDK_PATH=/absolute/path/to/pico-sdk -j8

@@ -2,12 +2,12 @@ CC = cc
 APP = ../../app_program/subsystem2
 SOURCE_DIR ?= $(APP)
 BUILD = ../../build/buddy2
-CPPFLAGS = -DAPP_H -DAPP_TEST=1 -include host_kernel.h -I. -Ifakes -I$(SOURCE_DIR)
+CPPFLAGS = -DAPP_H -DAPP_TEST=1 -include wheel_kernel.h -I. -Ifakes -I$(SOURCE_DIR)
 # Both IRQ pins must be acknowledged: the original intentional boolean |
 # must not be changed to short-circuit || merely to silence Clang.
 CFLAGS = -std=c11 -Wall -Wextra -Werror -Wno-bitwise-instead-of-logical -O2 -g
 MODULES = motion ctrl_motion motion_estimation motor_control speed_pid wheel_encoder buddy2_test
-SOURCES = host_regression.c $(addprefix $(SOURCE_DIR)/,$(addsuffix .c,$(MODULES)))
+SOURCES = host_regression_main.c $(addprefix $(SOURCE_DIR)/,$(addsuffix .c,$(MODULES)))
 ifeq ($(SOURCE_DIR),$(APP))
 CPPFLAGS += -DTEST_PACKED
 SOURCES += $(APP)/codec_motion.c $(APP)/../subsystem1/telemetry_codec.c
@@ -22,7 +22,7 @@ test: pack
 
 pack:
 	mkdir -p $(BUILD)
-	$(CC) -I$(APP) $(CFLAGS) pack_test.c $(APP)/motion_pack.c $(APP)/codec_motion.c $(APP)/snapshot_motion.c -o $(BUILD)/pack_test
+	$(CC) -I$(APP) $(CFLAGS) pack_main.c $(APP)/motion_pack.c $(APP)/codec_motion.c $(APP)/snapshot_motion.c -o $(BUILD)/pack_test
 	$(BUILD)/pack_test
 
 legacy-test:
@@ -41,5 +41,5 @@ regression:
 
 sizes:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -fshort-enums size_report.c -o $(BUILD)/size_report
+	$(CC) $(CPPFLAGS) $(CFLAGS) -fshort-enums wheel_sizes_main.c -o $(BUILD)/size_report
 	$(BUILD)/size_report

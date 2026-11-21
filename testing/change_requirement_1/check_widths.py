@@ -150,22 +150,33 @@ FIELDS = [
 STATE_FIELDS = {
     "b4 queue": [("head", (0, 7, 1), 3), ("count", (0, 8, 1), 4)] +
                 [(name, FLAG, 1) for name in
-                 ("published", "lost", "reset", "recalibrate", "mag_pending")],
-    "remote request": [("id", (0, 2**32 - 1, 1), 32),
+                 ("b_has_published", "b_has_lost_events", "b_is_reset_pending",
+                  "b_should_recalibrate", "b_has_pending_mag_cal")],
+    "remote request": [("request_id", (0, 2**32 - 1, 1), 32),
                        ("epoch", (0, 2**32 - 1, 1), 32),
                        ("time_us", (0, 2**32 - 1, 1), 32),
-                       ("action", (0, 3, 1), 2), ("valid", FLAG, 1)],
+                       ("action", (0, 3, 1), 2), ("b_is_request_valid", FLAG, 1)],
     "remote state": [("flags", (0, 15, 1), 4), ("head", (0, 5, 1), 3),
                      ("count", (0, 6, 1), 3)] +
                     [(name, FLAG, 1) for name in
-                     ("connected", "published", "physical_stop", "inflight")],
+                     (
+                         "b_is_connected", "b_has_published_status", "b_is_stop_held", "b_has_active_request"
+                     )],
     "barcode work flags": [(name, FLAG, 1) for name in
-                           ("faint", "rising", "crossed", "strong", "varying",
-                            "good", "allow_noise", "ambiguous", "provisional",
-                            "strict_broken", "early")],
+                           ("b_is_faint", "b_is_rising", "b_has_crossed", "b_is_strong", "b_does_bias_vary",
+                            "b_has_candidate", "b_allows_noise", "b_is_ambiguous", "b_is_provisional",
+                            "b_is_strict_fit_broken", "b_is_early")],
     "barcode record flags": [(name, FLAG, 1) for name in
-                             ("quiet_tolerant", "retry_blocked", "early_tried",
-                              "early_candidate")],
+                             ("b_accepts_faint_quiet", "b_blocks_retry", "b_did_try_early_fit",
+                              "b_has_early_candidate")],
+    "drive state": [("reset_result", (0, 3, 1), 2)] +
+                   [(name, FLAG, 1) for name in
+                    ("b_has_external_hold", "b_is_configured", "b_waits_for_stop",
+                     "b_is_advancing", "b_has_touched_line", "b_is_searching",
+                     "b_has_obstacle_snapshot", "b_is_bypassing")],
+    "terrain report cache": [("sent_height", (0, 500, 1), 9),
+                             ("b_sent_fault", FLAG, 1),
+                             ("b_has_unreported_impact", FLAG, 1)],
 }
 for group, fields in STATE_FIELDS.items():
     for name, limits, bits in fields:
@@ -173,10 +184,12 @@ for group, fields in STATE_FIELDS.items():
 
 STATE_SOURCES = {
     "b4 queue": ("app_program/subsystem4/buddy4.c", "subsystem4_queue_state_t"),
-    "remote request": ("app_program/controller/remote_control.h", "remote_request_t"),
-    "remote state": ("app_program/controller/s3_integration.c", "g_remote"),
-    "barcode work flags": ("app_program/subsystem3/bc_decoder.h", "s3_barcode_work_t"),
-    "barcode record flags": ("app_program/subsystem3/bc_decoder.h", "s3_barcode_record_t"),
+    "remote request": ("app_program/controller/remote_control.h", "remote_control_request_t"),
+    "remote state": ("app_program/controller/s3_integration.c", "remote_mailbox_t"),
+    "barcode work flags": ("app_program/subsystem3/bc_decoder.h", "bc_decoder_work_t"),
+    "barcode record flags": ("app_program/subsystem3/bc_decoder.h", "bc_decoder_record_t"),
+    "drive state": ("app_program/controller/s3_drive.h", "s3_drive_t"),
+    "terrain report cache": ("app_program/controller/terr_link.c", "terrain_control_t"),
 }
 
 # Total bits per topic used by the laptop decoder and C codec.
@@ -237,15 +250,18 @@ def source_errors(root=ROOT):
         errors.append("Remote reply byte count does not match packed widths and IDs")
 
     body = function_body((root / "app_program/subsystem4/terr_data.c").read_text(
-        encoding="utf-8"), "terrain_pack")
+        encoding="utf-8"), "terr_data_pack")
     widths = [int(width) for width in re.findall(
         r"\bput_bits\s*\([^;]*?,\s*(\d+)[uUlL]*\s*\)\s*;", body)]
     expected = [field[3] for field in FIELDS if field[0] == "b4 packet"]
     if widths != expected or len(widths) != len(re.findall(r"\bput_bits\s*\(", body)):
-        errors.append(f"Buddy 4 terrain_pack widths {widths} differ from inventory {expected}")
+        errors.append(f"Buddy 4 terr_data_pack widths {widths} differ from inventory {expected}")
 
     for group, (name, struct_name) in STATE_SOURCES.items():
         text = without_comments((root / name).read_text(encoding="utf-8"))
+        if group == "remote state" and not re.search(
+                rf"\bstatic\s+{struct_name}\s+g_remote\s*;", text):
+            errors.append(f"g_remote is not declared as {struct_name}")
         match = re.search(rf"\bstruct\s*\{{([^{{}}]*)\}}\s*{struct_name}\s*;", text, re.DOTALL)
         if not match:
             errors.append(f"Missing bound state declaration {struct_name}")

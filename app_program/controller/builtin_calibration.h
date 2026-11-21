@@ -1,30 +1,27 @@
 /** @file builtin_calibration.h
- * @brief Built-in IR calibration for the S3_MOTION profile, so the car is ready
- * to START right after power-up.
- */
-/*
- * Built-in IR calibration for the S3_MOTION profile, so the car is ready to
- * START right after power-up. Holding GP20 for 2 s at READY still recalibrates
- * by hand (e.g. different lighting, mat or sensor height on demo day).
+ * @brief Supply the integrated motion profile's initial IR calibration.
  *
- * Measured 2026-10-27 at the mounted height, using raw button-collection
- * summaries (101 samples per surface per round; ADC raw, 0..4095):
+ * These references cover the mounted sensor geometry, wiring and surfaces
+ * recorded below. Holding GP20 for two seconds at READY permits manual
+ * recalibration after a change in lighting, material or mounting height.
+ *
+ * On 27 October 2026, the button collector recorded 101 samples per
+ * surface per round. Its 12-bit ADC readings were as follows.
  *   front-left  (Grove 6 GP27): white 115..174, black path 1242..1761, 3 rounds
  *   front-right (Grove 5 GP26): white 146..218, black path 2960..3176, 4 rounds
  *   barcode     (Grove 7 GP28): white paper 134..179, printed black 275..335,
  *                              3 valid rounds
  * Barcode round 2 used black path material and is excluded. See
  * testing/subsystem3/IR_CALIBRATION_2026-10-27.md and its raw range logs.
- * BARCODE re-measured 27 Oct 21:48 from a course run (sensor moved, AO
- * wiring): white paper/mat 170..260, bars 3250..3850 (Gin's 134..179 /
- * 275..335 no longer valid). Replaying that run through the decoder with
- * these references reads the barcode at any cut-off from raw 1000 to 3000.
+ * The barcode sensor moved and switched to its AO output. The 21:48
+ * course run on 27 October measured 170..260 on white and 3250..3850
+ * on black bars. Those values superseded the earlier barcode ranges.
+ * Replay of that run decoded at raw cut-offs from 1000 to 3000.
  * Combined-range midpoint references are LEFT 144/1501, RIGHT 182/3068,
  * BARCODE 215/3550. Keep the bench reference macros in sync with this table.
- * These values are ONLY valid for that mounting height and surface. If a
- * sensor is moved, recalibrate with the buttons and update this table.
- * They still pass the normal calibration checks (>=10 samples per surface,
- * non-overlapping white/black ranges) before being accepted at boot.
+ * The boot path accepts the values through the regular calibration checks.
+ * Each surface needs at least ten samples, and the white and black ranges
+ * must be disjoint. Recalibrate and update this table if a sensor moves.
  *
  * Set S3_BUILTIN_CALIBRATION to 0 to restore the original rule that every
  * power-up requires a fresh button calibration.
@@ -36,7 +33,8 @@
 #define S3_BUILTIN_CALIBRATION 1
 #endif
 
-/* {white_min, white_max, black_min, black_max}, indexed by s3_sensor_id_t. */
+/* {white_min, white_max, black_min, black_max}, indexed by
+ * ir_acquisition_sensor_id_t. */
 #define S3_BUILTIN_CAL_BARCODE                                                 \
     {                                                                          \
         170U, 260U, 3250U, 3850U                                               \

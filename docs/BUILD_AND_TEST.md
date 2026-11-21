@@ -48,6 +48,13 @@ manifest; do not compare its hash with a public-example CI image as though the
 inputs were identical. Windows Application Control may also prevent local build
 helpers from launching; retain the failure instead of treating it as a C result.
 
+The [release receipt](compliance/evidence/phase4-release-20261122.json) records
+the production profile, tool versions, input hashes and separate diagnostics
+build commands. To reproduce the diagnostics images, use the same integrated
+profile with `DIAGNOSTICS=1` and `MOTION_SMOKE=0` in an isolated build directory.
+Use the public example configuration for reproducible review builds. A hotspot
+build uses the ignored private configuration and needs its own image hash.
+
 The operating periods are distinct and unchanged:
 
 | Path | Period |

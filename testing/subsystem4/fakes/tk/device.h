@@ -5,8 +5,9 @@
 #define S4_TEST_DEVICE_H
 typedef int SZ;
 #define TD_UPDATE 3
-ER tk_swri_dev (ID id, int start, const void * buffer, SZ length, SZ * actual);
-ID tk_opn_dev (UB * name, unsigned mode);
+ER tk_swri_dev (ID h_device, int start, const void * p_buffer, SZ length,
+                SZ * p_actual);
+ID tk_opn_dev (UB * p_name, unsigned mode);
 #endif
 
 /* End of file. */

@@ -1,9 +1,10 @@
 /** @file control_debug.h
  * @brief Observation-only controller snapshot.
- */
-/* Observation-only controller snapshot. Separate topic/version from IR/v2.
+ *
+ * Separate topic/version from IR/v2.
  * Explicit bit widths; no C struct layout is transmitted. Signed quantities
- * use two's complement. No callbacks to motion/control exist in the codec. */
+ * use two's complement. No callbacks to motion/control exist in the codec.
+ */
 #ifndef CONTROL_DEBUG_H
 #define CONTROL_DEBUG_H
 #include <stdbool.h>
@@ -13,10 +14,10 @@
     U(timestamp_us, 32) \
     U(motion_timestamp_us, 32) \
     U(sequence, 8) \
-    U(motion_available, 1) \
-    U(motion_valid, 1) \
-    U(braked, 1) \
-    U(busy, 1) \
+    U(b_has_motion_snapshot, 1) \
+    U(b_is_motion_valid, 1) \
+    U(b_is_motion_braked, 1) \
+    U(b_is_motion_busy, 1) \
     U(motion_state, 3) \
     U(motion_fault, 3) \
     S(setpoint_left, 13) \
@@ -53,7 +54,7 @@
     U(barcode_white_limit, 10) \
     U(barcode_black_limit, 10) \
     U(cal_sensor, 2) \
-    U(collecting, 1) \
+    U(b_is_collecting, 1) \
     U(white_min, 12) \
     U(white_max, 12) \
     U(black_min, 12) \
@@ -61,13 +62,13 @@
     U(white_count, 16) \
     U(black_count, 16)
 // clang-format on
-#define CD_COUNT(name, width) +width
+#define CD_COUNT(name, width) +(width)
 
-enum
+typedef enum
 {
-    CONTROL_DEBUG_BITS = 0 CONTROL_DEBUG_FIELDS(CD_COUNT, CD_COUNT),
-    CONTROL_DEBUG_PACKET_SIZE = 1 + (CONTROL_DEBUG_BITS + 7) / 8
-};
+    CONTROL_DEBUG_BITS        = 0 CONTROL_DEBUG_FIELDS(CD_COUNT, CD_COUNT),
+    CONTROL_DEBUG_PACKET_SIZE = 1 + ((CONTROL_DEBUG_BITS + 7) / 8)
+} control_debug_dimension_t;
 
 #undef CD_COUNT
 #define CD_U(name, width) uint32_t name;
@@ -142,58 +143,54 @@ typedef enum
     CD_FIELD_COUNT
 } control_debug_field_t;
 
-/** Sampling-owner scratch; no pointer to this object is published to tasks. */
+/** The sampling owner keeps this scratch object private. */
 typedef struct
 {
     control_debug_packet_t packet;
-    bool valid : 1;
+    bool                   b_is_valid : 1;
 } control_debug_builder_t;
 
-/** Reset the builder to the version-1 zero sample, owned by the caller. */
 /** @brief Reset caller-owned scratch to a valid version-1 zero sample.
  * @param p_builder Writable builder or null; null is a no-op.
- * @post clears all prior packet bits and the previous error latch.
- * @note No locks or callbacks. The caller exclusively owns the scratch object.
+ * @post The payload starts at zero and the error latch clears.
+ * @note The caller exclusively owns the scratch object and serializes access.
  */
 void control_debug_builder_init (control_debug_builder_t * p_builder);
-/** Validate an unsigned public value before encoding; errors remain latched. */
-/** @brief Validate and encode an unsigned wide public field value.
+/** @brief Validate and encode an unsigned public field value.
  * @param p_builder Initialized caller-owned builder; null is a no-op.
- * @param field Unsigned schema selector; negative/out-of-range or signed
- * selectors latch failure without writing packet bits.
+ * @param field Selector for an unsigned field. An out-of-range selector
+ * or a signed field latches failure without writing packet bits.
  * @param value Full uint32_t input in schema units; width/domain failures
  * latch failure without narrowing or changing the selected packet bits.
  * @post Later valid writes still update fields after an error,
  * but they cannot clear the failure latch; init is required to clear it.
- * @note Caller serializes builder access. No publication or motor effect.
+ * @note The caller serializes access to this private builder.
  */
 void control_debug_builder_u (control_debug_builder_t * p_builder,
                               control_debug_field_t field, uint32_t value);
-/** Validate a signed public value before encoding; errors remain latched. */
-/** @brief Validate and encode a signed wide public field value.
+/** @brief Validate and encode a signed public field value.
  * @param p_builder Initialized caller-owned builder; null is a no-op.
- * @param field Signed schema selector; negative/out-of-range or unsigned
- * selectors latch failure without writing packet bits.
+ * @param field Selector for a signed field. An out-of-range selector
+ * or an unsigned field latches failure without writing packet bits.
  * @param value Full int32_t input in schema units; no prevalidation clipping.
  * Valid values retain the public packer's low-bit two's-complement encoding.
  * @post Rejection latches failure; later valid writes cannot
  * clear that latch, although they still replace their selected field bits.
- * @note Caller serializes builder access. No locks, callbacks or publication.
+ * @note The caller serializes access to this private builder.
  */
 void control_debug_builder_s (control_debug_builder_t * p_builder,
                               control_debug_field_t field, int32_t value);
-/** Publish only a valid complete sample; failure leaves p_packet unchanged. */
 /** @brief Copy a valid builder packet to caller-owned output storage.
  * @param p_builder Readable initialized builder, or null for rejection.
  * @param p_packet Writable output packet, or null for rejection.
  * @return True after the full packet copy. False leaves output unchanged
  * for nulls, a latched field error, or motion valid while unavailable.
- * @note Does not change the builder. The motion-availability relationship
- * failure is not latched, so changing that field can permit a later end.
+ * @note Finishing leaves the builder intact. A motion-availability mismatch
+ * can be corrected before another attempt because it leaves the latch clear.
  * The caller owns synchronization; this function itself publishes nothing.
  */
 bool control_debug_builder_end (const control_debug_builder_t * p_builder,
-                                control_debug_packet_t * p_packet);
+                                control_debug_packet_t *        p_packet);
 
 /** Encode a debug sample; return false for null pointers or invalid fields. */
 /** @brief Encode a validated wide sample as the canonical 70-byte packet.
@@ -203,11 +200,11 @@ bool control_debug_builder_end (const control_debug_builder_t * p_builder,
  * @param p_packet Writable packet; null is rejected.
  * @return True on success. False for nulls, any width/domain error, or valid
  * motion marked unavailable; failure leaves the destination unchanged.
- * @note Copies no floating/native structure layout. No locks or callbacks;
- * the caller owns input/output access and supplies the already scaled units.
+ * @note The caller serializes buffer access and supplies already scaled
+ * values for the explicit wire fields.
  */
 bool control_debug_pack (const control_debug_sample_t * p_sample,
-                         control_debug_packet_t * p_packet);
+                         control_debug_packet_t *       p_packet);
 /** Decode a canonical packet. Use the output only when this returns true. */
 /** @brief Decode and validate a canonical version-1 controller packet.
  * @param p_packet Readable complete 70-byte packet; null is rejected.
@@ -215,11 +212,11 @@ bool control_debug_pack (const control_debug_sample_t * p_sample,
  * @return True only when decoded values re-encode to every original byte,
  * including zero padding. Nulls/bad version leave p_sample unchanged; with
  * version 1, fields are written before later semantic/canonical rejection.
- * @note Use the result only on true. No locks, callbacks or shared mutation;
- * the caller serializes access to its buffers.
+ * @note The caller serializes access to its buffers and uses the result
+ * only on success.
  */
 bool control_debug_unpack (const control_debug_packet_t * p_packet,
-                           control_debug_sample_t * p_sample);
+                           control_debug_sample_t *       p_sample);
 #endif
 
 /* End of file. */

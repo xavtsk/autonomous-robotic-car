@@ -9,6 +9,34 @@ from tools.compliance import barr_check as barr
 
 
 class LexicalTests(unittest.TestCase):
+    def test_macro_transfers_use_logical_lines_and_skip_literals(self):
+        source = ('#define TEXT(x) print("return", (x)) /* goto */\n'
+                  '#define OBJECT (arg)\n'
+                  '/* #define HIDDEN(x) break */\n'
+                  '%:define CHECK(x) if (x) ret??/\nurn (x)\n'
+                  '#define EXITING(x) longjmp((x), 1)\n')
+        self.assertEqual(list(barr.macro_control_transfers(source)),
+                         [(4, 'CHECK', 'return'), (6, 'EXITING', 'longjmp')])
+
+    def test_horizontal_padding_excludes_literals_comments_and_close_indent(self):
+        source = ('emit( "( ; )" ); /* ( ; ) */\n'
+                  'emit(\n    "( ; )"\n    );\n'
+                  'emit("text") ;\n')
+        findings = [r.rule for r in self.inspect(source) if r.rule in {"3.1.i", "3.1.m"}]
+        self.assertCountEqual(findings, ["3.1.i", "3.1.i", "3.1.m"])
+
+    def test_grouped_pointer_declarators_keep_expression_checks_active(self):
+        source = ('void ( * p_callback)(int count);\n'
+                  'void ( * p_other)( int count );\n'
+                  'emit( *p_pointer );\n')
+        findings = [row.line for row in self.inspect(source) if row.rule == "3.1.i"]
+        self.assertCountEqual(findings, [2, 2, 3, 3])
+
+    def test_nonprinting_unicode_and_permitted_form_feed(self):
+        text = "/* ±1 degree */\n/* \u0085 */\n/* \u200b */\n/* \f */\n"
+        findings = [row.line for row in self.inspect(text) if row.rule == "3.6.b"]
+        self.assertEqual(findings, [2, 3])
+
     def inspect(self, source, suffix=".c"):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -16,12 +44,31 @@ class LexicalTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8", newline="")
             return barr.lexical_checks(path, root)
 
+    def test_header_guard_encloses_the_module(self):
+        body = "#ifndef SAMPLE_H\n#define SAMPLE_H\n#if OPTION\nint f(void);\n#endif\n"
+        valid = body + "#endif /* SAMPLE_H */\n"
+        self.assertEqual(barr.enclosing_header_guard("\ufeff/* notice */\n" + valid),
+                         "SAMPLE_H")
+        for source in ("int f(void);\n" + valid, valid + "int g(void);\n", body,
+                       body + "#else\nint g(void);\n#endif\n",
+                       body + "%:un\\\ndef SAMPLE_H\n#endif\n"):
+            with self.subTest(source=source):
+                self.assertTrue(any(row.rule == "4.2.b"
+                                    for row in self.inspect(source, ".h")))
+
     def test_keywords_in_literals_and_comments_are_not_code(self):
         findings = self.inspect('/** @file sample.c */\n'
                                 'const char * p_text = "short long auto register";\n'
                                 '/* A long explanation. */\n'
                                 '/* End of file. */\n\n')
         self.assertFalse(any(row.rule in {"1.7.a", "1.7.b", "5.2.b"} for row in findings))
+
+    def test_directive_locations_after_blank_lines(self):
+        findings = self.inspect('/** @file sample.c */\n\n#define my_macro 1\n'
+                                '\n#include "private.c"\n')
+        self.assertEqual([(f.rule, f.line) for f in findings
+                          if f.rule in {"6.1.f", "4.3.f"}],
+                         [("6.1.f", 3), ("4.3.f", 5)])
 
     def test_keyword_suffix_is_not_forbidden_keyword(self):
         findings = self.inspect('uint32_t count = 1UL;\nlong value;\n')
@@ -34,6 +81,13 @@ class LexicalTests(unittest.TestCase):
     def test_equivalent_relative_own_header_include_is_accepted(self):
         findings = self.inspect('#include "./sample.h"\n')
         self.assertFalse(any(row.rule == "4.3.c" for row in findings))
+
+    def test_inactive_or_search_path_include_needs_review(self):
+        for source in ('#if 0\n#include "sample.h"\n#endif\n',
+                       '#include <sample.h>\n'):
+            with self.subTest(source=source):
+                self.assertEqual([r.severity for r in self.inspect(source)
+                                  if r.rule == "4.3.c"], ["review"])
 
     def test_noncolocated_header_is_not_declared_missing(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -92,6 +146,37 @@ class LexicalTests(unittest.TestCase):
 
 
 class AstTests(unittest.TestCase):
+    def test_restricted_identifiers_apply_to_declarations_only(self):
+        decl = {"kind": "FunctionDecl", "name": "class", "storageClass": "static"}
+        self.assertIn("6.1.a", [f.rule for f in self.inspect(decl)[0]])
+        for name, rule in (("interrupt", "7.1.a"), ("errno", "7.1.b")):
+            self.assertIn(rule, [f.rule for f in self.inspect({"kind": "ParmVarDecl", "name": name})[0]])
+        self.assertFalse(self.inspect({"kind": "DeclRefExpr", "name": "stderr"})[0])
+
+    def test_do_body_and_unbraced_else_after_braced_then(self):
+        expr, empty, block = ({"kind": name} for name in ("DeclRefExpr", "NullStmt", "CompoundStmt"))
+        unbraced_do = {"kind": "DoStmt", "inner": [empty, expr]}
+        tail = {"kind": "IfStmt", "hasElse": True, "inner": [expr, block, empty]}
+        chain = {"kind": "IfStmt", "hasElse": True, "inner": [expr, block, tail]}
+        for statement in (unbraced_do, chain):
+            self.assertEqual([r.rule for r in self.inspect(statement)[0]], ["1.3.a"])
+
+    def test_nested_default_does_not_satisfy_outer_switch(self):
+        nested = {"kind": "SwitchStmt", "inner": [
+            {"kind": "DeclRefExpr"}, {"kind": "CompoundStmt", "inner": [{"kind": "DefaultStmt"}]}]}
+        outer = {"kind": "SwitchStmt", "inner": [
+            {"kind": "DeclRefExpr"}, {"kind": "CompoundStmt", "inner": [nested]}]}
+        self.assertEqual([r.rule for r in self.inspect(outer)[0]], ["8.3.b"])
+
+    def test_assignments_only_in_if_condition(self):
+        assigned = {"kind": "BinaryOperator", "opcode": "="}
+        compound = {"kind": "CompoundAssignOperator", "opcode": "+="}
+        comparison = {"kind": "BinaryOperator", "opcode": "=="}
+        for operand, expected in ((assigned, ["8.2.c"]), (compound, ["8.2.c"]), (comparison, [])):
+            statement = {"kind": "IfStmt", "inner": [
+                {"kind": "ParenExpr", "inner": [operand]}, {"kind": "CompoundStmt", "inner": [assigned]}]}
+            self.assertEqual([r.rule for r in self.inspect(statement)[0]], expected)
+
     def inspect(self, node):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -106,6 +191,18 @@ class AstTests(unittest.TestCase):
         self.assertEqual([row.rule for row in self.inspect(node)[0]], ["5.4.b.iv"])
         node["inner"] = [{"kind": "IntegerLiteral", "type": {"qualType": "int"}}]
         self.assertEqual(self.inspect(node)[0], [])
+
+    def test_typedefs_and_local_declaration_groups(self):
+        for name, expected in (("wheel_state_t", []), ("T_CMTX", ["5.1.a"]),
+                               ("wheel_state", ["5.1.a"])):
+            node = {"kind": "TypedefDecl", "name": name}
+            self.assertEqual([r.rule for r in self.inspect(node)[0]], expected)
+        self.assertEqual(self.inspect(dict(node, isImplicit=True))[0], [])
+        variable = {"kind": "VarDecl", "name": "speed"}
+        for children, expected in (([{"kind": "RecordDecl"}, variable], []),
+                                   ([variable, dict(variable, name="count")], ["8.1.a"])):
+            statement = {"kind": "DeclStmt", "inner": children}
+            self.assertEqual([r.rule for r in self.inspect(statement)[0]], expected)
 
     def test_private_function_documentation_is_required(self):
         node = {"kind": "FunctionDecl", "name": "helper", "storageClass": "static",

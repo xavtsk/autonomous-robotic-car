@@ -17,8 +17,8 @@ typedef struct
     unsigned locked;
     unsigned starts_requested;
     unsigned stops;
-    bool go_down;
-    bool stop_down;
+    bool     go_down;
+    bool     stop_down;
     uint16_t raw[3];
 } op_trace_context_t;
 
@@ -37,9 +37,10 @@ typedef struct
  * milliseconds, raw ADC counts and normalized calibration summaries. Floating
  * averages are recorded as exact binary32 bits, not rounded decimal text.
  */
-void op_trace_write (const op_trace_context_t * p_context,
-                     const operator_t * p_operator, const op_button_t * p_go,
-                     const op_button_t * p_stop,
+void op_trace_write (const op_trace_context_t *      p_context,
+                     const op_logic_t *              p_operator,
+                     const op_logic_button_t *       p_go,
+                     const op_logic_button_t *       p_stop,
                      const s3_integration_status_t * p_status,
                      const char * p_console, size_t console_begin,
                      size_t console_end);

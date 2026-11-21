@@ -8,9 +8,9 @@ CFLAGS = -std=c11 -Wall -Wextra -Werror -O2 -g
 .PHONY: test sanitize
 test:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) policy_test.c -o $(BUILD)/policy_test
+	$(CC) $(CPPFLAGS) $(CFLAGS) policy_main.c -o $(BUILD)/policy_test
 	$(BUILD)/policy_test
-	$(CC) $(CPPFLAGS) $(CFLAGS) runtime_test.c $(DRIVER)/cyw43_utk.c -o $(BUILD)/runtime_test
+	$(CC) $(CPPFLAGS) $(CFLAGS) wifi_service_main.c $(DRIVER)/cyw43_utk.c -o $(BUILD)/runtime_test
 	$(BUILD)/runtime_test
 
 sanitize:

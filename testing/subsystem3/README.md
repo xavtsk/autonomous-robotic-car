@@ -234,7 +234,7 @@ narrow gaps keep their original checks. Edge interpolation also uses bounded
 32-bit arithmetic with the same integer rounding, removing expensive 64-bit
 divisions; this is not a measured guarantee of the sampling deadline.
 
-`test_barcode_wide.c` covers 468 synthetic scans: A-Z, both directions,
+`wide_bar_main.c` covers 468 synthetic scans: A-Z, both directions,
 8/14/19 mm wide elements and 2:1/2.5:1/3:1 ratios, plus malformed widths,
 truncation, real quiet and the longer deadline. These ideal geometries do not
 prove that the user's different papers are scaled copies. The recorder,
@@ -354,8 +354,8 @@ no suppressed replay and synthetic 5 ms/10 ms traces with jitter. The existing
 acquisition, calibration, line, steering, A-Z and independent A/Z tests remain.
 These are synthetic tests, not measured physical detection performance.
 
-The Windows script also runs `test_barcode_record.c` and
-`test_barcode_varying.c`, and builds a stdin replay utility. To run the saved
+The Windows script also runs `scan_record_main.c` and
+`variable_scan_main.c`, and builds a stdin replay utility. To run the saved
 3 November waveform regressions afterwards:
 
 ```powershell
@@ -368,7 +368,7 @@ sentinel-only width correction, original run outcomes, quantised timing and
 the explicitly synthetic quiet margins used in replay. Replay success does
 not replace a new hardware run.
 
-`barcode_fixtures.h` contains independent bar widths from all four pages of the
+`pdf_patterns.h` contains independent bar widths from all four pages of the
 supplied `Project/Barcode Sample.pdf` (A,A,Z,Z). Its source hash and extraction
 method are recorded in the header. Tests add explicit quiet zones; they do not
 claim the PDF's existing margins meet the decoder's requirement. The optional

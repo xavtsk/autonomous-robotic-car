@@ -7,7 +7,7 @@
 #include "../app_types.h"
 #include <stdbool.h>
 
-/* Exactly 3 bits. Flags/measurement validity are separate. */
+/* The wire state occupies three bits. Separate flags carry validity. */
 typedef enum
 {
     TERRAIN_UNKNOWN,
@@ -18,7 +18,7 @@ typedef enum
     TERRAIN_CLIMBING,
     TERRAIN_DESCENDING,
     TERRAIN_IMPACT
-} terrain_state_t;
+} events_motion_state_t;
 
 /**
  * @brief Select one motion category using the existing priority order.
@@ -26,16 +26,19 @@ typedef enum
  * @param speed Signed forward speed in metres per second.
  * @param longitudinal_g Longitudinal dynamic acceleration in g.
  * @param turn_dps Signed turn rate in degrees per second.
- * @param turn_valid Whether the turn-rate comparison is enabled.
- * @param impact Whether impact takes precedence over all other categories.
+ * @param b_is_turn_valid Whether the turn-rate comparison is enabled.
+ * @param b_has_impact Whether impact takes precedence over all other
+ * categories.
  * @return Impact, turning, climbing, descending, accelerating, stationary or
  * moving, in that priority order. This function does not return UNKNOWN.
  * @note Inputs are not checked for finiteness or physical range; ordinary
  * floating comparisons determine the outcome. No state or pointers are used.
  */
-terrain_state_t motion_classify (float32_t pitch, float32_t speed,
-                                 float32_t longitudinal_g, float32_t turn_dps,
-                                 bool turn_valid, bool impact);
+events_motion_state_t events_motion_classify (float32_t pitch, float32_t speed,
+                                              float32_t longitudinal_g,
+                                              float32_t turn_dps,
+                                              bool      b_is_turn_valid,
+                                              bool      b_has_impact);
 #endif
 
 /* End of file. */

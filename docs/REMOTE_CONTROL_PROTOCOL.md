@@ -7,6 +7,13 @@ All integers below are unsigned little-endian. Commands and status retain
 version `3`; compact replies use version `4`. Commands and replies are
 non-retained MQTT messages. There is no automatic START retry.
 
+```text
+Dashboard v3 request -> MQTT receive -> validation -> controller mailbox
+                                                           |
+                                                           v
+Dashboard <- MQTT publish <- replies (v4) and status (v3) <- controller
+```
+
 | Topic | Python struct | Fields in order |
 | --- | --- | --- |
 | `car/cmd/control` | `<BBIII` (14 bytes) | version, action, request ID, link epoch, observed robot time in microseconds |

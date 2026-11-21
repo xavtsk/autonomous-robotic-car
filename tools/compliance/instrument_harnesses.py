@@ -18,9 +18,22 @@ INTEGRATION_STORAGE_NAMES = {
     'g_control_ready': 'g_shared.control_ready',
 }
 
+INTEGRATION_PREDICATE_FIELDS = {
+    'pending': 'b_has_command',
+    'stop': 'b_has_stop',
+    'status_ready': 'b_has_status',
+    'reset_pending': 'b_has_reset',
+    'ir_ready': 'b_has_ir_debug',
+    'control_ready': 'b_has_control_debug',
+    'reset_waiting': 'b_waits_for_reset',
+    'reset_remote': 'b_is_remote_reset',
+    'collecting': 'b_is_collecting',
+    'control_seen': 'b_has_control_tick',
+}
+
 
 def integration_storage_aliases(subject):
-    """Select only the two reviewed private layouts; fail on unknown layouts."""
+    """Select the reviewed private layouts and reject other field bindings."""
     text = (Path(subject)/'app_program/controller/s3_integration.c').read_text()
     tokens = [match[0] for match in TOKEN.finditer(text) if match.lastgroup != 'comment']
     joined = ' '.join(tokens)
@@ -38,30 +51,72 @@ def integration_storage_aliases(subject):
         ):
             replace_once(text, declaration, '')
         return {}
-    if joined.count('} g_sampling ;') != 1 or joined.count('} g_shared ;') != 1:
-        raise ValueError('Unrecognized compact integration storage declarations')
-    replace_once(text, '''static struct {
+    predicate_fields = {new: old for old, new in INTEGRATION_PREDICATE_FIELDS.items()}
+    has_named_predicates = any(f'{field} : ' in joined for field in predicate_fields)
+    if has_named_predicates:
+        if not all(f'{field} : 1' in joined for field in predicate_fields):
+            raise ValueError('Harness changed; review compact predicate fields')
+        # Validate the same exact layout after translating the reviewed names.
+        text = TOKEN.sub(lambda token: predicate_fields.get(token[0], token[0])
+                         if token.lastgroup == 'identifier' else token[0], text)
+        tokens = [match[0] for match in TOKEN.finditer(text) if match.lastgroup != 'comment']
+        joined = ' '.join(tokens)
+    sampling_fields = '''{
         uint8_t sensor : 2; uint8_t label : 2;
         bool reset_waiting : 1; bool reset_remote : 1; bool collecting : 1;
         #if APP_IR_DEBUG
         bool control_seen : 1;
         #endif
-        } g_sampling;''', '')
-    replace_once(text, '''static struct {
+        }'''
+    shared_fields = '''{
         bool pending : 1, stop : 1, status_ready : 1, reset_pending : 1;
         #if APP_IR_DEBUG
         bool ir_ready : 1, control_ready : 1;
         #endif
-        } g_shared;''', '')
+        }'''
+    if 'bool pending : 1 ;' in joined:
+        # The cleaned layout repeats the same type for each individual field.
+        shared_fields = shared_fields.replace(': 1, ', ': 1; bool ')
+    named_layout = 's3_sampling_flags_t' in tokens
+    for fields, type_name, object_name in (
+        (sampling_fields, 's3_sampling_flags_t', 'g_sampling'),
+        (shared_fields, 's3_shared_flags_t', 'g_shared'),
+    ):
+        if named_layout:
+            replace_once(text, f'typedef struct {fields} {type_name};', '')
+            replace_once(text, f'static {type_name} {object_name};', '')
+        else:
+            replace_once(text, f'static struct {fields} {object_name};', '')
     for name, expression in INTEGRATION_STORAGE_NAMES.items():
         if name in tokens or expression.replace('.', ' . ') not in joined:
             raise ValueError('Unrecognized compact integration storage member: '+name)
-    return dict(INTEGRATION_STORAGE_NAMES)
+    aliases = INTEGRATION_STORAGE_NAMES.copy()
+    if has_named_predicates:
+        for name, expression in aliases.items():
+            owner, field = expression.split('.')
+            aliases[name] = owner + '.' + INTEGRATION_PREDICATE_FIELDS.get(field, field)
+    return aliases
 
 
 def integration_storage_flags(subject):
     """Enable the test-only post-include adapter for the reviewed compact layout."""
-    return ['-DTEST_S3_COMPACT_STORAGE=1'] if integration_storage_aliases(subject) else []
+    aliases = integration_storage_aliases(subject)
+    if not aliases:
+        return []
+    flags = ['-DTEST_S3_COMPACT_STORAGE=1']
+    if aliases['g_reset_waiting'] == 'g_sampling.reset_waiting':
+        flags.append('-DTEST_S3_LEGACY_PREDICATES=1')
+    return flags
+
+
+def remote_request_flags(subject):
+    """Select the request identifier spelling for the fixed comparison."""
+    header = (Path(subject)/'app_program/controller/remote_control.h').read_text()
+    fields = [token[0] for token in TOKEN.finditer(header)
+              if token.lastgroup != 'comment']
+    if 'uint32_t id ;' in ' '.join(fields):
+        return ['-DTEST_REMOTE_ID_MEMBER=id']
+    return []
 
 
 def replace_once(text, old, new):
@@ -87,48 +142,90 @@ def replace_once(text, old, new):
 
 
 def runtime_source(candidate, subject, destination):
-    source = (candidate/'testing/integration/runtime_test.c').read_text()
-    observer = Path(__file__).with_name('traces').joinpath('runtime_observer.h').read_text()
-    source = replace_once(source, 'static void cycle(void)', observer + '\nstatic void cycle(void)')
+    source = (candidate/'testing/integration/runtime_main.c').read_text()
+    observer = Path(__file__).with_name('traces').joinpath('cycle_observer.h').read_text()
+    declaration = 'static void cycle(void);'
+    source = replace_once(source, declaration, observer + '\n' + declaration)
     source = replace_once(source,
-        'sensor_sample_task(0,NULL);assert(!locked); }',
-        'sensor_sample_task(0, NULL);\n    assert(!locked);\n    trace_runtime("cycle");\n}')
-    source = replace_once(source, 's3_remote_receive(p,sizeof p);',
-                          's3_remote_receive(p,sizeof p); trace_runtime("receive");')
-    source = replace_once(source, 'assert((p[1]&0x80U)==0U);',
-        'assert((p[1]&0x80U)==0U);\n    printf("REPLY ");\n    for (unsigned trace_i=0; trace_i<sizeof p; ++trace_i) printf("%02x", p[trace_i]);\n    putchar(\'\\n\');\n    trace_runtime("take");')
-    # The copied harness embeds the *subject* implementation, not the source
-    # checkout that supplied test expectations. Only include locations change.
+        's3_integration_runtime_test_cycle(); } assert(!g_locks); }',
+        's3_integration_runtime_test_cycle();\n    }\n    assert(!g_locks);\n    trace_runtime("cycle");\n}')
+    receive_call = 'remote_control_receive(request_packet,sizeof request_packet);'
+    source = replace_once(source, receive_call, receive_call + ' trace_runtime("receive");')
+    reply_check = 'assert((reply_packet[1]&0x80U)==0U);'
+    reply_trace = r'''
+    printf("REPLY ");
+    for (unsigned trace_i = 0; trace_i < sizeof reply_packet; ++trace_i)
+    {
+        printf("%02x", reply_packet[trace_i]);
+    }
+    putchar('\n');
+    trace_runtime("take");'''
+    source = replace_once(source, reply_check, reply_check + reply_trace)
+    # Bind headers to the subject that supplies the independently linked owner.
     source = source.replace('"../../app_program/', '"' + (subject/'app_program').as_posix() + '/')
     destination.write_text(source, encoding='utf-8')
     return destination
 
 
 def mqtt_source(candidate, destination):
-    source = (candidate/'testing/subsystem1/host_test.c').read_text()
+    source = (candidate/'testing/subsystem1/host_main.c').read_text()
     observer = Path(__file__).with_name('traces').joinpath('mqtt_observer.h').read_text()
+    callbacks = {
+        'gp_incoming': 'trace_incoming',
+        'gp_fragment': 'trace_fragment',
+    }
+
+    def observe_delivery(token):
+        name = token[0]
+        if name in callbacks and source[token.end():].lstrip().startswith('('):
+            return callbacks[name]
+        return name
+
+    # Redirect fixture calls before adding the observers. Each observer
+    # delegates once to the original registered callback.
+    source = TOKEN.sub(observe_delivery, source)
     source = replace_once(source, 'u32_t sys_now(void)', observer + '\nu32_t sys_now(void)')
-    source = replace_once(source, 'incoming = p; fragment = d;',
-        'trace_original_incoming = p; trace_original_fragment = d; incoming = trace_incoming; fragment = trace_fragment;')
-    source = replace_once(source, 'if (publish_result != ERR_OK) return publish_result;',
-        'trace_publish(topic,payload,len,qos,retain);\n    if (publish_result != ERR_OK) return publish_result;')
+    publish_guard = 'if (g_publish_result != ERR_OK) { return g_publish_result; }'
+    source = replace_once(source, publish_guard,
+        'trace_publish(p_topic,p_payload,len,qos,retain);\n    ' + publish_guard)
     destination.write_text(source, encoding='utf-8')
     return destination
 
 
+def operator_port_flags(subject):
+    """Select the observer for the subject's two operator callbacks."""
+    header = (subject/'app_program/controller/op_logic.h').read_text()
+    tokens = ' '.join(m[0] for m in TOKEN.finditer(header) if m.lastgroup != 'comment')
+    declaration = ('typedef struct { bool ( * %ssubmit ) ( const %s * '
+                   'p_request ) ; int ( * %sprint ) ( const unsigned char * p_format '
+                   ', ... ) ; } ')
+    for prefix, flags in (('p_', []), ('', ['-DOP_TRACE_LEGACY_PORT=1'])):
+        matches = sum(
+            tokens.count((declaration % (prefix, request, prefix)) + type_name + ' ;')
+            for type_name, request in (
+                ('op_port_t', 's3_control_request_t'),
+                ('op_logic_port_t', 's3_control_request_t'),
+                ('op_logic_port_t', 's3_integration_request_t'),
+            )
+        )
+        if matches == 1:
+            return flags
+    raise ValueError('Unrecognized operator callback declaration in ' + str(subject))
+
+
 def operator_source(candidate, subject, destination):
     """Observe the existing whole GP20/GP21 fixture without changing assertions."""
-    source = (candidate/'testing/integration/operator_test.c').read_text()
+    source = (candidate/'testing/integration/operator_main.c').read_text()
     source = replace_once(source, 'static void period(void) {',
-        'static void period(void) {\n    const size_t trace_console_begin = console_len;\n')
-    anchor = '''operator_step(&op, now_ms(), go, op_button_held(&stop_b),
-                  op_button_held(&go_b), s3_integration_status(&st) ? &st : 0);'''
+        'static void period(void) {\n    const size_t trace_console_begin = g_console_length;\n')
+    anchor = '''op_logic_step(&g_operator, now_ms(), go_press, op_logic_button_held(&g_stop_button),
+                  op_logic_button_held(&g_go_button), s3_integration_status(&g_operator_status) ? &g_operator_status : 0);'''
     observation = '''
     const op_trace_context_t trace_context = {
-        clock_value, remote_stop_seen, sleeps, locked, starts_requested,
-        stops, go_down, stop_down, {raw[0], raw[1], raw[2]}};
-    op_trace_write(&trace_context, &op, &go_b, &stop_b, &st, console,
-                   trace_console_begin, console_len);
+        g_clock_us, g_remote_stop_seen, g_sleeps, g_locks, g_starts_requested,
+        g_stops, gb_is_go_down, gb_is_stop_down, {g_raw[0], g_raw[1], g_raw[2]}};
+    op_trace_write(&trace_context, &g_operator, &g_go_button, &g_stop_button, &g_operator_status, g_console,
+                   trace_console_begin, g_console_length);
 '''
     source = replace_once(source, anchor, anchor + observation)
     observer = (Path(__file__).with_name('traces')/'op_trace.h').resolve().as_posix()

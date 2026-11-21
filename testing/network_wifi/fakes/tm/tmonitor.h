@@ -4,8 +4,10 @@
 #ifndef TESTING_NETWORK_WIFI_FAKES_TM_TMONITOR_H
 #define TESTING_NETWORK_WIFI_FAKES_TM_TMONITOR_H
 
-typedef unsigned char UB;
-int tm_printf (const UB * format, ...);
+#include <stdint.h>
+
+typedef uint8_t UB;
+int             tm_printf (const UB * p_format, ...);
 
 #endif /* TESTING_NETWORK_WIFI_FAKES_TM_TMONITOR_H */
 

@@ -15,8 +15,8 @@ recorded compiler context. It establishes neither ownership nor authorization
 to alter the source or its imported header. The 268-file/55-candidate counts
 below describe the earlier batch-1 snapshot and are historical after the
 ownership correction. Current counts come from the scope/inventory manifest.
-The owned fake-header guards, standalone tests and actual shared test APIs
-remain the actionable parts of this plan. In particular, changed
+The host-interface section below records the completed pairing and guard
+checks. Review of the exported declarations continues. In particular, changed
 `mqtt_utk.c/.h` and `cyw43_utk.c` retain their explicit owned scope.
 
 BARR 4.2.a requires one same-root header for each source; it does not require
@@ -57,76 +57,37 @@ declarations, and require the matched target-image gate. Added declarations can
 affect optimizer decisions even when their C types are equivalent; the earlier
 float-alias investigation shows why source-only reasoning is insufficient.
 
-## Remaining host modules
+## Host interfaces and include guards
 
-Reparse each source using its real host command. For files defining only `main`
-and private helpers, apply the no-export pair used in batch 1. For actual shared
-test APIs, move only the existing necessary declarations to the paired header
-and include it in both defining and calling modules. For example,
-`testing/subsystem3/test_navigation.c` defines `test_navigation`, which is
-declared and called by `test_core.c`; that existing interface must not be
-misrepresented as empty. Fake SDK/kernel callbacks keep their established
-external declarations and receive a symbol-by-symbol ABI record.
+All 129 wholly team-owned C sources now include their matching header directly
+and unconditionally. The final batch paired 26 test fixtures. Fixtures that
+supply driver, kernel or SDK callbacks reuse the existing declarations.
+Standalone tools expose no additional project API.
 
-The current lexical scan at `4dd87b3` reports the 34 same-root source candidates
-listed below, after the second standalone-header batch. They still require actual
-compiler-context/interface review. Implementation-inclusion harnesses remain
-independently open under 4.3.f; adding a header does not close private-access review.
+For the 23 active fixtures and their affected callers, all 39 before-and-after
+compiler comparisons produced identical preprocessed code and object bytes.
+The remaining three legacy fixtures already failed to compile at the deployed
+baseline. Their new headers compile independently, including when included
+twice. The complete fixtures retain the same preprocessed code and compiler
+diagnostics as before this batch. Exact paths and results are under
+`fixture_interface_followup` in the [grouped evidence](evidence/phase2-mechanical.json).
 
-```
-testing/change_requirement_1/struct_sizes.c
-testing/compliance/barcode_work_test.c
-testing/compliance/motion_storage_test.c
-testing/compliance/mqtt_receive_test.c
-testing/diagnostics/firmware_test.c
-testing/diagnostics/motion_smoke_test.c
-testing/diagnostics/startup_test.c
-testing/integration/builtin_test.c
-testing/integration/controller_test.c
-testing/integration/course_sim.c
-testing/integration/course_test.c
-testing/integration/map_freeze_test.c
-testing/integration/operator_test.c
-testing/integration/remote_bridge_test.c
-testing/integration/runtime_test.c
-testing/integration/team_adapter_test.c
-testing/network_wifi/runtime_test.c
-testing/subsystem1/host_test.c
-testing/subsystem2/controller_adapter_test.c
-testing/subsystem2/host_regression.c
-testing/subsystem2/pack_test.c
-testing/subsystem3/bench_trace.c
-testing/subsystem3/host_trace.c
-testing/subsystem3/test_drive.c
-testing/subsystem3/test_motion_feedback.c
-testing/subsystem4/integration_test.c
-testing/subsystem4/transport_test.c
-testing/subsystem5/bypass_course_test.c
-testing/subsystem5/controller_test.c
-testing/subsystem5/course_clear_test.c
-testing/subsystem5/hardware_test.c
-testing/subsystem5/runtime_test.c
-testing/subsystem5/telemetry_test.c
-tools/compliance/traces/motion_trace.c
-```
+All 174 headers in scope have distinct enclosing guards. The two observer
+fragments still need export and storage review under 4.2.c. Implementation
+inclusion by test harnesses remains open under 4.3.f.
 
-## Guards and module names
+## Module names
 
-The eleven fake-header guards were completed in their separately verified
-batch. The two remaining observer fragments are listed below. They contain
-private definitions and, for MQTT, storage; guards alone do not resolve 4.2.c.ii
-or the distinction between an interface header and generated instrumentation.
-Review their actual insertion contexts before changing those boundaries.
-
-```
-tools/compliance/traces/mqtt_observer.h
-tools/compliance/traces/runtime_observer.h
-```
+Five test headers now have unique eight-character prefixes. The motion and
+navigation size reports use `wheel_sizes_main.c` and `nav_sizes_main.c` and
+keep their original Make targets and executable names. The path map and
+compiler comparisons are in the `test_filename_followup` entry of the
+[grouped evidence](evidence/phase2-mechanical.json).
 
 Rule 4.1.b remains separate from pairing. Confirmed first-eight-character
 collisions include the `test_barcode_*` family and the `control_*` test modules
 versus production `control_debug`. Identical basenames such as `host_test`,
-`size_report`, `runtime_test`, `controller_test` and fake `tmonitor` require
+`runtime_test`, `controller_test` and fake `tmonitor` require
 explicit module identities and build-context mapping; a source/header pair in
 different directories is not automatically two modules.
 
@@ -137,8 +98,14 @@ together. Preserve baseline file lookup per revision, as in the estimator
 rename. Record each fixed external include-name constraint individually rather
 than exempting all fakes or all tests. Pairing does not grant a naming waiver.
 
-Sequence: finish the isolated estimator target gate; publish batch 1 and refresh
-source-bound inventory; execute the Linux host/sanitizer gates; then proceed
-with guard, actual shared-test-interface, naming and adapter batches separately.
-Each batch keeps a concrete inverse proof and records any unresolved case with
-its exact symbol/profile. No deviation is self-approved by this plan.
+The remaining interface work includes filename collisions, test harnesses
+that include implementations, and the export and prototype review for shared
+callbacks. The [exception register](BARR_EXCEPTIONS.md) tracks decisions
+that need review or approval.
+
+The subsequent host filename review assigned unique prefixes to the barcode
+tests and distinct identities to the wheel, terrain, obstacle and Wi-Fi tests.
+It also updated the Make, PowerShell, Python and dashboard test source lookups.
+Existing Make targets and executables retain their original names. The
+current path map and the remaining simulated SDK/kernel include names are in
+`phase2_source_review` in the [grouped receipt](evidence/phase2-mechanical.json).

@@ -1,10 +1,8 @@
 /** @file wheel_encoder.h
  * @brief Wheel encoder acquisition (quadrature, decoded in PIO0).
- */
-/*
- * File: wheel_encoder.h
- * Owner: Buddy 2 - Motion Control
- * Purpose: Wheel encoder acquisition (quadrature, decoded in PIO0).
+ *
+ * @par Ownership
+ * Buddy 2 - Motion Control
  *
  * Counts are in quadrature edges (4 per encoder line). A positive count means
  * the wheel turned in the direction that drives the robot forward.
@@ -26,48 +24,50 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* Wheel identifiers, shared by the Buddy 2 modules */
+/* Buddy 2 modules share these wheel identifiers. */
 typedef enum
 {
-    WHEEL_LEFT = 0, /* left DC motor (M1) + left wheel encoder (ENC_L)   */
-    WHEEL_RIGHT,    /* right DC motor (M2) + right wheel encoder (ENC_R) */
+    WHEEL_LEFT = 0, /* Pair motor M1 with encoder ENC_L. */
+    WHEEL_RIGHT,    /* Pair motor M2 with encoder ENC_R. */
     WHEEL_COUNT
-} wheel_id_t;
+} wheel_encoder_id_t;
 
 #define WHEEL_COUNT_BITS (20U)
 #define WHEEL_COUNT_MASK ((1UL << WHEEL_COUNT_BITS) - 1U)
 
-/* A stored count (e.g. the start of a move) */
+/* Store a count such as the start of a move. */
 typedef struct
 {
     uint32_t bits : WHEEL_COUNT_BITS;
-} wheel_count_t;
+} wheel_encoder_count_t;
 
 /*
  * Configure ENC_L / ENC_R as inputs with pull-ups and start one PIO0 state
  * machine per encoder. No interrupt is used. Returns E_OK (0), or E_OBJ if
  * PIO0 is already in use; counts then stay at 0.
  */
-int32_t wheel_encoder_init (bool b_left_inverted, bool b_right_inverted);
+int32_t wheel_encoder_init (bool b_is_left_inverted, bool b_is_right_inverted);
 
-/* Motion task only: read both PIO counts into the snapshot */
+/* Only the motion task refreshes the snapshot. */
 void wheel_encoder_sample (void);
 
-/* The snapshot from the last wheel_encoder_sample(); any task */
-int32_t wheel_encoder_count (wheel_id_t wheel); /* + = forward        */
-uint32_t wheel_encoder_bits (wheel_id_t wheel); /* same, 20-bit field */
+/* Any task can read the last sampled value. */
+int32_t
+wheel_encoder_count (wheel_encoder_id_t wheel); /* Positive means forward. */
+uint32_t wheel_encoder_bits (
+    wheel_encoder_id_t wheel); /* Read the same count as a raw 20-bit field. */
 
-/* now - then for two stored counts, correct across the 20-bit wrap */
+/* Subtract two counts modulo the 20-bit counter period. */
 int32_t wheel_encoder_delta (uint32_t now_bits, uint32_t then_bits);
 
-bool wheel_encoder_is_running (void); /* PIO counting       */
+bool wheel_encoder_is_running (void); /* Report whether PIO is counting. */
 
-/* Invalid transitions; always 0, as the PIO program ignores them */
-uint32_t wheel_encoder_glitches (wheel_id_t wheel);
+/* Return zero because the PIO program ignores invalid transitions. */
+uint32_t wheel_encoder_glitches (wheel_encoder_id_t wheel);
 
-/* Count direction; used by calibration */
-void wheel_encoder_set_inverted (wheel_id_t wheel, bool b_inverted);
-bool wheel_encoder_is_inverted (wheel_id_t wheel);
+/* Calibration configures count direction. */
+void wheel_encoder_set_inverted (wheel_encoder_id_t wheel, bool b_is_inverted);
+bool wheel_encoder_is_inverted (wheel_encoder_id_t wheel);
 
 #endif /* BUDDY2_WHEEL_ENCODER_H */
 

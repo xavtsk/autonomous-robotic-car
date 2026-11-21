@@ -1,6 +1,14 @@
 /** @file buddy4.c
  * @brief Own IMU acquisition, terrain processing and protected snapshots and
  * events.
+ * @see app_program/subsystem4/README.md for the terrain data path.
+ * Validated enum limits are nonnegative. Casts make the unsigned
+ * comparison domain explicit while retaining the original limits.
+ * The selected byte and half-word operands fit a 32-bit int. The casts
+ * spell out the signed promotion already used by these comparisons.
+ * The selected constants and mask results are nonnegative.
+ * Cast them in the existing unsigned arithmetic or comparison domain.
+ * Unsigned casts spell out the original modulo conversion.
  */
 #include "buddy4.h"
 #include "../build_assert.h"
@@ -12,12 +20,33 @@
 #define APP_S4_BENCH 0
 #endif
 #if APP_S4
+#ifdef BUDDY4_TRANSPORT_TEST
+#include "transport_main.h"
+#endif
 #include <sys/sysdef.h>
 #include <tk/device.h>
+#if defined(BUDDY4_TRANSPORT_TEST) && defined(__clang__)
+/* The BSP header has no final newline. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnewline-eof"
+#endif
 #include "../../device/include/dev_i2c.h"
+#if defined(BUDDY4_TRANSPORT_TEST) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 #include "../subsystem2/motion.h"
 #if APP_IMU_DEBUG
 #include "../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h"
+#endif
+/* The host transport fixture substitutes these three operations. */
+#ifdef BUDDY4_TRANSPORT_TEST
+#define BUDDY4_IMU_INIT buddy4_transport_imu_init
+#define BUDDY4_IMU_READ buddy4_transport_imu_read
+#define BUDDY4_TERRAIN_PROCESS buddy4_transport_observe
+#else
+#define BUDDY4_IMU_INIT imu_sensor_init
+#define BUDDY4_IMU_READ imu_sensor_read
+#define BUDDY4_TERRAIN_PROCESS terr_data_process
 #endif
 /* This car's test obstacle raises the right wheel only. Keep the portable
  * monitor's longitudinal default available through an explicit build choice. */
@@ -31,31 +60,19 @@
 #define S4_QUEUE_LEN 8U
 /* Wake every kernel tick to check for the accelerometer's 50 Hz output. */
 #define S4_IMU_POLL_MS 10U
-static ID g_mutex, g_task, g_cycle, g_device;
-static uint8_t g_snapshot[TERRAIN_PACKET_SIZE],
-    g_events[S4_QUEUE_LEN][TERRAIN_PACKET_SIZE];
 
-/* All fields in this packed state are read and updated under g_mutex.
+/* All fields in this packed state are read and updated under gh_terrain_mutex.
  * Head is 0..7; count includes the full eight-event state. */
 typedef struct
 {
     uint16_t head : 3;
     uint16_t count : 4;
-    bool published : 1;
-    bool lost : 1;
-    bool reset : 1;
-    bool recalibrate : 1;
-    bool mag_pending : 1;
+    bool     b_has_published : 1;
+    bool     b_has_lost_events : 1;
+    bool     b_is_reset_pending : 1;
+    bool     b_should_recalibrate : 1;
+    bool     b_has_pending_mag_cal : 1;
 } subsystem4_queue_state_t;
-
-static subsystem4_queue_state_t g_queue;
-static uint16_t g_run, g_published_run, g_humps;
-static float32_t g_offset[3], g_scale[3];
-
-static uint32_t now_us (void)
-{
-    return in_w(TIMER_TIMERAWL);
-}
 
 #if APP_IMU_DEBUG
 #define IMU_DEBUG_VERSION 2U
@@ -67,298 +84,762 @@ static uint32_t now_us (void)
 #define IMU_DEBUG_QUEUE_ROWS 128U
 #define IMU_DEBUG_FLUSH_US 250000U
 
-enum
+typedef enum
 {
-    IMU_DEBUG_VALID = 1U << 0,
+    IMU_DEBUG_VALID     = 1U << 0,
     IMU_DEBUG_EVALUATED = 1U << 1,
-    IMU_DEBUG_OVERRUN = 1U << 2,
-    IMU_DEBUG_IMPACT = 1U << 3,
-    IMU_DEBUG_PENDING = 1U << 4,
-    IMU_DEBUG_UPWARD = 1U << 5,
-    IMU_DEBUG_TILTED = 1U << 6
-};
+    IMU_DEBUG_OVERRUN   = 1U << 2,
+    IMU_DEBUG_IMPACT    = 1U << 3,
+    IMU_DEBUG_PENDING   = 1U << 4,
+    IMU_DEBUG_UPWARD    = 1U << 5,
+    IMU_DEBUG_TILTED    = 1U << 6
+} buddy4_debug_flag_t;
 
 typedef struct
 {
-    uint32_t timestamp_us, sequence;
-    int32_t wheel_delta_um, hump_travel_um;
-    int16_t raw_mg[3], calibrated_mg[3];
+    uint32_t timestamp_us;
+    uint32_t sequence;
+    int32_t  wheel_delta_um;
+    int32_t  hump_travel_um;
+    int16_t  raw_mg[3];
+    int16_t  calibrated_mg[3];
     uint16_t run;
-    uint8_t flags, safety;
-    uint8_t hump_flags, hump_reason;
+    uint8_t  flags;
+    uint8_t  safety;
+    uint8_t  hump_flags;
+    uint8_t  hump_reason;
 } imu_debug_row_t;
 
-/* Compile-time guarantee: IMU debug packet exceeds MQTT staging capacity. */
+/* The largest IMU debug packet must fit in MQTT staging. */
 BUILD_ASSERT(IMU_DEBUG_PACKET_BYTES <= MQTT_UTK_IMU_DEBUG_MAX,
              buddy4_c_check_a_t);
-static ID g_imu_debug_mutex;
-static imu_debug_row_t g_imu_debug_rows[IMU_DEBUG_QUEUE_ROWS];
-static unsigned g_imu_debug_head, g_imu_debug_count;
-static uint32_t g_imu_debug_sequence, g_imu_debug_boot_tag;
+#endif
 
-static int16_t imu_debug_mg (float32_t g)
+static ID      gh_terrain_mutex;
+static ID      gh_terrain_task;
+static ID      gh_terrain_cycle;
+static ID      gh_imu_device;
+static uint8_t g_snapshot[TERRAIN_PACKET_SIZE];
+static uint8_t g_events[S4_QUEUE_LEN][TERRAIN_PACKET_SIZE];
+
+static subsystem4_queue_state_t g_queue;
+static uint16_t                 g_run;
+static uint16_t                 g_published_run;
+static uint16_t                 g_humps;
+static float32_t                g_offset[3];
+static float32_t                g_scale[3];
+
+#if APP_IMU_DEBUG
+static ID              gh_imu_debug_mutex;
+static imu_debug_row_t g_imu_debug_rows[IMU_DEBUG_QUEUE_ROWS];
+static unsigned        g_imu_debug_head;
+static unsigned        g_imu_debug_count;
+static uint32_t        g_imu_debug_sequence;
+static uint32_t        g_imu_debug_boot_tag;
+
+#endif
+
+static uint32_t now_us (void);
+static bool bus_read (void * p_ctx, uint8_t addr, uint8_t reg, uint8_t * p_out,
+                      unsigned byte_count);
+static bool bus_write (void * p_ctx, uint8_t addr, uint8_t reg, uint8_t value);
+static bool publish (const terr_data_result_t * p_terrain, uint16_t * p_run);
+static void process_sample (terr_data_monitor_t *        p_monitor,
+                            const imu_sensor_sample_t *  p_sample,
+                            const terr_data_odometry_t * p_odometry);
+static void imu_poll_tick (void * p_unused);
+static void terrain_task (INT stacd, void * p_exinf);
+static bool request_reset (bool b_should_recalibrate, uint16_t * p_token);
+
+#if APP_IMU_DEBUG
+static int16_t imu_debug_mg (float32_t acceleration_g);
+static int32_t imu_debug_um (float32_t metres);
+static void    imu_debug_record (const imu_sensor_sample_t * p_sample,
+                                 const terr_data_monitor_t * p_monitor,
+                                 uint16_t                    run);
+static void    imu_debug_put16 (uint8_t * p_bytes, uint16_t value);
+static void    imu_debug_put32 (uint8_t * p_bytes, uint32_t value);
+
+/** @brief Take up to five consecutive rows from one run under the debug mutex.
+ * A short tail waits up to 250 ms. Return the encoded byte count, or
+ * zero without consuming rows when the buffer, lock or batch is
+ * unavailable.
+ */
+unsigned int mqtt_utk_imu_debug_take (uint8_t * p_bytes, unsigned int size)
 {
-    /* The sensor range is Ã‚Â±4 g, and level calibration adds at most 0.15 g.
-     */
-    float32_t mg = g * 1000.0f;
-    return (int16_t)(mg + (mg < 0.0f ? -0.5f : 0.5f));
+    if ((((0 == p_bytes) || (size < IMU_DEBUG_PACKET_BYTES)) ||
+         (gh_imu_debug_mutex <= 0)) ||
+        (tk_loc_mtx(gh_imu_debug_mutex, TMO_POL) != E_OK))
+    {
+        return 0;
+    }
+
+    if (0U == g_imu_debug_count)
+    {
+        tk_unl_mtx(gh_imu_debug_mutex);
+        return 0;
+    }
+
+    const imu_debug_row_t * p_first_row = &g_imu_debug_rows[g_imu_debug_head];
+    unsigned                count       = 1;
+
+    while ((count < IMU_DEBUG_BATCH_ROWS) && (count < g_imu_debug_count))
+    {
+        const imu_debug_row_t * p_next_row =
+            &g_imu_debug_rows[(g_imu_debug_head + count) %
+                              IMU_DEBUG_QUEUE_ROWS];
+
+        if ((p_next_row->run != p_first_row->run) ||
+            (p_next_row->sequence != (p_first_row->sequence + count)))
+        {
+            break;
+        }
+
+        ++count;
+    }
+
+    if (((count < IMU_DEBUG_BATCH_ROWS) && (count == g_imu_debug_count)) &&
+        ((now_us() - p_first_row->timestamp_us) < IMU_DEBUG_FLUSH_US))
+    {
+        tk_unl_mtx(gh_imu_debug_mutex);
+        return 0;
+    }
+
+    /* The batch cap keeps the row count within one byte. */
+    p_bytes[0] = IMU_DEBUG_VERSION;
+    p_bytes[1] = (uint8_t)count;
+    imu_debug_put16(p_bytes + 2, p_first_row->run);
+    imu_debug_put32(p_bytes + 4, p_first_row->sequence);
+    imu_debug_put32(p_bytes + 8, g_imu_debug_boot_tag);
+    uint8_t * p_output  = p_bytes + IMU_DEBUG_HEADER_BYTES;
+    unsigned  row_index = 0;
+
+    while (row_index < count)
+    {
+        const imu_debug_row_t * p_row =
+            &g_imu_debug_rows[(g_imu_debug_head + row_index) %
+                              IMU_DEBUG_QUEUE_ROWS];
+        imu_debug_put32(p_output, p_row->timestamp_us);
+
+        /* Convert signed acceleration to its low 16 bits, preserving the
+         * wire representation for both positive and negative readings. */
+        for (unsigned axis = 0; axis < (unsigned)IMU_AXIS_COUNT; ++axis)
+        {
+            imu_debug_put16(p_output + 4 + (2U * axis),
+                            (uint16_t)p_row->raw_mg[axis]);
+            imu_debug_put16(p_output + 10 + (2U * axis),
+                            (uint16_t)p_row->calibrated_mg[axis]);
+        }
+
+        /* The signed distances use their low 32 bits. The reserved
+         * INT32_MIN value retains its bit pattern for unavailable data. */
+        p_output[16] = p_row->flags;
+        p_output[17] = p_row->safety;
+        imu_debug_put32(p_output + 18, (uint32_t)p_row->wheel_delta_um);
+        imu_debug_put32(p_output + 22, (uint32_t)p_row->hump_travel_um);
+        p_output[26] = p_row->hump_flags;
+        p_output[27] = p_row->hump_reason;
+        ++row_index;
+        p_output += IMU_DEBUG_ROW_BYTES;
+    }
+
+    g_imu_debug_head   = (g_imu_debug_head + count) % IMU_DEBUG_QUEUE_ROWS;
+    g_imu_debug_count -= count;
+    tk_unl_mtx(gh_imu_debug_mutex);
+    return IMU_DEBUG_HEADER_BYTES + (count * IMU_DEBUG_ROW_BYTES);
+}
+#endif
+
+/** @brief Create the terrain mutex once and return the kernel result. A failed
+ * optional debug mutex leaves terrain acquisition available.
+ */
+ER subsystem4_init (void)
+{
+    T_CMTX mutex_spec = {0};
+
+    if (gh_terrain_mutex > 0)
+    {
+        return E_OBJ;
+    }
+
+    mutex_spec.mtxatr = TA_INHERIT;
+    gh_terrain_mutex  = tk_cre_mtx(&mutex_spec);
+#if APP_IMU_DEBUG
+    /* Optional logging must never prevent the safety task from starting. */
+    if (gh_terrain_mutex > 0)
+    {
+        gh_imu_debug_mutex = tk_cre_mtx(&mutex_spec);
+
+        if (gh_imu_debug_mutex < 0)
+        {
+            tm_printf((UB *)"[S4] IMU debug queue unavailable\n");
+        }
+    }
+#endif
+    return gh_terrain_mutex < 0 ? gh_terrain_mutex : E_OK;
 }
 
+/** @brief Create the owner task and its 10 ms cyclic wakeup. Return E_OBJ for
+ * invalid startup order. Release newly created task and timer
+ * resources when timer or task startup fails.
+ * @note Preserve the creation or start error across best-effort rollback.
+ * Stop the timer before deleting it if task startup fails afterward.
+ */
+ER subsystem4_start (void)
+{
+    T_CTSK task_spec = {0};
+    T_CCYC cycle     = {0};
+    ER     value_er;
+
+    if ((gh_terrain_mutex <= 0) || (gh_terrain_task > 0))
+    {
+        return E_OBJ;
+    }
+
+    /* T_CTSK uses the kernel FP address type. The startup routine
+     * receives an INT start code and void * context. See tk/syscall.h. */
+    task_spec.task    = (FP)terrain_task;
+    task_spec.itskpri = S4_PRI_MAIN;
+    task_spec.stksz   = 4096;
+    task_spec.tskatr  = TA_HLNG | TA_RNG3;
+#if TK_SUPPORT_SMP
+    task_spec.tskatr |= TA_ASSPRC;
+    task_spec.assprc  = TP_PRC1;
+#endif
+    gh_terrain_task = tk_cre_tsk(&task_spec);
+
+    if (gh_terrain_task < 0)
+    {
+        return gh_terrain_task;
+    }
+
+    /* T_CCYC uses the kernel FP address type. The cyclic handler receives
+     * one void * extended-information argument. See tk/syscall.h. */
+    cycle.cycatr     = TA_HLNG;
+    cycle.cychdr     = (FP)imu_poll_tick;
+    cycle.cyctim     = S4_IMU_POLL_MS;
+    cycle.cycphs     = S4_IMU_POLL_MS;
+    gh_terrain_cycle = tk_cre_cyc(&cycle);
+
+    if (gh_terrain_cycle <= 0)
+    {
+        value_er = gh_terrain_cycle;
+    }
+    else
+    {
+        value_er                      = tk_sta_cyc(gh_terrain_cycle);
+        const bool b_is_cycle_started = E_OK == value_er;
+
+        if (b_is_cycle_started)
+        {
+            value_er = tk_sta_tsk(gh_terrain_task, 0);
+        }
+
+        if (E_OK == value_er)
+        {
+            return E_OK;
+        }
+
+        if (b_is_cycle_started)
+        {
+            (void)tk_stp_cyc(gh_terrain_cycle);
+        }
+
+        (void)tk_del_cyc(gh_terrain_cycle);
+    }
+
+    (void)tk_del_tsk(gh_terrain_task);
+    gh_terrain_task  = 0;
+    gh_terrain_cycle = 0;
+    return value_er;
+}
+
+/** @brief Poll the mutex for a coherent result, run token and hump count. A
+ * pending reset, missing publication, null output or busy lock leaves
+ * outputs untouched. A snapshot older than 150 ms still succeeds with
+ * fault and unknown state.
+ */
+bool buddy4_read (terr_data_result_t * p_out, uint16_t * p_token,
+                  uint16_t * p_humps)
+{
+    if (((((0 == p_out) || (0 == p_token)) || (0 == p_humps)) ||
+         (gh_terrain_mutex <= 0)) ||
+        (tk_loc_mtx(gh_terrain_mutex, TMO_POL) != E_OK))
+    {
+        return false;
+    }
+
+    if (((!g_queue.b_has_published) || (g_queue.b_is_reset_pending)) ||
+        (g_published_run != g_run))
+    {
+        tk_unl_mtx(gh_terrain_mutex);
+        return false;
+    }
+
+    terr_data_unpack(g_snapshot, p_out);
+    *p_token = g_published_run;
+    *p_humps = g_humps;
+    tk_unl_mtx(gh_terrain_mutex);
+
+    if ((now_us() - p_out->timestamp_us) > 150000U)
+    {
+        /* clang-format off */
+        p_out->flags              =
+            (p_out->flags & (TERRAIN_PEAK_VALID | TERRAIN_CALIBRATED)) |
+            TERRAIN_FAULT;
+        p_out->state              = TERRAIN_UNKNOWN;
+        p_out->b_has_impact       = false;
+        p_out->b_is_hump_complete = false;
+        /* clang-format on */
+    }
+
+    return true;
+}
+
+/** @brief Read the latest terrain result with the same freshness and lock
+ * rules as buddy4_read. Discard its run token and count.
+ */
+bool buddy4_snapshot (terr_data_result_t * p_out)
+{
+    uint16_t token;
+    uint16_t humps;
+    return buddy4_read(p_out, &token, &humps);
+}
+
+/** @brief Pop the oldest event and return whether a prior overflow lost
+ * events. Clear the loss flag only on delivery. An empty queue,
+ * unavailable lock or missing output returns false without writing
+ * either output.
+ */
+bool buddy4_event (terr_data_result_t * p_out, bool * pb_has_lost_events)
+{
+    bool b_did_succeed = false;
+
+    if ((((0 == p_out) || (0 == pb_has_lost_events)) ||
+         (gh_terrain_mutex <= 0)) ||
+        (tk_loc_mtx(gh_terrain_mutex, TMO_POL) != E_OK))
+    {
+        return false;
+    }
+
+    if (g_queue.count)
+    {
+        terr_data_unpack(g_events[g_queue.head], p_out);
+        /* Widen the bounded queue index before wrapping it. */
+        g_queue.head = ((unsigned)g_queue.head + 1U) % S4_QUEUE_LEN;
+        --g_queue.count;
+        *pb_has_lost_events       = g_queue.b_has_lost_events;
+        g_queue.b_has_lost_events = false;
+        b_did_succeed             = true;
+    }
+
+    tk_unl_mtx(gh_terrain_mutex);
+    return b_did_succeed;
+}
+
+/** @brief Request a new run, optionally restarting level calibration. True
+ * means the owner accepted a pending reset.
+ */
+bool buddy4_reset_run (bool b_should_recalibrate)
+{
+    return request_reset(b_should_recalibrate, NULL);
+}
+
+/** @brief Request a reset that retains level calibration and return its token
+ * through p_token. A null pointer or rejected request returns false.
+ */
+bool buddy4_begin_run (uint16_t * p_token)
+{
+    return p_token && (request_reset(false, p_token));
+}
+
+/** @brief Validate three finite axis offsets and scale factors using the
+ * terrain monitor, then queue a private copy under the mutex. Invalid
+ * inputs or contention leave pending calibration intact.
+ */
+bool buddy4_set_mag_calibration (const float32_t p_offset[3],
+                                 const float32_t p_scale[3])
+{
+    terr_data_monitor_t check;
+    terr_data_init(&check);
+
+    if (((!terr_data_set_mag_cal(&check, p_offset, p_scale)) ||
+         (gh_terrain_mutex <= 0)) ||
+        (tk_loc_mtx(gh_terrain_mutex, TMO_POL) != E_OK))
+    {
+        return false;
+    }
+
+    {
+        unsigned axis_index;
+
+        for (axis_index = 0; axis_index < (unsigned int)IMU_AXIS_COUNT;
+             ++axis_index)
+        {
+            g_offset[axis_index] = p_offset[axis_index];
+            g_scale[axis_index]  = p_scale[axis_index];
+        }
+    }
+    g_queue.b_has_pending_mag_cal = true;
+    tk_unl_mtx(gh_terrain_mutex);
+    return true;
+}
+
+#ifdef BUDDY4_TRANSPORT_TEST
+/** @brief Inject a terrain publication into the original queue path. */
+void buddy4_transport_publish (const terr_data_result_t * p_terrain)
+{
+    (void)publish(p_terrain, NULL);
+}
+
+/** @brief Process one caller-owned IMU sample with its matching odometry. */
+void buddy4_transport_process (terr_data_monitor_t *        p_monitor,
+                               const imu_sensor_sample_t *  p_sample,
+                               const terr_data_odometry_t * p_odometry)
+{
+    process_sample(p_monitor, p_sample, p_odometry);
+}
+
+/** @brief Return the selected geometry for the fixture's publication check. */
+terr_data_hump_geometry_t buddy4_transport_geometry (void)
+{
+    return S4_HUMP_GEOMETRY;
+}
+
+/** @brief Return the configured wheel track in metres. */
+float32_t buddy4_transport_track_m (void)
+{
+    return S4_WHEEL_TRACK_M;
+}
+
+/** @brief Seed the count at a saturation boundary while the owner is idle. */
+void buddy4_transport_set_hump_count (uint16_t count)
+{
+    g_humps = count;
+}
+
+/** @brief Seed a run token before testing its rollover. */
+void buddy4_transport_set_run (uint16_t token)
+{
+    g_run = token;
+}
+
+#if APP_IMU_DEBUG
+/** @brief Clear pending debug rows in the single-threaded fixture. */
+void buddy4_transport_clear_debug (void)
+{
+    g_imu_debug_head  = 0;
+    g_imu_debug_count = 0;
+}
+
+/** @brief Return the debug sequence without consuming a row. */
+uint32_t buddy4_transport_debug_sequence (void)
+{
+    return g_imu_debug_sequence;
+}
+
+/** @brief Return the terrain run token used in subsequent debug rows. */
+uint16_t buddy4_transport_debug_run (void)
+{
+    return g_run;
+}
+
+/** @brief Return the configured row capacity of the debug queue. */
+unsigned buddy4_transport_debug_capacity (void)
+{
+    return IMU_DEBUG_QUEUE_ROWS;
+}
+
+/** @brief Add a diagnostic row without advancing the terrain estimator. */
+void buddy4_transport_record_debug (const imu_sensor_sample_t * p_sample,
+                                    const terr_data_monitor_t * p_monitor)
+{
+    imu_debug_record(p_sample, p_monitor, g_run);
+}
+#endif
+#endif
+
+/** @brief Read the low 32 bits of the hardware clock in microseconds.
+ * Elapsed-time checks use unsigned subtraction across wrap.
+ */
+static uint32_t now_us (void)
+{
+    return in_w(TIMER_TIMERAWL);
+}
+
+#if APP_IMU_DEBUG
+/** @brief Round a sensor acceleration in g to the nearest milligravity, with
+ * ties away from zero. The sensor and calibration bounds keep the
+ * result in int16_t range.
+ */
+static int16_t imu_debug_mg (float32_t acceleration_g)
+{
+    /* The sensor spans -4 to +4 g. Level calibration adds at most 0.15 g. */
+    float32_t milligravity = acceleration_g * 1000.0f;
+    return (int16_t)(milligravity + (milligravity < 0.0f ? -0.5f : 0.5f));
+}
+
+/** @brief Round metres to signed micrometres for the debug packet. Return
+ * INT32_MIN for an unordered or out-of-range scaled value.
+ */
 static int32_t imu_debug_um (float32_t metres)
 {
-    float32_t um = metres * 1000000.0f;
+    float32_t micrometres = metres * 1000000.0f;
     /* Leave INT32_MIN available as a sentinel for an unavailable distance. */
-    if (!(um > -2147483648.0f && um < 2147483648.0f))
+    if (!((micrometres > -2147483648.0f) && (micrometres < 2147483648.0f)))
     {
         return INT32_MIN;
     }
-    return (int32_t)(um + (um < 0.0f ? -0.5f : 0.5f));
+
+    return (int32_t)(micrometres + (micrometres < 0.0f ? -0.5f : 0.5f));
 }
 
-static void imu_debug_record (const imu_sample_t * sample,
-                              const terrain_monitor_t * monitor, uint16_t run)
+/** @brief Build one row for the published run. The terrain owner advances the
+ * sequence before polling the debug mutex. Contention drops the row
+ * and a full queue discards its oldest row.
+ */
+static void imu_debug_record (const imu_sensor_sample_t * p_sample,
+                              const terr_data_monitor_t * p_monitor,
+                              uint16_t                    run)
 {
-    if (g_imu_debug_mutex <= 0)
+    if (gh_imu_debug_mutex <= 0)
     {
         return;
     }
 
     /* The calibrated flag is set only when this sample reached the detector. */
-    const bool evaluated = (monitor->result.flags & TERRAIN_CALIBRATED) != 0;
-    const bool valid = sample->valid;
-    imu_debug_row_t row = {
-        .timestamp_us = sample->timestamp_us,
-        .sequence = g_imu_debug_sequence++,
-        .wheel_delta_um = INT32_MIN,
-        .hump_travel_um = INT32_MIN,
-        .run = run,
-        .flags = (uint8_t)((valid ? IMU_DEBUG_VALID : 0) |
-                           (evaluated ? IMU_DEBUG_EVALUATED : 0) |
-                           (sample->overrun ? IMU_DEBUG_OVERRUN : 0) |
-                           (monitor->result.impact ? IMU_DEBUG_IMPACT : 0)),
-        .safety = (uint8_t)monitor->result.safety};
-    if (monitor->hump_geometry == TERRAIN_HUMP_RIGHT_WHEEL)
+    const bool b_is_evaluated =
+        (p_monitor->result.flags & TERRAIN_CALIBRATED) != 0U;
+    /* The first four flags use bits zero through three. Safety is
+     * the two-bit monitor code. Both values fit their output bytes. */
+    const bool      b_is_valid = p_sample->b_is_valid;
+    imu_debug_row_t row        = {
+               .timestamp_us   = p_sample->timestamp_us,
+               .sequence       = g_imu_debug_sequence++,
+               .wheel_delta_um = INT32_MIN,
+               .hump_travel_um = INT32_MIN,
+               .run            = run,
+               .flags =
+            (uint8_t)((b_is_valid ? IMU_DEBUG_VALID : 0) |
+                      (b_is_evaluated ? IMU_DEBUG_EVALUATED : 0) |
+                      (p_sample->b_has_overrun ? IMU_DEBUG_OVERRUN : 0) |
+                      (p_monitor->result.b_has_impact ? IMU_DEBUG_IMPACT : 0)),
+               .safety = (uint8_t)p_monitor->result.safety};
+
+    if ((unsigned)TERRAIN_HUMP_RIGHT_WHEEL == p_monitor->hump_geometry)
     {
-        if (monitor->hump.debug.wheel_delta_valid)
+        if (p_monitor->hump.debug.b_is_wheel_delta_valid)
         {
             row.wheel_delta_um =
-                imu_debug_um(monitor->hump.debug.wheel_delta_m);
+                imu_debug_um(p_monitor->hump.debug.wheel_delta_m);
         }
-        row.hump_travel_um = imu_debug_um(monitor->hump.debug.travel_m);
-        row.hump_flags = monitor->hump.debug.flags;
-        row.hump_reason = monitor->hump.debug.reason;
+
+        row.hump_travel_um = imu_debug_um(p_monitor->hump.debug.travel_m);
+        row.hump_flags     = p_monitor->hump.debug.flags;
+        row.hump_reason    = p_monitor->hump.debug.reason;
     }
-    if (evaluated)
+
+    if (b_is_evaluated)
     {
-        if (monitor->safety_tracking &&
-            monitor->result.safety == TERRAIN_SAFETY_NONE)
+        /* Each additional mask is 16, 32 or 64 and fits the row byte.
+         * Convert each mask to unsigned before merging it. */
+        if ((p_monitor->b_is_safety_tracking) &&
+            ((unsigned)TERRAIN_SAFETY_NONE == p_monitor->result.safety))
         {
-            row.flags |= IMU_DEBUG_PENDING;
+            row.flags |= (unsigned)IMU_DEBUG_PENDING;
         }
-        if (monitor->safety_upward)
+
+        if (p_monitor->b_is_moving_upward)
         {
-            row.flags |= IMU_DEBUG_UPWARD;
+            row.flags |= (unsigned)IMU_DEBUG_UPWARD;
         }
-        if (monitor->safety_lift_tilt)
+
+        if (p_monitor->b_has_lift_tilt)
         {
-            row.flags |= IMU_DEBUG_TILTED;
+            row.flags |= (unsigned)IMU_DEBUG_TILTED;
         }
     }
-    for (unsigned axis = 0; axis < 3; ++axis)
+
+    for (unsigned axis = 0; axis < (unsigned)IMU_AXIS_COUNT; ++axis)
     {
-        if (valid)
+        if (b_is_valid)
         {
-            row.raw_mg[axis] = imu_debug_mg(sample->accel_g[axis]);
+            row.raw_mg[axis] = imu_debug_mg(p_sample->accel_g[axis]);
         }
-        if (evaluated)
+
+        if (b_is_evaluated)
         {
             /* Match the unfiltered vector used in safety_update(). */
             row.calibrated_mg[axis] = imu_debug_mg(
-                sample->accel_g[axis] - monitor->calibration.bias_g[axis]);
+                p_sample->accel_g[axis] - p_monitor->calibration.bias_g[axis]);
         }
     }
 
     /* Debug contention may cost a row, detectable by its sequence gap. */
-    if (tk_loc_mtx(g_imu_debug_mutex, TMO_POL) != E_OK)
+    if (tk_loc_mtx(gh_imu_debug_mutex, TMO_POL) != E_OK)
     {
         return;
     }
-    if (g_imu_debug_boot_tag == 0U)
+
+    if (0U == g_imu_debug_boot_tag)
     {
         /* A best-effort session tag from startup timing and the first reading.
          */
         uint32_t tag = row.timestamp_us;
-        for (unsigned axis = 0; axis < 3; ++axis)
+
+        for (unsigned axis = 0; axis < (unsigned)IMU_AXIS_COUNT; ++axis)
         {
+            /* Mix each signed sample's low 16 bits into the boot tag. */
             tag = (tag ^ (uint16_t)row.raw_mg[axis]) * 16777619U;
         }
+
         g_imu_debug_boot_tag = tag | 1U;
     }
-    if (g_imu_debug_count == IMU_DEBUG_QUEUE_ROWS)
+
+    if (IMU_DEBUG_QUEUE_ROWS == g_imu_debug_count)
     {
         g_imu_debug_head = (g_imu_debug_head + 1U) % IMU_DEBUG_QUEUE_ROWS;
         --g_imu_debug_count;
     }
+
     unsigned tail =
         (g_imu_debug_head + g_imu_debug_count) % IMU_DEBUG_QUEUE_ROWS;
     g_imu_debug_rows[tail] = row;
     ++g_imu_debug_count;
-    tk_unl_mtx(g_imu_debug_mutex);
+    tk_unl_mtx(gh_imu_debug_mutex);
 }
 
-static void imu_debug_put16 (uint8_t * out, uint16_t value)
+/** @brief Write both bytes of value least significant first. The caller
+ * supplies two writable bytes.
+ */
+static void imu_debug_put16 (uint8_t * p_bytes, uint16_t value)
 {
-    out[0] = (uint8_t)value;
-    out[1] = (uint8_t)(value >> 8);
+    /* The first conversion retains the low octet. The unsigned shift
+     * puts the high octet within 0..255 before the second conversion. */
+    p_bytes[0] = (uint8_t)value;
+    p_bytes[1] = (uint8_t)((unsigned)value >> 8U);
 }
 
-static void imu_debug_put32 (uint8_t * out, uint32_t value)
+/** @brief Write four bytes to the caller's buffer in little-endian order.
+ */
+static void imu_debug_put32 (uint8_t * p_bytes, uint32_t value)
 {
-    imu_debug_put16(out, (uint16_t)value);
-    imu_debug_put16(out + 2, (uint16_t)(value >> 16));
-}
-
-unsigned int mqtt_utk_imu_debug_take (unsigned char * bytes, unsigned int size)
-{
-    if (!bytes || size < IMU_DEBUG_PACKET_BYTES || g_imu_debug_mutex <= 0 ||
-        tk_loc_mtx(g_imu_debug_mutex, TMO_POL) != E_OK)
-    {
-        return 0;
-    }
-    if (g_imu_debug_count == 0U)
-    {
-        tk_unl_mtx(g_imu_debug_mutex);
-        return 0;
-    }
-
-    const imu_debug_row_t * first = &g_imu_debug_rows[g_imu_debug_head];
-    unsigned count = 1;
-    while (count < IMU_DEBUG_BATCH_ROWS && count < g_imu_debug_count)
-    {
-        const imu_debug_row_t * next =
-            &g_imu_debug_rows[(g_imu_debug_head + count) %
-                              IMU_DEBUG_QUEUE_ROWS];
-        if (next->run != first->run ||
-            next->sequence != first->sequence + count)
-        {
-            break;
-        }
-        ++count;
-    }
-    if (count < IMU_DEBUG_BATCH_ROWS && count == g_imu_debug_count &&
-        now_us() - first->timestamp_us < IMU_DEBUG_FLUSH_US)
-    {
-        tk_unl_mtx(g_imu_debug_mutex);
-        return 0;
-    }
-
-    bytes[0] = IMU_DEBUG_VERSION;
-    bytes[1] = (uint8_t)count;
-    imu_debug_put16(bytes + 2, first->run);
-    imu_debug_put32(bytes + 4, first->sequence);
-    imu_debug_put32(bytes + 8, g_imu_debug_boot_tag);
-    uint8_t * out = bytes + IMU_DEBUG_HEADER_BYTES;
-    for (unsigned i = 0; i < count; ++i, out += IMU_DEBUG_ROW_BYTES)
-    {
-        const imu_debug_row_t * row =
-            &g_imu_debug_rows[(g_imu_debug_head + i) % IMU_DEBUG_QUEUE_ROWS];
-        imu_debug_put32(out, row->timestamp_us);
-        for (unsigned axis = 0; axis < 3; ++axis)
-        {
-            imu_debug_put16(out + 4 + 2 * axis, (uint16_t)row->raw_mg[axis]);
-            imu_debug_put16(out + 10 + 2 * axis,
-                            (uint16_t)row->calibrated_mg[axis]);
-        }
-        out[16] = row->flags;
-        out[17] = row->safety;
-        imu_debug_put32(out + 18, (uint32_t)row->wheel_delta_um);
-        imu_debug_put32(out + 22, (uint32_t)row->hump_travel_um);
-        out[26] = row->hump_flags;
-        out[27] = row->hump_reason;
-    }
-    g_imu_debug_head = (g_imu_debug_head + count) % IMU_DEBUG_QUEUE_ROWS;
-    g_imu_debug_count -= count;
-    tk_unl_mtx(g_imu_debug_mutex);
-    return IMU_DEBUG_HEADER_BYTES + count * IMU_DEBUG_ROW_BYTES;
+    /* Store the low half-word followed by the high half-word. The
+     * first conversion discards the high bits. The second retains them. */
+    imu_debug_put16(p_bytes, (uint16_t)value);
+    imu_debug_put16(p_bytes + 2, (uint16_t)(value >> 16));
 }
 #endif
 
+/** @brief Read byte_count bytes from one register into p_out using the open I2C
+ * device. The bus context is unused. Success requires E_OK and a
+ * complete execute request.
+ */
 static bool bus_read (void * p_ctx, uint8_t addr, uint8_t reg, uint8_t * p_out,
-                      unsigned value_n)
+                      unsigned byte_count)
 {
-    SZ actual = 0;
-    ER value_er;
+    SZ         actual  = 0;
     T_I2C_EXEC request = {0};
     (void)p_ctx;
-    request.sadr = addr;
+    request.sadr     = addr;
     request.snd_size = 1;
     request.snd_data = &reg;
-    request.rcv_size = (SZ)value_n;
+    request.rcv_size = (SZ)byte_count;
     request.rcv_data = p_out;
-    value_er =
-        tk_swri_dev(g_device, TDN_I2C_EXEC, &request, sizeof(request), &actual);
-    return value_er == E_OK && actual == (SZ)sizeof(request);
+    ER value_er      = tk_swri_dev(gh_imu_device, TDN_I2C_EXEC, &request,
+                                   sizeof(request), &actual);
+    return (E_OK == value_er) && (actual == (SZ)sizeof(request));
 }
 
+/** @brief Send a register and its one-byte value to the addressed I2C device.
+ * The context is unused. Return true only for a successful two-byte
+ * write.
+ */
 static bool bus_write (void * p_ctx, uint8_t addr, uint8_t reg, uint8_t value)
 {
-    uint8_t data[2] = {reg, value};
-    SZ actual = 0;
-    ER value_er;
+    uint8_t write_bytes[2] = {reg, value};
+    SZ      actual         = 0;
     (void)p_ctx;
-    value_er = tk_swri_dev(g_device, addr, data, 2, &actual);
-    return value_er == E_OK && actual == 2;
+    ER value_er = tk_swri_dev(gh_imu_device, addr, write_bytes, 2, &actual);
+    return (E_OK == value_er) && (2 == actual);
 }
 
-static bool publish (const terrain_result_t * p_r, uint16_t * p_run)
+/** @brief Under the terrain mutex, publish the latest result and count
+ * completed valid humps up to UINT16_MAX. Queue changes, impact or
+ * completion, evicting the oldest event on overflow. On success,
+ * optionally return the current run token. A pending reset or failed
+ * lock rejects publication.
+ */
+static bool publish (const terr_data_result_t * p_terrain, uint16_t * p_run)
 {
-    if (tk_loc_mtx(g_mutex, TMO_FEVR) != E_OK)
+    if (tk_loc_mtx(gh_terrain_mutex, TMO_FEVR) != E_OK)
     {
         return false;
     }
-    terrain_result_t previous;
-    if (g_queue.reset)
+
+    terr_data_result_t previous;
+
+    if (g_queue.b_is_reset_pending)
     {
-        tk_unl_mtx(g_mutex);
+        tk_unl_mtx(gh_terrain_mutex);
         return false;
     }
-    terrain_unpack(g_snapshot, &previous);
-    if (p_r->state != previous.state || p_r->flags != previous.flags ||
-        p_r->safety != previous.safety || p_r->hump_completed || p_r->impact)
+
+    terr_data_unpack(g_snapshot, &previous);
+
+    if (((((p_terrain->state != previous.state) ||
+           (p_terrain->flags != previous.flags)) ||
+          (p_terrain->safety != previous.safety)) ||
+         (p_terrain->b_is_hump_complete)) ||
+        (p_terrain->b_has_impact))
     {
-        if (g_queue.count == S4_QUEUE_LEN)
+        if (S4_QUEUE_LEN == g_queue.count)
         {
-            g_queue.head = (g_queue.head + 1) % S4_QUEUE_LEN;
+            /* Widen the bounded queue index before wrapping it. */
+            g_queue.head = ((unsigned)g_queue.head + 1U) % S4_QUEUE_LEN;
             --g_queue.count;
-            g_queue.lost = true;
+            g_queue.b_has_lost_events = true;
         }
-        terrain_pack(p_r,
-                     g_events[(g_queue.head + g_queue.count) % S4_QUEUE_LEN]);
+
+        /* Head and count stay in the nonnegative queue domain. */
+        terr_data_pack(
+            p_terrain,
+            g_events[(unsigned)(g_queue.head + g_queue.count) % S4_QUEUE_LEN]);
         ++g_queue.count;
     }
-    if (p_r->hump_completed && (p_r->flags & TERRAIN_PEAK_VALID) &&
-        g_humps < UINT16_MAX)
+
+    if (((p_terrain->b_is_hump_complete) &&
+         (p_terrain->flags & TERRAIN_PEAK_VALID)) &&
+        ((int)g_humps < UINT16_MAX))
     {
         ++g_humps;
     }
-    terrain_pack(p_r, g_snapshot);
-    g_published_run = g_run;
-    g_queue.published = true;
+
+    terr_data_pack(p_terrain, g_snapshot);
+    g_published_run         = g_run;
+    g_queue.b_has_published = true;
+
     if (p_run)
     {
         *p_run = g_published_run;
     }
-    tk_unl_mtx(g_mutex);
+
+    tk_unl_mtx(gh_terrain_mutex);
     return true;
 }
 
-static void process_sample (terrain_monitor_t * p_monitor,
-                            const imu_sample_t * p_sample,
-                            const terrain_odometry_t * p_odometry)
+/** @brief Update the owner's monitor with one timestamped IMU sample and its
+ * odometry, then publish the result. In the debug profile, only a
+ * successful publication can enqueue an IMU row.
+ */
+static void process_sample (terr_data_monitor_t *        p_monitor,
+                            const imu_sensor_sample_t *  p_sample,
+                            const terr_data_odometry_t * p_odometry)
 {
-    terrain_monitor_process(p_monitor, p_sample, p_odometry);
+    BUDDY4_TERRAIN_PROCESS(p_monitor, p_sample, p_odometry);
 #if APP_IMU_DEBUG
     uint16_t run;
+
     if (publish(&p_monitor->result, &run))
     {
         imu_debug_record(p_sample, p_monitor, run);
@@ -368,71 +849,91 @@ static void process_sample (terrain_monitor_t * p_monitor,
 #endif
 }
 
+/** @brief Wake the terrain task on a cyclic timer tick. The kernel callback
+ * argument is unused.
+ */
 static void imu_poll_tick (void * p_unused)
 {
     (void)p_unused;
-    (void)tk_wup_tsk(g_task);
+    (void)tk_wup_tsk(gh_terrain_task);
 }
 
+/** @brief Own the IMU bus and terrain monitor. Apply queued resets and
+ * calibration before sampling. Retry a disconnected sensor at
+ * one-second intervals and invalidate prolonged read failures. Drain
+ * accumulated wakes before sleeping for the next tick.
+ */
 static void terrain_task (INT stacd, void * p_exinf)
 {
-    terrain_monitor_t monitor;
-    imu_bus_t bus = {NULL, bus_read, bus_write};
-    uint32_t last_good = 0, report_at = 0, retry_at = 0;
-    bool connected = false;
+    terr_data_monitor_t monitor;
+    imu_sensor_bus_t    bus            = {NULL, bus_read, bus_write};
+    uint32_t            last_good      = 0;
+    uint32_t            report_at      = 0;
+    uint32_t            retry_at       = 0;
+    bool                b_is_connected = false;
     (void)stacd;
     (void)p_exinf;
-    terrain_monitor_init(&monitor);
-    if (!terrain_monitor_set_geometry(&monitor, S4_HUMP_GEOMETRY,
-                                      S4_WHEEL_TRACK_M))
+    terr_data_init(&monitor);
+
+    if (!terr_data_set_geometry(&monitor, S4_HUMP_GEOMETRY, S4_WHEEL_TRACK_M))
     {
         tm_printf((UB *)"[S4] invalid hump geometry configuration\n");
-        (void)tk_stp_cyc(g_cycle);
+        (void)tk_stp_cyc(gh_terrain_cycle);
         tk_ext_tsk();
         return;
     }
-    g_device = tk_opn_dev((UB *)"iicb", TD_UPDATE);
-    if (g_device < 0)
+
+    gh_imu_device = tk_opn_dev((UB *)"iicb", TD_UPDATE);
+
+    if (gh_imu_device < 0)
     {
-        tm_printf((UB *)"[S4] iicb open failed: %d\n", g_device);
-        (void)tk_stp_cyc(g_cycle);
+        tm_printf((UB *)"[S4] iicb open failed: %d\n", gh_imu_device);
+        (void)tk_stp_cyc(gh_terrain_cycle);
         tk_ext_tsk();
         return;
     }
+
     for (;;)
     {
-        uint32_t now = now_us();
-        imu_sample_t sample = {0};
-        terrain_odometry_t odo = {0};
-        if (tk_loc_mtx(g_mutex, TMO_FEVR) == E_OK)
+        const uint32_t       now    = now_us();
+        imu_sensor_sample_t  sample = {0};
+        terr_data_odometry_t odo    = {0};
+
+        if (tk_loc_mtx(gh_terrain_mutex, TMO_FEVR) == E_OK)
         {
-            if (g_queue.reset)
+            if (g_queue.b_is_reset_pending)
             {
-                terrain_monitor_reset_run(&monitor);
-                if (g_queue.recalibrate)
+                terr_data_reset_run(&monitor);
+
+                if (g_queue.b_should_recalibrate)
                 {
                     imu_calibration_reset(&monitor.calibration);
                 }
-                g_queue.reset = false;
-                g_queue.recalibrate = false;
-                g_queue.count = 0;
-                g_queue.head = 0;
-                g_queue.lost = false;
-                g_humps = 0;
+
+                g_queue.b_is_reset_pending   = false;
+                g_queue.b_should_recalibrate = false;
+                g_queue.count                = 0;
+                g_queue.head                 = 0;
+                g_queue.b_has_lost_events    = false;
+                g_humps                      = 0;
             }
-            if (g_queue.mag_pending)
+
+            if (g_queue.b_has_pending_mag_cal)
             {
-                terrain_monitor_set_mag_cal(&monitor, g_offset, g_scale);
-                g_queue.mag_pending = false;
+                terr_data_set_mag_cal(&monitor, g_offset, g_scale);
+                g_queue.b_has_pending_mag_cal = false;
             }
-            tk_unl_mtx(g_mutex);
+
+            tk_unl_mtx(gh_terrain_mutex);
         }
-        if (!connected &&
-            (retry_at == 0 || (uint32_t)(now - retry_at) >= 1000000U))
+
+        if ((!b_is_connected) &&
+            ((0U == retry_at) || ((now - retry_at) >= 1000000U)))
         {
-            retry_at = now;
-            connected = imu_sensor_init(&bus);
-            if (connected)
+            retry_at       = now;
+            b_is_connected = BUDDY4_IMU_INIT(&bus);
+
+            if (b_is_connected)
             {
                 tk_dly_tsk(160);
                 last_good = now_us();
@@ -443,50 +944,59 @@ static void terrain_task (INT stacd, void * p_exinf)
                 process_sample(&monitor, &sample, &odo);
             }
         }
-        if (connected)
+
+        if (b_is_connected)
         {
 #if APP_S4_BENCH
-            odo.stationary =
+            odo.b_is_stationary =
                 true; /* Bench: user keeps car level/still for startup. */
 #else
             motion_feedback_t feedback = {0};
             /* Waiting for the motion mutex can produce feedback newer than
              * this loop's start. Check its age against a clock read after the
              * copy, so fresh odometry is not rejected as an unsigned wrap. */
-            if (motion_get_feedback(&feedback) && feedback.valid &&
-                motion_is_calibrated() && feedback.fault == MOTION_FAULT_NONE &&
-                (uint32_t)(now_us() - feedback.timestamp_us) <= 50000U)
+            if (((((motion_get_feedback(&feedback)) &&
+                   (feedback.b_is_feedback_valid)) &&
+                  (motion_is_calibrated())) &&
+                 ((unsigned int)MOTION_FAULT_NONE == feedback.fault)) &&
+                ((now_us() - feedback.timestamp_us) <= 50000U))
             {
-                odo.valid = true;
-                odo.stationary = feedback.braked;
-                odo.distance_m = feedback.centre_m;
-                odo.epoch = feedback.epoch;
+                odo.b_is_valid      = true;
+                odo.b_is_stationary = feedback.b_is_braked;
+                odo.distance_m      = feedback.centre_m;
+                odo.epoch           = feedback.epoch;
             }
 #endif
-            if (imu_sensor_read(&bus, now_us(), &sample))
+            if (BUDDY4_IMU_READ(&bus, now_us(), &sample))
             {
                 last_good = sample.timestamp_us;
                 process_sample(&monitor, &sample, &odo);
             }
-            else if ((uint32_t)(now_us() - last_good) > 100000U)
+            else if ((now_us() - last_good) > 100000U)
             {
-                sample.valid = false;
+                sample.b_is_valid   = false;
                 sample.timestamp_us = now_us();
                 process_sample(&monitor, &sample, &odo);
-                connected = false;
+                b_is_connected = false;
+            }
+            else
+            {
+                /* Keep the connection during the allowed read-failure
+                 * interval. */
             }
         }
 #if APP_S4_BENCH
-        if ((uint32_t)(now_us() - report_at) >= 1000000U)
+        if ((now_us() - report_at) >= 1000000U)
         {
-            const terrain_result_t * r = &monitor.result;
-            report_at = now_us();
-            tm_printf((UB *)"[S4] connected=%d cal=%d flags=%u pitch_x10=%d "
-                            "roll_x10=%d state=%u peak_mm=%d safety=%u\n",
-                      connected, monitor.calibration.ready, r->flags,
-                      (int)(r->pitch_deg * 10), (int)(r->roll_deg * 10),
-                      (unsigned)r->state, (int)(r->peak_m * 1000),
-                      (unsigned)r->safety);
+            const terr_data_result_t * p_reading = &monitor.result;
+            report_at                            = now_us();
+            tm_printf(
+                (UB *)"[S4] connected=%d cal=%d flags=%u pitch_x10=%d "
+                      "roll_x10=%d state=%u peak_mm=%d safety=%u\n",
+                b_is_connected, monitor.calibration.b_is_calibrated,
+                p_reading->flags, (int)(p_reading->pitch_deg * 10),
+                (int)(p_reading->roll_deg * 10), (unsigned)p_reading->state,
+                (int)(p_reading->peak_m * 1000), (unsigned)p_reading->safety);
         }
 #else
         (void)report_at;
@@ -498,243 +1008,109 @@ static void terrain_task (INT stacd, void * p_exinf)
     }
 }
 
-ER subsystem4_init (void)
+/** @brief Poll the terrain mutex to queue one run reset. On acceptance,
+ * advance the wrapping token, clear pending events and optionally
+ * return the token. Defer monitor reset and optional level calibration
+ * to the owner.
+ */
+static bool request_reset (bool b_should_recalibrate, uint16_t * p_token)
 {
-    T_CMTX value_m = {0};
-    if (g_mutex > 0)
-    {
-        return E_OBJ;
-    }
-    value_m.mtxatr = TA_INHERIT;
-    g_mutex = tk_cre_mtx(&value_m);
-#if APP_IMU_DEBUG
-    /* Optional logging must never prevent the safety task from starting. */
-    if (g_mutex > 0)
-    {
-        g_imu_debug_mutex = tk_cre_mtx(&value_m);
-        if (g_imu_debug_mutex < 0)
-        {
-            tm_printf((UB *)"[S4] IMU debug queue unavailable\n");
-        }
-    }
-#endif
-    return g_mutex < 0 ? (ER)g_mutex : E_OK;
-}
-
-ER subsystem4_start (void)
-{
-    T_CTSK value_c = {0};
-    T_CCYC cycle = {0};
-    ER value_er;
-    if (g_mutex <= 0 || g_task > 0)
-    {
-        return E_OBJ;
-    }
-    value_c.task = (FP)terrain_task;
-    value_c.itskpri = S4_PRI_MAIN;
-    value_c.stksz = 4096;
-    value_c.tskatr = TA_HLNG | TA_RNG3;
-#if TK_SUPPORT_SMP
-    value_c.tskatr |= TA_ASSPRC;
-    value_c.assprc = TP_PRC1;
-#endif
-    g_task = tk_cre_tsk(&value_c);
-    if (g_task < 0)
-    {
-        return (ER)g_task;
-    }
-    cycle.cycatr = TA_HLNG;
-    cycle.cychdr = (FP)imu_poll_tick;
-    cycle.cyctim = S4_IMU_POLL_MS;
-    cycle.cycphs = S4_IMU_POLL_MS;
-    g_cycle = tk_cre_cyc(&cycle);
-    if (g_cycle > 0)
-    {
-        value_er = tk_sta_cyc(g_cycle);
-        if (value_er == E_OK)
-        {
-            value_er = tk_sta_tsk(g_task, 0);
-            if (value_er == E_OK)
-            {
-                return E_OK;
-            }
-            (void)tk_stp_cyc(g_cycle);
-        }
-        (void)tk_del_cyc(g_cycle);
-    }
-    else
-    {
-        value_er = (ER)g_cycle;
-    }
-    (void)tk_del_tsk(g_task);
-    g_task = 0;
-    g_cycle = 0;
-    return value_er;
-}
-
-bool subsystem4_read (terrain_result_t * p_out, uint16_t * p_token,
-                      uint16_t * p_humps)
-{
-    if (!p_out || !p_token || !p_humps || g_mutex <= 0 ||
-        tk_loc_mtx(g_mutex, TMO_POL) != E_OK)
+    if ((gh_terrain_mutex <= 0) ||
+        (tk_loc_mtx(gh_terrain_mutex, TMO_POL) != E_OK))
     {
         return false;
     }
-    if (!g_queue.published || g_queue.reset || g_published_run != g_run)
-    {
-        tk_unl_mtx(g_mutex);
-        return false;
-    }
-    terrain_unpack(g_snapshot, p_out);
-    *p_token = g_published_run;
-    *p_humps = g_humps;
-    tk_unl_mtx(g_mutex);
-    if ((uint32_t)(now_us() - p_out->timestamp_us) > 150000U)
-    {
-        p_out->flags =
-            (p_out->flags & (TERRAIN_PEAK_VALID | TERRAIN_CALIBRATED)) |
-            TERRAIN_FAULT;
-        p_out->state = TERRAIN_UNKNOWN;
-        p_out->impact = false;
-        p_out->hump_completed = false;
-    }
-    return true;
-}
 
-bool subsystem4_snapshot (terrain_result_t * p_out)
-{
-    uint16_t token, humps;
-    return subsystem4_read(p_out, &token, &humps);
-}
+    if (g_queue.b_is_reset_pending)
+    {
+        tk_unl_mtx(gh_terrain_mutex);
+        return false;
+    }
 
-bool subsystem4_event (terrain_result_t * p_out, bool * p_lost)
-{
-    bool value_ok = false;
-    if (!p_out || !p_lost || g_mutex <= 0 ||
-        tk_loc_mtx(g_mutex, TMO_POL) != E_OK)
-    {
-        return false;
-    }
-    if (g_queue.count)
-    {
-        terrain_unpack(g_events[g_queue.head], p_out);
-        g_queue.head = (g_queue.head + 1) % S4_QUEUE_LEN;
-        --g_queue.count;
-        *p_lost = g_queue.lost;
-        g_queue.lost = false;
-        value_ok = true;
-    }
-    tk_unl_mtx(g_mutex);
-    return value_ok;
-}
-
-static bool request_reset (bool recalibrate, uint16_t * p_token)
-{
-    if (g_mutex <= 0 || tk_loc_mtx(g_mutex, TMO_POL) != E_OK)
-    {
-        return false;
-    }
-    if (g_queue.reset)
-    {
-        tk_unl_mtx(g_mutex);
-        return false;
-    }
     ++g_run;
+
     if (p_token)
     {
         *p_token = g_run;
     }
-    g_queue.reset = true;
-    g_queue.recalibrate = recalibrate;
-    g_queue.published = false;
-    g_queue.head = 0;
-    g_queue.count = 0;
-    g_queue.lost = false;
-    tk_unl_mtx(g_mutex);
-    return true;
-}
 
-bool subsystem4_reset_run (bool recalibrate)
-{
-    return request_reset(recalibrate, NULL);
-}
-
-bool subsystem4_begin_run (uint16_t * p_token)
-{
-    return p_token && request_reset(false, p_token);
-}
-
-bool subsystem4_set_mag_calibration (const float32_t p_offset[3],
-                                     const float32_t p_scale[3])
-{
-    terrain_monitor_t check;
-    terrain_monitor_init(&check);
-    if (!terrain_monitor_set_mag_cal(&check, p_offset, p_scale) ||
-        g_mutex <= 0 || tk_loc_mtx(g_mutex, TMO_POL) != E_OK)
-    {
-        return false;
-    }
-    {
-        unsigned value_i;
-        for (value_i = 0; value_i < 3; ++value_i)
-        {
-            g_offset[value_i] = p_offset[value_i];
-            g_scale[value_i] = p_scale[value_i];
-        }
-    }
-    g_queue.mag_pending = true;
-    tk_unl_mtx(g_mutex);
+    g_queue.b_is_reset_pending   = true;
+    g_queue.b_should_recalibrate = b_should_recalibrate;
+    g_queue.b_has_published      = false;
+    g_queue.head                 = 0;
+    g_queue.count                = 0;
+    g_queue.b_has_lost_events    = false;
+    tk_unl_mtx(gh_terrain_mutex);
     return true;
 }
 #else
+/** @brief Return E_OK in the disabled profile so application startup can
+ * continue.
+ */
 ER subsystem4_init (void)
 {
     return E_OK;
 }
 
+/** @brief Return E_OK without creating the terrain task in this profile.
+ */
 ER subsystem4_start (void)
 {
     return E_OK;
 }
 
-bool subsystem4_snapshot (terrain_result_t * out)
+/** @brief Return false and leave the caller's terrain result untouched.
+ */
+bool buddy4_snapshot (terr_data_result_t * p_out)
 {
-    (void)out;
+    (void)p_out;
     return false;
 }
 
-bool subsystem4_event (terrain_result_t * out, bool * lost)
+/** @brief Return false without writing an event or overflow flag.
+ */
+bool buddy4_event (terr_data_result_t * p_out, bool * pb_has_lost_events)
 {
-    (void)out;
-    (void)lost;
+    (void)p_out;
+    (void)pb_has_lost_events;
     return false;
 }
 
-bool subsystem4_reset_run (bool recalibrate)
+/** @brief Return false because the disabled owner cannot accept a reset.
+ */
+bool buddy4_reset_run (bool b_should_recalibrate)
 {
-    (void)recalibrate;
+    (void)b_should_recalibrate;
     return false;
 }
 
-bool subsystem4_begin_run (uint16_t * token)
+/** @brief Return false without writing a run token.
+ */
+bool buddy4_begin_run (uint16_t * p_token)
 {
-    (void)token;
+    (void)p_token;
     return false;
 }
 
-bool subsystem4_read (terrain_result_t * out, uint16_t * token,
-                      uint16_t * humps)
+/** @brief Return false in this profile and leave all three caller outputs
+ * untouched.
+ */
+bool buddy4_read (terr_data_result_t * p_out, uint16_t * p_token,
+                  uint16_t * p_humps)
 {
-    (void)out;
-    (void)token;
-    (void)humps;
+    (void)p_out;
+    (void)p_token;
+    (void)p_humps;
     return false;
 }
 
-bool subsystem4_set_mag_calibration (const float32_t o[3], const float32_t s[3])
+/** @brief Return false without retaining the supplied calibration arrays.
+ */
+bool buddy4_set_mag_calibration (const float32_t p_offset[3],
+                                 const float32_t p_scale[3])
 {
-    (void)o;
-    (void)s;
+    (void)p_offset;
+    (void)p_scale;
     return false;
 }
 #endif

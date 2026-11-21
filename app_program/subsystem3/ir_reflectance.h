@@ -1,7 +1,6 @@
 /** @file ir_reflectance.h
  * @brief Buddy 3: hardware-independent, per-sensor reflectance classification.
  */
-/* Buddy 3: hardware-independent, per-sensor reflectance classification. */
 #ifndef BUDDY3_IR_REFLECTANCE_H
 #define BUDDY3_IR_REFLECTANCE_H
 
@@ -13,7 +12,7 @@ typedef enum
     IR_SURFACE_UNKNOWN = 0,
     IR_SURFACE_WHITE,
     IR_SURFACE_BLACK
-} ir_surface_t;
+} ir_reflectance_surface_t;
 
 typedef struct
 {
@@ -22,7 +21,7 @@ typedef struct
     uint16_t white_limit; /* Normalised 0..1000: enter WHITE at/below this. */
     uint16_t
         black_limit; /* Enter BLACK at/above this; must exceed white_limit. */
-} ir_calibration_t;
+} ir_reflectance_calibration_t;
 
 /* Validated retained values only. The public input above stays wide so an
  * invalid 4096 cannot truncate into an apparently valid ADC zero. */
@@ -32,13 +31,13 @@ typedef struct __attribute__((packed))
     uint32_t black_raw : 12;
     uint32_t white_limit : 10;
     uint32_t black_limit : 10;
-} ir_stored_calibration_t;
+} ir_reflectance_stored_cal_t;
 
 typedef struct
 {
-    ir_stored_calibration_t calibration;
-    uint8_t surface : 2;
-    uint8_t configured : 1;
+    ir_reflectance_stored_cal_t calibration;
+    uint8_t                     surface : 2;
+    uint8_t                     b_is_configured : 1;
 } ir_reflectance_t;
 
 /* One state object per sensor, owned by the sampling task. Either ADC polarity
@@ -53,8 +52,8 @@ typedef struct
  * @note Either raw polarity is supported. The sampling owner serializes access;
  * no physical calibration measurement or peripheral operation occurs here.
  */
-bool ir_reflectance_init (ir_reflectance_t * p_sensor,
-                          const ir_calibration_t * p_calibration);
+bool ir_reflectance_init (ir_reflectance_t *                   p_sensor,
+                          const ir_reflectance_calibration_t * p_calibration);
 /** @brief Forget only the previously classified surface.
  * @param p_sensor Writable caller-owned sensor state, or null for a no-op.
  * @post A nonnull state's surface is UNKNOWN; configuration and endpoints stay.

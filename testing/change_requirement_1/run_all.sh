@@ -33,7 +33,7 @@ step() {
 }
 step widths python3 testing/change_requirement_1/check_widths.py
 step style python3 tools/check_c_style.py
-step bend_filter cc -O2 -Wall testing/change_requirement_1/bend_filter_check.c -o "$WORK/bend_filter"
+step bend_filter cc -O2 -Wall testing/change_requirement_1/bend_filter_check_main.c -o "$WORK/bend_filter"
 step bend_filter_run "$WORK/bend_filter"
 for n in 1 2 3; do
     step "sizes_buddy$n" make -s -C "testing/subsystem$n" sizes "BUILD=$WORK/sizes$n"

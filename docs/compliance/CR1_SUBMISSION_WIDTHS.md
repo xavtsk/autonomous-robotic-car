@@ -1,0 +1,193 @@
+# Current scoped Change Requirement 1 width table
+
+Generated on 22 November 2026 by
+`python testing/change_requirement_1/check_widths.py`. The group identifies the
+packet layout or named C storage record. The used width is the field width
+within that layout. Target allocation and padding are measured separately in
+the [Phase 3 evidence](../CHANGE_REQUIREMENT_1_EVIDENCE.md#phase-3-submission-results).
+
+This check covers 155 selected fields and 18 codec totals. The
+[broader declaration snapshot](CR1_FIELD_INVENTORY.md) retains its original
+source bindings and open dispositions.
+
+| Group | Field | Range (step) | Codes | Min bits | Used bits | OK |
+|---|---|---|---:|---:|---:|---|
+| motion | left wheel speed magnitude, mm/s | 0..510 (2) | 256 | 8 | 8 | yes |
+| motion | left wheel reverse | 0..1 | 2 | 1 | 1 | yes |
+| motion | right wheel speed magnitude, mm/s | 0..510 (2) | 256 | 8 | 8 | yes |
+| motion | right wheel reverse | 0..1 | 2 | 1 | 1 | yes |
+| barcode | letter A-Z | 0..25 | 26 | 5 | 5 | yes |
+| barcode | action unknown/fwd/left/right/uturn | 0..4 | 5 | 3 | 3 | yes |
+| hump | hump count | 0..65535 | 65536 | 16 | 16 | yes |
+| hump | highest hump, mm | 0..500 | 501 | 9 | 9 | yes |
+| heading | heading, degrees | 0..359 | 360 | 9 | 9 | yes |
+| obstacle | distance, mm | 30..4000 | 3971 | 12 | 12 | yes |
+| obstacle | width, mm | 0..4095 | 4096 | 12 | 12 | yes |
+| obstacle | route unknown/left/right | 0..2 | 3 | 2 | 2 | yes |
+| state | robot state | 0..7 | 8 | 3 | 3 | yes |
+| faults | fault bitmask: stall, encoder, IMU, no-echo, Wi-Fi, IR | 0..63 | 64 | 6 | 6 | yes |
+| pose | distance since START, cm (mod 4096) | 0..4095 | 4096 | 12 | 12 | yes |
+| pose | heading since START, degrees | 0..359 | 360 | 9 | 9 | yes |
+| terrain | tilt valid | 0..1 | 2 | 1 | 1 | yes |
+| terrain | pitch, 0.1 deg | -900..900 | 1801 | 11 | 11 | yes |
+| terrain | roll, 0.1 deg | -900..900 | 1801 | 11 | 11 | yes |
+| terrain | terrain state | 0..7 | 8 | 3 | 3 | yes |
+| terrain | on hump | 0..1 | 2 | 1 | 1 | yes |
+| terrain | climb so far, mm | 0..500 | 501 | 9 | 9 | yes |
+| terrain | run peak valid | 0..1 | 2 | 1 | 1 | yes |
+| terrain | run peak, mm | 0..500 | 501 | 9 | 9 | yes |
+| terrain | turn rate valid (19 Nov 2026) | 0..1 | 2 | 1 | 1 | yes |
+| terrain | compass turn rate, deg/s | -360..360 | 721 | 10 | 10 | yes |
+| terrain | safety none/lifted/overturned | 0..2 | 3 | 2 | 2 | yes |
+| avoidance | front range valid | 0..1 | 2 | 1 | 1 | yes |
+| avoidance | no echo | 0..1 | 2 | 1 | 1 | yes |
+| avoidance | front range, mm | 30..4000 | 3971 | 12 | 12 | yes |
+| avoidance | servo angle, deg (0 = not positioned) | 0..180 | 181 | 8 | 8 | yes |
+| avoidance | Buddy 5 state | 0..6 | 7 | 3 | 3 | yes |
+| avoidance | Buddy 5 fault | 0..7 | 8 | 3 | 3 | yes |
+| avoidance | route | 0..2 | 3 | 2 | 2 | yes |
+| avoidance | bypass leg (9 = reversing, 10 = aiming) | 0..10 | 11 | 4 | 4 | yes |
+| avoidance | pass step | 0..4 | 5 | 3 | 3 | yes |
+| avoidance | side swapped | 0..1 | 2 | 1 | 1 | yes |
+| scan | profile valid | 0..1 | 2 | 1 | 1 | yes |
+| scan | scan id (low 8 bits) | 0..255 | 256 | 8 | 8 | yes |
+| scan | closest, mm | 30..4000 | 3971 | 12 | 12 | yes |
+| scan | width, mm | 0..4095 | 4096 | 12 | 12 | yes |
+| scan | left clearance, mm | 0..4000 | 4001 | 12 | 12 | yes |
+| scan | right clearance, mm | 0..4000 | 4001 | 12 | 12 | yes |
+| scan | depth to far face, mm | 0..4000 | 4001 | 12 | 12 | yes |
+| scan | left edge, mm (+4000 offset) | -4000..4000 | 8001 | 13 | 13 | yes |
+| scan | right edge, mm (+4000 offset) | -4000..4000 | 8001 | 13 | 13 | yes |
+| scan_sample | scan id (low 8 bits, 19 Nov 2026) | 0..255 | 256 | 8 | 8 | yes |
+| scan_sample | side peek | 0..1 | 2 | 1 | 1 | yes |
+| scan_sample | reading index | 0..15 | 16 | 4 | 4 | yes |
+| scan_sample | readings in this scan | 1..16 | 16 | 4 | 4 | yes |
+| scan_sample | angle index (30..150 deg, 5 deg steps) | 0..24 | 25 | 5 | 5 | yes |
+| scan_sample | reading valid | 0..1 | 2 | 1 | 1 | yes |
+| scan_sample | distance, mm (0 = no reading) | 0..4000 | 4001 | 12 | 12 | yes |
+| status | alive | 0..1 | 2 | 1 | 1 | yes |
+| status | fault field known | 0..1 | 2 | 1 | 1 | yes |
+| status | fault bitmask | 0..63 | 64 | 6 | 6 | yes |
+| map_reply | result ok/invalid/closed/internal | 0..3 | 4 | 2 | 2 | yes |
+| control_reply | action start/stop/reset | 1..3 | 3 | 2 | 2 | yes |
+| control_reply | queued/executed/rejected/cancelled | 0..3 | 4 | 2 | 2 | yes |
+| control_reply | reason | 0..7 | 8 | 3 | 3 | yes |
+| control_reply | request id | 0..4294967295 | 4294967296 | 32 | 32 | yes |
+| control_reply | link epoch | 0..4294967295 | 4294967296 | 32 | 32 | yes |
+| envelope | outbox topic selector (15 topics) | 0..14 | 15 | 4 | 4 | yes |
+| envelope | incoming command kind | 0..2 | 3 | 2 | 2 | yes |
+| b4 packet | timestamp, us | 0..4294967295 | 4294967296 | 32 | 32 | yes |
+| b4 packet | terrain state | 0..7 | 8 | 3 | 3 | yes |
+| b4 packet | flags: tilt/turn/peak valid, calibrated, fault | 0..31 | 32 | 5 | 5 | yes |
+| b4 packet | pitch, 0.1 deg | -900..900 | 1801 | 11 | 11 | yes |
+| b4 packet | roll, 0.1 deg | -900..900 | 1801 | 11 | 11 | yes |
+| b4 packet | turn rate, deg/s | -360..360 | 721 | 10 | 10 | yes |
+| b4 packet | highest hump, mm | 0..500 | 501 | 9 | 9 | yes |
+| b4 packet | hump completed | 0..1 | 2 | 1 | 1 | yes |
+| b4 packet | impact | 0..1 | 2 | 1 | 1 | yes |
+| b4 packet | hump in progress | 0..1 | 2 | 1 | 1 | yes |
+| b4 packet | climb so far, mm | 0..500 | 501 | 9 | 9 | yes |
+| b4 packet | safety none/lifted/overturned | 0..2 | 3 | 2 | 2 | yes |
+| b5 packet | forward reading time, us | 0..4294967295 | 4294967296 | 32 | 32 | yes |
+| b5 packet | scan time, us | 0..4294967295 | 4294967296 | 32 | 32 | yes |
+| b5 packet | scan id (0 = none, wraps) | 0..65535 | 65536 | 16 | 16 | yes |
+| b5 packet | forward distance, mm | 30..4000 | 3971 | 12 | 12 | yes |
+| b5 packet | forward valid | 0..1 | 2 | 1 | 1 | yes |
+| b5 packet | no echo | 0..1 | 2 | 1 | 1 | yes |
+| b5 packet | scan done | 0..1 | 2 | 1 | 1 | yes |
+| b5 packet | profile valid | 0..1 | 2 | 1 | 1 | yes |
+| b5 packet | closest, mm | 30..4000 | 3971 | 12 | 12 | yes |
+| b5 packet | width, mm | 0..4095 | 4096 | 12 | 12 | yes |
+| b5 packet | left clearance, mm | 0..4000 | 4001 | 12 | 12 | yes |
+| b5 packet | right clearance, mm | 0..4000 | 4001 | 12 | 12 | yes |
+| b5 packet | depth, mm | 0..4000 | 4001 | 12 | 12 | yes |
+| b5 packet | left edge, mm | -4000..4000 | 8001 | 13 | 13 | yes |
+| b5 packet | right edge, mm | -4000..4000 | 8001 | 13 | 13 | yes |
+| b5 sample | distance, mm | 0..4000 | 4001 | 12 | 12 | yes |
+| b5 sample | angle index (30..150 deg, 5 deg steps) | 0..24 | 25 | 5 | 5 | yes |
+| b5 sample | valid | 0..1 | 2 | 1 | 1 | yes |
+| s5 status | state | 0..6 | 7 | 3 | 3 | yes |
+| s5 status | fault | 0..7 | 8 | 3 | 3 | yes |
+| s5 status | route | 0..2 | 3 | 2 | 2 | yes |
+| s5 status | leg (9 = reversing, 10 = aiming) | 0..10 | 11 | 4 | 4 | yes |
+| s5 status | pass step | 0..4 | 5 | 3 | 3 | yes |
+| s5 status | side swapped | 0..1 | 2 | 1 | 1 | yes |
+| s5 private | aim turn, deg | -40..40 | 81 | 7 | 7 | yes |
+| s5 private | bend at detection, % (controller -> Buddy 5) | -100..100 | 201 | 8 | 8 | yes |
+| s5 private | heading vs passing heading, deg | -90..90 | 181 | 8 | 8 | yes |
+| s5 private | pending side turn away, deg | 0..10 | 11 | 4 | 4 | yes |
+| s5 private | side turns made | 0..3 | 4 | 2 | 2 | yes |
+| s5 private | hand-back centring tries | 0..2 | 3 | 2 | 2 | yes |
+| s5 private | consecutive blocked readings | 0..2 | 3 | 2 | 2 | yes |
+| s5 private | sideways travel after turning away, mm | 0..511 | 512 | 9 | 9 | yes |
+| s5 private | distance from the line at the last side peek, mm | 0..4095 | 4096 | 12 | 12 | yes |
+| b4 queue | head | 0..7 | 8 | 3 | 3 | yes |
+| b4 queue | count | 0..8 | 9 | 4 | 4 | yes |
+| b4 queue | b_has_published | 0..1 | 2 | 1 | 1 | yes |
+| b4 queue | b_has_lost_events | 0..1 | 2 | 1 | 1 | yes |
+| b4 queue | b_is_reset_pending | 0..1 | 2 | 1 | 1 | yes |
+| b4 queue | b_should_recalibrate | 0..1 | 2 | 1 | 1 | yes |
+| b4 queue | b_has_pending_mag_cal | 0..1 | 2 | 1 | 1 | yes |
+| remote request | request_id | 0..4294967295 | 4294967296 | 32 | 32 | yes |
+| remote request | epoch | 0..4294967295 | 4294967296 | 32 | 32 | yes |
+| remote request | time_us | 0..4294967295 | 4294967296 | 32 | 32 | yes |
+| remote request | action | 0..3 | 4 | 2 | 2 | yes |
+| remote request | b_is_request_valid | 0..1 | 2 | 1 | 1 | yes |
+| remote state | flags | 0..15 | 16 | 4 | 4 | yes |
+| remote state | head | 0..5 | 6 | 3 | 3 | yes |
+| remote state | count | 0..6 | 7 | 3 | 3 | yes |
+| remote state | b_is_connected | 0..1 | 2 | 1 | 1 | yes |
+| remote state | b_has_published_status | 0..1 | 2 | 1 | 1 | yes |
+| remote state | b_is_stop_held | 0..1 | 2 | 1 | 1 | yes |
+| remote state | b_has_active_request | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_is_faint | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_is_rising | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_has_crossed | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_is_strong | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_does_bias_vary | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_has_candidate | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_allows_noise | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_is_ambiguous | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_is_provisional | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_is_strict_fit_broken | 0..1 | 2 | 1 | 1 | yes |
+| barcode work flags | b_is_early | 0..1 | 2 | 1 | 1 | yes |
+| barcode record flags | b_accepts_faint_quiet | 0..1 | 2 | 1 | 1 | yes |
+| barcode record flags | b_blocks_retry | 0..1 | 2 | 1 | 1 | yes |
+| barcode record flags | b_did_try_early_fit | 0..1 | 2 | 1 | 1 | yes |
+| barcode record flags | b_has_early_candidate | 0..1 | 2 | 1 | 1 | yes |
+| drive state | reset_result | 0..3 | 4 | 2 | 2 | yes |
+| drive state | b_has_external_hold | 0..1 | 2 | 1 | 1 | yes |
+| drive state | b_is_configured | 0..1 | 2 | 1 | 1 | yes |
+| drive state | b_waits_for_stop | 0..1 | 2 | 1 | 1 | yes |
+| drive state | b_is_advancing | 0..1 | 2 | 1 | 1 | yes |
+| drive state | b_has_touched_line | 0..1 | 2 | 1 | 1 | yes |
+| drive state | b_is_searching | 0..1 | 2 | 1 | 1 | yes |
+| drive state | b_has_obstacle_snapshot | 0..1 | 2 | 1 | 1 | yes |
+| drive state | b_is_bypassing | 0..1 | 2 | 1 | 1 | yes |
+| terrain report cache | sent_height | 0..500 | 501 | 9 | 9 | yes |
+| terrain report cache | b_sent_fault | 0..1 | 2 | 1 | 1 | yes |
+| terrain report cache | b_has_unreported_impact | 0..1 | 2 | 1 | 1 | yes |
+
+| Group | Sum of fields | Bits in codec | OK |
+|---|---:|---:|---|
+| motion | 18 | 18 | yes |
+| barcode | 8 | 8 | yes |
+| hump | 25 | 25 | yes |
+| heading | 9 | 9 | yes |
+| obstacle | 26 | 26 | yes |
+| state | 3 | 3 | yes |
+| faults | 6 | 6 | yes |
+| pose | 21 | 21 | yes |
+| terrain | 59 | 59 | yes |
+| avoidance | 38 | 38 | yes |
+| scan | 95 | 95 | yes |
+| scan_sample | 35 | 35 | yes |
+| control_reply | 71 | 71 | yes |
+| b4 packet | 95 | 95 | yes |
+| b5 packet | 182 | 182 | yes |
+| b5 sample | 18 | 18 | yes |
+| s5 status | 16 | 16 | yes |
+| snapshot (7 validity + 7 sections + pose validity + pose) | 124 | 124 | yes |
+Selected C-source bindings: PASS
+
+RESULT: PASS

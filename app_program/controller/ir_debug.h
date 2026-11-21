@@ -1,9 +1,10 @@
 /** @file ir_debug.h
  * @brief Optional observation-only IR preview.
- */
-/* Optional observation-only IR preview. No ADC, navigation or motor calls.
+ *
+ * No ADC, navigation or motor calls.
  * Explicit 16-byte packet: version + 118 body bits, two zero padding bits.
- * Channel order is LEFT, RIGHT, BARCODE (not s3_sensor_id_t enum order).
+ * Channel order is LEFT, RIGHT, BARCODE (not ir_acquisition_sensor_id_t enum
+ * order).
  */
 #ifndef CONTROLLER_IR_DEBUG_H
 #define CONTROLLER_IR_DEBUG_H
@@ -13,9 +14,10 @@
 #define APP_IR_DEBUG 0
 #endif
 #define IR_DEBUG_VERSION 1U
+#define IR_DEBUG_CHANNELS (3U)
 #define IR_DEBUG_PACKET_SIZE 16U
 #define IR_DEBUG_PERIOD_US                                                     \
-    50000U /* <= 20 Hz preview; processing stays 100 Hz */
+    50000U /* 20 Hz preview of the integrated 5 ms samples. */
 
 typedef struct
 {
@@ -25,15 +27,19 @@ typedef struct
 typedef struct
 {
     uint32_t timestamp_us;
-    uint16_t raw[3], darkness[3];
-    uint8_t raw_valid, normalised_valid, surface[3], sequence;
+    uint16_t raw[IR_DEBUG_CHANNELS];
+    uint16_t darkness[IR_DEBUG_CHANNELS];
+    uint8_t  raw_valid;
+    uint8_t  normalised_valid;
+    uint8_t  surface[IR_DEBUG_CHANNELS];
+    uint8_t  sequence;
 } ir_debug_sample_t;
 
 bool ir_debug_pack (const ir_debug_sample_t * p_sample,
-                    ir_debug_packet_t * p_packet);
+                    ir_debug_packet_t *       p_packet);
 bool ir_debug_unpack (const ir_debug_packet_t * p_packet,
-                      ir_debug_sample_t * p_sample);
-bool ir_debug_due (uint32_t now, uint32_t * p_last, bool * p_seen);
+                      ir_debug_sample_t *       p_sample);
+bool ir_debug_due (uint32_t now, uint32_t * p_last, bool * pb_has_sampled);
 #endif
 
 /* End of file. */

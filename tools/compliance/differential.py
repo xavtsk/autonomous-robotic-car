@@ -7,10 +7,17 @@ from pathlib import Path
 import subprocess
 import sys
 from replay_audit import audit
-from instrument_harnesses import runtime_source, mqtt_source, operator_source, integration_storage_flags
-from run_host import motion_estimation_module, motion_storage_flags
-from fixture_binding import select_fixture_root
-from module_compat import prepare_tilt
+from host_recipes import (decoder_boundary_recipe, motion_storage_source,
+                          operator_runtime_recipe, sampling_runtime_recipe)
+from instrument_harnesses import (runtime_source, mqtt_source, operator_source,
+                                  integration_storage_flags, operator_port_flags,
+                                  remote_request_flags)
+from run_host import (capture_storage_flags, motion_estimation_module,
+                      motion_storage_flags)
+from fixture_binding import FIXED_BASELINE, select_fixture_root
+from module_compat import (fixture_api_flags,
+                           motion_predicate_flags, obstacle_predicate_flags,
+                           prepare_tilt, terrain_predicate_flags)
 
 
 def main():
@@ -31,8 +38,24 @@ def main():
 
     def build(label, name, sources, includes=(), flags=()):
         binary = output / (label + '-' + name)
+        revision = results['revisions'][label]
+        compatibility = fixture_api_flags(revision)
+        if name in ('motion', 'motion_storage', 'runtime', 'operator'):
+            compatibility.extend(motion_predicate_flags(revision))
+        if name in ('terrain', 'terrain_production'):
+            compatibility.extend(terrain_predicate_flags(revision))
+        if revision == FIXED_BASELINE and name in ('control_debug', 'runtime'):
+            compatibility.extend(('-Db_has_motion_snapshot=motion_available',
+                                  '-Db_is_motion_valid=motion_valid',
+                                  '-Db_is_motion_braked=braked',
+                                  '-Db_is_motion_busy=busy'))
+        if revision == FIXED_BASELINE and name == 'runtime':
+            compatibility.extend(('-Db_is_valid=valid', '-Db_is_request_valid=valid'))
+        if revision == FIXED_BASELINE and name == 'operator':
+            compatibility.append('-Db_is_available=available')
         command = ['gcc-13', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O2', '-g',
-                   *flags, *['-I' + str(path) for path in includes], *map(str, sources), '-lm', '-o', str(binary)]
+                   *compatibility, *flags, *['-I' + str(path) for path in includes],
+                   *map(str, sources), '-lm', '-o', str(binary)]
         with (output / (label + '-' + name + '-build.log')).open('w') as log:
             log.write('COMMAND ' + json.dumps(command) + '\n')
             log.flush()
@@ -51,7 +74,7 @@ def main():
             results['tilt_modules'][label] = tilt_receipt.name
             tilt_name, tilt_includes = prepare_tilt(root, results['revisions'][label],
                 output/(label+'-tilt-compat'), tilt_receipt)
-            trace_harness = fixtures_root/'testing/compliance/control_debug_trace.c'
+            trace_harness = fixtures_root/'testing/compliance/debug_wire_trace_main.c'
             shared = fixtures_root/'tools/compliance/traces'
             debug_binary = build(label, 'control_debug', [trace_harness, root / 'app_program/controller/control_debug.c'], [root])
             with (output / (label + '-control_debug.trace')).open('wb') as stream:
@@ -73,23 +96,35 @@ def main():
                 directory = app / f'subsystem{number}'
                 trace_name = 'terrain' if name == 'terrain_production' else name
                 compatibility_includes = tilt_includes if number == 4 else []
-                binary = build(label, name, [shared/(trace_name+'_trace.c'), *[directory/(module+'.c') for module in modules]],
-                               [*compatibility_includes, directory, harness_dir], flags)
+                if name == 'obstacle':
+                    flags = [*flags, *obstacle_predicate_flags(results['revisions'][label])]
+                entry = {'motion': 'test_motion_feedback_main.c', 'terrain': 'imu_host_main.c',
+                         'obstacle': 'bypass_fsm_main.c'}[trace_name]
+                binary = build(label, name, [harness_dir/entry, shared/(trace_name+'_trace.c'),
+                               *[directory/(module+'.c') for module in modules]],
+                               [*compatibility_includes, directory, harness_dir, shared],
+                               [*flags, '-DTEST_SEMANTIC_TRACE'])
                 with (output / (label + '-' + name + '.trace')).open('wb') as stream:
                     subprocess.run([str(binary)], stdout=stream, check=True, timeout=120)
+            storage_source = motion_storage_source(root, fixtures_root,
+                output/(label+'-motion-storage'))
             binary = build(label, 'motion_storage',
-                [fixtures/'compliance/motion_storage_test.c',
+                [fixtures/'compliance/motion_storage_main.c', fixtures/'subsystem3/test_motion_feedback_main.c',
+                 storage_source,
                  *[app/'subsystem2'/(name+'.c') for name in
                    ('ctrl_motion', 'motion_pack', estimation_module, 'speed_pid')]],
-                [root, app/'subsystem2', fixtures/'subsystem3'],
-                [*motion_storage_flags(root), '-include', str(fixtures/'subsystem3/motion_kernel_stub.h')])
+                [app/'subsystem2', fixtures/'subsystem3', fixtures/'compliance'],
+                [*motion_storage_flags(root), '-DTEST_MOTION_STORAGE', '-DMOTION_STORAGE_PROBE',
+                 '-include', str(fixtures/'subsystem3/motion_kernel_stub.h')])
             with (output/(label+'-motion_storage.trace')).open('wb') as stdout, (output/(label+'-motion_storage.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
-            binary = build(label, 'barcode_work', [fixtures/'compliance/barcode_work_test.c'], [root])
+            binary = build(label, 'barcode_work', *decoder_boundary_recipe(
+                root, fixtures_root, output/(label+'-barcode-boundaries')))
             with (output/(label+'-barcode_work.trace')).open('wb') as stdout, (output/(label+'-barcode_work.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
             binary = build(label, 'bcap_storage',
-                [fixtures/'compliance/bcap_storage_test.c', app/'controller/bc_capture.c'], [root])
+                [fixtures/'compliance/bcap_storage_main.c', app/'controller/bc_capture.c'],
+                [root], capture_storage_flags(root))
             with (output/(label+'-bcap_storage.trace')).open('wb') as stdout, (output/(label+'-bcap_storage.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
             runtime = runtime_source(fixtures_root, root, output/(label+'-runtime.c'))
@@ -98,9 +133,13 @@ def main():
             runtime_sources += [app/'subsystem3'/(name+'.c') for name in
                                 ('navigation_codec', 'ir_acquisition', 'ir_calibration', 'ir_reflectance',
                                  'line_detection', 'line_controller', 'bc_decoder', 'line_navigation')]
-            binary = build(label, 'runtime', [runtime, *runtime_sources],
-                [fixtures/'integration', fixtures/'integration/fakes', root/'lib/liblwip/sysdepend/pico_rp2040'],
-                ['-pthread', '-DAPP_IR_DEBUG=1', '-DTM_MQTT=1', *integration_storage_flags(root)])
+            sampling_owner, sampling_options = sampling_runtime_recipe(
+                root, fixtures_root, output/(label+'-sampling-runtime'))
+            binary = build(label, 'runtime', [runtime, sampling_owner, *runtime_sources],
+                [fixtures/'integration', fixtures/'integration/fakes', app/'controller',
+                 root/'lib/liblwip/sysdepend/pico_rp2040'],
+                ['-pthread', '-DAPP_IR_DEBUG=1', '-DTM_MQTT=1',
+                 *sampling_options, *integration_storage_flags(root), *remote_request_flags(root)])
             with (output/(label+'-runtime.trace')).open('wb') as stream:
                 subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
             operator = operator_source(fixtures_root, root, output/(label+'-operator.c'))
@@ -109,8 +148,11 @@ def main():
             operator_modules += [app/'subsystem3'/(name+'.c') for name in
                                  ('navigation_codec', 'ir_acquisition', 'ir_calibration', 'ir_reflectance',
                                   'line_detection', 'line_controller', 'bc_decoder', 'line_navigation')]
-            binary = build(label, 'operator', [operator, shared/'op_trace.c', *operator_modules],
-                           [fixtures/'integration', fixtures/'integration/fakes', app/'controller'], ['-pthread'])
+            operator_runtime, operator_options = operator_runtime_recipe(
+                root, fixtures_root, output/(label+'-operator-runtime'))
+            binary = build(label, 'operator', [operator, shared/'op_trace.c', operator_runtime, *operator_modules],
+                           [fixtures/'integration', fixtures/'integration/fakes', app/'controller'],
+                           ['-pthread', *operator_port_flags(root), *operator_options])
             with (output/(label+'-operator.trace')).open('wb') as stream:
                 subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
             mqtt = mqtt_source(fixtures_root, output/(label+'-mqtt.c'))
@@ -126,10 +168,12 @@ def main():
                      '-include', str(fixtures/'subsystem1/host_kernel.h')])
                 with (output/(label+'-'+name+'.trace')).open('wb') as stream:
                     subprocess.run([str(binary)], stdout=stream, check=True, timeout=180)
-            binary = build(label, 'mqtt_receive', [fixtures/'compliance/mqtt_receive_test.c', *mqtt_sources],
+            binary = build(label, 'mqtt_receive', [fixtures/'compliance/mqtt_receive_main.c',
+                              fixtures/'subsystem1/host_main.c', *mqtt_sources],
                 [fixtures/'subsystem1', fixtures/'subsystem1/fakes', app/'subsystem1', root/'lib/liblwip/sysdepend/pico_rp2040'],
                 ['-pthread', '-DAPP_H', '-DAPP_TEST=1', '-DTM_MQTT=1',
-                 '-DAPP_IR_DEBUG=1', '-DAPP_IMU_DEBUG=1', '-include', str(fixtures/'subsystem1/host_kernel.h')])
+                 '-DAPP_IR_DEBUG=1', '-DAPP_IMU_DEBUG=1', '-DTEST_MQTT_RECEIVE',
+                 '-include', str(fixtures/'subsystem1/host_kernel.h')])
             with (output/(label+'-mqtt_receive.trace')).open('wb') as stdout, (output/(label+'-mqtt_receive.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=180)
             source = root / 'app_program/subsystem3'
@@ -138,10 +182,21 @@ def main():
                        'line_controller', 'bc_decoder', 'line_navigation']
             # Each revision's harness is part of the recorded source SHA. The
             # semantic rows, rather than its PASS summary, are compared below.
-            binary = build(label, 'navigation', [harness/'host_trace.c', *[source/(name+'.c') for name in modules]], [source, harness])
+            nav_harness = harness / 'host_trace_main.c'
+            if not nav_harness.is_file():
+                nav_harness = harness / 'host_trace.c'
+            # Earlier revisions include their core/navigation fixtures directly.
+            nav_sources = [nav_harness]
+            nav_flags = []
+            interface = harness/'test_core_main.h'
+            if interface.is_file() and 'int test_core_run (void);' in interface.read_text(encoding='utf-8'):
+                nav_sources.extend([harness/'test_core_main.c', harness/'test_navigation.c'])
+                nav_flags.append('-DTEST_NAV_TRACE')
+            binary = build(label, 'navigation', [*nav_sources, *[source/(name+'.c') for name in modules]],
+                           [source, harness], nav_flags)
             with (output / (label + '-navigation.trace')).open('wb') as stdout, (output / (label + '-navigation.log')).open('wb') as stderr:
                 subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=180)
-            binaries[label] = build(label, 'replay', [fixtures/'compliance/barcode_replay_trace.c', source/'bc_decoder.c'], [root])
+            binaries[label] = build(label, 'replay', [fixtures/'compliance/barcode_replay_trace_main.c', source/'bc_decoder.c'], [root])
         for name, prefix in (('motion', b'M '), ('terrain', b'T '), ('terrain_production', b'T '), ('obstacle', b'O '),
                              ('runtime', b'RUNTIME '), ('mqtt', b'MQTT_'), ('mqtt_plain', b'MQTT_'),
                              ('mqtt_production', b'MQTT_'), ('mqtt_imu', b'MQTT_'),

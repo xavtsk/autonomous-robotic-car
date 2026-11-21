@@ -42,6 +42,13 @@ stop path. Enabling S5 does not automatically start the motors.
 
 ## Ownership and execution
 
+```text
+Ultrasonic task -> timestamped scan and range -> avoidance policy
+Controller     <- motion proposal <-------------+
+    |
+    +-----------> Buddy 2 command and feedback
+```
+
 - Buddy 5's priority-20/core-0 task owns ultrasonic acquisition and PWM6A servo.
 - Echo capture uses PIO0 SM2 and words 24–31 at a 1 MHz counter. The original
   encoder SM0/SM1 and words 0–23 are preserved. The PIO assembly source is
@@ -224,7 +231,7 @@ range, conservative width, route), avoiding-obstacle state, and only the owned
 NO_ECHO fault bit. Other buddies' flags are preserved by Buddy 1's protected
 changed-mask update. Invalid profiles invalidate the cached obstacle section.
 The full clearance/profile details and source timestamps are available through
-`subsystem5_snapshot()`. The controller uses `subsystem5_read_snapshot()` to
+`s5_api_snapshot()`. The controller uses `s5_api_read_snapshot()` to
 separate a busy snapshot mutex from unavailable/corrupt data. Only BUSY may reuse
 its owner-local 23-byte packed cache, for at most 250 ms since a successful read.
 Original source timestamps stay unchanged, so moving range data must also pass
@@ -240,7 +247,7 @@ Wi-Fi (see `subsystem1/MQTT_PROTOCOL.md`): `car/telemetry/avoidance` every 200 m
 `car/telemetry/scan` per finished scan or side peek, and since 19 Nov 2026
 `car/telemetry/scan_sample`, every raw reading of that scan (angle, distance or
 "no reading"), so the `[S5SCAN]` USB line is no longer the only copy. The S5
-task keeps the last scan's readings (`subsystem5_scan_samples()`); the
+task keeps the last scan's readings (`s5_api_scan_samples()`); the
 controller sends them one by one, at most every 40 ms and only while Buddy 1's
 outbox is empty (spare capacity only). The avoidance leg field also
 reports 9 while reversing before the 45° turn and 10 while turning to face the

@@ -1,10 +1,8 @@
 /** @file motion.h
  * @brief Public motion subsystem interface.
- */
-/*
- * File: motion.h
- * Owner: Buddy 2 - Motion Control
- * Purpose: Public motion subsystem interface.
+ *
+ * @par Ownership
+ * Buddy 2 - Motion Control
  *
  * Implements the Motion Control statechart (Week 6 Design Review, 6.1):
  *
@@ -38,54 +36,55 @@
 
 typedef enum
 {
-    MOTION_IDLE = 0, /* safe outputs (motors braked), ready for a request  */
-    MOTION_VELOCITY, /* following continuous wheel-speed targets           */
-    MOTION_DRIVE,    /* driving straight to a distance target              */
-    MOTION_TURN,     /* turning on the spot to an angle target             */
-    MOTION_COMPLETE, /* drive/turn reached its target; reported once       */
-    MOTION_FAULT     /* safe outputs, latched until motion_reset()         */
+    MOTION_IDLE = 0, /* Brake confirmation can be pending in IDLE. */
+    MOTION_VELOCITY, /* Follow continuous wheel-speed targets. */
+    MOTION_DRIVE,    /* Drive straight to a distance target. */
+    MOTION_TURN,     /* Turn on the spot to an angle target. */
+    MOTION_COMPLETE, /* Report reaching the target once. */
+    MOTION_FAULT     /* Brake and latch until motion_reset(). */
 } motion_state_t;
 
 typedef enum
 {
     MOTION_FAULT_NONE = 0,
-    MOTION_FAULT_STALL,         /* driven wheel made no encoder progress     */
-    MOTION_FAULT_STALE_COMMAND, /* VELOCITY: no new target within 250 ms     */
-    MOTION_FAULT_ENCODER,       /* invalid signal; not raised with PIO       */
-    MOTION_FAULT_DIRECTION,     /* a wheel turned against its command        */
-    MOTION_FAULT_TIMEOUT        /* drive/turn took far longer than expected  */
+    MOTION_FAULT_STALL,         /* A driven wheel made no progress. */
+    MOTION_FAULT_STALE_COMMAND, /* No velocity target arrived in 250 ms. */
+    MOTION_FAULT_ENCODER,   /* PIO leaves this invalid-signal fault unused. */
+    MOTION_FAULT_DIRECTION, /* A wheel turned against its command. */
+    MOTION_FAULT_TIMEOUT    /* The move missed its deadline. */
 } motion_fault_t;
 
 typedef enum
 {
-    MOTION_OK = 0,             /* request accepted                          */
-    MOTION_ERR_BUSY,           /* not IDLE (velocity: not IDLE or VELOCITY) */
-    MOTION_ERR_FAULT,          /* in MOTION_FAULT: call motion_reset()      */
-    MOTION_ERR_BAD_ARG,        /* negative / zero speed, or not a number    */
-    MOTION_ERR_NOT_CALIBRATED, /* set the CALIBRATE values in motion.c      */
-    MOTION_ERR_OBSOLETE        /* command ID is not the running command     */
+    MOTION_OK = 0,      /* The request was accepted. */
+    MOTION_ERR_BUSY,    /* The current state does not accept the request. */
+    MOTION_ERR_FAULT,   /* Reset the latched motion fault first. */
+    MOTION_ERR_BAD_ARG, /* A request argument failed validation. */
+    MOTION_ERR_NOT_CALIBRATED, /* Set the calibration values in motion.c. */
+    MOTION_ERR_OBSOLETE        /* The command ID no longer applies. */
 } motion_result_t;
 
-/* How a command ended */
+/* These outcomes explain how commands end. */
 typedef enum
 {
-    MOTION_OUTCOME_NONE = 0,  /* no command has ended yet                  */
-    MOTION_OUTCOME_DONE,      /* drive / turn reached its target           */
-    MOTION_OUTCOME_CANCELLED, /* stop() or motion_cancel()                 */
-    MOTION_OUTCOME_FAULT      /* entered MOTION_FAULT; see fault           */
+    MOTION_OUTCOME_NONE = 0,  /* No command has ended yet. */
+    MOTION_OUTCOME_DONE,      /* The move reached its target. */
+    MOTION_OUTCOME_CANCELLED, /* The move was stopped or cancelled. */
+    MOTION_OUTCOME_FAULT      /* The move ended because of a fault. */
 } motion_outcome_t;
 
-/* Report of the last command that ended */
+/* This report describes a command that ended. */
 typedef struct
 {
-    uint8_t command_id; /* from motion_command_id()                  */
+    uint8_t          command_id; /* Use the accepted command ID. */
     motion_outcome_t outcome;
-    motion_fault_t fault; /* MOTION_OUTCOME_FAULT only                 */
-    bool b_lost;          /* true: reports before this one were lost  */
+    motion_fault_t   fault;      /* This field describes a fault outcome. */
+    bool             b_was_lost; /* Earlier reports were lost. */
 } motion_report_t;
 
-/* Reports wait in a bounded queue (a message buffer) this deep; each is
- * stored packed in 16 bits (motion_pack.h) */
+/* Reports wait in a bounded message buffer. Each report uses 16 bits as
+ * defined in motion_pack.h.
+ */
 #define MOTION_REPORT_QUEUE_LEN (8U)
 
 /* Snapshot of Buddy 2's shared data (telemetry). motion_get_status_packed()
@@ -93,52 +92,55 @@ typedef struct
 typedef struct
 {
     motion_state_t state;
-    motion_fault_t fault;     /* lowest latched fault bit, as a code */
-    uint8_t command_id;       /* running / last accepted command     */
-    float32_t speed_left_mps; /* + = forward                         */
-    float32_t speed_right_mps;
-    float32_t distance_m;  /* robot centre, since start           */
-    float32_t heading_deg; /* 0 ... 359, + = anticlockwise        */
-    bool b_stopped;        /* motion_is_stopped()                 */
-    bool b_busy;           /* calibration running                 */
-    bool b_valid;          /* false: encoder PIO not running      */
-    uint8_t fault_bits;    /* every latched fault, one bit each   */
+    motion_fault_t fault;          /* Report the lowest latched fault. */
+    uint8_t        command_id;     /* Report the last accepted command ID. */
+    float32_t      speed_left_mps; /* Positive speed is forward. */
+    float32_t      speed_right_mps;
+    float32_t      distance_m;  /* Measure centre distance since start. */
+    float32_t      heading_deg; /* Heading is 0 to 359 degrees anticlockwise. */
+    bool           b_is_stopped; /* motion_is_stopped()                 */
+    bool           b_is_busy;    /* Calibration is running. */
+    bool    b_is_status_valid;   /* Validity requires running encoder PIO. */
+    uint8_t fault_bits;          /* Use one bit per latched fault. */
 } motion_status_t;
 
 typedef enum
 {
-    MANOEUVRE_LEFT = 0, /* TURN 90 deg left on the spot              */
-    MANOEUVRE_RIGHT,    /* TURN 90 deg right on the spot             */
-    MANOEUVRE_STRAIGHT, /* DRIVE straight MANOEUVRE_STRAIGHT_M       */
-    MANOEUVRE_U_TURN    /* TURN 180 deg left on the spot             */
-} manoeuvre_t;
+    MANOEUVRE_LEFT = 0, /* Turn 90 degrees left on the spot. */
+    MANOEUVRE_RIGHT,    /* Turn 90 degrees right on the spot. */
+    MANOEUVRE_STRAIGHT, /* Drive the configured straight distance. */
+    MANOEUVRE_U_TURN    /* Turn 180 degrees left on the spot. */
+} motion_manoeuvre_t;
 
-/* Values measured by calibration; each field goes into the #define of the
- * same name (without b_) in the CALIBRATE block of motion.c */
+/* Transfer each measured calibration value to the corresponding macro in the
+ * CALIBRATE section of motion.c. Omit the b_ prefix when matching flag
+ * names.
+ */
 typedef struct
 {
-    bool b_valid;               /* all checks below passed                   */
-    float32_t counts_per_rev;   /* ENCODER_COUNTS_PER_REV                    */
-    float32_t max_speed_mps;    /* MOTOR_MAX_SPEED_MPS (the slower motor)    */
-    bool b_m1_inverted;         /* M1_INVERTED                               */
-    bool b_m2_inverted;         /* M2_INVERTED                               */
-    bool b_enc_l_inverted;      /* ENC_L_INVERTED                            */
-    bool b_enc_r_inverted;      /* ENC_R_INVERTED                            */
-    float32_t counts_per_rev_l; /* per wheel, for checking                   */
+    bool      b_is_calibration_valid; /* All calibration checks passed. */
+    float32_t counts_per_rev; /* ENCODER_COUNTS_PER_REV                    */
+    float32_t max_speed_mps;  /* Use the slower wheel's top speed. */
+    bool      b_is_left_motor_inverted;  /* M1_INVERTED  */
+    bool      b_is_right_motor_inverted; /* M2_INVERTED */
+    bool b_is_left_enc_inverted; /* ENC_L_INVERTED                            */
+    bool b_is_right_enc_inverted; /* ENC_R_INVERTED */
+    float32_t counts_per_rev_l;   /* Use each wheel's count for checking. */
     float32_t counts_per_rev_r;
-    float32_t top_speed_l_mps; /* per wheel, wheels off the ground          */
+    float32_t top_speed_l_mps; /* Measure with the wheels off the ground. */
     float32_t top_speed_r_mps;
-    bool b_enc_l_ok;         /* false: ENC_L did not count                */
-    bool b_enc_r_ok;         /* false: ENC_R did not count                */
-    bool b_encoders_swapped; /* true: ENC_L / ENC_R cables swapped        */
-    bool b_aborted;          /* true: stopped by stop() (not valid)       */
+    bool      b_is_left_enc_ok;  /* True means the left encoder counted. */
+    bool      b_is_right_enc_ok; /* True means the right encoder counted. */
+    bool      b_are_encoders_swapped; /* The encoder cables were swapped. */
+    bool      b_was_aborted;          /* A stop aborted the calibration. */
 } motion_calibration_t;
 
 /* ---- Lifecycle (Buddy 2 internal, called by buddy2.c only) ---------- */
-int32_t motion_create (void);              /* mutex, queue; _init()        */
-void motion_attach_task (int32_t task_id); /* motion task, for stop()      */
-void motion_init (void);                   /* hardware; in the motion task */
-void motion_process (void);                /* every period, in the task    */
+int32_t motion_create (void); /* Create the mutex and report queue. */
+void    motion_attach_task (
+       int32_t task_id);    /* Save the task so STOP can wake it. */
+void motion_init (void);    /* Initialize from the motion task. */
+void motion_process (void); /* Call each period in the motion task. */
 
 /* ---- Brief API (non-blocking) --------------------------------------------
  * Named as in the brief: moveForward(distance), moveBackward(distance),
@@ -148,8 +150,8 @@ void motion_process (void);                /* every period, in the task    */
  * distance in metres, angle in degrees, both >= 0. */
 motion_result_t moveForward (float32_t distance);
 motion_result_t moveBackward (float32_t distance);
-motion_result_t turnLeft (float32_t angle);  /* on the spot, anticlockwise */
-motion_result_t turnRight (float32_t angle); /* on the spot, clockwise     */
+motion_result_t turnLeft (float32_t angle);  /* Turn anticlockwise in place. */
+motion_result_t turnRight (float32_t angle); /* Turn clockwise in place. */
 
 /* Stop: any active state -> IDLE, both motors braked within one control
  * period, reported as cancelled. Takes priority over any running command:
@@ -177,12 +179,12 @@ motion_result_t motion_request_drive (float32_t meters, float32_t speed_mps);
  * speed_mps is how fast each wheel moves while turning. IDLE only. */
 motion_result_t motion_request_turn (float32_t degrees, float32_t speed_mps);
 
-/* TURN 180 degrees to the left */
+/* Turn 180 degrees to the left. */
 motion_result_t motion_request_u_turn (float32_t speed_mps);
 
 /* Junction manoeuvre with fixed settings, so every Left (Right, Straight,
  * U-turn) is the same. IDLE only; finishes with MOTION_COMPLETE. */
-motion_result_t motion_request_manoeuvre (manoeuvre_t value_m);
+motion_result_t motion_request_manoeuvre (motion_manoeuvre_t manoeuvre);
 
 /* Cancel the running command, like stop(), but only if command_id is the
  * one running. Every command ends with exactly one report: a command that
@@ -208,8 +210,8 @@ bool motion_reset (void);
  * updates keep it. */
 uint8_t motion_command_id (void);
 
-/* Consistent snapshot of the shared data, taken under the mutex */
-bool motion_get_status (motion_status_t * p_out);
+/* Take a coherent snapshot under the mutex. */
+bool     motion_get_status (motion_status_t * p_out);
 uint64_t motion_get_status_packed (void);
 
 /* Done / cancelled / fault reports, oldest first, from a bounded queue of
@@ -222,11 +224,12 @@ uint64_t motion_get_status_packed (void);
 bool motion_get_report (motion_report_t * p_out);
 bool motion_wait_report (motion_report_t * p_out, int32_t timeout_ms);
 
-/* Most reports ever waiting in the queue, to validate its length */
+/* Use the report queue high-water mark to check its length. */
 uint32_t motion_report_peak (void);
 
-/* Stopped acknowledgement: no command running, brake applied, no
- * calibration running and both wheels still */
+/* A stop is acknowledged once the brake is applied, the wheels are still,
+ * and no command or calibration is running.
+ */
 bool motion_is_stopped (void);
 
 /* Current state. MOTION_COMPLETE is returned exactly once (the completion
@@ -234,21 +237,24 @@ bool motion_is_stopped (void);
 motion_state_t motion_poll (void);
 
 motion_fault_t motion_get_fault (void);
-uint8_t motion_get_fault_bits (void); /* motion_fault_bit() each  */
-const char * motion_state_name (motion_state_t value_s);
-const char * motion_fault_name (motion_fault_t value_f);
-const char * manoeuvre_name (manoeuvre_t value_m);
+uint8_t
+motion_get_fault_bits (void); /* Use motion_pack_fault_bit() for each fault. */
+const char * motion_state_name (motion_state_t state);
+const char * motion_fault_name (motion_fault_t fault);
+const char * motion_manoeuvre_name (motion_manoeuvre_t manoeuvre);
 
 /* ---- Estimates from encoder feedback (safe from any task) -------------- */
-int32_t enc_l_count (void);             /* left wheel encoder (ENC_L) count  */
-int32_t enc_r_count (void);             /* right wheel encoder (ENC_R) count */
-float32_t wheel_distance_left_m (void); /* since start, + = forward          */
-float32_t wheel_distance_right_m (void);
-float32_t wheel_speed_left_mps (void); /* + = forward                       */
-float32_t wheel_speed_right_mps (void);
-float32_t robot_distance_m (void); /* centre of the robot               */
-float32_t robot_speed_mps (void);
-float32_t robot_heading_deg (void); /* since start, + = anticlockwise    */
+int32_t   enc_l_count (void); /* Read the left encoder count. */
+int32_t   enc_r_count (void); /* Read the right encoder count. */
+float32_t motion_wheel_left_distance_m (
+    void); /* Forward travel since start is positive. */
+float32_t motion_wheel_right_distance_m (void);
+float32_t motion_wheel_left_speed_mps (void); /* Positive speed is forward. */
+float32_t motion_wheel_right_speed_mps (void);
+float32_t robot_distance_m (void); /* Measure travel at the axle centre. */
+float32_t motion_robot_speed_mps (void);
+float32_t
+robot_heading_deg (void); /* Measure anticlockwise degrees since start. */
 
 /* Coherent, non-consuming control feedback for the Vehicle Controller.
  * timestamp_us is the last motion update, never the time a reader calls the
@@ -260,13 +266,16 @@ float32_t robot_heading_deg (void); /* since start, + = anticlockwise    */
  * is unchanged and is not a substitute for this control-feedback contract. */
 typedef struct
 {
-    float64_t centre_m;
-    uint32_t timestamp_us, epoch;
+    float64_t      centre_m;
+    uint32_t       timestamp_us;
+    uint32_t       epoch;
     motion_state_t state;
     motion_fault_t fault;
-    bool valid, braked; /* braked = applied brake AND wheels still >=100 ms */
-    uint8_t command_id;
-    uint32_t report_loss_count; /* monotonically increases on queue overflow */
+    bool           b_is_feedback_valid;
+
+    bool     b_is_braked; /* This confirms the brake and 100 ms of stillness. */
+    uint8_t  command_id;
+    uint32_t report_loss_count; /* Queue overflow increases the loss count. */
 } motion_feedback_t;
 
 bool motion_get_feedback (motion_feedback_t * p_feedback);
@@ -278,18 +287,22 @@ bool motion_get_feedback (motion_feedback_t * p_feedback);
  * Diagnostic readers must check valid and timestamp freshness. */
 typedef struct
 {
-    uint32_t timestamp_us;
-    float32_t setpoint_mps[2], measured_mps[2], duty[2];
-    int32_t encoder[2];
+    uint32_t       timestamp_us;
+    float32_t      setpoint_mps[2];
+    float32_t      measured_mps[2];
+    float32_t      duty[2];
+    int32_t        encoder[2];
     motion_state_t state;
     motion_fault_t fault;
-    bool valid, braked, busy;
+    bool           b_is_debug_valid;
+    bool           b_is_braked;
+    bool           b_is_debug_busy;
 } motion_debug_snapshot_t;
 
 bool motion_try_debug_snapshot (motion_debug_snapshot_t * p_snapshot);
 /* Exclusive navigation-owner lease. Refresh each healthy integration cycle.
  * Expiry faults/brakes even during a DRIVE/TURN; disabled by default. */
-void motion_navigation_heartbeat (bool enabled);
+void motion_navigation_heartbeat (bool b_is_enabled);
 
 /* ---- Calibration (one-off setup, outside the statechart) ----------------
  * motion_request_calibration() is accepted in IDLE; the motion task then:
@@ -300,10 +313,11 @@ void motion_navigation_heartbeat (bool enabled);
  *      right - lift the wheels off the ground before then.
  * Moves are rejected (MOTION_ERR_BUSY) while it runs. No output is produced:
  * read the results with motion_get_calibration(). */
-bool motion_is_calibrated (void); /* false until values are set */
+bool motion_is_calibrated (
+    void); /* Wait until calibration values are installed. */
 motion_result_t motion_request_calibration (void);
-bool motion_is_calibrating (void);
-/* true once calibration has finished */
+bool            motion_is_calibrating (void);
+/* Calibration has finished. */
 bool motion_get_calibration (motion_calibration_t * p_out);
 
 #endif /* BUDDY2_MOTION_H */

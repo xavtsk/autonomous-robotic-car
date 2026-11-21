@@ -18,7 +18,7 @@ Include `line_navigation.h`. New public types use `s3_`/`S3_`; existing
 control calls. The context is not internally locked. Other tasks must deliver
 requests to that owner through `s3_integration_submit()` in the integrated profile.
 
-`s3_navigation_process(&nav, &frame, &odometry, &out)` replaces the previous
+`line_navigation_process(&nav, &frame, &odometry, &out)` replaces the previous
 three-argument call. The odometry pointer may be NULL for diagnostics. It must
 be supplied on every active processing call; NULL does not reuse old input.
 
@@ -26,7 +26,7 @@ be supplied on every active processing call; NULL does not reuse old input.
   The frame timestamp marks completion of sequential acquisition, not simultaneous
   measurements. Disabled channels remain unavailable. A floating disconnected
   wire can still produce plausible counts: validity does not certify wiring.
-- Odometry: `s3_odometry_sample_t` contains signed centre displacement in metres
+- Odometry: `line_navigation_odometry_t` contains signed centre displacement in metres
   (`double centre_m`), source timestamp, validity and counter-reset `epoch`.
   The producer increments/changes the epoch whenever its counter resets. Supply
   signed centre displacement, not absolute accumulated travel or either wheel alone.
@@ -49,9 +49,9 @@ raw/normalised diagnostics but **do not count as accepted calibration**. There i
 no navigation bypass and no automatic start.
 
 For each sensor, explicitly collect known white/black samples with
-`s3_calibration_begin` and `s3_calibration_add`. `s3_calibration_summary` reports
+`ir_calibration_begin` and `ir_calibration_add`. `ir_calibration_summary` reports
 count, minimum, maximum and average without changing the active references. Each
-label holds up to 65535 samples. `s3_navigation_apply_calibration` accepts at least
+label holds up to 65535 samples. `line_navigation_set_calibration` accepts at least
 ten per label with strictly non-overlapping ranges. Missing samples, overlap and
 equal references reject the candidate and retain the previous calibration and its
 acceptance status. Accepted means are truncated to integer references, existing
@@ -59,7 +59,7 @@ hysteresis limits are retained, and affected detection state is reset. New sampl
 are required after acceptance. Calibration changes are allowed only while inactive.
 There is no silent adaptation, serial calibration command or flash persistence.
 
-`s3_navigation_readiness(&nav, now_us)` returns these bit flags:
+`line_navigation_readiness(&nav, now_us)` returns these bit flags:
 
 | Flag / value | Blocker |
 |---|---|
@@ -73,13 +73,13 @@ Typical owner sequence (all return values must be checked):
 
 1. Initialise once with validated configuration; enable only physically connected
    channels. Collect and apply calibration for all three sensors while inactive.
-2. Optionally apply the full action table using `s3_navigation_set_mapping`.
+2. Optionally apply the full action table using `line_navigation_set_mapping`.
 3. Process fresh sensor and odometry input. Inspect readiness.
-4. Call `s3_navigation_start(&nav, now_us)`. It rechecks readiness at call time,
+4. Call `line_navigation_start(&nav, now_us)`. It rechecks readiness at call time,
    enters active only when every blocker is clear and resets detection state.
 5. Process every frame and consume its output immediately. Starting does not itself
    provide a steering request; wait for fresh active output and line persistence.
-6. `s3_navigation_end_run` returns a healthy context to inactive. It cannot clear a
+6. `line_navigation_end_run` returns a healthy context to inactive. It cannot clear a
    fault. Discard old outputs on any control change; outputs are per-call snapshots.
 
 Only active, healthy TRACK processing emits actionable navigation events/steering.
@@ -106,7 +106,7 @@ Line detection continues independently during barcode capture. Genuine front-lin
 loss is not masked by barcode activity. Ordinary line loss and malformed barcodes
 are not critical faults, but line loss immediately inhibits forward steering.
 
-`s3_navigation_set_mapping(&nav, map)` takes exactly 26 A-Z action entries. It is
+`line_navigation_set_mapping(&nav, map)` takes exactly 26 A-Z action entries. It is
 inactive-only, validates every entry before copying and preserves the old table on
 any rejection. NONE is valid. Defaults: A=left, B=right, C=straight, D=U-turn;
 E-Z unmapped. A valid unmapped letter still emits an active barcode event with
@@ -149,7 +149,7 @@ additional causes accumulate while faulted, without repeated fault events.
 `stop_requested` remains true on every faulted output, steering stays invalid and
 navigation actions stop. Good readings alone do not resume operation. The owner
 must process healthy required inputs continuously for `fault_clear_us` (100 ms
-by default), then call `s3_navigation_reset_fault(&nav, now_us)`. Freshness is
+by default), then call `line_navigation_reset_fault(&nav, now_us)`. Freshness is
 rechecked at the call; merely waiting without samples cannot clear a fault.
 A changed epoch becomes the new observed baseline while faulted, but interrupts
 the healthy interval. Reset returns to inactive and a separate start is required.
@@ -162,6 +162,13 @@ heartbeat, including during turns. The kernel/motion task must still be running.
 valid output; the consumer must reject it. No physical stopping latency is claimed.
 
 ## Barcode assumptions and limits
+
+```text
+Waiting history -> triggered recording -> bounded fit work
+                                                |
+                                                v
+Navigation <- accepted decode <- quiet gate <- candidate
+```
 
 Provisional Code 39 frame: quiet zone, `*`, inter-character white gap, one A-Z
 letter, gap, `*`, quiet zone. Both scan directions are accepted; `reversed` describes

@@ -10,7 +10,7 @@
 
 #define BUDDY1_WIRE_VERSION 3U
 #define BUDDY1_PAYLOAD_MAX                                                     \
-    17U /* version + 124-bit snapshot (19 Nov 2026: + pose) */
+    17U /* The version and 124-bit snapshot fit in 17 bytes. */
 #define BUDDY1_HUMP_HEIGHT_MAX_MM 500U
 #define BUDDY1_OBSTACLE_MIN_MM 30U
 #define BUDDY1_OBSTACLE_MAX_MM 4000U
@@ -25,16 +25,16 @@
 #define BUDDY1_FAULT_IR (1U << 5)
 #define BUDDY1_FAULT_BITS 6U
 #define BUDDY1_FAULT_MASK 0x3fU
-/* Route pose (live only, not in the snapshot): distance since START in cm,
- * sent modulo 4096 and unwrapped by the laptop; heading since START. */
+/* Both live pose and the snapshot carry distance and heading since START.
+ * Distance is centimetres modulo 4096. The laptop unwraps the value. */
 #define BUDDY1_POSE_DISTANCE_BITS 12U
 #define BUDDY1_POSE_DISTANCE_MOD (1U << BUDDY1_POSE_DISTANCE_BITS)
-/* Buddy 4 live terrain (not in the snapshot): pitch/roll in 0.1 degree,
- * -90.0..+90.0 (same 11-bit signed widths as Buddy 4's own packet), terrain
- * state, live climb height and this run's highest hump, 0..500 mm. */
+/* The separate live terrain topic carries pitch and roll in tenths of a
+ * degree, from -90.0 to +90.0. It also carries the terrain state, current
+ * climb and run peak. Both heights range from 0 to 500 mm. */
 #define BUDDY1_TILT_BITS 11U
 #define BUDDY1_TILT_LIMIT_X10 900
-#define BUDDY1_TERRAIN_STATES 8U /* Buddy 4 terrain_state_t, 3 bits */
+#define BUDDY1_TERRAIN_STATES 8U /* Buddy 4 uses three bits. */
 #define BUDDY1_TERRAIN_IMPACT 7U
 /* 19 Nov 2026: Buddy 4 turn rate (compass, whole deg/s, same 10-bit signed
  * width as Buddy 4's own packet) and safety trip, previously USB-only. */
@@ -44,7 +44,7 @@
 #define BUDDY1_SAFETY_LIFTED 1U
 #define BUDDY1_SAFETY_OVERTURNED 2U
 
-enum
+typedef enum
 {
     BUDDY1_TOPIC_MOTION = 0,
     BUDDY1_TOPIC_BARCODE,
@@ -62,7 +62,7 @@ enum
     BUDDY1_TOPIC_SCAN,
     BUDDY1_TOPIC_SCAN_SAMPLE,
     BUDDY1_TOPIC_COUNT
-};
+} telemetry_codec_topic_t;
 
 typedef enum
 {
@@ -71,14 +71,14 @@ typedef enum
     BUDDY1_ACTION_LEFT,
     BUDDY1_ACTION_RIGHT,
     BUDDY1_ACTION_UTURN
-} buddy1_barcode_action_t;
+} telemetry_codec_action_t;
 
 typedef enum
 {
     BUDDY1_ROUTE_UNKNOWN = 0,
     BUDDY1_ROUTE_LEFT,
     BUDDY1_ROUTE_RIGHT
-} buddy1_obstacle_route_t;
+} telemetry_codec_route_t;
 
 typedef enum
 {
@@ -91,72 +91,77 @@ typedef enum
     BUDDY1_STATE_AVOIDING_OBSTACLE,
     BUDDY1_STATE_COMPLETE,
     BUDDY1_STATE_ERROR
-} buddy1_robot_state_t;
+} telemetry_codec_state_t;
 
-enum
+typedef enum
 {
     BUDDY1_REPLY_OK = 0,
     BUDDY1_REPLY_INVALID,
     BUDDY1_REPLY_BUSY,
     BUDDY1_REPLY_INTERNAL
-};
+} telemetry_codec_reply_t;
 
 typedef struct
 {
-    uint8_t forward, left, right, uturn; /* decoded A-Z; never sent raw */
-} buddy1_barcode_map_t;
+    uint8_t forward;
+    uint8_t left;
+    uint8_t right;
+    uint8_t uturn; /* The map uses encoded letters A through Z. */
+} telemetry_codec_map_t;
 
-/* Buddy 5 live status (car/telemetry/avoidance, 5 Hz). Unavailable = zero. */
+/* The 5 Hz avoidance topic sends unavailable fields as zero. */
 #define BUDDY1_S5_STATE_MAX                                                    \
-    6U /* idle, wait-stop, scanning, moving, finish, complete, fault */
-#define BUDDY1_S5_PASS_MAX 4U /* approach, peek, peeking, step, extra */
+    6U /* State values follow Buddy 5 from idle through fault. */
+#define BUDDY1_S5_PASS_MAX 4U /* Pass steps end at extra. */
 #define BUDDY1_SERVO_MAX_DEG 180U
 
 typedef struct
 {
-    uint8_t range_valid; /* front ultrasonic reading usable              */
-    uint8_t no_echo;     /* confirmed no-echo (never with range_valid)    */
-    uint16_t range_mm;   /* 30..4000 when valid, else 0                   */
-    uint8_t servo_deg;   /* 1..180 last commanded, 90 = ahead; 0 unknown  */
-    uint8_t state;       /* 0..6 Buddy 5 avoidance state                  */
-    uint8_t fault;       /* 0..7 Buddy 5 fault reason                     */
-    uint8_t route;       /* buddy1_obstacle_route_t                          */
-    uint8_t leg;         /* 0..15 bypass leg                               */
-    uint8_t pass;        /* 0..4 leg-3 pass step                           */
-    uint8_t swapped;     /* switched to the other side                    */
-} buddy1_avoidance_t;
+    uint8_t  range_valid; /* The forward range is usable. */
+    uint8_t  no_echo;     /* No echo implies an invalid range. */
+    uint16_t range_mm;    /* Use 30 to 4000 mm if valid or zero. */
+    uint8_t  servo_deg;   /* Use 1 to 180 degrees or zero if unknown. */
+    uint8_t  state;       /* Buddy 5 state ranges from 0 to 6. */
+    uint8_t  fault;       /* Buddy 5 reasons range from 0 to 7. */
+    uint8_t  route;       /* telemetry_codec_route_t                          */
+    uint8_t  leg;         /* The bypass leg ranges from 0 to 15. */
+    uint8_t  pass;        /* Leg 3 has pass steps 0 through 4. */
+    uint8_t  swapped;     /* The car changed sides. */
+} telemetry_codec_avoidance_t;
 
-/* Buddy 5 obstacle profile (car/telemetry/scan, per finished scan or side
- * peek): FR6 position (edges, + = left of the car's centreline), width,
- * closest distance and left/right clearance. Invalid profile = zero values. */
+/* The scan topic carries the finished sweep or side-peek profile. Positive
+ * edge positions are left of the car's centreline. Width, closest distance
+ * and both clearances are in millimetres. Invalid profiles use zero fields. */
 #define BUDDY1_SCAN_EDGE_MAX_MM 4000
 
 typedef struct
 {
-    uint8_t valid;
-    uint8_t scan_id;     /* low 8 bits of Buddy 5's scan id               */
+    uint8_t  valid;
+    uint8_t  scan_id;    /* Use the low eight bits of the scan ID. */
     uint16_t closest_mm; /* 30..4000                                      */
     uint16_t width_mm;   /* 0..4095                                       */
-    uint16_t left_clear_mm, right_clear_mm; /* 0..4000 */
-    uint16_t forward_mm; /* 0..4000, depth to the far face                */
-    int16_t left_edge_mm, right_edge_mm; /* -4000..4000                     */
-} buddy1_scan_t;
+    uint16_t left_clear_mm;
+    uint16_t right_clear_mm; /* 0..4000 */
+    uint16_t forward_mm;     /* The far face is 0 to 4000 mm away. */
+    int16_t  left_edge_mm;
+    int16_t  right_edge_mm; /* -4000..4000                     */
+} telemetry_codec_scan_t;
 
 /* One live Buddy 4 report. Unavailable values are sent as zero. */
 typedef struct
 {
-    uint8_t tilt_valid; /* 0: pitch/roll unavailable                  */
-    int16_t pitch_x10;  /* -900..900, + = nose up                      */
-    int16_t roll_x10;   /* -900..900, + = right side up                */
-    uint8_t state;      /* 0..7 terrain state; 7 = impact in the period */
-    uint8_t on_hump;    /* a hump is being crossed now                 */
-    uint16_t climb_mm;  /* 0..500, height so far on that hump          */
-    uint8_t peak_valid; /* a valid hump completed since START          */
-    uint16_t peak_mm;   /* 0..500, highest of this run                 */
-    uint8_t turn_valid; /* 0: turn rate unavailable (compass)          */
-    int16_t turn_dps;   /* -360..360 deg/s, + = anticlockwise          */
-    uint8_t safety;     /* BUDDY1_SAFETY_*: none, lifted, overturned   */
-} buddy1_terrain_t;
+    uint8_t  tilt_valid;       /* Zero marks unavailable pitch and roll. */
+    int16_t  pitch_tenths_deg; /* Use -900 to 900. Positive raises the nose. */
+    int16_t  roll_tenths_deg;  /* Use -900 to 900. Positive raises the right. */
+    uint8_t  state;            /* State 7 reports an impact in the period. */
+    uint8_t  on_hump;          /* The car is on a hump. */
+    uint16_t climb_mm;         /* Climb reports 0 to 500 mm so far. */
+    uint8_t  peak_valid;       /* A valid hump completed since START. */
+    uint16_t peak_mm;          /* The run's peak is 0 to 500 mm. */
+    uint8_t  turn_valid;       /* Zero marks an unavailable compass rate. */
+    int16_t  turn_dps; /* Use -360 to 360 deg/s, positive anticlockwise. */
+    uint8_t  safety;   /* Report no trip, lifted, or overturned. */
+} telemetry_codec_terrain_t;
 
 /* One Buddy 5 ultrasonic reading of a finished scan or side peek
  * (car/telemetry/scan_sample, sent one by one after the profile). */
@@ -164,73 +169,79 @@ typedef struct
 
 typedef struct
 {
-    uint8_t scan_id;      /* low 8 bits, same id as car/telemetry/scan     */
-    uint8_t peek;         /* 1: single side-peek reading, 0: full scan    */
-    uint8_t index;        /* 0..count-1, order measured                   */
-    uint8_t count;        /* 1..16 readings in this scan                  */
-    uint8_t angle_deg;    /* 30..150 in 5 degree steps, 90 = ahead         */
-    uint8_t valid;        /* 0: no usable echo at this angle               */
-    uint16_t distance_mm; /* 30..4000 when valid, else 0                   */
-} buddy1_scan_sample_t;
+    uint8_t  scan_id;     /* Use the same low byte as the scan topic. */
+    uint8_t  peek;        /* Set for a single side-peek reading. */
+    uint8_t  index;       /* Index from 0 to count - 1 in scan order. */
+    uint8_t  count;       /* A scan contains one to 16 readings. */
+    uint8_t  angle_deg;   /* Scan from 30 to 150 in 5 degree steps. */
+    uint8_t  valid;       /* Zero marks no usable echo at this angle. */
+    uint16_t distance_mm; /* Use 30 to 4000 mm if valid or zero. */
+} telemetry_codec_scan_sample_t;
 
 /* Temporary decoded view for callers/calculations. The shared cache is a
  * packed 17-byte packet, protected by the Buddy 1 mutex. */
 typedef struct
 {
-    uint8_t motion_valid;
-    int16_t left_mms, right_mms;
-    uint8_t barcode_valid, barcode_letter;
-    buddy1_barcode_action_t barcode_action;
-    uint8_t hump_valid;
-    uint16_t hump_count, hump_height_mm;
-    uint8_t heading_valid;
-    int16_t heading_deg;
-    uint8_t obstacle_valid;
-    uint16_t obstacle_distance_mm, obstacle_width_mm;
-    buddy1_obstacle_route_t obstacle_route;
-    uint8_t robot_state_valid;
-    buddy1_robot_state_t robot_state;
-    uint8_t faults_valid, faults;
+    uint8_t                  motion_valid;
+    int16_t                  left_mms;
+    int16_t                  right_mms;
+    uint8_t                  barcode_valid;
+    uint8_t                  barcode_letter;
+    telemetry_codec_action_t barcode_action;
+    uint8_t                  hump_valid;
+    uint16_t                 hump_count;
+    uint16_t                 hump_height_mm;
+    uint8_t                  heading_valid;
+    int16_t                  heading_deg;
+    uint8_t                  obstacle_valid;
+    uint16_t                 obstacle_distance_mm;
+    uint16_t                 obstacle_width_mm;
+    telemetry_codec_route_t  obstacle_route;
+    uint8_t                  robot_state_valid;
+    telemetry_codec_state_t  robot_state;
+    uint8_t                  faults_valid;
+    uint8_t                  faults;
     /* Live-only pose; never part of the snapshot packet. */
-    uint8_t pose_valid;
-    uint16_t pose_distance_cm; /* 0..4095, distance since START modulo 4096 */
-    int16_t pose_heading_deg;  /* 0..359, + = anticlockwise since START */
+    uint8_t  pose_valid;
+    uint16_t pose_distance_cm; /* Wrap distance since START at 4096 cm. */
+    int16_t  pose_heading_deg; /* Measure heading anticlockwise from START. */
     /* Live-only Buddy 4 terrain; never part of the snapshot packet. */
-    uint8_t terrain_valid;
-    buddy1_terrain_t terrain;
+    uint8_t                   terrain_valid;
+    telemetry_codec_terrain_t terrain;
     /* Live-only Buddy 5 status and profile; never part of the snapshot. */
-    uint8_t avoidance_valid;
-    buddy1_avoidance_t avoidance;
-    uint8_t scan_valid;
-    buddy1_scan_t scan;
-    uint8_t scan_sample_valid;
-    buddy1_scan_sample_t scan_sample;
-} buddy1_snapshot_t;
+    uint8_t                       avoidance_valid;
+    telemetry_codec_avoidance_t   avoidance;
+    uint8_t                       scan_valid;
+    telemetry_codec_scan_t        scan;
+    uint8_t                       scan_sample_valid;
+    telemetry_codec_scan_sample_t scan_sample;
+} telemetry_codec_snapshot_t;
 
 /** @brief Return the complete wire length for a topic selector.
  * @param[in] topic Selector in 0..BUDDY1_TOPIC_COUNT-1.
  * @return Version byte plus rounded-up body bytes, or zero for an unknown
  * selector. MAP_REPLY has a size although buddy1_encode does not build it.
  */
-unsigned buddy1_payload_size (uint8_t topic);
+unsigned telemetry_codec_payload_size (uint8_t topic);
 /** @brief Return the meaningful body width, excluding version and padding.
  * @param[in] topic Selector in 0..BUDDY1_TOPIC_COUNT-1.
  * @return Body bits for that layout, or zero for an unknown selector.
  */
-unsigned buddy1_payload_bits (uint8_t topic);
+unsigned telemetry_codec_payload_bits (uint8_t topic);
 /** @brief Look up the MQTT topic string for a wire layout.
  * @param[in] topic Selector in 0..BUDDY1_TOPIC_COUNT-1.
  * @return Borrowed NUL-terminated string with program lifetime, or null for
  * an unknown selector. The caller must not modify or free the string.
  */
-const char * buddy1_topic_name (uint8_t topic);
+const char * telemetry_codec_topic_name (uint8_t topic);
 /* Return packet length, or zero for invalid input/capacity. Byte 0 is version;
  * body bits are numbered from the least significant bit of byte 1. */
 /** @brief Serialize the selected telemetry fields into a versioned packet.
  * @param[in] topic Known selector other than BUDDY1_TOPIC_MAP_REPLY.
  * @param[in] p_value Stable decoded fields in the units described below.
  * @param[out] p_packet Caller-owned storage of at least capacity bytes.
- * @param[in] capacity Writable byte count; at least buddy1_payload_size(topic).
+ * @param[in] capacity Writable byte count; at least
+ * telemetry_codec_payload_size(topic).
  * @return Packet length on success, or zero for nulls, unsupported topic,
  * insufficient capacity or invalid selected fields.
  * @details Null/topic/capacity failures leave the packet unchanged. After
@@ -261,20 +272,22 @@ const char * buddy1_topic_name (uint8_t topic);
  * climb/peak 0..500 mm, turn -360..360 degrees/s and safety NONE..OVERTURNED.
  * Unavailable tilt, climb, peak and turn components must have zero values.
  * Its validity flags are normalized from zero/nonzero.
- * Avoidance follows the ranges in buddy1_avoidance_t: range_valid, no_echo
- * and swapped are 0/1; a valid range excludes no_echo, and an invalid range
- * must be zero. Scan geometry follows buddy1_scan_t, with left edge at least
- * right edge when valid and all geometry zero when invalid; scan ID remains
- * unrestricted. A scan sample requires peek/valid 0/1, count 1..16,
+ * Avoidance follows the ranges in telemetry_codec_avoidance_t: range_valid,
+ * no_echo and swapped are 0/1; a valid range excludes no_echo, and an invalid
+ * range must be zero. Scan geometry follows telemetry_codec_scan_t, with left
+ * edge at least right edge when valid and all geometry zero when invalid; scan
+ * ID remains unrestricted. A scan sample requires peek/valid 0/1, count 1..16,
  * index below count, angle 30..150 in 5-degree steps, and distance 30..4000 mm
  * when valid or zero otherwise. Values are rejected rather than saturated.
  */
-unsigned buddy1_encode (uint8_t topic, const buddy1_snapshot_t * p_value,
+unsigned buddy1_encode (uint8_t                            topic,
+                        const telemetry_codec_snapshot_t * p_value,
                         uint8_t * p_packet, unsigned capacity);
 /** @brief Decode one canonical telemetry payload into a fresh decoded view.
  * @param[in] topic Known selector other than BUDDY1_TOPIC_MAP_REPLY.
  * @param[in] p_packet Stable readable packet containing length bytes.
- * @param[in] length Exact buddy1_payload_size(topic), including version.
+ * @param[in] length Exact telemetry_codec_payload_size(topic), including
+ * version.
  * @param[out] p_out Caller-owned snapshot; unchanged on every failure.
  * @return One after assigning the complete decoded view; zero for nulls,
  * unsupported topic, wrong length/version, nonzero padding or invalid fields.
@@ -288,7 +301,7 @@ unsigned buddy1_encode (uint8_t topic, const buddy1_snapshot_t * p_value,
  * output.
  */
 int buddy1_decode (uint8_t topic, const uint8_t * p_packet, unsigned length,
-                   buddy1_snapshot_t * p_out);
+                   telemetry_codec_snapshot_t * p_out);
 /** @brief Validate a payload without publishing decoded state.
  * @param[in] topic Selector to validate, including BUDDY1_TOPIC_MAP_REPLY.
  * @param[in] p_packet Stable readable packet, or null to return zero.
@@ -297,8 +310,8 @@ int buddy1_decode (uint8_t topic, const uint8_t * p_packet, unsigned length,
  * requires two bytes: current version and reply code OK..INTERNAL; all other
  * topics use buddy1_decode. The input is never changed or retained.
  */
-int buddy1_payload_valid (uint8_t topic, const uint8_t * p_packet,
-                          unsigned length);
+int telemetry_codec_payload_valid (uint8_t topic, const uint8_t * p_packet,
+                                   unsigned length);
 /** @brief Encode four distinct barcode letters for the route actions.
  * @param[in] p_map Stable mapping of forward, left, right and U-turn to A..Z.
  * @param[out] p_packet Writable four-byte packet; unchanged on failure.
@@ -308,8 +321,8 @@ int buddy1_payload_valid (uint8_t topic, const uint8_t * p_packet,
  * codes in action order, low bit first. The final four padding bits are zero.
  * Validation completes before writes; no pointer is retained or lock taken.
  */
-int buddy1_map_pack (const buddy1_barcode_map_t * p_map,
-                     uint8_t p_packet[BUDDY1_MAP_BYTES]);
+int buddy1_map_pack (const telemetry_codec_map_t * p_map,
+                     uint8_t                       p_packet[BUDDY1_MAP_BYTES]);
 /** @brief Decode and validate a complete four-action barcode map.
  * @param[in] p_packet Stable readable map packet containing length bytes.
  * @param[in] length Exactly BUDDY1_MAP_BYTES.
@@ -319,8 +332,8 @@ int buddy1_map_pack (const buddy1_barcode_map_t * p_map,
  * @details A local decoded map is checked with buddy1_map_pack before commit.
  * The caller supplies synchronization; no caller pointer is retained.
  */
-int buddy1_map_unpack (const uint8_t * p_packet, unsigned length,
-                       buddy1_barcode_map_t * p_out);
+int telemetry_codec_map_unpack (const uint8_t * p_packet, unsigned length,
+                                telemetry_codec_map_t * p_out);
 
 #endif
 

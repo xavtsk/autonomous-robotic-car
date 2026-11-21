@@ -3,29 +3,40 @@
  */
 #include "line_recovery.h"
 
-void s5_recovery_reset (s5_recovery_t * p_r)
+/** @brief Clear all recovery state, including a previous confirmation.
+ * @see line_recovery.h for the non-null ownership contract.
+ */
+void line_recovery_reset (line_recovery_t * p_state)
 {
-    *p_r = (s5_recovery_t){0};
+    *p_state = (line_recovery_t){0};
 }
 
-bool s5_recovery_observe (s5_recovery_t * p_r, uint32_t now, bool healthy,
-                          bool tape, bool junction, bool corridor)
+/** @brief Track eligible contact without clearing a latched confirmation.
+ * @see line_recovery.h for timing, input qualification and failure effects.
+ */
+bool line_recovery_observe (line_recovery_t * p_state, uint32_t now,
+                            bool b_is_healthy, bool b_is_tape,
+                            bool b_is_junction, bool b_is_in_corridor)
 {
-    if (!healthy || !tape || junction || !corridor)
+    if ((((!b_is_healthy) || (!b_is_tape)) || b_is_junction) ||
+        (!b_is_in_corridor))
     {
-        p_r->touching = false;
-        return p_r->confirmed;
+        p_state->b_is_touching = false;
+        return p_state->b_is_confirmed;
     }
-    if (!p_r->touching)
+
+    if (!p_state->b_is_touching)
     {
-        p_r->touching = true;
-        p_r->since_us = now;
+        p_state->b_is_touching = true;
+        p_state->since_us      = now;
     }
-    if ((uint32_t)(now - p_r->since_us) >= 30000U)
+
+    if ((now - p_state->since_us) >= 30000U)
     {
-        p_r->confirmed = true;
+        p_state->b_is_confirmed = true;
     }
-    return p_r->confirmed;
+
+    return p_state->b_is_confirmed;
 }
 
 /* End of file. */

@@ -1,10 +1,8 @@
 /** @file speed_pid.c
  * @brief Motor speed PID control (one controller per wheel).
- */
-/*
- * File: speed_pid.c
- * Owner: Buddy 2 - Motion Control
- * Purpose: Motor speed PID control (one controller per wheel).
+ *
+ * @par Ownership
+ * Buddy 2 owns both wheel controllers.
  */
 
 #include "speed_pid.h"
@@ -15,15 +13,15 @@
 /** @brief Initialize one wheel controller with the supplied gains.
  * @see speed_pid.h for the units, validation and ownership contract.
  */
-void speed_pid_init (speed_pid_t * p_pid, float32_t value_kp,
-                     float32_t value_ki, float32_t value_kd, float32_t kff,
-                     float32_t accel_mps2)
+void speed_pid_init (speed_pid_t * p_pid, float32_t proportional_gain,
+                     float32_t integral_gain, float32_t derivative_gain,
+                     float32_t feedforward_gain, float32_t accel_mps2)
 {
-    p_pid->kp = value_kp;
-    p_pid->ki = value_ki;
-    p_pid->kd = value_kd;
-    p_pid->kff = kff;
-    p_pid->accel_mps2 = accel_mps2;
+    p_pid->proportional_gain = proportional_gain;
+    p_pid->integral_gain     = integral_gain;
+    p_pid->derivative_gain   = derivative_gain;
+    p_pid->feedforward_gain  = feedforward_gain;
+    p_pid->accel_mps2        = accel_mps2;
     speed_pid_reset(p_pid);
 }
 
@@ -33,7 +31,7 @@ void speed_pid_init (speed_pid_t * p_pid, float32_t value_kp,
 void speed_pid_reset (speed_pid_t * p_pid)
 {
     p_pid->setpoint_mps = 0.0f;
-    p_pid->integral = 0.0f;
+    p_pid->integral     = 0.0f;
 }
 
 /** @brief Advance the ramp and calculate one wheel's signed motor duty.
@@ -43,19 +41,14 @@ float32_t speed_pid_update (speed_pid_t * p_pid, float32_t target_mps,
                             float32_t speed_mps, float32_t accel_mps2,
                             float32_t dt_s)
 {
-    float32_t step = p_pid->accel_mps2 * dt_s;
-    float32_t error;
-    float32_t value_ff;
-    float32_t deriv;
-    float32_t integral;
-    float32_t duty;
+    const float32_t step = p_pid->accel_mps2 * dt_s;
 
-    /* Ramp the setpoint toward the target */
-    if (target_mps > p_pid->setpoint_mps + step)
+    /* Limit the setpoint change to one acceleration step. */
+    if (target_mps > (p_pid->setpoint_mps + step))
     {
         p_pid->setpoint_mps += step;
     }
-    else if (target_mps < p_pid->setpoint_mps - step)
+    else if (target_mps < (p_pid->setpoint_mps - step))
     {
         p_pid->setpoint_mps -= step;
     }
@@ -64,24 +57,28 @@ float32_t speed_pid_update (speed_pid_t * p_pid, float32_t target_mps,
         p_pid->setpoint_mps = target_mps;
     }
 
-    if ((p_pid->setpoint_mps == 0.0f) && (target_mps == 0.0f))
+    if ((0.0f == p_pid->setpoint_mps) && (0.0f == target_mps))
     {
         speed_pid_reset(p_pid);
 
         return 0.0f;
     }
 
-    error = p_pid->setpoint_mps - speed_mps;
-    value_ff = p_pid->kff * p_pid->setpoint_mps;
-    deriv = -p_pid->kd * accel_mps2;
-    integral = p_pid->integral + (p_pid->ki * error * dt_s);
-    duty = value_ff + (p_pid->kp * error) + integral + deriv;
+    const float32_t error    = p_pid->setpoint_mps - speed_mps;
+    const float32_t value_ff = p_pid->feedforward_gain * p_pid->setpoint_mps;
+    const float32_t deriv    = -p_pid->derivative_gain * accel_mps2;
+    float32_t       integral;
+    integral = p_pid->integral + (p_pid->integral_gain * error * dt_s);
+    float32_t duty =
+        value_ff + (p_pid->proportional_gain * error) + integral + deriv;
 
-    /* Anti-windup: do not grow the integral while the output is saturated */
+    /* Hold the integral when it would drive the output further into saturation.
+     */
     if (((duty > DUTY_MAX) && (error > 0.0f)) ||
         ((duty < -DUTY_MAX) && (error < 0.0f)))
     {
-        duty = value_ff + (p_pid->kp * error) + p_pid->integral + deriv;
+        duty = value_ff + (p_pid->proportional_gain * error) + p_pid->integral +
+               deriv;
     }
     else
     {
@@ -92,6 +89,7 @@ float32_t speed_pid_update (speed_pid_t * p_pid, float32_t target_mps,
     {
         duty = DUTY_MAX;
     }
+
     if (duty < -DUTY_MAX)
     {
         duty = -DUTY_MAX;

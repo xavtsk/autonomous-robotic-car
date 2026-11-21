@@ -22,3 +22,11 @@ does not establish a normal-production MQTT byte change from source metadata,
 nor does it prove whole-program output equivalence, every imported macro's
 expansion, or physical timing. The JSON binds the inspected working-tree inputs
 by hash; later source edits require a fresh audit.
+
+The later Phase 2 cleanup split declarations in the Buddy 1 and Buddy 4
+device tests and moved the private outbox drain after its caller. Compared
+with the immediately preceding sources, all 38 Buddy 1 and three Buddy 4
+check IDs kept their invocation lines. With `APP_TEST=1`, both Arm objects
+retained their allocated sections, relocations and stack estimates. P13
+remains open for source-location differences recorded earlier in the
+cleanup. [Source and compiler comparisons](evidence/phase2-mechanical.json)

@@ -308,6 +308,8 @@ CFLAGS := -mcpu=cortex-m0plus -mthumb -ffreestanding\
     -MMD -MP \
     -mfloat-abi=soft \
 
+APP_INITIALIZATION_WARNINGS := -Wuninitialized -Wmaybe-uninitialized
+
 ASFLAGS := -mcpu=cortex-m0plus -mthumb -ffreestanding\
     -x assembler-with-cpp \
     -O2 -g3 \
@@ -515,6 +517,8 @@ LFLAGS += -Wl,--gc-sections
 OBJS += $(WIFI_LOCAL_OBJS) $(CYW43_OBJS)
 C_DEPS += $(WIFI_LOCAL_OBJS:.o=.d) $(CYW43_OBJS:.o=.d)
 
+mtkernel_3/lib/libwifi/sysdepend/pico_rp2040/cyw43_utk.o: CFLAGS += $(APP_INITIALIZATION_WARNINGS)
+
 mtkernel_3/lib/libwifi/sysdepend/pico_rp2040/%.o: $(WIFIDIR)/%.c
 	@echo 'Building Wi-Fi port file: $<'
 	@mkdir -p "$(@D)"
@@ -610,6 +614,8 @@ CFLAGS += -DTM_MQTT=1
 
 OBJS += $(MQTT_CORE_OBJS) $(MQTT_PORT_OBJS)
 C_DEPS += $(MQTT_CORE_OBJS:.o=.d) $(MQTT_PORT_OBJS:.o=.d)
+
+$(MQTT_PORT_OBJS): CFLAGS += $(APP_INITIALIZATION_WARNINGS)
 
 mtkernel_3/lwip/apps/mqtt/mqtt.o: $(LWIPDIR)/apps/mqtt/mqtt.c
 	@echo 'Building lwIP file: $<'

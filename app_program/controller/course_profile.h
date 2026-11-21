@@ -1,31 +1,29 @@
 /** @file course_profile.h
  * @brief Line-following profile for the Buddies 1-3 course car (integration
  * build).
- */
-/* Line-following profile for the Buddies 1-3 course car (integration build).
  *
- * Agreed 27 Oct 2026 (hardware session follow-up):
- *  - The two front sensors are further apart than the 18 mm tape, so the tape
- *    runs BETWEEN them. Both white = centred = go straight; one sensor on the
- *    tape = steer towards it (Buddy 3's unchanged R - L error). No "line lost"
- *    while following: the car always starts on the line and the tiles' curve
- *    radius is within the car's tightest steering turn.
- *  - A crossing with no barcode before it (or a STRAIGHT action) is driven
- *    straight across instead of halting.
- *  - LEFT/RIGHT turns pivot on the axle, which is behind the sensors: drive on
- *    so the axle is over the crossing first (needs the measured distance).
- *  - After LEFT/RIGHT/U-TURN a front sensor must have crossed the new line at
- *    the end of the spin; otherwise the run halts with "line lost".
- * Buddy 3's own build/tests keep his original behaviour (all switches off).
- * Every value here is a compile-time override (-D...). */
+ * The course assumes the car starts centred on 18 mm tape, with one sensor
+ * on each side. Two white readings mean centred during ordinary following.
+ * A sensor on tape produces the corresponding steering correction. This
+ * interpretation assumes curves remain within the car's steering range.
+ *
+ * The default profile permits a straight crossing without a pending map
+ * action. A mapped left or right turn advances until the axle reaches the
+ * crossing before turning. The turn completes when a front sensor reacquires
+ * tape in the configured window or bounded search. Search failure stops the
+ * run with a line fault.
+ *
+ * @see app_program/controller/README.md for the integration profile.
+ * @see app_program/subsystem3/INTEGRATION.md for the standalone defaults and
+ * the recorded barcode path.
+ */
 #ifndef S3_COURSE_PROFILE_H
 #define S3_COURSE_PROFILE_H
 #include "../app_types.h"
 #include "s3_drive.h"
 
-/* Explicit table/paper experiment with no line: remove differential IR
- * steering while retaining barcode actions, operator STOP and fault handling.
- * Leave disabled for the track. */
+/* This optional plain-surface test disables IR steering corrections.
+ * Barcode actions, operator STOP and fault handling stay enabled. */
 #ifndef S3_STRAIGHT_TEST
 #define S3_STRAIGHT_TEST 0
 #endif
@@ -33,27 +31,27 @@
 #error S3_STRAIGHT_TEST must be 0 or 1
 #endif
 #ifndef S3_LINE_BETWEEN
-#define S3_LINE_BETWEEN 1 /* 0 = Buddy 3's original edge design */
+#define S3_LINE_BETWEEN 1 /* Zero selects the original edge design. */
 #endif
 #ifndef S3_CROSS_STRAIGHT
-#define S3_CROSS_STRAIGHT 1 /* 0 = halt at a crossing with no action */
+#define S3_CROSS_STRAIGHT 1 /* Zero halts at an unmapped crossing. */
 #endif
-/* MEASURE on the car: middle of the driven-wheel axle to the front IR sensor
- * heads, in millimetres. 0 = unknown: LEFT/RIGHT turn where the car stops,
- * and the after-turn check will usually halt them (sensors beside the line). */
+/* Measure from the driven axle to the front IR sensor heads in millimetres.
+ * Zero disables the configured junction advance before a turn. */
 #ifndef S3_SENSOR_TO_AXLE_MM
 #define S3_SENSOR_TO_AXLE_MM 135
 #endif
-/* Steering gain (m/s of wheel-speed difference per full error). Buddy 3's
- * default 0.06 gives a tightest turn of about 13 cm radius (inner wheel held at
- * the 0.06 m/s minimum); the course tiles measured about 14 cm on 27 Oct, too
- * little margin. 0.10 stops the inner wheel on a full error (0 m/s is not a
- * stall) and the outer runs at 0.20 m/s: simulator follows 10 cm curves. */
+/* The gain is the correction in m/s at full normalized steering error.
+ * The 27 October practice tiles had curves of about 14 cm radius. The
+ * greater course gain allows the inner wheel to stop at full error. The
+ * course simulator in testing/integration/course_sim_main.c exercises the
+ * steering model; its result is separate from a physical track measurement. */
 #ifndef S3_COURSE_STEERING_KP
 #define S3_COURSE_STEERING_KP (0.10f)
 #endif
-/* 19 Nov: requested 0.10 m/s cruise, paired with 200 Hz barcode sampling
- * and a 25 ms minimum narrow width for small-barcode tests. */
+/* This is the requested cruise speed in m/s. Integrated sampling runs every
+ * 5 ms (run_timing.h) and the decoder defaults to a 25 ms minimum narrow run
+ * (bc_decoder.c). */
 #ifndef S3_COURSE_BASE_MPS
 #define S3_COURSE_BASE_MPS (0.10f)
 #endif
@@ -61,72 +59,83 @@
  * the crossing centre is about this much further on. */
 #define S3_CROSSING_CENTRE_MM 5
 #define S3_ADVANCE_MPS (0.10f)
-/* Barcode -> crossing: Y is about 1-1.4 m before crossing 2 on the practice
- * course; the original 5 s limit would time out. */
+/* This duration keeps a decoded action pending for its crossing. On the
+ * practice course, Y was about 1 to 1.4 m before crossing 2. A 5 s timeout
+ * was too short for that placement. */
 #ifndef S3_COURSE_PENDING_WAIT_US
-#define S3_COURSE_PENDING_WAIT_US (40000000U) /* ~1.4 m at 0.07 m/s = 20 s */
+#define S3_COURSE_PENDING_WAIT_US (40000000U)
 #endif
 /* A sensor must have touched the tape this recently when the spin is done. */
 #ifndef S3_TURN_LINE_WINDOW_US
 #define S3_TURN_LINE_WINDOW_US (300000U)
 #endif
 
-/* Barcode sensor (GP28) only: darkness cut-offs, 0 (white) .. 1000 (black).
- * White <= WHITE_LIMIT, black >= BLACK_LIMIT; a reading in between keeps the
- * previous answer (stops flicker). Line sensors always use 400/600.
- * 27 Oct 21:48: barcode recalibrated (builtin_calibration.h, white ~215 raw,
- * bars ~3550 raw), so the normal 400/600 apply again (= raw ~1550 / ~2220).
- * The old 650/700 was a workaround for the stale 156/305 calibration.
- * Tune: white gaps come out too short -> raise WHITE (keep it below every
- * bar); thin bars missed -> lower BLACK (keep it above every white). */
+/* These are reflectance hysteresis limits for the GP28 barcode channel.
+ * Calibrated darkness runs from 0 (white) to 1000 (black). The previous
+ * surface state is held between the limits. Raw ADC equivalents depend on
+ * the channel calibration in builtin_calibration.h. The recording decoder
+ * applies its own edge and prominence checks in bc_decoder.c. */
 #ifndef S3_BARCODE_WHITE_LIMIT
-#define S3_BARCODE_WHITE_LIMIT (400U) /* was 400; 28 Oct: Y thin bars */
+#define S3_BARCODE_WHITE_LIMIT (400U)
 #endif
 #ifndef S3_BARCODE_BLACK_LIMIT
-/* was 600; Y's faint bars peak 480/512 */
 #define S3_BARCODE_BLACK_LIMIT (600U)
 #endif
 
-/* After a turn that ends off the line: sweep up to +/- this many degrees
- * around where the turn ended, stop as soon as a front sensor finds the tape
- * and follow it; not found -> halt "line lost". 0 = halt at once. Keep < 45
- * so it cannot pick up a neighbouring arm of the crossing. */
+/* Limit the search after a turn that ends without a tape reading. A front
+ * sensor reading ends the search. The sweep assumes a limit below 45
+ * degrees to reduce the chance of selecting an adjacent crossing arm.
+ * Zero disables the search. */
 #ifndef S3_TURN_SEARCH_DEG
 #define S3_TURN_SEARCH_DEG (35.0f)
 #endif
-#define S3_TURN_SEARCH_MPS (0.05f) /* each wheel, while sweeping */
-#define S3_TRACK_M (0.116f)        /* wheel centre-to-centre (Buddy 2) */
+#define S3_TURN_SEARCH_MPS (0.05f) /* Set each wheel's search speed. */
+#define S3_TRACK_M (0.116f)        /* Use the Buddy 2 axle track. */
 
-static inline void s3_course_navigation (s3_navigation_config_t * p_cfg)
+/** @brief Apply the selected track geometry, barcode thresholds and wheel
+ * speed settings to the caller's navigation configuration.
+ */
+static inline void course_profile_navigation (line_navigation_config_t * p_cfg)
 {
     p_cfg->calibration[S3_SENSOR_BARCODE].white_limit = S3_BARCODE_WHITE_LIMIT;
     p_cfg->calibration[S3_SENSOR_BARCODE].black_limit = S3_BARCODE_BLACK_LIMIT;
-    p_cfg->line.between = S3_STRAIGHT_TEST || (S3_LINE_BETWEEN != 0);
-    p_cfg->steering.kp_mps = S3_STRAIGHT_TEST ? 0.0f : S3_COURSE_STEERING_KP;
-    p_cfg->steering.base_mps = S3_COURSE_BASE_MPS;
+
+    /* clang-format off */
+    p_cfg->line.b_is_tape_between = S3_STRAIGHT_TEST || (S3_LINE_BETWEEN != 0);
+    p_cfg->steering.kp_mps        =
+        S3_STRAIGHT_TEST ? 0.0f : S3_COURSE_STEERING_KP;
+    p_cfg->steering.base_mps      = S3_COURSE_BASE_MPS;
+    /* clang-format on */
 }
 
-static inline s3_drive_options_t s3_course_options (void)
+/** @brief Return drive options for this firmware profile, including junction
+ * handling, pending barcode timing and turn reacquisition.
+ */
+static inline s3_drive_options_t course_profile_options (void)
 {
-    s3_drive_options_t value_o = s3_drive_default_options();
-    value_o.cross_straight = S3_STRAIGHT_TEST || (S3_CROSS_STRAIGHT != 0);
-    value_o.pending_wait_us = S3_COURSE_PENDING_WAIT_US;
+    s3_drive_options_t options = s3_drive_default_options();
+    options.b_allows_cross_straight =
+        S3_STRAIGHT_TEST || (S3_CROSS_STRAIGHT != 0);
+
+    options.pending_wait_us = S3_COURSE_PENDING_WAIT_US;
     /* "touching" is only produced by the between-sensors detector. */
-    value_o.turn_line_window_us =
+    options.turn_line_window_us =
         (S3_STRAIGHT_TEST || S3_LINE_BETWEEN) ? S3_TURN_LINE_WINDOW_US : 0U;
-    if (value_o.turn_line_window_us != 0U)
+
+    if (options.turn_line_window_us != 0U)
     {
-        value_o.search_deg = S3_TURN_SEARCH_DEG;
-        value_o.search_mps = S3_TURN_SEARCH_MPS;
-        value_o.track_m = S3_TRACK_M;
+        options.search_deg = S3_TURN_SEARCH_DEG;
+        options.search_mps = S3_TURN_SEARCH_MPS;
+        options.track_m    = S3_TRACK_M;
     }
 #if S3_SENSOR_TO_AXLE_MM > 0
-    value_o.turn_advance_m =
+    options.turn_advance_m =
         (float32_t)(S3_SENSOR_TO_AXLE_MM + S3_CROSSING_CENTRE_MM) / 1000.0f;
-    value_o.advance_mps = S3_ADVANCE_MPS;
-    value_o.drive = motion_request_drive;
+
+    options.advance_mps = S3_ADVANCE_MPS;
+    options.p_drive     = motion_request_drive;
 #endif
-    return value_o;
+    return options;
 }
 #endif
 

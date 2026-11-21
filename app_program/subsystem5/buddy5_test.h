@@ -7,7 +7,9 @@
 #include "buddy5.h"
 
 #if APP_TEST
-/** Run Buddy 5's built-in checks and report their results to the console. */
+/** @brief Check pulse conversion, timeout rejection and an observation
+ * packet round trip using synthetic inputs. Print the result on the console.
+ */
 void subsystem5_test (void);
 #endif
 

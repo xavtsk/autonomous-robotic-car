@@ -15,7 +15,7 @@ KINDS = ("summary", "episode", "samples", "end")
 
 
 def encode_barcode(capture_id, kind, *, version=VERSION, **data):
-    """Independent demo/test encoder; firmware uses bcap_binary_next()."""
+    """Independent demo/test encoder; firmware uses bc_capture_binary_next()."""
     bits, offset = 0, 0
 
     def put(value, width, maximum=None):

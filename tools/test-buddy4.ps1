@@ -23,7 +23,7 @@ try {
     # Never define NDEBUG: the test's assertions must execute.
     Invoke-RecordedHostCompiler -std=c11 -O2 -Wall -Wextra -Werror -pedantic `
         "-I$repoRoot\app_program\subsystem4" `
-        "$repoRoot\testing\subsystem4\host_test.c" @sources -lm -o $testExe
+        "$repoRoot\testing\subsystem4\imu_host_main.c" @sources -lm -o $testExe
     if ($HostTestExitCode -ne 0) { throw 'Buddy 4 test compilation failed.' }
     Invoke-RecordedHostExecutable $testExe
     if ($HostTestExitCode -ne 0) { throw "Buddy 4 tests failed (exit $HostTestExitCode)." }

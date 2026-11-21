@@ -1,8 +1,9 @@
 /** @file buddy1.h
  * @brief Buddy 1: task-context reporting API.
+ *
+ * The RTOS copies complete binary
+ * messages; only the kernel-owned network task calls lwIP/MQTT.
  */
-/* Buddy 1: task-context reporting API. The RTOS copies complete binary
- * messages; only the kernel-owned network task calls lwIP/MQTT. */
 #ifndef SUBSYSTEM1_H
 #define SUBSYSTEM1_H
 
@@ -30,73 +31,74 @@ typedef enum
 
 typedef struct
 {
-    UB kind; /* two bits; length is fixed by kind */
+    UB kind; /* Two bits select the fixed packet length. */
     UB payload[BUDDY1_MAP_BYTES];
 } buddy1_command_msg_t;
 
-IMPORT ID g_mbf_buddy1_outbox;
-IMPORT ID g_mbf_buddy1_commands;
-IMPORT ID g_mtx_buddy1_state;
-IMPORT ER buddy1_report_motion (H left_mms, H right_mms);
-IMPORT ER buddy1_report_barcode (UB decoded_letter);
-IMPORT ER buddy1_report_hump (UH hump_count, UH height_mm);
-IMPORT ER buddy1_report_heading (H heading_deg);
-IMPORT ER buddy1_report_obstacle (UH distance_mm, UH width_mm,
-                                  buddy1_obstacle_route_t route);
+extern ID gh_buddy1_commands;
+extern ID gh_buddy1_state_mutex;
+extern ER buddy1_report_motion (H left_mms, H right_mms);
+extern ER buddy1_report_barcode (UB decoded_letter);
+extern ER buddy1_report_hump (UH hump_count, UH height_mm);
+extern ER buddy1_report_heading (H heading_deg);
+extern ER buddy1_report_obstacle (UH distance_mm, UH width_mm,
+                                  telemetry_codec_route_t route);
 /* Live route pose: distance since START modulo 4096 cm, heading 0-359 deg
  * since START (+ anticlockwise). Not cached in the snapshot. */
-IMPORT ER buddy1_report_pose (UH distance_cm_mod, H heading_deg);
+extern ER buddy1_report_pose (UH distance_cm_mod, H heading_deg);
 /* Live Buddy 4 terrain: tilt, terrain state, live climb height and this
  * run's highest hump (see MQTT_PROTOCOL.md). Unavailable values must be zero;
  * out-of-range values are rejected (E_PAR). Not cached. */
-IMPORT ER buddy1_report_terrain (const buddy1_terrain_t * p_terrain);
+extern ER buddy1_report_terrain (const telemetry_codec_terrain_t * p_terrain);
 /* Live Buddy 5 status (5 Hz) and obstacle profile (per scan/peek); see
  * MQTT_PROTOCOL.md. Out-of-range values are rejected (E_PAR). Not cached. */
-IMPORT ER buddy1_report_avoidance (const buddy1_avoidance_t * p_avoidance);
-IMPORT ER buddy1_report_scan (const buddy1_scan_t * p_scan);
+extern ER
+buddy1_report_avoidance (const telemetry_codec_avoidance_t * p_avoidance);
+extern ER buddy1_report_scan (const telemetry_codec_scan_t * p_scan);
 /* One reading of the last scan; call once per reading after its profile. */
-IMPORT ER buddy1_report_scan_sample (const buddy1_scan_sample_t * p_sample);
+extern ER
+buddy1_report_scan_sample (const telemetry_codec_scan_sample_t * p_sample);
 /* TRUE when nothing is waiting in the outbox. Optional bulk data (raw scan
  * readings) is sent only then, so it never takes a slot an event needs. */
-IMPORT BOOL buddy1_outbox_idle (void);
-IMPORT ER buddy1_report_robot_state (buddy1_robot_state_t state);
+extern BOOL buddy1_outbox_idle (void);
+extern ER   buddy1_report_robot_state (telemetry_codec_state_t state);
 /* Central protected telemetry fault mirror. Each caller updates only its
  * owned bits; active is a subset of changed. Task context only. Controller
  * safety decisions remain separate from this best-effort telemetry mirror. */
-IMPORT ER buddy1_update_faults (UB changed, UB active);
-IMPORT ER buddy1_invalidate (UB telemetry_type);
-IMPORT ER buddy1_queue_publish (UB type, const UB * p_payload, UH payload_len);
-IMPORT BOOL buddy1_outbox_take (buddy1_telemetry_msg_t * p_out);
-IMPORT ER buddy1_command_enqueue (const char * p_topic, const UB * p_payload,
-                                  UH payload_len);
-IMPORT ER buddy1_command_process (const buddy1_command_msg_t * p_command);
+extern ER buddy1_update_faults (UB changed, UB active);
+extern ER buddy1_invalidate (UB telemetry_type);
+extern ER buddy1_queue_publish (UB type, const UB * p_payload, UH payload_len);
+extern BOOL buddy1_outbox_take (buddy1_telemetry_msg_t * p_out);
+extern ER   buddy1_command_enqueue (const char * p_topic, const UB * p_payload,
+                                    UH payload_len);
+extern ER   buddy1_command_process (const buddy1_command_msg_t * p_command);
 /* Same, but a full outbox is retried every BUDDY1_REPLY_RETRY_MS, up to
  * `tries` attempts (the command task uses BUDDY1_REPLY_TRIES = 2 s, well
  * inside the dashboard's 8 s reply wait). Task context only (it may sleep). */
 #define BUDDY1_REPLY_RETRY_MS 10
 #define BUDDY1_REPLY_TRIES 200U
-IMPORT ER buddy1_command_process_retry (const buddy1_command_msg_t * p_command,
-                                        UINT tries);
-IMPORT BOOL buddy1_motion_snapshot (H * p_left_mms, H * p_right_mms);
-IMPORT BOOL buddy1_snapshot (buddy1_snapshot_t * p_out);
-IMPORT BOOL buddy1_snapshot_packet (UB p_packet[BUDDY1_PAYLOAD_MAX]);
-IMPORT buddy1_command_kind_t buddy1_command_kind (const char * p_topic);
-IMPORT BOOL buddy1_parse_barcode_map (const UB * p_payload, UH length,
-                                      buddy1_barcode_map_t * p_out);
-IMPORT ER buddy1_apply_barcode_map (const buddy1_barcode_map_t * p_map);
-IMPORT buddy1_barcode_action_t buddy1_barcode_action (UB decoded_letter);
+extern ER buddy1_command_process_retry (const buddy1_command_msg_t * p_command,
+                                        UINT                         tries);
+extern BOOL buddy1_motion_snapshot (H * p_left_mms, H * p_right_mms);
+extern BOOL buddy1_snapshot (telemetry_codec_snapshot_t * p_out);
+extern BOOL buddy1_snapshot_packet (UB p_packet[BUDDY1_PAYLOAD_MAX]);
+extern buddy1_command_kind_t buddy1_command_kind (const char * p_topic);
+extern BOOL buddy1_parse_barcode_map (const UB * p_payload, UH length,
+                                      telemetry_codec_map_t * p_out);
+extern ER   buddy1_apply_barcode_map (const telemetry_codec_map_t * p_map);
+extern telemetry_codec_action_t buddy1_barcode_action (UB decoded_letter);
 /* Close once before the first run; the map remains frozen until reboot. */
-IMPORT BOOL buddy1_configuration_allowed (void);
-IMPORT ER buddy1_configuration_close (void);
-IMPORT ER buddy1_config_snapshot_close (buddy1_barcode_map_t * p_map);
+extern BOOL buddy1_configuration_allowed (void);
+extern ER   buddy1_configuration_close (void);
+extern ER   buddy1_config_snapshot_close (telemetry_codec_map_t * p_map);
 /* Same, and reports whether this call froze the map (TRUE) or it was already
  * frozen by an earlier run (FALSE). newly_closed may be NULL. */
-IMPORT ER buddy1_configuration_claim (buddy1_barcode_map_t * p_map,
-                                      BOOL * p_newly_closed);
+extern ER buddy1_configuration_claim (telemetry_codec_map_t * p_map,
+                                      BOOL *                  pb_did_close);
 /* Undo only a close that the caller's own rejected START newly took (claim
  * reported TRUE), so no run ever used the map. Never undo an earlier freeze. */
-IMPORT ER buddy1_configuration_reopen (void);
-IMPORT void buddy1_command_task (INT stacd, void * p_exinf);
+extern ER   buddy1_configuration_reopen (void);
+extern void buddy1_command_task (INT stacd, void * p_exinf);
 #endif
 
 /* End of file. */

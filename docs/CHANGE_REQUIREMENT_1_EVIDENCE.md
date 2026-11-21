@@ -1,5 +1,84 @@
 # Change Requirement 1: Minimum-Bit Data Representation, Week 13 evidence
 
+## Phase 3 submission results
+
+The final packing batch covers the drive flags and terrain reporting cache.
+The sampling task owns both records during a run. Startup initializes them
+before it starts sampling. The terrain cache still updates only after the
+associated report is accepted. See the [current width table](compliance/CR1_SUBMISSION_WIDTHS.md)
+for named fields, ranges and codec totals.
+
+| Retained fields | Valid range | Required bits | Representation before → after |
+| --- | --- | ---: | --- |
+| Drive `b_has_external_hold`, `b_is_configured`, `b_waits_for_stop`, `b_is_advancing`, `b_has_touched_line`, `b_is_searching` | False or true | 1 each | Byte-sized Booleans → unsigned one-bit fields |
+| Drive `b_has_obstacle_snapshot`, `b_is_bypassing` | False or true when Buddy 5 is enabled | 1 each | Byte-sized Booleans → unsigned one-bit fields |
+| Drive `reset_result` | 0..3, including idle and failure | 2 | Two-bit field moved into the same group |
+| Terrain `sent_height` | 0..500 mm in whole millimetres | 9 | `uint16_t` → unsigned nine-bit field after existing validation |
+| Terrain `sent_fault` → `b_sent_fault` | 0..1 | 1 | `int` → unsigned one-bit field |
+| Terrain impact latch `b_has_unreported_impact` | False or true | 1 | Separate Boolean → unsigned one-bit field in the cache |
+
+Wrapping microsecond timestamps retain 32 bits. Run tokens and the saturating
+hump count retain 16 bits. Public validation inputs and floating-point sensor
+and control arithmetic keep their existing types. The dashboard still uses
+version 3 for requests and status and version 4 for replies.
+
+### Matched firmware RAM
+
+The two linked images use Arm GNU 14.3.1, the pinned Pico SDK and the same
+production profile with public example network settings. “Before” is the
+Phase 2 closeout immediately before this batch. Static RAM is `.data + .bss`.
+It excludes live stack usage.
+
+| Arm measurement | Before | Phase 3 | Change |
+| --- | ---: | ---: | ---: |
+| Static RAM | 129,496 B | 129,480 B | −16 B |
+| `.data` | 696 B | 696 B | 0 B |
+| `.bss` | 128,800 B | 128,784 B | −16 B |
+| Drive state object | 10,840 B | 10,832 B | −8 B |
+| Terrain cache and separate impact latch | 61 B | 56 B | −5 B |
+| `.text` | 465,756 B | 465,748 B | −8 B |
+
+The object measurements exclude padding between objects. The linked totals
+include that padding. Build inputs, commands and hashes are in the
+[measurement receipt](compliance/evidence/phase3-submission-20261122.json).
+
+### Matched message sizes
+
+An Arm compile probe measured the existing C message types and encoded sizes
+with each image's production flags. MQTT sizes count application bytes.
+
+| Message | Before | Phase 3 |
+| --- | ---: | ---: |
+| Buddy 1 outbox slot | 18 B | 18 B |
+| Buddy 1 command slot | 5 B | 5 B |
+| Buddy 1 maximum telemetry payload | 17 B | 17 B |
+| Motion snapshot | 4 B | 4 B |
+| Navigation result | 60 B | 60 B |
+| Terrain event | 12 B | 12 B |
+| Obstacle snapshot | 23 B | 23 B |
+| Dashboard request | 14 B | 14 B |
+| Dashboard status | 14 B | 14 B |
+| Dashboard reply | 10 B | 10 B |
+| Controller debug packet | 70 B | 70 B |
+
+### Correctness and timing evidence
+
+One offline Linux comparison matched all 16 behaviour and wire traces
+(80,959 rows) and 1,008 barcode replays against `4ad2cc4`. The runner still
+reported the same two inherited replay expectation failures. The width
+checker passed for 155 selected fields and 18 codec totals. All 14 width
+and timing-analysis unit tests passed.
+
+The baseline and candidate timing-counter fixtures both passed nominal
+period, threshold, rollover and saturation checks. The integrated IR and
+motion periods remain 5 ms and 10 ms. The Arm terrain polling function grew
+by 20 code bytes. These checks cover software timing logic and code size.
+Actual cycle duration and end-to-end performance on the car remain pending.
+[Verification receipt](compliance/evidence/phase3-submission-20261122.json) ·
+[On-car timing check](PHYSICAL_VALIDATION.md#three-minute-timing-and-reconnection-capture)
+
+## Earlier Week 13 evidence
+
 > Historical record: this body describes its original revision/session. Use the [current documentation index](README.md) and [baseline status](CURRENT_STATUS.md) for later changes and evidence.
 
 Team AAI07. Historical measurements below identify their original snapshots;
@@ -8,7 +87,7 @@ The latest compliance cleanup starts from `f684e0c` and keeps the drive,
 barcode, terrain and avoidance decisions and tuning unchanged.
 [How to regenerate](#how-to-regenerate) is at the end.
 
-## Current compliance cleanup
+## 19 November compliance cleanup
 
 The same-profile Arm builds measure **129720 B before** and **129696 B after**
 the completed cleanup: **24 B less static RAM**. Text grows from

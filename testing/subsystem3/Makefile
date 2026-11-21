@@ -8,36 +8,39 @@ CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g
 MODULES = ir_acquisition ir_calibration ir_reflectance line_detection line_controller bc_decoder line_navigation
 SOURCES = $(addprefix $(SOURCE_DIR)/,$(addsuffix .c,$(MODULES)))
 # Archived baselines predate the BARR module-name cleanup.
+BENCH_FLAGS = -DAPP_H -DAPP_IR_BENCH=1 -DAPP_TEST=0 -include bench_trace_main.h
+BASELINE_BENCH = $(BASELINE_DIR)/buddy3.c
 BASELINE_MODULES = $(MODULES)
 ifeq ($(wildcard $(BASELINE_DIR)/bc_decoder.c),)
 BASELINE_MODULES = $(subst bc_decoder,barcode_decoder,$(MODULES))
 BASELINE_CPPFLAGS = -DS3_LEGACY_MODULE_NAMES
+BASELINE_BENCH = $(BASELINE_DIR)/subsystem3.c
 endif
 
 .PHONY: test replay regression compare bench bench-compare codec sanitize sizes drive feedback
 test:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_core.c test_navigation.c $(SOURCES) -o $(BUILD)/test_core
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_core_main.c test_navigation.c $(SOURCES) -o $(BUILD)/test_core
 	$(BUILD)/test_core
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_mapping.c $(SOURCES) -o $(BUILD)/test_mapping
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_mapping_main.c $(SOURCES) -o $(BUILD)/test_mapping
 	$(BUILD)/test_mapping
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_ir_reflectance.c $(SOURCE_DIR)/ir_reflectance.c -o $(BUILD)/test_ir_reflectance
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_ir_reflectance_main.c $(SOURCE_DIR)/ir_reflectance.c -o $(BUILD)/test_ir_reflectance
 	$(BUILD)/test_ir_reflectance
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_record.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_record
+	$(CC) $(CPPFLAGS) $(CFLAGS) scan_record_main.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_record
 	$(BUILD)/test_barcode_record
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_fast.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_fast
+	$(CC) $(CPPFLAGS) $(CFLAGS) fast_scan_main.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_fast
 	$(BUILD)/test_barcode_fast
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_faint.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_faint
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_faint_main.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_faint
 	$(BUILD)/test_barcode_faint
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_varying.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_varying
+	$(CC) $(CPPFLAGS) $(CFLAGS) variable_scan_main.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_varying
 	$(BUILD)/test_barcode_varying
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_barcode_wide.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_wide
+	$(CC) $(CPPFLAGS) $(CFLAGS) wide_bar_main.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/test_barcode_wide
 	$(BUILD)/test_barcode_wide
 
 PYTHON ?= python3
 replay:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) replay_barcode_record.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/replay_barcode_record
+	$(CC) $(CPPFLAGS) $(CFLAGS) replay_barcode_record_main.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/replay_barcode_record
 	$(PYTHON) test_barcode_replay.py $(BUILD)/replay_barcode_record
 
 regression:
@@ -45,29 +48,29 @@ regression:
 
 compare:
 	mkdir -p $(BUILD)
-	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) $(BASELINE_CPPFLAGS) -DS3_BASELINE_TRACE host_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) -o $(BUILD)/before_trace
+	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) $(BASELINE_CPPFLAGS) -DS3_BASELINE_TRACE -DTEST_NAV_TRACE host_trace_main.c test_core_main.c test_navigation.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) -o $(BUILD)/before_trace
 	$(BUILD)/before_trace > $(BUILD)/before.trace
-	$(CC) $(CPPFLAGS) $(CFLAGS) -DS3_BASELINE_TRACE host_trace.c $(SOURCES) -o $(BUILD)/after_trace
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DS3_BASELINE_TRACE -DTEST_NAV_TRACE host_trace_main.c test_core_main.c test_navigation.c $(SOURCES) -o $(BUILD)/after_trace
 	$(BUILD)/after_trace > $(BUILD)/after.trace
 	cmp $(BUILD)/before.trace $(BUILD)/after.trace
 	$(PYTHON) -c 'import hashlib,sys; [print(hashlib.sha256(open(p,"rb").read()).hexdigest(), p) for p in sys.argv[1:]]' $(BUILD)/before.trace $(BUILD)/after.trace
 
 bench:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) bench_trace.c $(SOURCES) $(APP)/navigation_codec.c -o $(BUILD)/after_bench
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(BENCH_FLAGS) bench_trace_main.c $(SOURCE_DIR)/buddy3.c $(SOURCES) $(APP)/navigation_codec.c -o $(BUILD)/after_bench
 	$(BUILD)/after_bench > $(BUILD)/after-bench.trace
 	tail -n 1 $(BUILD)/after-bench.trace
 
 bench-compare: bench
 	mkdir -p $(BUILD)
-	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) $(BASELINE_CPPFLAGS) bench_trace.c $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) $(wildcard $(BASELINE_DIR)/navigation_codec.c) -o $(BUILD)/before_bench
+	$(CC) -I$(BASELINE_DIR) -I. $(CFLAGS) $(BASELINE_CPPFLAGS) $(BENCH_FLAGS) bench_trace_main.c $(BASELINE_BENCH) $(addprefix $(BASELINE_DIR)/,$(addsuffix .c,$(BASELINE_MODULES))) $(wildcard $(BASELINE_DIR)/navigation_codec.c) -o $(BUILD)/before_bench
 	$(BUILD)/before_bench > $(BUILD)/before-bench.trace
 	cmp $(BUILD)/before-bench.trace $(BUILD)/after-bench.trace
 	$(PYTHON) -c 'import hashlib,sys; [print(hashlib.sha256(open(p,"rb").read()).hexdigest(), p) for p in sys.argv[1:]]' $(BUILD)/before-bench.trace $(BUILD)/after-bench.trace
 
 codec:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) test_codec.c $(APP)/navigation_codec.c -o $(BUILD)/test_codec
+	$(CC) $(CPPFLAGS) $(CFLAGS) test_codec_main.c $(APP)/navigation_codec.c -o $(BUILD)/test_codec
 	$(BUILD)/test_codec
 
 sanitize:
@@ -81,15 +84,15 @@ CPPFLAGS += -DS2_LEGACY_MODULE_NAMES
 endif
 drive:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) -I$(MOTION) -I$(APP)/../controller $(CFLAGS) test_drive.c $(SOURCES) $(APP)/../controller/s3_drive.c $(MOTION_CORE) -o $(BUILD)/test_drive
+	$(CC) $(CPPFLAGS) -I$(MOTION) -I$(APP)/../controller $(CFLAGS) test_drive_main.c $(SOURCES) $(APP)/../controller/s3_drive.c $(MOTION_CORE) -o $(BUILD)/test_drive
 	$(BUILD)/test_drive
 
 feedback:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) -I$(MOTION) -include motion_kernel_stub.h $(CFLAGS) test_motion_feedback.c $(MOTION)/motion.c $(MOTION_CORE) -o $(BUILD)/test_motion_feedback
+	$(CC) $(CPPFLAGS) -I$(MOTION) -include motion_kernel_stub.h $(CFLAGS) test_motion_feedback_main.c $(MOTION)/motion.c $(MOTION_CORE) -o $(BUILD)/test_motion_feedback
 	$(BUILD)/test_motion_feedback
 
 sizes:
 	mkdir -p $(BUILD)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -fshort-enums size_report.c -o $(BUILD)/size_report
+	$(CC) $(CPPFLAGS) $(CFLAGS) -fshort-enums nav_sizes_main.c -o $(BUILD)/size_report
 	$(BUILD)/size_report

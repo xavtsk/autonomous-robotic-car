@@ -7,7 +7,7 @@
 #include "codec_motion.h"
 
 /** Copy and pack the latest motion status without consuming a completion. */
-bool motion_read_snapshot (motion_snapshot_t * p_snapshot);
+bool snapshot_motion_read (codec_motion_snapshot_t * p_snapshot);
 
 #endif /* MOTION_SNAPSHOT_ADAPTER_H */
 

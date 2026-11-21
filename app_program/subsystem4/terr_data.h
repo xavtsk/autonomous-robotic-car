@@ -20,76 +20,92 @@ typedef enum
 {
     TERRAIN_HUMP_LONGITUDINAL = 0,
     TERRAIN_HUMP_RIGHT_WHEEL
-} terrain_hump_geometry_t;
+} terr_data_hump_geometry_t;
 
 typedef enum
 {
     TERRAIN_SAFETY_NONE = 0,
     TERRAIN_SAFETY_LIFTED,
     TERRAIN_SAFETY_OVERTURNED
-} terrain_safety_t;
+} terr_data_safety_t;
 
 typedef struct
 {
-    uint32_t timestamp_us;
-    float32_t pitch_deg, roll_deg, turn_dps, peak_m;
-    float32_t
-        hump_height_m; /* current height on a hump in progress (0..0.5 m) */
-    terrain_state_t state;
-    terrain_safety_t safety;
-    uint8_t flags;
-    bool impact, hump_completed, hump_active;
-} terrain_result_t;
+    uint32_t  timestamp_us;
+    float32_t pitch_deg;
+    float32_t roll_deg;
+    float32_t turn_dps;
+    float32_t peak_m;
+    float32_t hump_height_m; /* Report current climb between 0 and 0.5 m. */
+    events_motion_state_t state;
+    terr_data_safety_t    safety;
+    uint8_t               flags;
+    bool                  b_has_impact;
+    bool                  b_is_hump_complete;
+    bool                  b_is_hump_active;
+} terr_data_result_t;
 
 typedef struct
 {
     float64_t distance_m;
-    uint32_t epoch;
-    bool valid, stationary;
-} terrain_odometry_t;
+    uint32_t  epoch;
+    bool      b_is_valid;
+    bool      b_is_stationary;
+} terr_data_odometry_t;
 
 typedef struct
 {
-    imu_calibration_t calibration;
-    hump_detector_t hump;
-    terrain_result_t result;
-    float64_t previous_distance;
-    float32_t filtered[3], heading, mag_offset[3], mag_scale[3];
-    uint32_t previous_us, heading_us, epoch, safety_since_us;
-    unsigned stable_count;
-    terrain_state_t candidate;
-    terrain_hump_geometry_t hump_geometry;
-    terrain_safety_t safety;
-    float32_t wheel_track_m;
-    bool seen, odometry_seen, heading_seen, magnetic_calibrated,
-        safety_tracking;
+    imu_calibration_t         calibration;
+    hump_detection_t          hump;
+    terr_data_result_t        result;
+    float64_t                 previous_distance;
+    float32_t                 filtered[3];
+    float32_t                 heading;
+    float32_t                 mag_offset[3];
+    float32_t                 mag_scale[3];
+    uint32_t                  previous_us;
+    uint32_t                  heading_us;
+    uint32_t                  epoch;
+    uint32_t                  safety_since_us;
+    unsigned                  stable_count;
+    events_motion_state_t     candidate;
+    terr_data_hump_geometry_t hump_geometry;
+    terr_data_safety_t        safety;
+    float32_t                 wheel_track_m;
+    bool                      b_has_imu_sample;
+    bool                      b_has_terrain_odometry;
+    bool                      b_has_seen_heading;
+    bool                      b_is_magnetic_calibrated;
+    bool                      b_is_safety_tracking;
 #if APP_IMU_DEBUG
-    bool safety_upward, safety_lift_tilt;
+    bool b_is_moving_upward;
+    bool b_has_lift_tilt;
 #endif
-} terrain_monitor_t;
+} terr_data_monitor_t;
 
-void terrain_monitor_init (terrain_monitor_t * p_t);
+void terr_data_init (terr_data_monitor_t * p_monitor);
 /* Portable default is longitudinal. Right-wheel mode assumes the left wheel
  * stays on level ground; track is the wheel-centre spacing in metres.
  * Selecting a geometry clears run statistics and retains IMU calibration. */
-bool terrain_monitor_set_geometry (terrain_monitor_t * p_t,
-                                   terrain_hump_geometry_t geometry,
-                                   float32_t track_m);
+bool terr_data_set_geometry (terr_data_monitor_t *     p_monitor,
+                             terr_data_hump_geometry_t geometry,
+                             float32_t                 track_m);
 /* New run clears peaks/history but retains calibration and an active safety
  * trip. Owner task only. */
-void terrain_monitor_reset_run (terrain_monitor_t * p_t);
+void terr_data_reset_run (terr_data_monitor_t * p_monitor);
 /* Vehicle-axis hard-iron offsets and diagonal soft-iron scale. Must come from
  * measured calibration; calling this asserts calibration was performed. */
-bool terrain_monitor_set_mag_cal (terrain_monitor_t * p_t,
-                                  const float32_t p_offset[3],
-                                  const float32_t p_scale[3]);
-void terrain_monitor_process (terrain_monitor_t * p_t, const imu_sample_t * p_s,
-                              const terrain_odometry_t * p_odo);
+bool terr_data_set_mag_cal (terr_data_monitor_t * p_monitor,
+                            const float32_t       p_offset[3],
+                            const float32_t       p_scale[3]);
+void terr_data_process (terr_data_monitor_t *        p_monitor,
+                        const imu_sensor_sample_t *  p_sample,
+                        const terr_data_odometry_t * p_odometry);
 /* Explicit bit packing, never C struct memcpy. See DATA_FORMAT.md. */
-void terrain_pack (const terrain_result_t * p_r,
-                   uint8_t p_out[TERRAIN_PACKET_SIZE]);
-void terrain_unpack (const uint8_t p_in[TERRAIN_PACKET_SIZE],
-                     terrain_result_t * p_r);
+void terr_data_pack (const terr_data_result_t * p_result,
+                     uint8_t                    p_out[TERRAIN_PACKET_SIZE]);
+void terr_data_unpack (const uint8_t        p_in[TERRAIN_PACKET_SIZE],
+                       terr_data_result_t * p_result);
 #endif
 
 /* End of file. */

@@ -13,6 +13,23 @@ def code_tokens(text):
 
 
 class AnchorTests(unittest.TestCase):
+    def test_operator_ports_select_only_the_reviewed_callback_pair(self):
+        root = Path(__file__).resolve().parents[2]
+        path = Path('app_program/controller/op_logic.h')
+        current = (root/path).read_text()
+        self.assertEqual(harness.operator_port_flags(root), [])
+        with tempfile.TemporaryDirectory() as directory:
+            subject = Path(directory)
+            header = subject/path
+            header.parent.mkdir(parents=True)
+            legacy = harness.replace_once(current, '(*p_submit)', '(*submit)')
+            legacy = harness.replace_once(legacy, '(*p_print)', '(*print)')
+            header.write_text(legacy)
+            self.assertEqual(harness.operator_port_flags(subject), ['-DOP_TRACE_LEGACY_PORT=1'])
+            header.write_text(harness.replace_once(legacy, '(*print)', '(*p_print)'))
+            with self.assertRaises(ValueError):
+                harness.operator_port_flags(subject)
+
     def test_private_storage_flags_require_exact_reviewed_declarations(self):
         root = Path(__file__).resolve().parents[2]
         original = (root/'app_program/controller/s3_integration.c').read_text()
@@ -21,9 +38,40 @@ class AnchorTests(unittest.TestCase):
             subject = Path(directory)
             source = subject/'app_program/controller/s3_integration.c'
             source.parent.mkdir(parents=True)
+            grouped = re.sub(r'(\b(?:b_has_command|b_has_stop|b_has_status|b_has_ir_debug) : 1);\s*bool ',
+                             r'\1, ', original)
+            source.write_text(grouped)
+            self.assertEqual(harness.integration_storage_flags(subject), ['-DTEST_S3_COMPACT_STORAGE=1'])
+            source.write_text(grouped.replace('bool b_has_command : 1,', 'bool b_has_command : 2,'))
+            with self.assertRaisesRegex(ValueError, 'Harness changed'):
+                harness.integration_storage_flags(subject)
             source.write_text(original.replace('uint8_t sensor : 2;', 'uint8_t sensor : 3;'))
             with self.assertRaisesRegex(ValueError, 'Harness changed'):
                 harness.integration_storage_flags(subject)
+            source.write_text(original.replace('s3_shared_flags_t g_shared;',
+                                               's3_sampling_flags_t g_shared;'))
+            with self.assertRaisesRegex(ValueError, 'Harness changed'):
+                harness.integration_storage_flags(subject)
+            anonymous = original
+            for name in ('shared', 'sampling'):
+                fields = re.search(
+                    r'typedef struct\s*(\{[^{}]*\}) s3_' + name + r'_flags_t;',
+                    anonymous)
+                self.assertIsNotNone(fields)
+                anonymous = anonymous.replace(fields[0], '').replace(
+                    f'static s3_{name}_flags_t g_{name};',
+                    f'static struct {fields[1]} g_{name};')
+            source.write_text(anonymous)
+            self.assertEqual(harness.integration_storage_flags(subject),
+                             ['-DTEST_S3_COMPACT_STORAGE=1'])
+            older_fields = {new: old for old, new in harness.INTEGRATION_PREDICATE_FIELDS.items()}
+            older_compact = TOKEN.sub(
+                lambda token: older_fields.get(token[0], token[0])
+                if token.lastgroup == 'identifier' else token[0], original)
+            source.write_text(older_compact)
+            self.assertEqual(harness.integration_storage_flags(subject),
+                             ['-DTEST_S3_COMPACT_STORAGE=1',
+                              '-DTEST_S3_LEGACY_PREDICATES=1'])
             legacy = '''static struct {
                 unsigned pending : 1, stop : 1, status_ready : 1, reset_pending : 1;
             } g_shared;
@@ -42,14 +90,17 @@ class AnchorTests(unittest.TestCase):
 
     def test_private_aliases_follow_subject_and_preserve_original_assertions(self):
         root = Path(__file__).resolve().parents[2]
-        fixture = (root/'testing/integration/runtime_test.c').read_text()
-        self.assertLess(fixture.index('#include "../../app_program/controller/s3_integration.c"'),
-                        fixture.index('#include "integration_storage_compat.h"'))
-        header = (root/'testing/integration/integration_storage_compat.h').read_text()
+        fixture = (root/'testing/integration/runtime_main.c').read_text()
+        self.assertNotIn('#include "../../app_program/controller/s3_integration.c"', fixture)
+        fixture_header = (root/'testing/integration/runtime_main.h').read_text()
+        self.assertIn('#include "layout_access.h"', fixture_header)
+        header = (root/'testing/integration/layout_access.h').read_text()
         self.assertIn('#if defined(TEST_S3_COMPACT_STORAGE) && TEST_S3_COMPACT_STORAGE', header)
         for name, member in harness.INTEGRATION_STORAGE_NAMES.items():
             self.assertIn(f'#define TEST_S3_{name[2:].upper()} ({member})', header)
             self.assertIn(f'#define TEST_S3_{name[2:].upper()} ({name})', header)
+        for name, member in harness.integration_storage_aliases(root).items():
+            self.assertIn(f'#define TEST_S3_{name[2:].upper()} ({member})', header)
         self.assertNotIn('assert(', header)
         self.assertNotIn('TEST_S3_COMPACT_STORAGE',
                          (root/'app_program/controller/s3_integration.c').read_text())
@@ -94,7 +145,7 @@ class AnchorTests(unittest.TestCase):
 
     def test_real_harnesses_instrument_without_mutating_original_files(self):
         root = Path(__file__).resolve().parents[2]
-        paths = [root/'testing/integration/runtime_test.c', root/'testing/subsystem1/host_test.c']
+        paths = [root/'testing/integration/runtime_main.c', root/'testing/subsystem1/host_main.c']
         originals = [path.read_bytes() for path in paths]
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory)
@@ -102,19 +153,17 @@ class AnchorTests(unittest.TestCase):
             mqtt = harness.mqtt_source(root, destination/'mqtt.c').read_text()
             self.assertIn('trace_runtime("cycle")', runtime)
             self.assertIn('trace_runtime("receive")', runtime)
-            self.assertIn('trace_publish(topic,payload,len,qos,retain)', mqtt)
-            # Only sensor_sample_task belongs to the unbraced setjmp if. The
-            # assertion and observer must return to the enclosing indentation;
-            # placing them on its body line fails GCC -Wmisleading-indentation.
-            cycle_tail = runtime[runtime.index('sensor_sample_task(0, NULL);'):]
+            self.assertIn('trace_publish(p_topic,p_payload,len,qos,retain)', mqtt)
+            # The assertion and observer must also run after the task longjmps.
+            cycle_tail = runtime[runtime.index('s3_integration_runtime_test_cycle();'):]
             self.assertTrue(cycle_tail.startswith(
-                'sensor_sample_task(0, NULL);\n    assert(!locked);\n'
+                's3_integration_runtime_test_cycle();\n    }\n    assert(!g_locks);\n'
                 '    trace_runtime("cycle");\n}'))
         self.assertEqual([path.read_bytes() for path in paths], originals)
 
     def test_operator_observer_preserves_fixture_tokens_and_subject_selection(self):
         root = Path(__file__).resolve().parents[2]
-        original_path = root/'testing/integration/operator_test.c'
+        original_path = root/'testing/integration/operator_main.c'
         original = original_path.read_bytes()
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory)/'observed.c'
@@ -123,11 +172,11 @@ class AnchorTests(unittest.TestCase):
             observed = harness.operator_source(root, subject, destination).read_text()
             self.assertNotIn('"../../app_program/', observed)
             self.assertIn((subject/'app_program/controller/op_logic.h').as_posix(), observed)
-            self.assertLess(observed.index('#define APP_H'), observed.index('op_trace.h'))
-            self.assertLess(observed.index('operator_step(&op'), observed.index('op_trace_write('))
+            self.assertLess(observed.index('#include "operator_main.h"'), observed.index('op_trace.h'))
+            self.assertLess(observed.index('op_logic_step(&g_operator'), observed.index('op_trace_write('))
             recovered, count = re.subn(r'^#include "[^"\n]*/op_trace\.h"\n', '', observed, flags=re.M)
             self.assertEqual(count, 1)
-            recovered, count = re.subn(r'const size_t trace_console_begin = console_len;', '', recovered)
+            recovered, count = re.subn(r'const size_t trace_console_begin = g_console_length;', '', recovered)
             self.assertEqual(count, 1)
             recovered, count = re.subn(
                 r'const op_trace_context_t trace_context = \{[^;]+;\s*'

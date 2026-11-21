@@ -1,112 +1,184 @@
 /** @file s5_codec.c
  * @brief Encode and decode copied obstacle-observation packets.
+ * Byte and flag masks are widened unsigned before bitwise operations.
  */
 #include "s5_codec.h"
 
-static void put (uint8_t * p_p, unsigned * p_at, uint32_t value, unsigned bits)
-{
-    for (unsigned value_i = 0; value_i < bits; value_i++, (*p_at)++)
-    {
-        p_p[*p_at / 8U] |= (uint8_t)(((value >> value_i) & 1U) << (*p_at % 8U));
-    }
-}
+static void     write_bits (uint8_t * p_packet, unsigned * p_at, uint32_t value,
+                            unsigned bits);
+static uint32_t read_bits (const uint8_t * p_packet, unsigned * p_at,
+                           unsigned bits);
 
-static uint32_t get (const uint8_t * p_p, unsigned * p_at, unsigned bits)
+/** @brief Check range, flags and scan geometry, then copy the canonical
+ * encoded bytes to the output. Invalid observations leave the output
+ * untouched.
+ */
+bool s5_codec_observation_pack (const s5_codec_observation_t * p_observation,
+                                uint8_t p_out[S5_PACKET_BYTES])
 {
-    uint32_t value_v = 0;
-    for (unsigned value_i = 0; value_i < bits; value_i++, (*p_at)++)
-    {
-        value_v |= ((uint32_t)((p_p[*p_at / 8U] >> (*p_at % 8U)) & 1U))
-                   << value_i;
-    }
-    return value_v;
-}
+    unsigned bit_position             = 0;
+    uint8_t  encoded[S5_PACKET_BYTES] = {0};
 
-bool s5_observation_pack (const s5_observation_t * p_v,
-                          uint8_t p_out[S5_PACKET_BYTES])
-{
-    unsigned value_at = 0;
-    uint8_t value_p[S5_PACKET_BYTES] = {0};
-    if (!p_v || !p_out || p_v->range_mm > 4000U ||
-        (p_v->range_valid && p_v->range_mm < 30U) ||
-        (!p_v->range_valid && p_v->range_mm) ||
-        (p_v->no_echo && p_v->range_valid))
+    if ((((((0 == p_observation) || (!p_out)) ||
+           (p_observation->range_mm > 4000U)) ||
+          ((p_observation->b_is_range_valid) &&
+           (p_observation->range_mm < 30U))) ||
+         ((!p_observation->b_is_range_valid) && (p_observation->range_mm))) ||
+        ((p_observation->b_has_no_echo) && (p_observation->b_is_range_valid)))
     {
         return false;
     }
-    const s5_profile_t * p_q = &p_v->profile;
-    if (p_q->closest_mm > 4000U || p_q->width_mm > 4095U ||
-        p_q->left_clear_mm > 4000U || p_q->right_clear_mm > 4000U ||
-        p_q->forward_mm > 4000U || p_q->left_edge_mm < -4000 ||
-        p_q->left_edge_mm > 4000 || p_q->right_edge_mm < -4000 ||
-        p_q->right_edge_mm > 4000 ||
-        (p_q->valid && (!p_v->scan_done || p_q->closest_mm < 30U ||
-                        p_q->left_edge_mm < p_q->right_edge_mm)))
+
+    const profile_obstacle_t * p_profile = &p_observation->profile;
+
+    if ((((((((((p_profile->closest_mm > 4000U) ||
+                (p_profile->width_mm > 4095U)) ||
+               (p_profile->left_clear_mm > 4000U)) ||
+              (p_profile->right_clear_mm > 4000U)) ||
+             (p_profile->forward_mm > 4000U)) ||
+            (p_profile->left_edge_mm < -4000)) ||
+           (p_profile->left_edge_mm > 4000)) ||
+          (p_profile->right_edge_mm < -4000)) ||
+         (p_profile->right_edge_mm > 4000)) ||
+        ((p_profile->b_is_valid) &&
+         (((!p_observation->b_is_scan_done) || (p_profile->closest_mm < 30U)) ||
+          (p_profile->left_edge_mm < p_profile->right_edge_mm))))
     {
         return false;
     }
-    put(value_p, &value_at, p_v->range_us, 32);
-    put(value_p, &value_at, p_v->scan_us, 32);
-    put(value_p, &value_at, p_v->scan_id, 16);
-    put(value_p, &value_at, p_v->range_mm, 12);
-    put(value_p, &value_at, p_v->range_valid, 1);
-    put(value_p, &value_at, p_v->no_echo, 1);
-    put(value_p, &value_at, p_v->scan_done, 1);
-    put(value_p, &value_at, p_q->valid, 1);
-    put(value_p, &value_at, p_q->closest_mm, 12);
-    put(value_p, &value_at, p_q->width_mm, 12);
-    put(value_p, &value_at, p_q->left_clear_mm, 12);
-    put(value_p, &value_at, p_q->right_clear_mm, 12);
-    put(value_p, &value_at, p_q->forward_mm, 12);
-    put(value_p, &value_at, (uint32_t)(p_q->left_edge_mm + 4000), 13);
-    put(value_p, &value_at, (uint32_t)(p_q->right_edge_mm + 4000), 13);
-    for (unsigned value_i = 0; value_i < S5_PACKET_BYTES; value_i++)
+
+    write_bits(encoded, &bit_position, p_observation->range_us, 32);
+    write_bits(encoded, &bit_position, p_observation->scan_us, 32);
+    write_bits(encoded, &bit_position, p_observation->scan_id, 16);
+    write_bits(encoded, &bit_position, p_observation->range_mm, 12);
+    write_bits(encoded, &bit_position, p_observation->b_is_range_valid, 1);
+    write_bits(encoded, &bit_position, p_observation->b_has_no_echo, 1);
+    write_bits(encoded, &bit_position, p_observation->b_is_scan_done, 1);
+    write_bits(encoded, &bit_position, p_profile->b_is_valid, 1);
+    write_bits(encoded, &bit_position, p_profile->closest_mm, 12);
+    write_bits(encoded, &bit_position, p_profile->width_mm, 12);
+    write_bits(encoded, &bit_position, p_profile->left_clear_mm, 12);
+    write_bits(encoded, &bit_position, p_profile->right_clear_mm, 12);
+    write_bits(encoded, &bit_position, p_profile->forward_mm, 12);
+    /* Validation bounds each signed edge to ±4000 mm. The bias makes it
+     * 0..8000 before conversion and packing into thirteen bits. */
+    write_bits(encoded, &bit_position,
+               (uint32_t)(p_profile->left_edge_mm + 4000), 13);
+    write_bits(encoded, &bit_position,
+               (uint32_t)(p_profile->right_edge_mm + 4000), 13);
+
+    for (unsigned byte_index = 0; byte_index < S5_PACKET_BYTES; byte_index++)
     {
-        p_out[value_i] = value_p[value_i];
+        p_out[byte_index] = encoded[byte_index];
     }
+
     return true;
 }
 
-bool s5_observation_unpack (const uint8_t p_in[S5_PACKET_BYTES],
-                            s5_observation_t * p_v)
+/** @brief Decode into a temporary observation and verify its canonical bytes
+ * by re-encoding. Write the caller's observation only after every
+ * check passes.
+ */
+bool s5_codec_observation_unpack (const uint8_t p_in[S5_PACKET_BYTES],
+                                  s5_codec_observation_t * p_observation)
 {
-    unsigned value_at = 0;
-    s5_observation_t value_t = {0};
-    uint8_t check[S5_PACKET_BYTES];
-    if (!p_in || !p_v)
+    unsigned               bit_position = 0;
+    s5_codec_observation_t decoded      = {0};
+    uint8_t                check[S5_PACKET_BYTES];
+
+    if ((!p_in) || (0 == p_observation))
     {
         return false;
     }
-    value_t.range_us = get(p_in, &value_at, 32);
-    value_t.scan_us = get(p_in, &value_at, 32);
-    value_t.scan_id = (uint16_t)get(p_in, &value_at, 16);
-    value_t.range_mm = (uint16_t)get(p_in, &value_at, 12);
-    value_t.range_valid = get(p_in, &value_at, 1) != 0;
-    value_t.no_echo = get(p_in, &value_at, 1) != 0;
-    value_t.scan_done = get(p_in, &value_at, 1) != 0;
-    value_t.profile.valid = get(p_in, &value_at, 1) != 0;
-    value_t.profile.closest_mm = (uint16_t)get(p_in, &value_at, 12);
-    value_t.profile.width_mm = (uint16_t)get(p_in, &value_at, 12);
-    value_t.profile.left_clear_mm = (uint16_t)get(p_in, &value_at, 12);
-    value_t.profile.right_clear_mm = (uint16_t)get(p_in, &value_at, 12);
-    value_t.profile.forward_mm = (uint16_t)get(p_in, &value_at, 12);
-    value_t.profile.left_edge_mm =
-        (int16_t)((int)get(p_in, &value_at, 13) - 4000);
-    value_t.profile.right_edge_mm =
-        (int16_t)((int)get(p_in, &value_at, 13) - 4000);
-    if (!s5_observation_pack(&value_t, check))
+
+    decoded.range_us = read_bits(p_in, &bit_position, 32);
+    decoded.scan_us  = read_bits(p_in, &bit_position, 32);
+    /* These reads produce at most sixteen bits. The twelve-bit values
+     * retain even invalid raw readings for the canonical re-encode check. */
+    /* clang-format off */
+    decoded.scan_id                =
+        (uint16_t)read_bits(p_in, &bit_position, 16);
+    decoded.range_mm               =
+        (uint16_t)read_bits(p_in, &bit_position, 12);
+    decoded.b_is_range_valid       = read_bits(p_in, &bit_position, 1) != 0U;
+    decoded.b_has_no_echo          = read_bits(p_in, &bit_position, 1) != 0U;
+    decoded.b_is_scan_done         = read_bits(p_in, &bit_position, 1) != 0U;
+    decoded.profile.b_is_valid     = read_bits(p_in, &bit_position, 1) != 0U;
+    decoded.profile.closest_mm     =
+        (uint16_t)read_bits(p_in, &bit_position, 12);
+    decoded.profile.width_mm       =
+        (uint16_t)read_bits(p_in, &bit_position, 12);
+    decoded.profile.left_clear_mm  =
+        (uint16_t)read_bits(p_in, &bit_position, 12);
+    decoded.profile.right_clear_mm =
+        (uint16_t)read_bits(p_in, &bit_position, 12);
+    decoded.profile.forward_mm     =
+        (uint16_t)read_bits(p_in, &bit_position, 12);
+    /* clang-format on */
+    /* Raw thirteen-bit values are 0..8191. Unbias in int, so the complete
+     * malformed or valid range of -4000..4191 remains representable. */
+    /* clang-format off */
+    decoded.profile.left_edge_mm  =
+        (int16_t)((int)read_bits(p_in, &bit_position, 13) - 4000);
+    decoded.profile.right_edge_mm =
+        (int16_t)((int)read_bits(p_in, &bit_position, 13) - 4000);
+    /* clang-format on */
+
+    if (!s5_codec_observation_pack(&decoded, check))
     {
         return false;
     }
-    for (unsigned value_i = 0; value_i < S5_PACKET_BYTES; value_i++)
+
+    for (unsigned byte_index = 0; byte_index < S5_PACKET_BYTES; byte_index++)
     {
-        if (check[value_i] != p_in[value_i])
+        if (check[byte_index] != p_in[byte_index])
         {
             return false;
         }
     }
-    *p_v = value_t;
+
+    *p_observation = decoded;
     return true;
+}
+
+/** @brief Append an unsigned field of the given bit width to a zeroed packet,
+ * advancing the caller's bit cursor.
+ */
+static void write_bits (uint8_t * p_packet, unsigned * p_at, uint32_t value,
+                        unsigned bits)
+{
+    unsigned bit_offset = 0;
+
+    while (bit_offset < bits)
+    {
+        /* The selected bit is zero or one before shifting within a byte. */
+        p_packet[*p_at / 8U] =
+            (uint8_t)((unsigned)p_packet[*p_at / 8U] |
+                      (((value >> bit_offset) & 1U) << (*p_at % 8U)));
+        bit_offset++;
+        (*p_at)++;
+    }
+}
+
+/** @brief Read an unsigned field at the current bit cursor and advance the
+ * cursor by its width.
+ */
+static uint32_t read_bits (const uint8_t * p_packet, unsigned * p_at,
+                           unsigned bits)
+{
+    uint32_t field      = 0;
+    unsigned bit_offset = 0;
+
+    while (bit_offset < bits)
+    {
+        /* Widen the selected zero or one before shifting into the field. */
+        field |= ((uint32_t)((p_packet[*p_at / 8U] >> (*p_at % 8U)) & 1U))
+                 << bit_offset;
+        bit_offset++;
+        (*p_at)++;
+    }
+
+    return field;
 }
 
 /* End of file. */

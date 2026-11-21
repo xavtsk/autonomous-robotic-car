@@ -7,7 +7,9 @@
 #include "buddy1.h"
 
 #if APP_TEST
-/** Run Buddy 1's built-in checks and report their results to the console. */
+/** @brief Exercise the telemetry queue, codecs and barcode configuration.
+ * Consumes queued test messages and reports individual results on the console.
+ */
 void subsystem1_test (void);
 #endif
 

@@ -128,7 +128,8 @@ def format_text(text, path, formatter):
                             input=text, capture_output=True, text=True, check=False)
     if result.returncode:
         raise ValueError(result.stderr.strip() or "clang-format failed")
-    return result.stdout.rstrip() + "\n\n"
+    from tools.check_c_style import canonical_format
+    return canonical_format(result.stdout)
 
 
 def propose(root, plan, scope, formatter=None):

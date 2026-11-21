@@ -31,10 +31,23 @@ def classify_output(status, contents):
 
 
 def motion_storage_flags(root):
-    """Select the private adapter only when the subject defines that helper."""
+    """Select the storage and mutex spellings used by the subject."""
     source = (root/'app_program/subsystem2/motion.c').read_text(encoding='utf-8')
     compact = re.search(r'\bstatic\s+void\s+motion_calibration_store\s*\(', source)
-    return ['-DMOTION_COMPACT_RETAINED=1'] if compact else []
+    flags = ['-DMOTION_COMPACT_RETAINED=1'] if compact else []
+    if re.search(r'\bstatic\s+ID\s+g_mutex_id\b', source):
+        flags.append('-DMOTION_LEGACY_MUTEX_NAME=1')
+    return flags
+
+
+def capture_storage_flags(root):
+    """Select the capture members used by the fixed baseline."""
+    source = (root/'app_program/controller/bc_capture.h').read_text(encoding='utf-8')
+    if re.search(r'\buint16_t\s+mm\s*;', source):
+        return ['-DBCAP_STORAGE_DISTANCE_MEMBER=mm', '-Db_is_active=active',
+                '-Db_is_rearming=rearming', '-Db_is_header_done=header_done',
+                '-Db_is_summary_done=summary_done', '-Db_is_end_done=end_done']
+    return []
 
 
 def motion_estimation_module(root):
@@ -75,12 +88,13 @@ def main():
     tool_bin = output / 'tool-bin'
     tool_bin.mkdir()
     tooling = Path(__file__).resolve().parent
-    from fixture_binding import select_fixture_root
+    from fixture_binding import FIXED_BASELINE, select_fixture_root
     try:
-        from .module_compat import prepare_tilt
+        from .module_compat import fixture_api_flags, motion_predicate_flags, prepare_tilt
     except ImportError:
-        from module_compat import prepare_tilt
+        from module_compat import fixture_api_flags, motion_predicate_flags, prepare_tilt
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+    shared_flags = [*shlex.split(flags), *fixture_api_flags(revision)]
     tooling_revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
                                                cwd=tooling.parents[1], text=True).strip()
     binding_stage = 'fixture_bindings'
@@ -161,9 +175,10 @@ def main():
     # These existing PowerShell/Make recipes were absent from the Linux runner.
     # Keep the same shared assertions for both subjects and record every build
     # and execution independently, even when another suite has already failed.
-    from host_recipes import additional_host_recipes
+    from host_recipes import (additional_host_recipes, decoder_boundary_recipe,
+                              motion_storage_source, operator_runtime_recipe)
     try:
-        recipes = additional_host_recipes(root, fixtures_root, output, compiler, shlex.split(flags))
+        recipes = additional_host_recipes(root, fixtures_root, output, compiler, shared_flags)
     except (OSError, ValueError) as error:
         log = output/'additional-host-recipes.log'
         log.write_text(str(error)+'\n', encoding='utf-8')
@@ -179,9 +194,9 @@ def main():
     terrain_binary = output/'terrain_production_test'
     terrain_app = root/'app_program/subsystem4'
     terrain_fixture = fixtures_root/'testing/subsystem4'
-    run('terrain_production_build', [compiler, *shlex.split(flags), '-DAPP_IMU_DEBUG=0',
+    run('terrain_production_build', [compiler, *shared_flags, '-DAPP_IMU_DEBUG=0',
         *['-I'+str(path) for path in tilt_includes],
-        '-I'+str(terrain_app), '-I'+str(terrain_fixture), str(terrain_fixture/'host_test.c'),
+        '-I'+str(terrain_app), '-I'+str(terrain_fixture), str(terrain_fixture/'imu_host_main.c'),
         *[str(terrain_app/(name+'.c')) for name in
           ('imu_sensor', 'imu_calibration', tilt_name, 'hump_detection', 'events_motion', 'terr_data')],
         '-lm', '-o', str(terrain_binary)])
@@ -193,40 +208,47 @@ def main():
     # with production-like flags; execute the enabled tests with sanitizers.
     make('diagnostics_disabled', 'testing/diagnostics', ['disabled'], 'firmware_test.mk', instrument=False)
     make('network_wifi', 'testing/network_wifi', ['test'])
-    trace = fixtures_root/'testing/compliance/control_debug_trace.c'
+    trace = fixtures_root/'testing/compliance/debug_wire_trace_main.c'
     trace_binary = output / 'control_debug_trace'
     run('control_debug_trace_build', [compiler, *shlex.split(flags), '-I' + str(root),
         str(trace), str(root / 'app_program/controller/control_debug.c'), '-o', str(trace_binary)])
     run('control_debug_trace', [str(trace_binary)])
-    builder_test = root / 'testing/compliance/control_builder_test.c'
+    builder_test = root / 'testing/compliance/packet_builder_main.c'
+    if not builder_test.is_file():
+        builder_test = root / 'testing/compliance/control_builder_test.c'
     if builder_test.is_file():
         builder_binary = output/'control_builder_test'
         run('control_builder_build', [compiler, *shlex.split(flags), '-I'+str(root),
             str(builder_test), str(root/'app_program/controller/control_debug.c'), '-o', str(builder_binary)])
         run('control_builder', [str(builder_binary)])
-    motion_fixture = fixtures_root/'testing/compliance/motion_storage_test.c'
+    motion_fixture = fixtures_root/'testing/compliance/motion_storage_main.c'
     motion_stubs = fixtures_root/'testing/subsystem3'
     motion_app = root/'app_program/subsystem2'
     estimation_module = motion_estimation_module(root)
     motion_binary = output/'motion_storage_test'
-    run('motion_storage_build', [compiler, *shlex.split(flags),
-        *motion_storage_flags(root), '-I'+str(root), '-I'+str(motion_app),
+    storage_source = motion_storage_source(root, fixtures_root, output/'motion-storage')
+    run('motion_storage_build', [compiler, *shared_flags, *motion_predicate_flags(revision),
+        *motion_storage_flags(root), '-I'+str(motion_app), '-I'+str(motion_fixture.parent),
         '-I'+str(motion_stubs), '-include', str(motion_stubs/'motion_kernel_stub.h'),
-        str(motion_fixture), *[str(motion_app/(name+'.c')) for name in
+        '-DTEST_MOTION_STORAGE', '-DMOTION_STORAGE_PROBE',
+        str(motion_fixture), str(motion_stubs/'test_motion_feedback_main.c'), str(storage_source),
+        *[str(motion_app/(name+'.c')) for name in
             ('ctrl_motion', 'motion_pack', estimation_module, 'speed_pid')],
         '-o', str(motion_binary)])
     run('motion_storage', [str(motion_binary)])
-    barcode_fixture = fixtures_root/'testing/compliance/barcode_work_test.c'
     barcode_binary = output/'barcode_work_test'
-    run('barcode_work_build', [compiler, *shlex.split(flags), '-I'+str(root),
-        str(barcode_fixture), '-o', str(barcode_binary)])
+    sources, includes, options = decoder_boundary_recipe(
+        root, fixtures_root, output/'barcode-boundaries')
+    run('barcode_work_build', [compiler, *shared_flags, *options,
+        *['-I'+str(path) for path in includes], *map(str, sources), '-o', str(barcode_binary)])
     run('barcode_work', [str(barcode_binary)])
     bcap_binary = output/'bcap_storage_test'
-    run('bcap_storage_build', [compiler, *shlex.split(flags), '-I'+str(root),
-        str(fixtures_root/'testing/compliance/bcap_storage_test.c'),
+    run('bcap_storage_build', [compiler, *shared_flags, '-I'+str(root),
+        *capture_storage_flags(root),
+        str(fixtures_root/'testing/compliance/bcap_storage_main.c'),
         str(root/'app_program/controller/bc_capture.c'), '-lm', '-o', str(bcap_binary)])
     run('bcap_storage', [str(bcap_binary)])
-    from instrument_harnesses import operator_source
+    from instrument_harnesses import operator_source, operator_port_flags
     operator_fixture = operator_source(fixtures_root, root, output/'operator-observed.c')
     operator_binary = output/'operator_observed'
     operator_modules = [root/'app_program/controller'/(name+'.c') for name in
@@ -235,11 +257,17 @@ def main():
                          ('navigation_codec', 'ir_acquisition', 'ir_calibration', 'ir_reflectance',
                           'line_detection', 'line_controller', 'bc_decoder', 'line_navigation')]
     operator_fixtures = fixtures_root/'testing/integration'
-    run('operator_observed_build', [compiler, *shlex.split(flags),
+    operator_runtime, operator_options = operator_runtime_recipe(
+        root, fixtures_root, output/'operator-runtime')
+    operator_aliases = motion_predicate_flags(revision)
+    if revision == FIXED_BASELINE:
+        operator_aliases.append('-Db_is_available=available')
+    run('operator_observed_build', [compiler, *shared_flags, *operator_port_flags(root),
+        *operator_options, *operator_aliases,
         *['-I'+str(path) for path in (operator_fixtures, operator_fixtures/'fakes',
                                     root/'app_program/controller')],
         str(operator_fixture), str(fixtures_root/'tools/compliance/traces/op_trace.c'),
-        *map(str, operator_modules), '-lm', '-o', str(operator_binary)])
+        *map(str, [operator_runtime, *operator_modules]), '-lm', '-o', str(operator_binary)])
     run('operator_observed', [str(operator_binary)])
     # The existing S1 make targets cover 0/0 and 1/1. Exercise each independent
     # debug layout with the same assertions, including under ASan/UBSan.
@@ -247,15 +275,16 @@ def main():
     mqtt_app = root/'app_program/subsystem1'
     mqtt_driver = root/'lib/liblwip/sysdepend/pico_rp2040'
     for name, ir_debug, imu_debug, fixture in (
-            ('mqtt_production', 1, 0, mqtt_fixtures/'host_test.c'),
-            ('mqtt_imu', 0, 1, mqtt_fixtures/'host_test.c'),
-            ('mqtt_receive', 1, 1, fixtures_root/'testing/compliance/mqtt_receive_test.c')):
+            ('mqtt_production', 1, 0, mqtt_fixtures/'host_main.c'),
+            ('mqtt_imu', 0, 1, mqtt_fixtures/'host_main.c'),
+            ('mqtt_receive', 1, 1, fixtures_root/'testing/compliance/mqtt_receive_main.c')):
         mqtt_binary = output/name
-        run(name+'_build', [compiler, *shlex.split(flags), '-DAPP_H', '-DAPP_TEST=1',
+        run(name+'_build', [compiler, *shared_flags, '-DAPP_H', '-DAPP_TEST=1',
             '-DTM_MQTT=1', f'-DAPP_IR_DEBUG={ir_debug}', f'-DAPP_IMU_DEBUG={imu_debug}',
             '-include', str(mqtt_fixtures/'host_kernel.h'),
             *['-I'+str(path) for path in (mqtt_fixtures, mqtt_fixtures/'fakes', mqtt_app, mqtt_driver)],
             str(fixture),
+            *(['-DTEST_MQTT_RECEIVE', str(mqtt_fixtures/'host_main.c')] if name == 'mqtt_receive' else []),
             *[str(mqtt_app/(module+'.c')) for module in
                 ('telemetry_codec', 'buddy1', 'command', 'mqtt_bridge', 'buddy1_test')],
             str(mqtt_driver/'mqtt_utk.c'), '-o', str(mqtt_binary)])

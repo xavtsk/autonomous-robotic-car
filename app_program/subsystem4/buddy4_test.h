@@ -7,7 +7,9 @@
 #include "buddy4.h"
 
 #if APP_TEST
-/** Run Buddy 4's built-in checks and report their results to the console. */
+/** @brief Check pitch sign, signed pitch packing and invalid peak height
+ * using synthetic samples. Report each result on the device console.
+ */
 void subsystem4_test (void);
 #endif
 

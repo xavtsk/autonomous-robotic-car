@@ -16,14 +16,14 @@ message buffers and mutexes; no hardware or broker is used. Python requires only
 the standard library; override `PYTHON=/path/to/python3` if needed.
 
 - `buddy1_test.c`: S1-B01 through B37 (40 checks including four FIFO entries).
-- `host_test.c`: all 1,021 signed speed inputs, every heading/state code,
+- `host_main.c`: all 1,021 signed speed inputs, every heading/state code,
   all 256 barcode body codes, all 64 fault masks through live/snapshot/heartbeat,
   eight simultaneous producers, exact topic/length bridge,
   fragmented binary commands, zero bytes, oversized/short fragments, Wi-Fi bit
   preservation and heartbeat payloads. Versions 1/2 are explicitly rejected. The real `mqtt_utk.c` callbacks run.
 - `test_laptop_codec.py`: independently decode the C-emitted packets on the
   laptop, plus malformed-packet, valid-zero, IR-bit/padding and all-fault tests.
-- `size_report.c`: before/after slot, buffer and payload measurements. The host
+- `size_report_main.c`: before/after slot, buffer and payload measurements. The host
   size target uses short enums to match this Arm toolchain's ABI; wire tests also
   run with ordinary host enums to verify layout independence.
 

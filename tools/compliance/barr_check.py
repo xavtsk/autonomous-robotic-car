@@ -25,6 +25,11 @@ TOKEN = re.compile(
     r'(?P<string>(?:u8|[LuU])?"(?:\\[\s\S]|[^"\\])*"|'
     r"(?:[LuU])?'(?:\\[\s\S]|[^'\\])*')|"
     r'(?P<identifier>[A-Za-z_]\w*)|(?P<other>.)', re.DOTALL)
+GROUPED_POINTER_DECLARATOR = re.compile(
+    r"\b(?:void|bool|char|short|int|long|float|double|[A-Za-z_]\w*_t)\b"
+    r"(?P<space>[ \t]+)(?P<group>\([ \t]*\*[ \t]*)"
+    r"[A-Za-z_]\w*[ \t]*\)(?=[ \t]*\()"
+)
 STANDARD_HEADERS = {
     "assert", "complex", "ctype", "errno", "fenv", "float", "inttypes",
     "iso646", "limits", "locale", "math", "setjmp", "signal", "stdarg",
@@ -40,6 +45,17 @@ KEYWORDS = set("auto break case char const continue default do double else enum 
                "extern float for goto if inline int long register restrict "
                "return short signed sizeof static struct switch typedef union "
                "unsigned void volatile while _Bool _Complex _Imaginary".split())
+RESERVED_IDENTIFIERS = KEYWORDS | set(
+    "alignas alignof and and_eq asm "
+    "bitand bitor bool catch char8_t char16_t char32_t class compl concept consteval "
+    "constexpr constinit const_cast co_await co_return co_yield decltype delete "
+    "dynamic_cast explicit export false friend interrupt mutable namespace "
+    "new noexcept not not_eq nullptr operator or or_eq private protected public "
+    "reinterpret_cast requires static_assert static_cast template this thread_local "
+    "throw true try typeid typename using virtual wchar_t xor xor_eq typeof typeof_unqual "
+    "_Alignas _Alignof _Atomic _BitInt _Decimal32 _Decimal64 _Decimal128 _Generic "
+    "_Noreturn _Static_assert _Thread_local".split())
+STANDARD_OBJECT_NAMES = {"errno", "stdin", "stdout", "stderr"}
 STRENGTHS = {"mandatory", "qualified", "preferred", "guidance", "permission",
              "example", "mixed", "conditional"}
 STATUSES = {"unreviewed", "verified", "not_applicable", "pending_deviation",
@@ -85,6 +101,87 @@ def without_comments(text: str) -> str:
                      if match.lastgroup == "comment" else match.group(), text)
 
 
+def logical_source_lines(text: str) -> list[str]:
+    """Return nonempty logical lines for structural preprocessor checks."""
+    # C99 translates trigraphs and splices lines before removing comments.
+    text = text.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
+    spliced = text.replace("??=", "#").replace("??/", "\\").replace("\\\n", "")
+    return [line.strip() for line in without_comments(spliced).splitlines() if line.strip()]
+
+
+def macro_control_transfers(text: str):
+    """Locate explicit control transfers in parameterized macro replacements."""
+    normalized = text.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
+    translated = normalized.replace("??=", "#").replace("??/", "\\")
+    # Preserve the physical start of each directive, even when a token spans
+    # a continuation. Comments and literals are removed after line splicing.
+    starts = [1]
+    for number, line in enumerate(translated.split("\n"), 1):
+        if not line.endswith("\\"):
+            starts.append(number + 1)
+    code = mask_noncode(translated.replace("\\\n", ""))
+    directive = re.compile(r"^[ \t]*(?:#|%:)\s*define\s+(\w+)\(([^)]*)\)(.*)$")
+    for number, line in zip(starts, code.split("\n")):
+        match = directive.match(line)
+        if not match or not match[2].strip():
+            continue
+        parameters = set(re.findall(r"\w+", match[2]))
+        for token in re.findall(r"\b(?:break|continue|goto|return|longjmp|exit)\b", match[3]):
+            if token not in parameters:
+                yield number, match[1], token
+
+
+def enclosing_header_guard(text: str) -> str | None:
+    """Return the conventional guard if it encloses every declaration."""
+    lines = logical_source_lines(text)
+    if len(lines) < 3:
+        return None
+    directive = r"(?:#|%:)\s*"
+    opening = re.fullmatch(directive + r"ifndef\s+([A-Za-z_]\w*)", lines[0])
+    if not opening:
+        return None
+    guard = opening[1]
+    if not re.fullmatch(directive + r"define\s+" + guard + r"(?:\s+.*)?", lines[1]):
+        return None
+    depth = 1
+    for index, line in enumerate(lines[2:], start=2):
+        match = re.match(directive + r"(\w+)\b(.*)", line)
+        if not match:
+            continue
+        keyword, argument = match[1], match[2].strip()
+        if keyword in ("if", "ifdef", "ifndef"):
+            depth += 1
+        elif keyword == "endif":
+            depth -= 1
+            if depth == 0:
+                return guard if index == len(lines) - 1 else None
+        elif depth == 1 and keyword in ("else", "elif"):
+            return None
+        elif keyword == "undef" and argument == guard:
+            return None
+    return None
+
+
+def includes_local_header_unconditionally(source: Path, text: str) -> bool:
+    """Check for a direct, unconditional quoted include of the local pair."""
+    header = source.with_suffix(".h").resolve()
+    depth = 0
+    for line in logical_source_lines(text):
+        match = re.fullmatch(r"(?:#|%:)\s*(\w+)\b(.*)", line)
+        if not match:
+            continue
+        directive, argument = match[1], match[2].strip()
+        if directive in ("if", "ifdef", "ifndef"):
+            depth += 1
+        elif directive == "endif":
+            depth -= 1
+        elif directive == "include" and depth == 0:
+            quoted = re.fullmatch(r'"([^"]+)"', argument)
+            if quoted and (source.parent / quoted[1]).resolve() == header:
+                return True
+    return False
+
+
 def owned_files(root: Path, scope: dict) -> list[Path]:
     """Enumerate manifest includes, including untracked files; never guess scope."""
     if scope.get("schema_version") not in {1, 2} or not scope.get("include_globs"):
@@ -114,9 +211,32 @@ def lexical_checks(path: Path, root: Path, source_override=None, file_level=True
             add("3.5.a", number, "Literal tab character")
     if b"\r" in data:
         add("3.6.a", 1, "Non-LF line endings need normalization or review", "review")
-    for match in re.finditer(r"[\x00-\x08\x0b\x0e-\x1f\x7f]", text):
-        add("3.6.b", line_at(text, match.start()), "Forbidden control character")
+    for offset, character in enumerate(text):
+        # Tabs and CR have their own diagnostics above. UTF-8 also permits
+        # controls outside ASCII, such as U+0085 and zero-width format marks.
+        if not character.isprintable() and character not in "\n\r\t\f":
+            add("3.6.b", line_at(text, offset), "Forbidden nonprinting character")
     code = mask_noncode(text)
+    for number, macro, token in macro_control_transfers(text):
+        add("6.3.b.iv", number, f"Parameterized macro {macro} contains {token}")
+    # Use the original whitespace. Masked literals and comments occupy spaces
+    # in "code" even when the closing quote touches the punctuation.
+    declarator_parens = {
+        pos for item in GROUPED_POINTER_DECLARATOR.finditer(code)
+        for pos in (item.start("group"), item.end() - 1)
+    }
+    for match in re.finditer(r"[();]", code):
+        pos = match.start()
+        before = text[pos - 1:pos] if pos else ""
+        after = text[pos + 1:pos + 2]
+        if match[0] == ";" and before in (" ", "\t"):
+            add("3.1.m", line_at(text, pos), "Space immediately before semicolon")
+        if match[0] == "(" and pos not in declarator_parens and after in (" ", "\t"):
+            add("3.1.i", line_at(text, pos), "Horizontal padding inside opening parenthesis")
+        if match[0] == ")" and pos not in declarator_parens and before in (" ", "\t"):
+            line_start = text.rfind("\n", 0, pos) + 1
+            if text[line_start:pos].strip():
+                add("3.1.i", line_at(text, pos), "Horizontal padding inside closing parenthesis")
     for match in re.finditer(r"\b(auto|register|short|long)\b", code):
         rule = {"auto": "1.7.a", "register": "1.7.b"}.get(match[0], "5.2.b")
         add(rule, line_at(text, match.start()), f"Forbidden keyword {match[0]}")
@@ -124,7 +244,7 @@ def lexical_checks(path: Path, root: Path, source_override=None, file_level=True
         add("1.7.d", line_at(text, match.start()), "Review preferred avoidance of continue", "review")
     for match in re.finditer(r"(?m)^[ \t]+#", code):
         add("3.2.d", line_at(text, match.start()), "Preprocessor hash is indented")
-    for match in re.finditer(r"(?m)^\s*#\s*define\s+(\w+)", code):
+    for match in re.finditer(r"(?m)^[ \t]*#[ \t]*define[ \t]+(\w+)", code):
         macro = match[1]
         if macro in KEYWORDS:
             add("1.1.d", line_at(text, match.start()), f"Macro renames language keyword {macro}")
@@ -135,7 +255,7 @@ def lexical_checks(path: Path, root: Path, source_override=None, file_level=True
             body = match[0][2:-2] if match[0].startswith("/*") else match[0][2:]
             if re.search(r"/\*|//|\\", body):
                 add("2.1.b", line_at(text, match.start()), "Comment content contains a forbidden comment token or backslash")
-    includes = list(re.finditer(r'(?m)^\s*#\s*include\s*[<"]([^>"\n]+)[>"]', without_comments(text)))
+    includes = list(re.finditer(r'(?m)^[ \t]*#[ \t]*include[ \t]*[<"]([^>"\n]+)[>"]', without_comments(text)))
     for match in includes:
         target = match[1]
         if target.startswith(("/", "\\")) or re.match(r"[A-Za-z]:", target):
@@ -162,14 +282,14 @@ def lexical_checks(path: Path, root: Path, source_override=None, file_level=True
         elif not any((path.parent / item[1]).resolve() == path.with_suffix(".h").resolve()
                      for item in own_includes):
             add("4.3.c", 1, "Same-root include uses a separate directory; confirm its resolved module header", "review")
+        elif not includes_local_header_unconditionally(path, text):
+            add("4.3.c", 1, "Check which configurations and search paths include the module header", "review")
         last = comments[-1] if comments else None
         if not (last and re.search(r"\b(?:end of file|eof)\b", last[0], re.IGNORECASE)
                 and re.fullmatch(r"\n\n[\n]*", text[last.end():])):
             add("3.3.c", max(1, len(text.splitlines())), "Missing final end-of-file comment followed by a blank line")
-    if file_level and path.suffix == ".h":
-        guard = re.search(r"(?m)^\s*#\s*ifndef\s+(\w+)", code)
-        if not guard or not re.search(r"(?m)^\s*#\s*define\s+" + re.escape(guard[1]) + r"\b", code):
-            add("4.2.b", 1, "No conventional matching ifndef/define inclusion guard found", "review")
+    if file_level and path.suffix == ".h" and enclosing_header_guard(text) is None:
+        add("4.2.b", 1, "Review header without an enclosing ifndef/define guard", "review")
     if file_level and not any(re.match(r"/\*\*|/\*!|///|//!", match[0]) and
                re.search(r"(?:@file|\\file)\b", match[0]) for match in comments):
         add("2.2.h", 1, "No automatic-documentation module @file comment found")
@@ -186,6 +306,40 @@ def float_type(node: dict) -> bool:
     types = node.get("type", {})
     spelling = types.get("desugaredQualType", types.get("qualType", ""))
     return bool(re.search(r"\b(?:float|double|_Float\d+)\b", spelling))
+
+
+def contains_assignment(expression: dict) -> bool:
+    """Check only the conditional expression, including nested operands."""
+    if expression.get("kind") == "CompoundAssignOperator" or (
+            expression.get("kind") == "BinaryOperator" and expression.get("opcode") == "="):
+        return True
+    return any(contains_assignment(child) for child in expression.get("inner", []))
+
+
+def has_own_default(statement: dict) -> bool:
+    """A default inside a nested switch belongs to that switch alone."""
+    kind = statement.get("kind")
+    if kind == "SwitchStmt":
+        return False
+    if kind == "DefaultStmt":
+        return True
+    return any(has_own_default(child) for child in statement.get("inner", []))
+
+
+def control_bodies(node: dict) -> list[dict]:
+    """Return the governed statements in Clang's C AST, excluding else-if links."""
+    children = node.get("inner", [])
+    kind = node["kind"]
+    if not children:
+        return []
+    if kind == "IfStmt" and node.get("hasElse") and len(children) >= 3:
+        then, otherwise = children[-2:]
+        return [then] if otherwise.get("kind") == "IfStmt" else [then, otherwise]
+    if kind == "DoStmt":
+        return children[:1]
+    if kind in {"IfStmt", "WhileStmt", "ForStmt", "SwitchStmt"}:
+        return children[-1:]
+    return []
 
 
 def ast_checks(tree: dict, source: Path, root: Path, owned: set[Path], allowed_lines=None):
@@ -218,8 +372,19 @@ def ast_checks(tree: dict, source: Path, root: Path, owned: set[Path], allowed_l
         def add(rule, message, severity="violation"):
             findings.append(Finding(rule, relative(path, root), number, message, severity))
 
+        if relevant and kind == "TypedefDecl" and not node.get("isImplicit"):
+            name = node.get("name", "")
+            if name and not re.fullmatch(r"[a-z][a-z0-9_]*_t", name):
+                add("5.1.a", f"Type {name} needs lowercase spelling and a _t suffix")
+        if relevant and kind == "DeclStmt":
+            variables = [child.get("name", "") for child in node.get("inner", [])
+                         if child.get("kind") == "VarDecl"]
+            if len(variables) > 1:
+                add("8.1.a", "Variables share one local declaration: " + ", ".join(variables))
         if relevant and kind == "FunctionDecl" and not node.get("isImplicit"):
             name = node.get("name", "")
+            if name in RESERVED_IDENTIFIERS:
+                add("6.1.a", f"Function {name} reuses a reserved language name")
             if name.startswith("_"):
                 add("6.1.c", f"Function {name} starts with underscore")
             if len(name) > 31:
@@ -244,6 +409,10 @@ def ast_checks(tree: dict, source: Path, root: Path, owned: set[Path], allowed_l
         if relevant and kind in {"VarDecl", "ParmVarDecl", "FieldDecl"} and not node.get("isImplicit"):
             name = node.get("name", "")
             if name:
+                if name in RESERVED_IDENTIFIERS:
+                    add("7.1.a", f"Variable {name} reuses a reserved language name")
+                if name in STANDARD_OBJECT_NAMES:
+                    add("7.1.b", f"Variable {name} reuses a standard library name")
                 if name.startswith("_"):
                     add("7.1.c", f"Variable {name} starts with underscore")
                 if len(name) > 31:
@@ -252,14 +421,22 @@ def ast_checks(tree: dict, source: Path, root: Path, owned: set[Path], allowed_l
                     add("7.1.e", f"Variable {name} is shorter than three characters")
                 if re.search(r"[A-Z]", name):
                     add("7.1.f", f"Variable {name} contains uppercase letters")
+        if relevant and kind in {"IfStmt", "DoStmt", "WhileStmt", "ForStmt", "SwitchStmt"}:
+            for body in control_bodies(node):
+                if body.get("kind") != "CompoundStmt":
+                    add("1.3.a", f"{kind} body has no braces")
         if relevant and kind == "BinaryOperator":
             children = node.get("inner", [])
             if node.get("opcode") in {"==", "!="} and any(float_type(item) for item in children):
                 add("5.4.b.iv", "Equality/inequality operates on floating-point values")
         if relevant and kind == "IfStmt":
+            if node.get("inner") and contains_assignment(node["inner"][0]):
+                add("8.2.c", "Assignment in if condition")
             depth = 1 + sum(parent == "IfStmt" for parent in parents)
             if depth > 2:
                 add("8.2.b", f"Conditional nesting depth {depth}; else-if chains need manual structural review", "review")
+        if relevant and kind == "SwitchStmt" and node.get("inner") and not has_own_default(node["inner"][-1]):
+            add("8.3.b", "Switch has no default label")
         for child in node.get("inner", []):
             walk(child, filename, parents + (kind,))
 

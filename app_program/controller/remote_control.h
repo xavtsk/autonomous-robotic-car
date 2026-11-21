@@ -21,40 +21,40 @@
 #define REMOTE_REPLY_RING_SIZE 6U
 #define REMOTE_MAX_AGE_US 2000000U
 
-enum
+typedef enum
 {
     REMOTE_START = 1,
-    REMOTE_STOP = 2,
+    REMOTE_STOP  = 2,
     REMOTE_RESET = 3
-};
+} remote_control_command_t;
 
-enum
+typedef enum
 {
-    REMOTE_QUEUED = 0,
-    REMOTE_EXECUTED = 1,
-    REMOTE_REJECTED = 2,
+    REMOTE_QUEUED    = 0,
+    REMOTE_EXECUTED  = 1,
+    REMOTE_REJECTED  = 2,
     REMOTE_CANCELLED = 3
-};
+} remote_control_outcome_t;
 
-enum
+typedef enum
 {
-    REMOTE_NONE = 0,
-    REMOTE_INVALID = 1,
-    REMOTE_STALE = 2,
-    REMOTE_REPLAY = 3,
-    REMOTE_BUSY = 4,
-    REMOTE_NOT_READY = 5,
-    REMOTE_SUPERSEDED = 6,
+    REMOTE_NONE        = 0,
+    REMOTE_INVALID     = 1,
+    REMOTE_STALE       = 2,
+    REMOTE_REPLAY      = 3,
+    REMOTE_BUSY        = 4,
+    REMOTE_NOT_READY   = 5,
+    REMOTE_SUPERSEDED  = 6,
     REMOTE_UNAVAILABLE = 7
-};
+} remote_control_reason_t;
 
-enum
+typedef enum
 {
     REMOTE_AVAILABLE = 1,
     REMOTE_CAN_START = 2,
     REMOTE_CAN_RESET = 4,
-    REMOTE_RUNNING = 8
-};
+    REMOTE_RUNNING   = 8
+} remote_control_capability_t;
 
 /* Requests and status retain version 3. Only replies use the compact version
  * 4 layout: action bits 0..1, result 2..3, reason 4..6; bit 7 stays zero.
@@ -62,46 +62,51 @@ enum
  * These native bit-fields stay in memory; they are never sent as wire bytes. */
 typedef struct
 {
-    uint32_t id;
+    uint32_t request_id;
     uint32_t epoch;
     uint32_t time_us;
     unsigned action : REMOTE_REPLY_ACTION_BITS;
-    bool valid : 1;
-} remote_request_t;
+    bool     b_is_request_valid : 1;
+} remote_control_request_t;
 
 /** @brief Read an unsigned little-endian value without changing the buffer.
- * @param[in] p_p Non-NULL readable storage containing at least four bytes.
+ * @param[in] p_bytes Non-NULL readable storage containing at least four bytes.
  * @return The full 32-bit value; no range or pointer validation is performed.
  */
-static inline uint32_t remote_get32 (const uint8_t * p_p)
+static inline uint32_t remote_control_get_u32 (const uint8_t * p_bytes)
 {
-    return ((((uint32_t)p_p[0] | ((uint32_t)p_p[1] << 8)) |
-             ((uint32_t)p_p[2] << 16)) |
-            ((uint32_t)p_p[3] << 24));
+    /* Widen each byte before shifting. The largest shift places 0..255
+     * in bits 24 through 31 of an unsigned word. */
+    return ((((uint32_t)p_bytes[0] | ((uint32_t)p_bytes[1] << 8)) |
+             ((uint32_t)p_bytes[2] << 16)) |
+            ((uint32_t)p_bytes[3] << 24));
 }
 
 /** @brief Write exactly four little-endian bytes without retaining a pointer.
- * @param[out] p_p Non-NULL writable storage containing at least four bytes.
- * @param value_n Full-range unsigned value to encode; no narrowing is applied.
+ * @param[out] p_bytes Non-NULL writable storage containing at least four bytes.
+ * @param word Full-range unsigned value to encode; no narrowing is applied.
  */
-static inline void remote_put32 (uint8_t * p_p, uint32_t value_n)
+static inline void remote_control_put_u32 (uint8_t * p_bytes, uint32_t word)
 {
-    for (unsigned value_i = 0; value_i < 4; value_i++)
+    /* The byte conversion keeps the low eight bits after each shift. */
+    for (unsigned byte_index = 0; byte_index < sizeof word; byte_index++)
     {
-        p_p[value_i] = (uint8_t)(value_n >> (8U * value_i));
+        p_bytes[byte_index] = (uint8_t)(word >> (8U * byte_index));
     }
 }
 
 /** @brief Compare sequence numbers using the existing unsigned half-range rule.
- * @param value_a Candidate sequence number, including wrapped values.
- * @param value_b Previously consumed sequence number.
+ * @param candidate Candidate sequence number, including wrapped values.
+ * @param previous Previously consumed sequence number.
  * @return True for a nonzero forward difference below 2^31; equality and the
  * exact half-range difference return false. No state changes.
  */
-static inline bool remote_newer (uint32_t value_a, uint32_t value_b)
+static inline bool remote_control_is_newer (uint32_t candidate,
+                                            uint32_t previous)
 {
-    return ((value_a != value_b) &&
-            ((uint32_t)(value_a - value_b) < 0x80000000U));
+    /* Reduce the difference modulo 2^32 before applying the half-range test. */
+    return ((candidate != previous) &&
+            ((uint32_t)(candidate - previous) < 0x80000000U));
 }
 
 /* Network callbacks never operate motors. The sampling owner executes through
@@ -109,12 +114,12 @@ static inline bool remote_newer (uint32_t value_a, uint32_t value_b)
 /** @brief Record link state and cancel applicable pending remote requests.
  * @param epoch Session identifier; an up event maps zero to one and resets the
  * consumed command ID. A down event does not assign a new epoch.
- * @param value_up True for an available remote link.
+ * @param b_is_up True for an available remote link.
  * @note Task context: waits for the controller mutex. Unavailable objects or
  * lock failure leave state unchanged. Pending STOP survives link changes.
  * With APP_S3_MOTION disabled, this and the other remote setters are no-ops.
  */
-void s3_remote_link (uint32_t epoch, bool value_up);
+void remote_control_link (uint32_t epoch, bool b_is_up);
 /** @brief Validate and enqueue a borrowed version-3 command.
  * @param[in] p_packet Readable command bytes for this call; NULL is ignored.
  * @param length Must equal REMOTE_COMMAND_SIZE. Bad version/action/length is
@@ -125,7 +130,7 @@ void s3_remote_link (uint32_t epoch, bool value_up);
  * IDs are consumed even when rejected. Disabled integration ignores packets.
  * Network callbacks never drive motors directly.
  */
-void s3_remote_receive (const uint8_t * p_packet, unsigned length);
+void remote_control_receive (const uint8_t * p_packet, unsigned length);
 /** @brief Remove one queued version-4 reply using a nonblocking mutex attempt.
  * @param[out] p_packet Writable buffer; NULL returns zero without consuming.
  * @param capacity Buffer size in bytes; at least REMOTE_REPLY_SIZE is required.
@@ -133,7 +138,7 @@ void s3_remote_receive (const uint8_t * p_packet, unsigned length);
  * An empty queue, unavailable/locked controller or disabled integration
  * returns zero. The caller owns the output and no pointer is retained.
  */
-unsigned s3_remote_reply_take (uint8_t * p_packet, unsigned capacity);
+unsigned remote_control_reply_take (uint8_t * p_packet, unsigned capacity);
 /** @brief Copy an eligible version-3 status and record its publication.
  * @param[out] p_packet Writable buffer; NULL returns zero.
  * @param capacity Buffer size in bytes; must be at least REMOTE_STATUS_SIZE.
@@ -143,18 +148,19 @@ unsigned s3_remote_reply_take (uint8_t * p_packet, unsigned capacity);
  * @note Uses a nonblocking mutex attempt. Failed locking, unavailable state
  * and disabled integration return zero. Wire bytes remain explicitly encoded.
  */
-unsigned s3_remote_status_take (uint8_t * p_packet, unsigned capacity);
+unsigned remote_control_status_take (uint8_t * p_packet, unsigned capacity);
 /** @brief Read the wrapping count of queued remote STOP requests.
  * @return Current 32-bit sequence, or zero for missing state, lock failure or
  * disabled integration. Task context; may wait for the controller mutex.
  */
-uint32_t s3_remote_stop_sequence (void);
+uint32_t remote_control_stop_sequence (void);
 /** @brief Publish the physical STOP level used to inhibit remote START/RESET.
- * @param held True while physical STOP is held; does not itself drive motors.
+ * @param b_is_held True while physical STOP is held; does not itself drive
+ * motors.
  * @note Task context; may wait for the controller mutex. Missing state or lock
  * failure leaves the stored level unchanged. Disabled integration is a no-op.
  */
-void s3_remote_physical_stop (bool held);
+void remote_control_physical_stop (bool b_is_held);
 #endif
 
 /* End of file. */

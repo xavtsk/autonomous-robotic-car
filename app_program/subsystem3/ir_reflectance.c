@@ -1,5 +1,7 @@
 /** @file ir_reflectance.c
  * @brief Buddy 3: hardware-independent, per-sensor reflectance classification.
+ * The selected byte and half-word operands fit a 32-bit int. The casts
+ * spell out the signed promotion already used by these comparisons.
  */
 #include "ir_reflectance.h"
 
@@ -29,27 +31,33 @@ void ir_reflectance_reset (ir_reflectance_t * p_sensor)
  * @note Either raw polarity is supported. The sampling owner serializes access;
  * no physical calibration measurement or peripheral operation occurs here.
  */
-bool ir_reflectance_init (ir_reflectance_t * p_sensor,
-                          const ir_calibration_t * p_calibration)
+bool ir_reflectance_init (ir_reflectance_t *                   p_sensor,
+                          const ir_reflectance_calibration_t * p_calibration)
 {
-    if (p_sensor == 0)
+    if (0 == p_sensor)
     {
         return false;
     }
-    p_sensor->configured = false;
+
+    p_sensor->b_is_configured = false;
     ir_reflectance_reset(p_sensor);
-    if ((p_calibration == 0) || (p_calibration->white_raw > IR_ADC_MAX_COUNT) ||
-        (p_calibration->black_raw > IR_ADC_MAX_COUNT) ||
-        (p_calibration->white_raw == p_calibration->black_raw) ||
-        (p_calibration->white_limit >= p_calibration->black_limit) ||
-        (p_calibration->black_limit > IR_DARKNESS_MAX))
+
+    if ((((((0 == p_calibration) ||
+            (p_calibration->white_raw > IR_ADC_MAX_COUNT)) ||
+           (p_calibration->black_raw > IR_ADC_MAX_COUNT)) ||
+          (p_calibration->white_raw == p_calibration->black_raw)) ||
+         (p_calibration->white_limit >= p_calibration->black_limit)) ||
+        ((int)p_calibration->black_limit > IR_DARKNESS_MAX))
     {
         return false;
     }
-    p_sensor->calibration = (ir_stored_calibration_t){
+
+    /* clang-format off */
+    p_sensor->calibration     = (ir_reflectance_stored_cal_t){
         p_calibration->white_raw, p_calibration->black_raw,
         p_calibration->white_limit, p_calibration->black_limit};
-    p_sensor->configured = true;
+    p_sensor->b_is_configured = true;
+    /* clang-format on */
     return true;
 }
 
@@ -67,24 +75,28 @@ bool ir_reflectance_init (ir_reflectance_t * p_sensor,
 bool ir_reflectance_update (ir_reflectance_t * p_sensor, uint16_t raw,
                             uint16_t * p_darkness)
 {
-    int32_t span;
-    int32_t darkness;
 
-    if ((p_sensor == 0) || (p_darkness == 0))
+    if ((0 == p_sensor) || (0 == p_darkness))
     {
         return false;
     }
-    if ((!p_sensor->configured) || (raw > IR_ADC_MAX_COUNT))
+
+    if ((!p_sensor->b_is_configured) || (raw > IR_ADC_MAX_COUNT))
     {
         ir_reflectance_reset(p_sensor);
         return false;
     }
 
-    span = (int32_t)p_sensor->calibration.black_raw -
-           (int32_t)p_sensor->calibration.white_raw;
-    darkness = (((int32_t)raw - (int32_t)p_sensor->calibration.white_raw) *
-                IR_DARKNESS_MAX) /
-               span;
+    /* A validated 12-bit endpoint fits in int32_t. Signed subtraction
+     * preserves either sensor polarity and the scaled delta fits in int32_t.
+     */
+    const int32_t span = (int32_t)p_sensor->calibration.black_raw -
+                         (int32_t)p_sensor->calibration.white_raw;
+    int32_t darkness =
+        (((int32_t)raw - (int32_t)p_sensor->calibration.white_raw) *
+         IR_DARKNESS_MAX) /
+        span;
+
     if (darkness < 0)
     {
         darkness = 0;
@@ -93,8 +105,14 @@ bool ir_reflectance_update (ir_reflectance_t * p_sensor, uint16_t raw,
     {
         darkness = IR_DARKNESS_MAX;
     }
+    else
+    {
+        /* The normalized result is already in range. */
+    }
 
+    /* The clamp bounds the value to 0..1000 before unsigned conversion. */
     *p_darkness = (uint16_t)darkness;
+
     if (*p_darkness <= p_sensor->calibration.white_limit)
     {
         p_sensor->surface = IR_SURFACE_WHITE;
@@ -103,6 +121,11 @@ bool ir_reflectance_update (ir_reflectance_t * p_sensor, uint16_t raw,
     {
         p_sensor->surface = IR_SURFACE_BLACK;
     }
+    else
+    {
+        /* Between the limits, retain the previous surface classification. */
+    }
+
     return true;
 }
 
