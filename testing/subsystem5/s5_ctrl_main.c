@@ -596,8 +596,15 @@ static void tick (uint16_t barcode, uint16_t left, uint16_t right,
         /* clang-format off */
         g_obstacle.b_is_scan_done = true;
         g_obstacle.scan_us        = g_now;
-        g_obstacle.profile        =
-            (profile_obstacle_t){250, 100, 2000, 2000, 50, -50, 250, true};
+        g_obstacle.profile     = (profile_obstacle_t){
+            .closest_mm = 250U,
+            .width_mm = 100U,
+            .left_clear_mm = 2000U,
+            .right_clear_mm = 2000U,
+            .left_edge_mm = 50,
+            .right_edge_mm = -50,
+            .forward_mm = 250U,
+            .b_is_valid = true};
         g_obstacle.range_mm       = 2000;
         gb_is_scanning_requested  = false;
         /* clang-format on */

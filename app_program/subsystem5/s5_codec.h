@@ -18,7 +18,7 @@ typedef struct
     bool               b_is_scan_done;
 } s5_codec_observation_t;
 
-#define S5_PACKET_BYTES 23U
+#define S5_PACKET_BYTES 26U
 bool s5_codec_observation_pack (const s5_codec_observation_t * p_observation,
                                 uint8_t p_out[S5_PACKET_BYTES]);
 bool s5_codec_observation_unpack (const uint8_t p_in[S5_PACKET_BYTES],

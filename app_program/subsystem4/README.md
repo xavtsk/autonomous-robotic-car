@@ -47,10 +47,16 @@ matching the Buddy 2 configuration).
 For this geometry, the estimated right-wheel elevation relative to the left is
 `track_m * sin(roll) * cos(pitch)`. Positive roll means right side up. A 10 mm
 right-wheel rise with 116 mm spacing produces approximately 4.95 degrees of roll
-when pitch is zero. The detector requires forward wheel travel and a rise followed
-by return to level before counting a hump. Live height is available during the
-crossing; the completed peak is retained afterward. A stationary hand tilt is not
-a completed hump. The pitch-based terrain label can remain "moving" while the
+when pitch is zero. Height uses the median of three quality-checked accelerometer
+roll readings and the filtered pitch. This preserves a short crest seen in two
+consecutive readings while rejecting an isolated roll spike. Telemetry pitch and
+roll retain their usual smoothing. A commanded on-the-spot pivot discards the
+current crossing. After five level readings the detector can start another
+crossing, including during normal forward line steering.
+
+Counting a hump requires forward wheel travel and a return to level after the
+rise. Live height is available during the crossing and the completed peak is
+retained afterward. The pitch-based terrain label can remain "moving" while the
 separate `on_hump` flag and live height report a right-wheel crossing.
 
 The portable monitor defaults to `TERRAIN_HUMP_LONGITUDINAL`, which retains the
@@ -108,7 +114,7 @@ succeed. Press GP20 at the fault prompt or use the dashboard RESET, then issue
 START separately for the next run. The controller retains completed hump
 results for the stopped run.
 
-### Record level pickup tests
+### Record hump and pickup tests
 
 Build with `S4=1 S3_MOTION=1 MQTT=1 IMU_DEBUG=1` and launch
 `tools/robot_dashboard.py` with `--imu-captures` on the car's broker.
@@ -116,6 +122,11 @@ The dashboard saves raw and bias-corrected acceleration at
 the IMU task's sampling cadence. Download each CSV under **Runs → Raw IMU
 captures**. The firmware run token changes when START resets the terrain monitor.
 Samples with the same token can include time after a stop.
+
+For a short hump, inspect `hump_events`, `crossing_travel_um` and
+`hump_rejection_reason` against the accelerometer readings. The `turn_rate`
+reason includes an explicit pivot or a valid compass rate of at least 15 degrees/s.
+Compare its timestamp with the motion commands to identify a commanded pivot.
 
 For a level pickup, check `upward_gate` to see whether the sample satisfied
 either upward-acceleration rule. On consecutive qualifying samples, the detector

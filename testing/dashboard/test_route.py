@@ -149,6 +149,21 @@ class DashboardRouteTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_buddy4_turn_rate_validity_sign_and_source_time(self):
+        self.state.ingest("car/telemetry/state", b"\x03\x01")
+        for seq, (left, right, valid) in enumerate(((0, 116, 1), (116, 0, 1), (-20, -20, 1), (0, 0, 0))):
+            sample_time = (0xffff0000 + 200_000 * seq) & 0xffffffff
+            self.state.ingest(CONTROL_TOPIC, encode_control(
+                timestamp_us=sample_time, motion_timestamp_us=sample_time, sequence=seq, drive_state=1,
+                motion_available=1, motion_valid=valid, measured_left=left, measured_right=right))
+        frames = self.state.debug_snapshot()["controller"]["samples"]
+        expected = [57.3, -57.3, 0.0, None]
+        self.assertEqual([frame["data"]["encoder_turn_dps"] for frame in frames], expected)
+        self.assertEqual([frame["t_ms"] for frame in frames], [0.0, 200.0, 400.0, 600.0])
+        rows = self.state.download_run(self.state.route.current_log_id, buddy=4)["entries"]
+        self.assertEqual([row["data"]["encoder_turn_dps"] for row in rows], expected)
+        self.assertEqual(rows[-1]["data"]["timestamp_us"], frames[-1]["data"]["motion_timestamp_us"])
+
     def test_pose_and_barcode_reach_the_route(self):
         self.state.ingest(POSE_TOPIC, pose_bytes(0, 0))
         self.state.ingest(POSE_TOPIC, pose_bytes(25, 0))

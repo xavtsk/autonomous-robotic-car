@@ -3,6 +3,7 @@ param(
     [ValidateRange(1, 65535)][int]$MqttPort = 1883,
     [ValidateRange(1, 65535)][int]$Port = 8765,
     [switch]$StartBroker,
+    [switch]$ImuCaptures,
     [switch]$Demo
 )
 $ErrorActionPreference = 'Stop'
@@ -42,7 +43,10 @@ try {
     }
     $dashboardArgs = @((Join-Path $PSScriptRoot 'robot_dashboard.py'), '--port', "$Port", '--open')
     if ($Demo) { $dashboardArgs += '--demo' }
-    else { $dashboardArgs += @('--broker', $Broker, '--mqtt-port', "$MqttPort", '--connect') }
+    else {
+        $dashboardArgs += @('--broker', $Broker, '--mqtt-port', "$MqttPort", '--connect')
+        if ($ImuCaptures) { $dashboardArgs += '--imu-captures' }
+    }
     & $python @dashboardArgs
     if ($LASTEXITCODE -ne 0) { throw "Dashboard exited with code $LASTEXITCODE" }
 } finally {

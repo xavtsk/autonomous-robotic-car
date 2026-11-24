@@ -22,7 +22,7 @@ class WidthCheckTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             files = {value[0] for value in widths.STATE_SOURCES.values()}
-            files.add("app_program/subsystem4/terr_data.c")
+            files.update(widths.PACKET_SOURCES)
             for name in files:
                 source = (widths.ROOT / name).read_text(encoding="utf-8")
                 if name == filename:
@@ -40,17 +40,28 @@ class WidthCheckTests(unittest.TestCase):
             lambda text: re.sub(r"(REMOTE_REPLY_SIZE\s+)10U", r"\g<1>12U", text))
         self.assertTrue(any("SIZE" in error for error in errors))
 
-    def test_queue_width_drift_is_detected(self):
-        errors = self.changed_sources(
-            "app_program/subsystem4/buddy4.c",
-            lambda text: re.sub(r"\bhead\s*:\s*3", "head : 4", text, count=1))
-        self.assertTrue(any("head" in error for error in errors))
+    def test_packed_field_width_drift_is_detected(self):
+        for source, field, actual, widened in (
+            ("app_program/subsystem4/buddy4.c", "head", 3, 4),
+            ("app_program/subsystem5/scan_obstacle.h", "b_has_profile", 1, 2),
+        ):
+            with self.subTest(field=field):
+                errors = self.changed_sources(
+                    source, lambda text: re.sub(
+                        rf"\b{field}\s*:\s*{actual}", f"{field} : {widened}", text, count=1))
+                self.assertTrue(any(field in error for error in errors))
 
     def test_omitting_terrain_safety_is_detected(self):
         errors = self.changed_sources(
             "app_program/subsystem4/terr_data.c",
             lambda text: re.sub(r"\bput_bits\s*\([^;]*?->safety\s*,\s*2\s*\);", "", text))
         self.assertTrue(any("terr_data_pack" in error for error in errors))
+
+    def test_scan_face_width_drift_is_detected(self):
+        errors = self.changed_sources(
+            "app_program/subsystem1/telemetry_codec.c",
+            lambda text: re.sub(r"(p_scan->face_width_max_mm,\s*)12U", r"\g<1>11U", text))
+        self.assertTrue(any("buddy1_encode face width" in error for error in errors))
 
 
 if __name__ == "__main__":

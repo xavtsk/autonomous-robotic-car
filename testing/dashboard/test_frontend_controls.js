@@ -69,6 +69,25 @@ async function dashboard(initial = robotState()) {
     }};
 }
 
+test('face width estimate comes only from bounds on the last usable scan', async () => {
+  const state = robotState();
+  const scan = {valid: true, freshness: 'last_report', received_at: '2026-11-23T02:56:20Z',
+    data: {valid: true, width_mm: 209, face_width_min_mm: 123, face_width_max_mm: 177}};
+  state.sections.scan = scan;
+  const ui = await dashboard(state);
+  const rows = () => ui.get('readings-body').children[0].children;
+  const estimate = () => rows().find(row => row.children[0].textContent.includes('estimated face width'))?.children[1].textContent;
+  assert.equal(estimate(), '≈150 mm (123–177 mm)');
+  scan.stale = true;
+  await ui.poll(state);
+  assert.equal(estimate(), 'Unavailable while disconnected');
+  scan.stale = false;
+  delete scan.data.face_width_min_mm;
+  delete scan.data.face_width_max_mm;
+  await ui.poll(state);
+  assert.equal(estimate(), 'No estimate in this scan');
+});
+
 test('run history shows run summaries and keeps downloads in the Buddy sections', async () => {
   const started_at = '2026-11-13T07:34:22Z';
   const runs = [

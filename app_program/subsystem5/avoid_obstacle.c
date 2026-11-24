@@ -808,8 +808,7 @@ static avoid_obstacle_action_t fail_detour (avoid_obstacle_t *     p_detour,
  * gap between the sensor line and the obstacle edge, not the whole offset. */
 static unsigned pass_extra_mm (const avoid_obstacle_t * p_detour)
 {
-    const unsigned pad =
-        p_detour->config.half_width_mm + p_detour->config.margin_mm;
+    const unsigned pad = s5_outward_gap_mm(&p_detour->config);
     const unsigned edge =
         p_detour->plan.offset_mm > pad ? p_detour->plan.offset_mm - pad : 0U;
     const unsigned gap =
@@ -854,8 +853,7 @@ static unsigned diagonal_mm (unsigned offset_mm)
 static unsigned diagonal_short (const avoid_obstacle_t * p_detour,
                                 unsigned                 offset_mm)
 {
-    const unsigned pad =
-        p_detour->config.half_width_mm + p_detour->config.margin_mm;
+    const unsigned pad  = s5_outward_gap_mm(&p_detour->config);
     const unsigned edge = offset_mm > pad ? offset_mm - pad : 0U;
     const unsigned face = p_detour->plan.closest_mm + S5_SONAR_AXLE_MM;
     const unsigned corner =
@@ -1021,10 +1019,11 @@ static avoid_obstacle_action_t peek_result (avoid_obstacle_t * p_detour,
          * margin from the sensor line)? If not, turn away, then peek again. */
         const unsigned pad =
             p_detour->config.half_width_mm + p_detour->config.margin_mm;
-        const unsigned gap  = (side * 966U) / 1000U;
-        const unsigned edge = p_detour->plan.offset_mm > pad
-                                  ? p_detour->plan.offset_mm - pad
-                                  : 0U;
+        const unsigned gap         = (side * 966U) / 1000U;
+        const unsigned planned_gap = s5_outward_gap_mm(&p_detour->config);
+        const unsigned offset_mm   = p_detour->plan.offset_mm;
+        const unsigned edge =
+            (offset_mm > planned_gap) ? (offset_mm - planned_gap) : 0U;
         /* Measured distance from the original line now (obstacle edge + gap):
          * catches a car that drifted away while passing (left a bend crooked).
          */

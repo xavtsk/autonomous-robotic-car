@@ -1,0 +1,248 @@
+{
+  "date": "2026-11-24",
+  "purpose": "Cortex-M0+ native allocation and member widths for the course firmware storage cleanup. Packet bit counts and whole-image RAM are reported separately.",
+  "before": {
+    "pushed_base": "8bc969c43eec984f92f13e2a6a5e74e0e004054b",
+    "working_tree_patch_sha256": "59481d32c7afaf57bed64155f79e966d3908f271b4669ab1471e0bef6f9c5b4c",
+    "description": "Course features present, immediately before the minimum-bit cleanup. The patch fingerprint identifies the captured working tree from this comparison."
+  },
+  "compiler": "arm-none-eabi-gcc.exe (Arm GNU Toolchain 14.3.Rel1 (Build arm-14.174)) 14.3.1 20250623",
+  "method": {
+    "probe_source": [
+      "#include \"app_program/subsystem1/telemetry_codec.h\"",
+      "#include \"app_program/subsystem4/terr_data.h\"",
+      "#include \"app_program/subsystem5/scan_obstacle.h\"",
+      "terr_data_odometry_t keep_terr_data_odometry_t;",
+      "terr_data_monitor_t keep_terr_data_monitor_t;",
+      "scan_obstacle_t keep_scan_obstacle_t;",
+      "profile_obstacle_t keep_profile_obstacle_t;",
+      "telemetry_codec_scan_t keep_telemetry_codec_scan_t;"
+    ],
+    "commands": [
+      "arm-none-eabi-gcc -std=gnu11 -mcpu=cortex-m0plus -mthumb -mfloat-abi=soft -ffreestanding -O2 -g -gdwarf-5 -DAPP_S4=1 -DAPP_S5=1 -DAPP_IMU_DEBUG=<0 or 1> -I <source-root> -c course-records.c -o course-records.o",
+      "arm-none-eabi-readelf --debug-dump=info course-records.o"
+    ],
+    "interpretation": "Record bytes are DW_AT_byte_size on the typedef target. Bit fields use DW_AT_bit_size; other members use their declared type size, multiplied by the element count for arrays."
+  },
+  "records": {
+    "telemetry_codec_scan_t": {
+      "sizeof_bytes": {
+        "IMU_DEBUG=0": {
+          "before": 20,
+          "after": 20
+        },
+        "IMU_DEBUG=1": {
+          "before": 20,
+          "after": 20
+        }
+      },
+      "members": {
+        "face_width_min_mm": {
+          "before_bits": 16,
+          "after_bits": 16
+        },
+        "face_width_max_mm": {
+          "before_bits": 16,
+          "after_bits": 16
+        }
+      }
+    },
+    "terr_data_odometry_t": {
+      "sizeof_bytes": {
+        "IMU_DEBUG=0": {
+          "before": 16,
+          "after": 16
+        },
+        "IMU_DEBUG=1": {
+          "before": 16,
+          "after": 16
+        }
+      },
+      "members": {
+        "b_is_valid": {
+          "before_bits": 8,
+          "after_bits": 1
+        },
+        "b_is_stationary": {
+          "before_bits": 8,
+          "after_bits": 1
+        },
+        "b_is_pivoting": {
+          "before_bits": 8,
+          "after_bits": 1
+        }
+      }
+    },
+    "terr_data_monitor_t": {
+      "sizeof_bytes": {
+        "IMU_DEBUG=0": {
+          "before": 216,
+          "after": 208
+        },
+        "IMU_DEBUG=1": {
+          "before": 232,
+          "after": 224
+        }
+      },
+      "members": {
+        "right_roll_deg": {
+          "before_bits": 64,
+          "after_bits": 64
+        },
+        "stable_count": {
+          "before_bits": 32,
+          "after_bits": 2
+        },
+        "b_has_imu_sample": {
+          "before_bits": 8,
+          "after_bits": 1
+        },
+        "b_has_right_roll": {
+          "before_bits": 8,
+          "after_bits": 1
+        },
+        "b_has_terrain_odometry": {
+          "before_bits": 8,
+          "after_bits": 1
+        },
+        "b_has_seen_heading": {
+          "before_bits": 8,
+          "after_bits": 1
+        },
+        "b_is_magnetic_calibrated": {
+          "before_bits": 8,
+          "after_bits": 1
+        },
+        "b_is_safety_tracking": {
+          "before_bits": 8,
+          "after_bits": 1
+        },
+        "b_is_moving_upward": {
+          "before_bits": 8,
+          "after_bits": 1,
+          "only_if": "APP_IMU_DEBUG=1"
+        },
+        "b_has_lift_tilt": {
+          "before_bits": 8,
+          "after_bits": 1,
+          "only_if": "APP_IMU_DEBUG=1"
+        }
+      }
+    },
+    "profile_obstacle_t": {
+      "sizeof_bytes": {
+        "IMU_DEBUG=0": {
+          "before": 20,
+          "after": 20
+        },
+        "IMU_DEBUG=1": {
+          "before": 20,
+          "after": 20
+        }
+      },
+      "members": {
+        "face_width_min_mm": {
+          "before_bits": 16,
+          "after_bits": 16
+        },
+        "face_width_max_mm": {
+          "before_bits": 16,
+          "after_bits": 16
+        }
+      }
+    },
+    "scan_obstacle_t": {
+      "sizeof_bytes": {
+        "IMU_DEBUG=0": {
+          "before": 60,
+          "after": 60
+        },
+        "IMU_DEBUG=1": {
+          "before": 60,
+          "after": 60
+        }
+      },
+      "members": {
+        "count": {
+          "before_bits": 5,
+          "after_bits": 5
+        },
+        "width_probe": {
+          "before_bits": 3,
+          "after_bits": 3
+        },
+        "b_has_profile": {
+          "before_bits": 5,
+          "after_bits": 1,
+          "before_member": "profile_count",
+          "encoding": "The scan task stores completion. The completed profile length is derived from the frozen nearest coarse bearing."
+        }
+      }
+    }
+  },
+  "header_sha256": {
+    "before": {
+      "app_program/subsystem1/telemetry_codec.h": "e1a08f5c9b4369eb3a9048191531dbc96c9248c68bf1919e30c993eae66937c6",
+      "app_program/subsystem4/terr_data.h": "2c0ae7144772cb635826dfc870f9ad137bb15afecc04f7d9900c55a421b855b8",
+      "app_program/subsystem5/scan_obstacle.h": "1d506f530bb3c39504ae4dfacf696a83b5ea5d7c15b7fa624c3d9f2108838bda",
+      "app_program/subsystem5/profile_obstacle.h": "fbf4a52d8f1ae9686ea7052dfd1407ace3423a3731ece4c0b9a73cae6b5897cc"
+    },
+    "after": {
+      "app_program/subsystem1/telemetry_codec.h": "817649f3787614c757e2a66858ff1e34eae9e5c1f42cdaeb5af8793822fa5cf1",
+      "app_program/subsystem4/terr_data.h": "21585c75ab828230ea288bb3133613d89b5d45c518ad5f3683f56b01a8abcd1e",
+      "app_program/subsystem5/scan_obstacle.h": "1ee068980b226ba59c1ff7c980fd9f1756e1ebfc745119ff2bd6340ac757fafe",
+      "app_program/subsystem5/profile_obstacle.h": "bff124675a8e7efa375a6ba524b1266b7548df5f652e7ca81396355a2856cfb1"
+    }
+  },
+  "matched_course_builds": {
+    "profile": "SMP=1 CONSOLE=usb_cdc CRASH_REPORT=0 WIFI=cyw43 NET=lwip MQTT=1 S3_MOTION=1 S3_STRAIGHT_TEST=0 S4=1 S4_BENCH=0 S5=1 S5_HARDWARE_CONFIRMED=1 IR_DEBUG=1 IMU_DEBUG=1 TEST=0 IR_BENCH=0 IR_CHANNELS=1 DIAGNOSTICS=0 MOTION_SMOKE=0",
+    "compiler": "Arm GNU 14.3.1",
+    "sdk_commit": "98a542c1a62fb549ffb5d66a3e5892b06276b670",
+    "network_configuration": "config/wifi_secrets.example.h copied to config/wifi_secrets.h in the isolated build",
+    "candidate_c_and_headers_git_diff_HEAD_binary_sha256": "196f834f53ef0b8ac4b0b69a85d23197a93b91415f4d8982c9f7926cad1b2d6f",
+    "units": "Bytes from arm-none-eabi-size -A. Static RAM is vector + .data + .bss. GNU text is the text column from arm-none-eabi-size.",
+    "images": {
+      "pushed": {
+        "elf_sha256": "6035f719768e1ea62656f36060ee00be36a9cecf050774b5470e40c28627cfbd",
+        "gnu_text": 467812,
+        "vector": 192,
+        ".data": 696,
+        ".bss": 133304,
+        "static_ram": 134192
+      },
+      "before": {
+        "elf_sha256": "179f48d23a7dda7a698c01950a82b68bd5a1356745667b9b727506ddb390dcb1",
+        "gnu_text": 470048,
+        "vector": 192,
+        ".data": 696,
+        ".bss": 133316,
+        "static_ram": 134204
+      },
+      "candidate": {
+        "elf_sha256": "163f2966a7ac3dadf1ec532b039df4f7bbd576e214d00c5142e1daefca5bb860",
+        "gnu_text": 470296,
+        "vector": 192,
+        ".data": 696,
+        ".bss": 133316,
+        "static_ram": 134204
+      }
+    }
+  },
+  "host_comparison": {
+    "command": "make -C testing/subsystem<N> test CC=gcc-13 PYTHON=python3 BUILD=/tmp/buddy<N> for N = 1, 4, 5",
+    "comparison": "Pre-cleanup working tree and candidate in identical read-only source mounts and the same network-disabled local Linux image.",
+    "suites_passed": [
+      1,
+      4,
+      5
+    ],
+    "python_laptop_codec_tests": 12,
+    "matching_output_lines": 416,
+    "packet_vector_lines": 42,
+    "distinct_packet_vector_lines": 14,
+    "normalization": "LF, with only the unittest elapsed-time value replaced by <elapsed>. Output order retained.",
+    "normalized_output_sha256": "d41ae4443d057fa52be4d2a4ce76da0caa2fd456e754abd352bafbd9e976c893",
+    "packet_vector_output_sha256": "a3e1e45c7b0443787b8519aba3374c4b2d66efe2e414d58056044e1312332fa1",
+    "known_result": "The optional Buddy 5 run with turns 10% short reports the existing simulated miss in both runs. All required scenarios passed."
+  }
+}

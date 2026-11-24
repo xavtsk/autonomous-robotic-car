@@ -22,8 +22,14 @@
         controller('Signed motor duty',[series('Left','duty_left','target'),series('Right','duty_right')],'%',d=>d.motion_valid,[-100,100])];
     }
     if(buddy==='3') return [controller('Line-position error',[series('Error','line_error')],'±100',d=>d.line_flags&1,[-100,100])];
-    if(buddy==='4') return [{...report('Pitch and roll','terrain',[series('Pitch','pitch_deg'),series('Roll','roll_deg','target')],'°',[-45,45]),clock:'Laptop receive time · 5 Hz terrain reports; gaps = tilt unavailable'},{...report('Hump height','terrain',[series('Climb on current hump','climb_mm'),series('Highest this run','peak_mm','target')],'mm',[0,100]),clock:'Laptop receive time · 5 Hz terrain reports; gaps = not on a hump / no hump yet'},report('Heading reports','heading',[series('Heading','heading_deg')],'°',[0,360]),report('Reported hump height','hump',[series('Height','height_mm')],'mm',null,true)];
-    return [{...report('Front range','avoidance',[series('Range','range_mm')],'mm',[0,1500]),clock:'Laptop receive time · 5 Hz avoidance reports; gaps = no echo / unavailable'},{...report('Servo angle','avoidance',[series('Commanded angle','servo_deg')],'°',[0,180]),clock:'Laptop receive time · last commanded angle, 90° = straight ahead'},report('Clearance per scan','scan',[series('Left','left_clear_mm'),series('Right','right_clear_mm','target')],'mm',null,true),report('Obstacle distance reports','obstacle',[series('Distance','distance_mm')],'mm',null,true),report('Obstacle width reports','obstacle',[series('Width','width_mm')],'mm',null,true)];
+    if(buddy==='4') return [
+      controller('Turning rate from wheel encoders',[series('Estimated yaw (+ left)','encoder_turn_dps')],'°/s',d=>d.motion_valid),
+      {...report('Turning rate from compass','terrain',[series('Compass (+ left)','turn_dps')],'°/s'),valid:d=>d.turn_valid,clock:'Laptop receive time · requires calibrated, valid compass readings'},
+      {...report('Pitch and roll','terrain',[series('Pitch','pitch_deg'),series('Roll','roll_deg','target')],'°',[-45,45]),clock:'Laptop receive time · 5 Hz terrain reports; gaps = tilt unavailable'},
+      {...report('Hump height','terrain',[series('Climb on current hump','climb_mm'),series('Highest this run','peak_mm','target')],'mm',[0,100]),clock:'Laptop receive time · 5 Hz terrain reports; gaps = not on a hump / no hump yet'},
+      report('Heading reports','heading',[series('Heading','heading_deg')],'°',[0,360]),
+      report('Reported hump height','hump',[series('Height','height_mm')],'mm',null,true)];
+    return [{...report('Front range','avoidance',[series('Range','range_mm')],'mm',[0,1500]),clock:'Laptop receive time · 5 Hz avoidance reports; gaps = no echo / unavailable'},{...report('Servo angle','avoidance',[series('Commanded angle','servo_deg')],'°',[0,180]),clock:'Laptop receive time · last commanded angle, 90° = straight ahead'},report('Clearance per scan','scan',[series('Left','left_clear_mm'),series('Right','right_clear_mm','target')],'mm',null,true),report('Obstacle distance reports','obstacle',[series('Distance','distance_mm')],'mm',null,true),report('Padded planning width','obstacle',[series('Padded width','width_mm')],'mm',null,true)];
   }
   function layout(defs) {
     const key=buddy+':'+defs.map(d=>d.title).join('|');
@@ -100,7 +106,7 @@
       const name=['Barcode','Left','Right'][d.cal_sensor];
       target.append(make('p',`${d.collecting?'Collecting':'Last collection'} · ${name}: white ${d.white_count?`${d.white_min}–${d.white_max}`:'not sampled'} (n=${d.white_count}), black ${d.black_count?`${d.black_min}–${d.black_max}`:'not sampled'} (n=${d.black_count}). Active references are not the full observed ranges.`, 'buddy-chart-note'));
       target.append(make('p','Line error: negative = line left, positive = line right. Both white can be normal in the current between-sensors mounting. Diagnostic states are sampled at 5 Hz; event counters preserve brief events but are not exact event timestamps.', 'buddy-chart-note'));
-    }else if(buddy==='4')target.append(make('p','Raw acceleration / gyro and calibration diagnostics: not published. Hump height is shown as individual reports, not a continuous height signal. Pitch/roll beyond ±45° is clipped on this chart only; the readings table shows the reported value.', 'future-signal'));
+    }else if(buddy==='4')target.append(make('p','Wheel turning rate uses the measured right speed minus the left speed and a 116 mm wheel spacing. Wheel slip can affect the estimate. The Buddy 4 run CSV includes timestamped rates. The compass series appears when magnetic calibration and valid reports are available.', 'buddy-chart-note'));
     else target.append(make('p','Raw scan readings (distance at each angle) are listed in the Buddy 5 table (car/telemetry/scan_sample). Original-line confirmation: not published. The servo angle is the last commanded angle. Gaps in the range graph are no-echo or unavailable readings, never drawn as 0 mm; no-echo also appears in the fault table.', 'future-signal'));
   }
   function draw(){
@@ -114,7 +120,8 @@
       if(control?.stale)status.classList.add('warning-text');
     }else {
       const disconnected=state?.connection?.status!=='connected';
-      status.textContent=`${data?.mode==='demo'?'SIMULATED · ':''}${disconnected?'Broker disconnected · ':''}Laptop receive-time histories · no cached snapshot points${paused?' · graphs paused':''}`;
+      const clocks=buddy==='4'?'Encoder graph uses MCU time · terrain reports use laptop receive time':'Laptop receive-time histories · no cached snapshot points';
+      status.textContent=`${data?.mode==='demo'?'SIMULATED · ':''}${disconnected?'Broker disconnected · ':''}${clocks}${paused?' · graphs paused':''}`;
       if(disconnected)status.classList.add('warning-text');
     }
   }

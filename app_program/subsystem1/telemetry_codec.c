@@ -66,6 +66,22 @@ unsigned telemetry_codec_payload_size (uint8_t topic)
                : 0U;
 }
 
+/** @brief Include the two 12-bit face-width bounds when sizing a v4 scan.
+ * @see telemetry_codec.h for supported selectors and failure behaviour.
+ */
+unsigned telemetry_codec_version_size (uint8_t topic, uint8_t version)
+{
+    const unsigned wire_version = version;
+    if ((BUDDY1_TOPIC_SCAN == topic) &&
+        (BUDDY1_SCAN_FACE_VERSION == wire_version))
+    {
+        return telemetry_codec_payload_size(topic) + 3U;
+    }
+    return (BUDDY1_WIRE_VERSION == wire_version)
+               ? telemetry_codec_payload_size(topic)
+               : 0U;
+}
+
 /** @brief Look up the meaningful body bit count without version or padding.
  * @see telemetry_codec.h for the unknown-selector return value.
  */
@@ -96,10 +112,15 @@ unsigned buddy1_encode (uint8_t                            topic,
                         const telemetry_codec_snapshot_t * p_value,
                         uint8_t * p_packet, unsigned capacity)
 {
-    unsigned       bit = 0;
-    unsigned       index;
-    unsigned       flags;
-    const unsigned length = telemetry_codec_payload_size(topic);
+    unsigned      bit = 0;
+    unsigned      index;
+    unsigned      flags;
+    const uint8_t version =
+        (((BUDDY1_TOPIC_SCAN == topic) && (0 != p_value)) &&
+         (p_value->scan.face_width_min_mm || p_value->scan.face_width_max_mm))
+            ? BUDDY1_SCAN_FACE_VERSION
+            : BUDDY1_WIRE_VERSION;
+    const unsigned length = telemetry_codec_version_size(topic, version);
 
     if (((((0 == p_value) || (0 == p_packet)) || (0U == length)) ||
          (capacity < length)) ||
@@ -113,7 +134,7 @@ unsigned buddy1_encode (uint8_t                            topic,
         p_packet[index] = 0;
     }
 
-    p_packet[0] = BUDDY1_WIRE_VERSION;
+    p_packet[0] = version;
 
     switch (topic)
     {
@@ -176,6 +197,22 @@ unsigned buddy1_encode (uint8_t                            topic,
     break;
     }
 
+    /* The version byte widens exactly for comparison with wire constants. */
+    if (BUDDY1_SCAN_FACE_VERSION == (unsigned)version)
+    {
+        const telemetry_codec_scan_t * p_scan   = &p_value->scan;
+        const unsigned                 upper_mm = p_scan->face_width_max_mm;
+        const unsigned                 lower_mm = p_scan->face_width_min_mm;
+        if (((!p_scan->valid) || (upper_mm > 4095U)) || (lower_mm > upper_mm))
+        {
+            return 0;
+        }
+        /* The extension starts after the base scan's reserved padding bit. */
+        uint8_t * p_bounds = p_packet + telemetry_codec_payload_size(topic);
+        bit                = 0U;
+        write_bits(p_bounds, &bit, p_scan->face_width_min_mm, 12U);
+        write_bits(p_bounds, &bit, p_scan->face_width_max_mm, 12U);
+    }
     return length;
 }
 
@@ -202,19 +239,22 @@ int buddy1_decode (uint8_t topic, const uint8_t * p_packet, unsigned length,
     unsigned                   topic_index;
     unsigned                   flags;
 
-    if ((((((0 == p_packet) || (0 == p_out)) ||
-           ((int)topic >= BUDDY1_TOPIC_COUNT)) ||
-          (BUDDY1_TOPIC_MAP_REPLY == (int)topic)) ||
-         (length != telemetry_codec_payload_size(topic))) ||
-        (p_packet[0] != BUDDY1_WIRE_VERSION))
+    if (((0 == p_packet) || (0 == p_out)) || (0U == length))
     {
         return 0;
     }
 
-    const unsigned remainder = g_body_bits[topic] % 8U;
+    if ((BUDDY1_TOPIC_MAP_REPLY == topic) ||
+        (length != telemetry_codec_version_size(topic, p_packet[0])))
+    {
+        return 0;
+    }
 
-    if (remainder &&
-        (((unsigned int)(p_packet[length - 1U] >> remainder)) != 0U))
+    /* Widen wire bytes (0..255) before unsigned arithmetic and shifting. */
+    const unsigned remainder = (unsigned)g_body_bits[topic] % 8U;
+    if ((0U != remainder) &&
+        (0U != ((unsigned)p_packet[telemetry_codec_payload_size(topic) - 1U] >>
+                remainder)))
     {
         return 0;
     }
@@ -301,6 +341,23 @@ int buddy1_decode (uint8_t topic, const uint8_t * p_packet, unsigned length,
     break;
     }
 
+    /* An unsigned conversion preserves every possible wire version byte. */
+    if (BUDDY1_SCAN_FACE_VERSION == (unsigned)p_packet[0])
+    {
+        const uint8_t * p_bounds =
+            p_packet + telemetry_codec_payload_size(topic);
+        bit = 0U;
+        /* Each 12-bit read is in 0..4095 and fits its uint16_t result. */
+        decoded.scan.face_width_min_mm =
+            (uint16_t)read_bits(p_bounds, &bit, 12U);
+        decoded.scan.face_width_max_mm =
+            (uint16_t)read_bits(p_bounds, &bit, 12U);
+        if (((!decoded.scan.valid) || (!decoded.scan.face_width_max_mm)) ||
+            (decoded.scan.face_width_min_mm > decoded.scan.face_width_max_mm))
+        {
+            return 0;
+        }
+    }
     *p_out = decoded;
     return 1;
 }
@@ -738,7 +795,7 @@ static int write_fields (uint8_t                            topic,
         write_bits(p_body, p_bit, p_scan->left_clear_mm, 12);
         write_bits(p_body, p_bit, p_scan->right_clear_mm, 12);
         write_bits(p_body, p_bit, p_scan->forward_mm, 12);
-        /* Checked signed edges are ±4000 mm. Adding the bias gives
+        /* Checked signed edges are Ã‚Â±4000 mm. Adding the bias gives
          * unsigned codes from 0 to 8000, which fit thirteen bits. */
         write_bits(p_body, p_bit,
                    (uint32_t)(p_scan->left_edge_mm + BUDDY1_SCAN_EDGE_MAX_MM),

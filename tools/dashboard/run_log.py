@@ -5,6 +5,7 @@ import json
 import sqlite3
 import time
 
+from .control_protocol import encoder_turn_rate
 
 MAX_RUN_LOGS = 20
 MAX_ENTRIES_PER_STREAM = 1200
@@ -183,9 +184,24 @@ class RunLog:
                     raise KeyError(run_id)
                 filters = "run_id=?" if buddy is None else "run_id=? AND buddy=?"
                 params = (run_id,) if buddy is None else (run_id, buddy)
+                # Earlier firmware sessions kept timestamped wheel feedback in Buddy 2.
+                # Derive the corresponding Buddy 4 CSV rows at the archived cadence.
+                if buddy == 4 and not db.execute(
+                    "SELECT 1 FROM run_entries WHERE run_id=? AND buddy=4 AND kind='encoder_turn' LIMIT 1",
+                    (run_id,),
+                ).fetchone():
+                    filters = "run_id=? AND (buddy=? OR (buddy=2 AND kind='motor_feedback'))"
                 entries = [dict(entry, data=json.loads(entry["data"])) for entry in db.execute(
                     f"""SELECT buddy, kind, received_at, data FROM run_entries
                         WHERE {filters} ORDER BY sequence""", params)]
+                if buddy == 4:
+                    for entry in entries:
+                        if entry["buddy"] == 2:
+                            wheels = entry["data"]
+                            left, right = wheels.get("measured_left"), wheels.get("measured_right")
+                            rate = encoder_turn_rate(left, right) if None not in (left, right) else None
+                            entry.update(buddy=4, kind="encoder_turn", data=dict(
+                                timestamp_us=wheels.get("timestamp_us"), encoder_turn_dps=rate))
                 drops = db.execute("SELECT count FROM run_entry_drops WHERE run_id=?", (run_id,)).fetchone()
         except sqlite3.Error as exc:
             raise OSError(f"Could not read the run archive. {exc}") from exc

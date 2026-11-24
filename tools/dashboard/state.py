@@ -10,7 +10,8 @@ import math
 from buddy1_mqtt_codec import NAMES, WIDTHS, VERSION, SNAPSHOT_BYTES, decode, encode_map
 from .ir_protocol import IRBuffer, IR_TOPIC, decode_ir, encode_ir
 from .control_protocol import (TOPIC as CONTROL_TOPIC, ACTIONS, BARCODE_STATUS, DRIVE_STATES,
-                               MOTION_FAULTS, MOTION_STATES, REASONS, decode_control, encode_control)
+                               MOTION_FAULTS, MOTION_STATES, REASONS, decode_control, encode_control,
+                               encoder_turn_rate)
 from .debug_history import DebugHistory
 from .imu_capture import ImuCaptures, TOPIC as IMU_TOPIC, decode_imu
 from .route import ACTIVE_STATES, RouteTracker
@@ -141,6 +142,11 @@ class DashboardState:
                           pending=ACTIONS[d["pending"]], barcode_status=BARCODE_STATUS[d["barcode_status"]],
                           timestamp_us=frame["timestamp_us"])
         self._log_run(3, "navigation", navigation, received_at, final=final)
+        # Keep every accepted controller preview for Buddy 4, including unavailable
+        # feedback. The wheel snapshot and controller preview have distinct timestamps.
+        turning = dict(timestamp_us=d["motion_timestamp_us"] if d["motion_available"] else None,
+                       preview_timestamp_us=frame["timestamp_us"], encoder_turn_dps=d["encoder_turn_dps"])
+        self._log_run(4, "encoder_turn", turning, received_at)
         if d["motion_available"] and d["motion_valid"]:
             motion = {key: d[key] for key in ("setpoint_left", "setpoint_right", "measured_left",
                       "measured_right", "duty_left", "duty_right", "encoder_left", "encoder_right")}
@@ -301,12 +307,14 @@ class DashboardState:
                     self.counters["malformed"] += 1
                     self.add_event(3,"warning",str(exc))
                     return
+                d = frame["data"]
+                d["encoder_turn_dps"] = (encoder_turn_rate(d["measured_left"], d["measured_right"])
+                                         if d["motion_valid"] else None)
                 if self.debug.controller.add(frame):
                     self.last_car = self.clock()
                     self.counters["received"] += 1
                     self.counters["bytes_received"] += len(payload)
                     self.debug.receive(len(payload))
-                    d = frame["data"]
                     self._run_sample = d
                     self._run_sample_mono = self.clock()
                     self._run_sample_serial += 1
@@ -412,9 +420,13 @@ class DashboardState:
                                               hex=payload.hex(), decoded=decoded))
                 if topic == SCAN_TOPIC:
                     if decoded["valid"]:
+                        face = ""
+                        if "face_width_max_mm" in decoded:
+                            face = (f"estimated face width {decoded['face_width_min_mm']}–"
+                                    f"{decoded['face_width_max_mm']} mm, ")
                         self.add_event(5, "info", (
                             f"Buddy 5 scan {decoded['scan_id']}: closest {decoded['closest_mm']} mm, "
-                            f"width {decoded['width_mm']} mm, clearance L {decoded['left_clear_mm']} / "
+                            f"{face}padded planning width {decoded['width_mm']} mm, clearance L {decoded['left_clear_mm']} / "
                             f"R {decoded['right_clear_mm']} mm"))
                     else:
                         self.add_event(5, "warning", f"Buddy 5 scan {decoded['scan_id']}: no valid profile")

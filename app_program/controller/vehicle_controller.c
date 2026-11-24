@@ -217,14 +217,16 @@ obstacle_profile_report (const s5_codec_observation_t * p_observation)
 
     if (p_profile->b_is_valid)
     {
-        report.valid          = 1U;
-        report.closest_mm     = p_profile->closest_mm;
-        report.width_mm       = p_profile->width_mm;
-        report.left_clear_mm  = p_profile->left_clear_mm;
-        report.right_clear_mm = p_profile->right_clear_mm;
-        report.forward_mm     = p_profile->forward_mm;
-        report.left_edge_mm   = p_profile->left_edge_mm;
-        report.right_edge_mm  = p_profile->right_edge_mm;
+        report.valid             = 1U;
+        report.closest_mm        = p_profile->closest_mm;
+        report.width_mm          = p_profile->width_mm;
+        report.left_clear_mm     = p_profile->left_clear_mm;
+        report.right_clear_mm    = p_profile->right_clear_mm;
+        report.forward_mm        = p_profile->forward_mm;
+        report.left_edge_mm      = p_profile->left_edge_mm;
+        report.right_edge_mm     = p_profile->right_edge_mm;
+        report.face_width_min_mm = p_profile->face_width_min_mm;
+        report.face_width_max_mm = p_profile->face_width_max_mm;
     }
 
     ER value_er = buddy1_report_scan(&report);

@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #define BUDDY1_WIRE_VERSION 3U
+#define BUDDY1_SCAN_FACE_VERSION 4U
 #define BUDDY1_PAYLOAD_MAX                                                     \
     17U /* The version and 124-bit snapshot fit in 17 bytes. */
 #define BUDDY1_HUMP_HEIGHT_MAX_MM 500U
@@ -144,7 +145,9 @@ typedef struct
     uint16_t right_clear_mm; /* 0..4000 */
     uint16_t forward_mm;     /* The far face is 0 to 4000 mm away. */
     int16_t  left_edge_mm;
-    int16_t  right_edge_mm; /* -4000..4000                     */
+    int16_t  right_edge_mm;     /* -4000..4000                     */
+    uint16_t face_width_min_mm; /* Bracketed face width, 0..4095 mm. */
+    uint16_t face_width_max_mm; /* Both zero when the sweep lacks an edge. */
 } telemetry_codec_scan_t;
 
 /* One live Buddy 4 report. Unavailable values are sent as zero. */
@@ -217,12 +220,18 @@ typedef struct
     telemetry_codec_scan_sample_t scan_sample;
 } telemetry_codec_snapshot_t;
 
-/** @brief Return the complete wire length for a topic selector.
+/** @brief Return the version 3 wire length for a topic selector.
  * @param[in] topic Selector in 0..BUDDY1_TOPIC_COUNT-1.
  * @return Version byte plus rounded-up body bytes, or zero for an unknown
  * selector. MAP_REPLY has a size although buddy1_encode does not build it.
  */
 unsigned telemetry_codec_payload_size (uint8_t topic);
+/** @brief Return the encoded length for a topic and wire version.
+ * @param[in] topic Telemetry layout selector.
+ * @param[in] version Wire version byte. Version 4 extends only scan packets.
+ * @return Total bytes including the version, or zero for an unknown pair.
+ */
+unsigned telemetry_codec_version_size (uint8_t topic, uint8_t version);
 /** @brief Return the meaningful body width, excluding version and padding.
  * @param[in] topic Selector in 0..BUDDY1_TOPIC_COUNT-1.
  * @return Body bits for that layout, or zero for an unknown selector.
@@ -241,7 +250,7 @@ const char * telemetry_codec_topic_name (uint8_t topic);
  * @param[in] p_value Stable decoded fields in the units described below.
  * @param[out] p_packet Caller-owned storage of at least capacity bytes.
  * @param[in] capacity Writable byte count; at least
- * telemetry_codec_payload_size(topic).
+ * telemetry_codec_version_size(topic, version).
  * @return Packet length on success, or zero for nulls, unsupported topic,
  * insufficient capacity or invalid selected fields.
  * @details Null/topic/capacity failures leave the packet unchanged. After
@@ -252,7 +261,8 @@ const char * telemetry_codec_topic_name (uint8_t topic);
  * stable and owns output exclusively; no locking, allocation or retention
  * of caller pointers is performed.
  * @par Layout and validity
- * Byte zero is BUDDY1_WIRE_VERSION. Body fields and bytes are low bit first;
+ * Byte zero is BUDDY1_WIRE_VERSION for the base layout. A scan with
+ * bracketed face edges uses BUDDY1_SCAN_FACE_VERSION. Fields are low bit first;
  * unused high bits are zero. Single-section topics encode their fields even
  * if the corresponding top-level validity flag is zero. SNAPSHOT selects the
  * original seven sections plus pose using nonzero validity flags; absent
@@ -286,8 +296,8 @@ unsigned buddy1_encode (uint8_t                            topic,
 /** @brief Decode one canonical telemetry payload into a fresh decoded view.
  * @param[in] topic Known selector other than BUDDY1_TOPIC_MAP_REPLY.
  * @param[in] p_packet Stable readable packet containing length bytes.
- * @param[in] length Exact telemetry_codec_payload_size(topic), including
- * version.
+ * @param[in] length Exact telemetry_codec_version_size for the topic and
+ * version byte.
  * @param[out] p_out Caller-owned snapshot; unchanged on every failure.
  * @return One after assigning the complete decoded view; zero for nulls,
  * unsupported topic, wrong length/version, nonzero padding or invalid fields.

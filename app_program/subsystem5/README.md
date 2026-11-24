@@ -58,7 +58,7 @@ Controller     <- motion proposal <-------------+
 - The existing `s3_drive` controller is still the ONLY motion requester and
   report consumer. The pure S5 state machine returns proposals, and the
   controller authorises the corresponding Buddy 2 commands.
-- Source-timed observations cross the task boundary as a 23-byte packet under
+- Source-timed observations cross the task boundary as a 26-byte packet under
   one priority-inheritance mutex. Scan requests use one identified token;
   cancellation takes precedence. No new unbounded queues or application heap.
 - Buddy 3 remains the IR owner. Its normal action generation is suppressed during
@@ -78,6 +78,19 @@ The profile reports nearest return, estimated forward extent, left/right
 clearance and a conservative lateral obstacle envelope. Angular/beam uncertainty
 inflates the observed lateral extent. This is not an exact measurement of an
 obstacle's physical width or proof that every surface reflects ultrasound.
+
+For a target seen straight ahead, the stopped car also samples bearings
+35° and 45° on each side when needed. These up to four additional readings
+use spare scan slots and typically take about one extra second. Routing uses
+the original sweep. From a full scan, telemetry estimates the width of a flat
+face square to the car using the last matching return and first clear bearing
+on each side. It allows a 15° half-beam and 5% variation in front-face depth.
+If either side lacks a clear bearing or the returns disagree, the width
+estimate is unavailable. The conservative planning width still has beam padding.
+
+The outbound 45° diagonal adds 5 mm of lateral clearance. On the November 23
+scan with a left edge at 103 mm, the diagonal is 285 mm (previously 278 mm).
+The planned distance after the side peek clears is 217 mm (previously 214 mm).
 
 ## Route and recovery limits — physical tuning required
 
@@ -233,7 +246,7 @@ changed-mask update. Invalid profiles invalidate the cached obstacle section.
 The full clearance/profile details and source timestamps are available through
 `s5_api_snapshot()`. The controller uses `s5_api_read_snapshot()` to
 separate a busy snapshot mutex from unavailable/corrupt data. Only BUSY may reuse
-its owner-local 23-byte packed cache, for at most 250 ms since a successful read.
+its owner-local 26-byte packed cache, for at most 250 ms since a successful read.
 Original source timestamps stay unchanged, so moving range data must also pass
 its existing 250 ms source-age check. A fresh invalid/no-echo observation replaces
 the old cache and still stops motion; unavailable/corrupt data never falls back.

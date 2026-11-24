@@ -26,16 +26,17 @@ static terr_data_odometry_t      g_seen_odometry;
 static terr_data_hump_geometry_t g_seen_geometry;
 static float32_t                 g_seen_track_m;
 
-static uint32_t g_clock_us = 1000;
-static uint32_t g_read_delay_us;
-static uint32_t g_feedback_age_us;
-static uint32_t g_pose_future_us;
-static unsigned g_owner_remaining;
-static bool     gb_mutex_locked[3];
-static bool     gb_should_fail_lock;
-static bool     gb_should_fail_debug_lock;
-static ID       gh_next_mutex;
-static jmp_buf  g_task_exit;
+static uint32_t       g_clock_us = 1000;
+static uint32_t       g_read_delay_us;
+static uint32_t       g_feedback_age_us;
+static uint32_t       g_pose_future_us;
+static motion_state_t g_feedback_state = MOTION_IDLE;
+static unsigned       g_owner_remaining;
+static bool           gb_mutex_locked[3];
+static bool           gb_should_fail_lock;
+static bool           gb_should_fail_debug_lock;
+static ID             gh_next_mutex;
+static jmp_buf        g_task_exit;
 
 static void ( * gp_entry)(INT start_code, void * p_extra_info) = NULL;
 static void ( * gp_cycle)(void * p_context)                    = NULL;
@@ -214,6 +215,7 @@ bool motion_get_feedback (motion_feedback_t * p_out)
     *p_out      = (motion_feedback_t){
              .b_is_feedback_valid = true,
              .b_is_braked         = true,
+             .state               = g_feedback_state,
              .timestamp_us = g_clock_us - g_feedback_age_us + g_pose_future_us};
     return true;
 }
@@ -393,13 +395,16 @@ int main (void)
     assert(g_seen_odometry.b_is_valid && g_seen_odometry.b_is_stationary);
     assert(g_clock_us - owner_start_us ==
            180000U); /* 160 ms startup and two 10 ms polls. */
-    g_read_delay_us = 1000;
+    g_read_delay_us  = 1000;
+    g_feedback_state = MOTION_TURN;
     owner_cycles(2);
     assert(g_seen_odometry.b_is_valid &&
            "Fresh feedback after a mutex wait must remain valid");
+    assert(g_seen_odometry.b_is_pivoting);
+    g_feedback_state  = MOTION_DRIVE;
     g_feedback_age_us = 50000;
     owner_cycles(2);
-    assert(g_seen_odometry.b_is_valid);
+    assert(g_seen_odometry.b_is_valid && (!g_seen_odometry.b_is_pivoting));
     g_feedback_age_us = 50001;
     owner_cycles(2);
     assert(!g_seen_odometry.b_is_valid && !g_seen_odometry.b_is_stationary);

@@ -1956,7 +1956,9 @@ static void test_buddy5 (void)
             (uint16_t)((unsigned)(4000 - edge_mm) % 4001U),
             (uint16_t)((unsigned)(edge_mm + 4000) / 2U),
             4000,
-            (int16_t)edge_mm};
+            (int16_t)edge_mm,
+            0,
+            0};
         assert(buddy1_encode(BUDDY1_TOPIC_SCAN, &snapshot, payload,
                              sizeof payload) == 13U &&
                ((unsigned)payload[12] >> 7U) == 0U);
@@ -1972,12 +1974,18 @@ static void test_buddy5 (void)
            !decoded.scan.valid && 9U == decoded.scan.scan_id);
     {
         const telemetry_codec_scan_t bad[] = {
-            {1, 0, 29, 0, 0, 0, 0, 0, 0},     {1, 0, 4001, 0, 0, 0, 0, 0, 0},
-            {1, 0, 100, 4096, 0, 0, 0, 0, 0}, {1, 0, 100, 0, 4001, 0, 0, 0, 0},
-            {1, 0, 100, 0, 0, 4001, 0, 0, 0}, {1, 0, 100, 0, 0, 0, 4001, 0, 0},
-            {1, 0, 100, 0, 0, 0, 0, 4001, 0}, {1, 0, 100, 0, 0, 0, 0, 0, -4001},
-            {1, 0, 100, 0, 0, 0, 0, -10, 10}, {0, 0, 100, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0, 5, 0},      {2, 0, 100, 0, 0, 0, 0, 0, 0}};
+            {1, 0, 29, 0, 0, 0, 0, 0, 0, 0, 0},
+            {1, 0, 4001, 0, 0, 0, 0, 0, 0, 0, 0},
+            {1, 0, 100, 4096, 0, 0, 0, 0, 0, 0, 0},
+            {1, 0, 100, 0, 4001, 0, 0, 0, 0, 0, 0},
+            {1, 0, 100, 0, 0, 4001, 0, 0, 0, 0, 0},
+            {1, 0, 100, 0, 0, 0, 4001, 0, 0, 0, 0},
+            {1, 0, 100, 0, 0, 0, 0, 4001, 0, 0, 0},
+            {1, 0, 100, 0, 0, 0, 0, 0, -4001, 0, 0},
+            {1, 0, 100, 0, 0, 0, 0, -10, 10, 0, 0},
+            {0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0},
+            {2, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0}};
 
         for (unsigned case_index = 0; case_index < (sizeof bad / sizeof bad[0]);
              ++case_index)
@@ -2017,8 +2025,8 @@ static void test_buddy5 (void)
            buddy1_decode(BUDDY1_TOPIC_AVOIDANCE, g_published, g_published_len,
                          &decoded) &&
            same_avoidance(&decoded.avoidance, &avoidance_case));
-    scan_case =
-        (telemetry_codec_scan_t){1, 7, 250, 400, 180, 320, 380, 150, -250};
+    scan_case = (telemetry_codec_scan_t){1,   7,   250,  400, 180, 320,
+                                         380, 150, -250, 0,   0};
     assert(buddy1_report_scan(&scan_case) == E_OK);
     poll_after(20);
     assert(strcmp(g_published_topic, "car/telemetry/scan") == 0 &&
@@ -2026,6 +2034,38 @@ static void test_buddy5 (void)
            buddy1_decode(BUDDY1_TOPIC_SCAN, g_published, g_published_len,
                          &decoded) &&
            same_scan(&decoded.scan, &scan_case));
+    /* The extended scan uses the same outbox slot. Both bounds must reach
+     * the subscriber even if the individual sonar pings are never sent. */
+    scan_case.face_width_min_mm = 123U;
+    scan_case.face_width_max_mm = 180U;
+    assert(buddy1_report_scan(&scan_case) == E_OK);
+    poll_after(20);
+    assert(strcmp(g_published_topic, "car/telemetry/scan") == 0 &&
+           16U == g_published_len && 4U == g_published[0] &&
+           0x7BU == g_published[13] && 0x40U == g_published[14] &&
+           0x0BU == g_published[15]);
+    assert(buddy1_decode(BUDDY1_TOPIC_SCAN, g_published, g_published_len,
+                         &decoded) &&
+           same_scan(&decoded.scan, &scan_case) &&
+           123U == decoded.scan.face_width_min_mm &&
+           180U == decoded.scan.face_width_max_mm);
+    snapshot.scan = scan_case;
+    assert(0U == buddy1_encode(BUDDY1_TOPIC_SCAN, &snapshot, payload, 15U));
+    assert(!buddy1_decode(BUDDY1_TOPIC_SCAN, g_published, 13U, &decoded));
+    snapshot.scan.face_width_min_mm = 181U;
+    assert(0U == buddy1_encode(BUDDY1_TOPIC_SCAN, &snapshot, payload,
+                               sizeof payload));
+    snapshot.scan.face_width_min_mm = 0;
+    snapshot.scan.face_width_max_mm = 4095;
+    assert(16U == buddy1_encode(BUDDY1_TOPIC_SCAN, &snapshot, payload,
+                                sizeof payload));
+    assert(buddy1_decode(BUDDY1_TOPIC_SCAN, payload, 16U, &decoded));
+    assert(0 == decoded.scan.face_width_min_mm);
+    assert(4095 == decoded.scan.face_width_max_mm);
+    /* The input view must preserve the first value outside the wire range. */
+    snapshot.scan.face_width_max_mm = 4096;
+    assert(0U == buddy1_encode(BUDDY1_TOPIC_SCAN, &snapshot, payload,
+                               sizeof payload));
     assert(buddy1_snapshot(&after) &&
            memcmp(&before, &after, sizeof before) == 0);
     puts("HOST PASS: Buddy 5 avoidance 38 bits/6 bytes and FR6 scan 95 bits/13 "
@@ -2502,7 +2542,8 @@ static void emit_vectors (void)
     snapshot.avoidance            =
         (telemetry_codec_avoidance_t){1, 0, 412, 150, 3, 0, 2, 3, 3, 1};
     snapshot.scan                 =
-        (telemetry_codec_scan_t){1, 7, 250, 400, 180, 320, 380, 150, -250};
+        (telemetry_codec_scan_t){1, 7, 250, 400, 180, 320, 380,
+                                 150, -250, 0, 0};
     snapshot.scan_sample          =
         (telemetry_codec_scan_sample_t){7, 0, 3, 13, 75, 1, 412};
     /* clang-format on */

@@ -55,6 +55,7 @@ _FIELDS = {
         ),
     },
     4: {
+        "encoder_turn": (("motion_timestamp_us", "timestamp_us"), "preview_timestamp_us", "encoder_turn_dps"),
         "terrain": ("tilt_valid", "pitch_deg", "roll_deg", ("terrain_state", "state"), "on_hump",
                     ("live_hump_height_mm", "climb_mm"), ("peak_height_valid", "peak_valid"),
                     ("reported_peak_hump_mm", "peak_mm"), "turn_valid", "turn_dps", "safety"),
@@ -63,9 +64,10 @@ _FIELDS = {
     5: {
         "avoidance": ("range_mm", "range_valid", "no_echo", "servo_deg", ("bypass_state", "state"),
                       ("bypass_fault", "fault"), "route", "leg", "pass_step", "swapped"),
-        "scan": ("scan_id", ("scan_valid", "valid"), "closest_mm", "width_mm",
-                 "left_clear_mm", "right_clear_mm", "forward_mm", "left_edge_mm", "right_edge_mm"),
-        "obstacle": ("distance_mm", "width_mm", "route"),
+        "scan": ("scan_id", ("scan_valid", "valid"), "closest_mm", ("padded_width_mm", "width_mm"),
+                 "left_clear_mm", "right_clear_mm", "forward_mm", "left_edge_mm", "right_edge_mm",
+                 "face_width_min_mm", "face_width_max_mm"),
+        "obstacle": ("distance_mm", ("padded_width_mm", "width_mm"), "route"),
         "scan_sample": ("scan_id", "peek", ("sample_index", "index"), ("sample_count", "count"),
                         ("sample_angle_deg", "angle_deg"), ("sample_valid", "valid"),
                         ("sample_distance_mm", "distance_mm")),

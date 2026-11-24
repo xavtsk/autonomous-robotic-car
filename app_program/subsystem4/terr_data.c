@@ -24,6 +24,9 @@ static void safety_update (terr_data_monitor_t * p_monitor,
                            const float32_t p_accel_g[3], float32_t norm,
                            uint32_t now, bool b_is_continuous);
 
+static float32_t right_wheel_roll (terr_data_monitor_t * p_monitor,
+                                   float32_t             roll_deg);
+
 static void     put_bits (uint8_t * p_out, unsigned * p_bit, uint32_t value,
                           unsigned width);
 static uint32_t get_bits (const uint8_t * p_packet, unsigned * p_bit,
@@ -50,6 +53,7 @@ void terr_data_reset_run (terr_data_monitor_t * p_monitor)
     p_monitor->b_has_imu_sample       = false;
     p_monitor->b_has_terrain_odometry = false;
     p_monitor->b_has_seen_heading     = false;
+    p_monitor->b_has_right_roll       = false;
     p_monitor->stable_count           = 0;
     p_monitor->b_is_safety_tracking   = false;
     p_monitor->result                 =
@@ -180,6 +184,7 @@ void terr_data_process (terr_data_monitor_t *        p_monitor,
 
         if ((unsigned int)TERRAIN_HUMP_RIGHT_WHEEL == p_monitor->hump_geometry)
         {
+            p_monitor->b_has_right_roll = false;
             hump_detection_update_right(
                 &p_monitor->hump, 0, 0, p_monitor->wheel_track_m, 0,
                 HUMP_SAMPLE_INVALID, p_sample->timestamp_us);
@@ -348,9 +353,11 @@ void terr_data_process (terr_data_monitor_t *        p_monitor,
         if ((unsigned int)TERRAIN_HUMP_RIGHT_WHEEL == p_monitor->hump_geometry)
         {
             /* Lateral acceleration can imitate a raised right wheel. */
-            hump_detection_sample_quality_t quality = HUMP_SAMPLE_INVALID;
+            hump_detection_sample_quality_t quality   = HUMP_SAMPLE_INVALID;
+            float32_t                       hump_roll = roll;
 
-            if (b_is_hump_valid)
+            if ((b_is_hump_valid && (!p_odometry->b_is_pivoting)) &&
+                (accel_vec[2] > 0.0f))
             {
                 quality = b_is_forward_stable &&
                                   (fabsf(accel_vec[1] -
@@ -359,9 +366,30 @@ void terr_data_process (terr_data_monitor_t *        p_monitor,
                               : HUMP_SAMPLE_ACCELERATION_SPIKE;
             }
 
-            hump_detection_update_right(&p_monitor->hump, pitch, roll,
+            if (((((unsigned)HUMP_SAMPLE_VALID == quality) &&
+                  (travel_m >= 0.0f)) &&
+                 (fabsf(roll) < 10.0f)) &&
+                (fabsf(pitch) <= 40.0f))
+            {
+                /* The attitude display uses a slower filter. Preserve the crest
+                 * of a brief crossing while rejecting a lone roll excursion.
+                 * Positive roll raises the right wheel in the vehicle frame. */
+                const float32_t raw_roll =
+                    atan2f(-accel_vec[1], accel_vec[2]) * 57.295779513f;
+                hump_roll = right_wheel_roll(p_monitor, raw_roll);
+            }
+
+            hump_detection_update_right(&p_monitor->hump, pitch, hump_roll,
                                         p_monitor->wheel_track_m, travel_m,
                                         quality, p_sample->timestamp_us);
+            if (((!p_monitor->hump.b_is_armed) &&
+                 (!p_monitor->hump.b_is_hump_tracking)) &&
+                (0U == p_monitor->hump.level_samples))
+            {
+                /* Discards require a fresh level baseline. A single tolerated
+                 * acceleration spike retains history but never enters it. */
+                p_monitor->b_has_right_roll = false;
+            }
 #if APP_IMU_DEBUG
             if ((unsigned)HUMP_SAMPLE_INVALID == quality)
             {
@@ -370,7 +398,7 @@ void terr_data_process (terr_data_monitor_t *        p_monitor,
                 {
                     p_monitor->hump.debug.reason = HUMP_REASON_SAFETY_OR_IMPACT;
                 }
-                else if (!b_is_tilt_valid)
+                else if ((!b_is_tilt_valid) || (accel_vec[2] <= 0.0f))
                 {
                     p_monitor->hump.debug.reason = HUMP_REASON_INVALID_TILT;
                 }
@@ -430,7 +458,7 @@ void terr_data_process (terr_data_monitor_t *        p_monitor,
             p_monitor->candidate    = candidate;
             p_monitor->stable_count = 1;
         }
-        else if (p_monitor->stable_count < 3U)
+        else if (p_monitor->stable_count < 3)
         {
             ++p_monitor->stable_count;
         }
@@ -439,8 +467,9 @@ void terr_data_process (terr_data_monitor_t *        p_monitor,
             /* The stability counter has reached its cap. */
         }
 
-        reading.state =
-            p_monitor->stable_count >= 3U ? candidate : p_monitor->result.state;
+        reading.state = (p_monitor->stable_count >= 3)
+                            ? candidate
+                            : p_monitor->result.state;
 
         if ((unsigned int)TERRAIN_IMPACT == reading.state)
         {
@@ -572,6 +601,29 @@ void terr_data_unpack (const uint8_t        p_in[TERRAIN_PACKET_SIZE],
     p_result->hump_height_m      = get_bits(p_in, &bit, 9) / 1000.0f;
     p_result->safety             = (terr_data_safety_t)get_bits(p_in, &bit, 2);
     /* clang-format on */
+}
+
+/** @brief Return the median of three trusted right-wheel roll readings in
+ * degrees. Seed the delay line with the first observation after a discard.
+ * The terrain task owns this history; acceleration spikes never enter it.
+ */
+static float32_t right_wheel_roll (terr_data_monitor_t * p_monitor,
+                                   float32_t             roll_deg)
+{
+    if (!p_monitor->b_has_right_roll)
+    {
+        p_monitor->right_roll_deg[0] = roll_deg;
+        p_monitor->right_roll_deg[1] = roll_deg;
+        p_monitor->b_has_right_roll  = true;
+    }
+
+    const float32_t first        = p_monitor->right_roll_deg[0];
+    const float32_t second       = p_monitor->right_roll_deg[1];
+    const float32_t lower        = (first < second) ? first : second;
+    const float32_t upper        = (first < second) ? second : first;
+    p_monitor->right_roll_deg[0] = second;
+    p_monitor->right_roll_deg[1] = roll_deg;
+    return (roll_deg < lower) ? lower : ((roll_deg > upper) ? upper : roll_deg);
 }
 
 /** @brief Use acceleration and elapsed microseconds to track and debounce

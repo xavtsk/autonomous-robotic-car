@@ -108,9 +108,11 @@ int mqtt_utk_app_take (T_MQTT_UTK_APP_MSG * p_out)
 
     /* The selected layout rounds a byte-sized bit count up to full bytes
      * and adds one version byte. The total fits the MQTT length field. */
-    p_out->payload_len = (uint16_t)telemetry_codec_payload_size(message.type);
+    p_out->payload_len = (uint16_t)telemetry_codec_version_size(
+        message.type, message.payload[0]);
 
-    if ((int)p_out->payload_len > MQTT_UTK_APP_PAYLOAD_MAX)
+    if ((!p_out->payload_len) ||
+        ((int)p_out->payload_len > MQTT_UTK_APP_PAYLOAD_MAX))
     {
         return 0;
     }

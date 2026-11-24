@@ -1,4 +1,4 @@
-# Buddy 1 binary MQTT protocol version 3
+# Buddy 1 binary MQTT protocol
 
 Tribunal 1 replaces JSON application payloads with explicit binary fields.
 Topics remain readable. Robot tasks call the existing `buddy1_report_*()` APIs;
@@ -6,15 +6,15 @@ Buddy 1 packs the values, copies a complete message into its RTOS outbox, and
 the existing network task publishes the bytes. The laptop decodes them with
 `tools/buddy1_mqtt_codec.py`.
 
-Robot and laptop must both use version 3. Versions 1/2 and JSON are rejected,
-not guessed by packet length. Version 3 adopts Buddy 4's 0–500 mm peak range
+The base telemetry layout uses version 3. Scan summaries with a bracketed
+obstacle face use the version 4 scan extension below. Version 3 adopts Buddy 4's 0–500 mm peak range
 and Buddy 5's 30–4000 mm distance / 0–4095 mm width ranges. Hump count remains
 16 bits for the sensor owner's saturating 0–65535 count. Wheel/control precision
 and all navigation algorithms are unchanged. No raw C struct/enum layout is sent.
 
 ## Common encoding
 
-- Byte 0 is protocol version `0x03`. It is framing metadata.
+- Byte 0 carries the version for the selected topic.
 - The body starts at byte 1. Bit 0 is its least significant bit; bits continue
   through successive bytes. Multi-byte fields are little endian.
 - Unused high bits in the last byte must be zero. Unknown versions, invalid
@@ -45,6 +45,7 @@ Bit positions below are relative to the body, excluding the version byte.
 | `car/telemetry/avoidance` | range-valid bit 0; no-echo bit 1; front range bits 2–13 (30–4000 mm, 0 if not valid); servo angle bits 14–21 (1–180°, 0 unknown); Buddy 5 state bits 22–24; fault bits 25–27; route bits 28–29; leg bits 30–33; leg-3 step bits 34–36; side-swapped bit 37; two zero padding bits | 6 |
 | `car/telemetry/scan_sample` | scan id bits 0–7; side-peek bit 8; reading index bits 9–12; readings in the scan minus 1 bits 13–16; angle index bits 17–21 (30 + 5 × index degrees); reading-valid bit 22; distance bits 23–34 (30–4000 mm, 0 if no reading); five zero padding bits | 6 |
 | `car/telemetry/scan` | profile-valid bit 0; scan id bits 1–8; closest bits 9–20; width bits 21–32; left clearance bits 33–44; right clearance bits 45–56; depth bits 57–68; left edge bits 69–81 and right edge bits 82–94 (−4000…+4000 mm, sent +4000); one zero padding bit | 13 |
+| `car/telemetry/scan` v4 | Same first 96 body bits as v3, including zero padding at bit 95. Minimum face width occupies bits 96–107 and maximum face width bits 108–119, both in mm. | 16 |
 | `car/reply/snapshot` | validity and all seven sections, then distance/heading since START (19 Nov 2026), described below | 17 |
 | `car/reply/barcode_map` | result bits 0–1: 0 OK, 1 invalid, 2 configuration closed, 3 internal error | 2 |
 | `car/status` | alive bit 0; faults-valid bit 1; fault mask bits 2–7 | 2 |
@@ -158,6 +159,13 @@ the avoidance state, request progress and unsafe-route / timeout / fault reasons
   across the car's centreline (+ = left). Left edge ≥ right edge.
 - Example `03 0f f4 01 32 68 01 28 f8 c2 06 9a 3a` = scan 7, closest 250 mm,
   width 400 mm, clearance L 180 / R 320 mm, depth 380 mm, edges +150 / −250 mm.
+- The original width is the padded planning envelope. When the sweep brackets
+  both edges of a flat, front-facing obstacle, the car sends the lower and upper
+  model estimates together in the same scan packet. The v4 interval requires
+  a valid profile and `0 ≤ minimum ≤ maximum ≤ 4095`, with a positive maximum.
+  Side peeks carry the previous full sweep's geometry. A scan without an
+  interval uses the v3 layout. Older receivers that only accept v3 need the
+  updated decoder to display an extended scan.
 
 **Scan sample** (`car/telemetry/scan_sample`, added 19 Nov 2026), the raw
 readings behind each profile: after the scan packet, one message per reading,

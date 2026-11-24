@@ -963,8 +963,10 @@ static void terrain_task (INT stacd, void * p_exinf)
             {
                 odo.b_is_valid      = true;
                 odo.b_is_stationary = feedback.b_is_braked;
-                odo.distance_m      = feedback.centre_m;
-                odo.epoch           = feedback.epoch;
+                /* The nonnegative motion state codes fit in unsigned. */
+                odo.b_is_pivoting = (unsigned)MOTION_TURN == feedback.state;
+                odo.distance_m    = feedback.centre_m;
+                odo.epoch         = feedback.epoch;
             }
 #endif
             if (BUDDY4_IMU_READ(&bus, now_us(), &sample))

@@ -49,8 +49,10 @@ typedef struct
 {
     float64_t distance_m;
     uint32_t  epoch;
-    bool      b_is_valid;
-    bool      b_is_stationary;
+    /* These flags describe the same caller-owned odometry sample. */
+    bool b_is_valid : 1;
+    bool b_is_stationary : 1;
+    bool b_is_pivoting : 1; /* Commanded on-the-spot turn. */
 } terr_data_odometry_t;
 
 typedef struct
@@ -60,6 +62,7 @@ typedef struct
     terr_data_result_t        result;
     float64_t                 previous_distance;
     float32_t                 filtered[3];
+    float32_t                 right_roll_deg[2]; /* Previous trusted samples. */
     float32_t                 heading;
     float32_t                 mag_offset[3];
     float32_t                 mag_scale[3];
@@ -67,19 +70,21 @@ typedef struct
     uint32_t                  heading_us;
     uint32_t                  epoch;
     uint32_t                  safety_since_us;
-    unsigned                  stable_count;
     events_motion_state_t     candidate;
     terr_data_hump_geometry_t hump_geometry;
     terr_data_safety_t        safety;
     float32_t                 wheel_track_m;
-    bool                      b_has_imu_sample;
-    bool                      b_has_terrain_odometry;
-    bool                      b_has_seen_heading;
-    bool                      b_is_magnetic_calibrated;
-    bool                      b_is_safety_tracking;
+    /* The terrain task owns the saturated count and all history flags. */
+    unsigned stable_count : 2;
+    bool     b_has_imu_sample : 1;
+    bool     b_has_right_roll : 1;
+    bool     b_has_terrain_odometry : 1;
+    bool     b_has_seen_heading : 1;
+    bool     b_is_magnetic_calibrated : 1;
+    bool     b_is_safety_tracking : 1;
 #if APP_IMU_DEBUG
-    bool b_is_moving_upward;
-    bool b_has_lift_tilt;
+    bool b_is_moving_upward : 1;
+    bool b_has_lift_tilt : 1;
 #endif
 } terr_data_monitor_t;
 

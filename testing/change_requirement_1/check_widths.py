@@ -74,6 +74,8 @@ FIELDS = [
     ("scan", "depth to far face, mm", (0, 4000, 1), 12, ""),
     ("scan", "left edge, mm (+4000 offset)", (-4000, 4000, 1), 13, ""),
     ("scan", "right edge, mm (+4000 offset)", (-4000, 4000, 1), 13, ""),
+    ("scan v4 bounds", "face width lower estimate, mm", (0, 4095, 1), 12, ""),
+    ("scan v4 bounds", "face width upper estimate, mm", (1, 4095, 1), 12, ""),
     ("scan_sample", "scan id (low 8 bits, 19 Nov 2026)", (0, 255, 1), 8, WRAP),
     ("scan_sample", "side peek", FLAG, 1, ""),
     ("scan_sample", "reading index", (0, 15, 1), 4, ""),
@@ -105,7 +107,7 @@ FIELDS = [
     ("b4 packet", "hump in progress", FLAG, 1, ""),
     ("b4 packet", "climb so far, mm", (0, 500, 1), 9, ""),
     ("b4 packet", "safety none/lifted/overturned", (0, 2, 1), 2, ""),
-    # Buddy 5 internal 23-byte task snapshot.
+    # Buddy 5 internal 26-byte task snapshot.
     ("b5 packet", "forward reading time, us", (0, 2**32 - 1, 1), 32, WRAP),
     ("b5 packet", "scan time, us", (0, 2**32 - 1, 1), 32, WRAP),
     ("b5 packet", "scan id (0 = none, wraps)", (0, 65535, 1), 16, WRAP),
@@ -121,6 +123,8 @@ FIELDS = [
     ("b5 packet", "depth, mm", (0, 4000, 1), 12, ""),
     ("b5 packet", "left edge, mm", (-4000, 4000, 1), 13, ""),
     ("b5 packet", "right edge, mm", (-4000, 4000, 1), 13, ""),
+    ("b5 packet", "face width lower estimate, mm", (0, 4095, 1), 12, ""),
+    ("b5 packet", "face width upper estimate, mm", (0, 4095, 1), 12, ""),
     ("b5 sample", "distance, mm", (0, 4000, 1), 12, ""),
     ("b5 sample", "angle index (30..150 deg, 5 deg steps)", (0, 24, 1), 5, ""),
     ("b5 sample", "valid", FLAG, 1, ""),
@@ -177,6 +181,10 @@ STATE_FIELDS = {
     "terrain report cache": [("sent_height", (0, 500, 1), 9),
                              ("b_sent_fault", FLAG, 1),
                              ("b_has_unreported_impact", FLAG, 1)],
+    "b4 odometry": [("b_is_pivoting", FLAG, 1)],
+    "b4 monitor": [("b_has_right_roll", FLAG, 1), ("stable_count", (0, 3, 1), 2)],
+    "b5 scan state": [("count", (0, 16, 1), 5), ("b_has_profile", FLAG, 1),
+                      ("width_probe", (0, 4, 1), 3)],
 }
 for group, fields in STATE_FIELDS.items():
     for name, limits, bits in fields:
@@ -190,7 +198,18 @@ STATE_SOURCES = {
     "barcode record flags": ("app_program/subsystem3/bc_decoder.h", "bc_decoder_record_t"),
     "drive state": ("app_program/controller/s3_drive.h", "s3_drive_t"),
     "terrain report cache": ("app_program/controller/terr_link.c", "terrain_control_t"),
+    "b4 odometry": ("app_program/subsystem4/terr_data.h", "terr_data_odometry_t"),
+    "b4 monitor": ("app_program/subsystem4/terr_data.h", "terr_data_monitor_t"),
+    "b5 scan state": ("app_program/subsystem5/scan_obstacle.h", "scan_obstacle_t"),
 }
+
+PACKET_SOURCES = (
+    "app_program/subsystem1/telemetry_codec.c",
+    "app_program/subsystem1/telemetry_codec.h",
+    "app_program/subsystem4/terr_data.c",
+    "app_program/subsystem5/s5_codec.c",
+    "app_program/subsystem5/s5_codec.h",
+)
 
 # Total bits per topic used by the laptop decoder and C codec.
 TOTALS = {
@@ -198,9 +217,10 @@ TOTALS = {
     "heading": codec.WIDTHS[3], "obstacle": codec.WIDTHS[4], "state": codec.WIDTHS[5],
     "faults": codec.WIDTHS[6], "pose": codec.POSE_DISTANCE_BITS + 9,
     "terrain": codec.TERRAIN_BITS, "avoidance": codec.AVOIDANCE_BITS, "scan": codec.SCAN_BITS,
+    "scan v4": 119,
     "scan_sample": codec.SCAN_SAMPLE_BITS,
     "control_reply": remote.REPLY_BITS + 32 + 32,
-    "b4 packet": 95, "b5 packet": 182, "b5 sample": 18, "s5 status": 16,
+    "b4 packet": 95, "b5 packet": 206, "b5 sample": 18, "s5 status": 16,
 }
 
 
@@ -223,7 +243,8 @@ def integer_macros(text):
 
 def function_body(text, name):
     text = without_comments(text)
-    match = re.search(rf"\b{re.escape(name)}\s*\([^;{{}}]*\)\s*\{{", text)
+    match = re.search(rf"^[ \t]*(?:\w+[ \t]+)+{re.escape(name)}\s*\([^();{{}}]*\)\s*\{{",
+                      text, re.MULTILINE)
     if not match:
         raise ValueError(f"Missing function {name}")
     start = match.end()
@@ -233,6 +254,51 @@ def function_body(text, name):
         if depth == 0:
             return text[start:index]
     raise ValueError(f"Unclosed function {name}")
+
+
+def packing_width_errors(group, function, body, call):
+    """Check each selected C packing call in wire order."""
+    widths = [int(width) for width in re.findall(
+        rf"\b{call}\s*\([^;]*?,\s*(\d+)[uUlL]*\s*\)\s*;", body)]
+    expected = [field[3] for field in FIELDS if field[0] == group]
+    if widths != expected or len(widths) != len(re.findall(rf"\b{call}\s*\(", body)):
+        return [f"{function} widths {widths} differ from inventory {expected}"]
+    return []
+
+
+def packet_source_errors(root):
+    sources = {name: (root / name).read_text(encoding="utf-8") for name in PACKET_SOURCES}
+    terrain = sources["app_program/subsystem4/terr_data.c"]
+    s5 = sources["app_program/subsystem5/s5_codec.c"]
+    telemetry = sources["app_program/subsystem1/telemetry_codec.c"]
+    errors = packing_width_errors("b4 packet", "terr_data_pack",
+                                  function_body(terrain, "terr_data_pack"), "put_bits")
+    errors.extend(packing_width_errors(
+        "b5 packet", "s5_codec_observation_pack",
+        function_body(s5, "s5_codec_observation_pack"), "write_bits"))
+
+    s5_defs = integer_macros(sources["app_program/subsystem5/s5_codec.h"])
+    if s5_defs.get("S5_PACKET_BYTES") != (TOTALS["b5 packet"] + 7) // 8:
+        errors.append("S5_PACKET_BYTES does not match the packed Buddy 5 layout")
+
+    scan = function_body(telemetry, "write_fields").partition("case BUDDY1_TOPIC_SCAN:")[2]
+    errors.extend(packing_width_errors("scan", "write_fields scan",
+                                       scan.partition("case ")[0], "write_bits"))
+    bounds = function_body(telemetry, "buddy1_encode")
+    bounds = "\n".join(re.findall(r"\bwrite_bits\s*\(\s*p_bounds\s*,[^;]+;", bounds))
+    errors.extend(packing_width_errors(
+        "scan v4 bounds", "buddy1_encode face width", bounds, "write_bits"))
+
+    telemetry_defs = integer_macros(sources["app_program/subsystem1/telemetry_codec.h"])
+    if telemetry_defs.get("BUDDY1_SCAN_FACE_VERSION") != codec.SCAN_FACE_VERSION:
+        errors.append("The C and Python scan face versions differ")
+    base_bytes = 1 + (TOTALS["scan"] + 7) // 8
+    extended_bytes = 1 + (TOTALS["scan v4"] + 7) // 8
+    size = function_body(telemetry, "telemetry_codec_version_size")
+    extra_bytes = extended_bytes - base_bytes
+    if not re.search(rf"telemetry_codec_payload_size\(topic\)\s*\+\s*{extra_bytes}U?\s*;", size):
+        errors.append("telemetry_codec_version_size does not match the extended scan layout")
+    return errors
 
 
 def source_errors(root=ROOT):
@@ -249,13 +315,7 @@ def source_errors(root=ROOT):
     if remote.REPLY_SIZE != 1 + (remote.REPLY_BITS + 7) // 8 + 4 + 4:
         errors.append("Remote reply byte count does not match packed widths and IDs")
 
-    body = function_body((root / "app_program/subsystem4/terr_data.c").read_text(
-        encoding="utf-8"), "terr_data_pack")
-    widths = [int(width) for width in re.findall(
-        r"\bput_bits\s*\([^;]*?,\s*(\d+)[uUlL]*\s*\)\s*;", body)]
-    expected = [field[3] for field in FIELDS if field[0] == "b4 packet"]
-    if widths != expected or len(widths) != len(re.findall(r"\bput_bits\s*\(", body)):
-        errors.append(f"Buddy 4 terr_data_pack widths {widths} differ from inventory {expected}")
+    errors.extend(packet_source_errors(root))
 
     for group, (name, struct_name) in STATE_SOURCES.items():
         text = without_comments((root / name).read_text(encoding="utf-8"))
@@ -297,6 +357,7 @@ def main():
     print()
     print("| Group | Sum of fields | Bits in codec | OK |")
     print("|---|---:|---:|---|")
+    sums["scan v4"] = sums["scan"] + sums["scan v4 bounds"]
     for group, total in TOTALS.items():
         ok = sums.get(group) == total
         bad += not ok

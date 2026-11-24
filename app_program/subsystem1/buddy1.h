@@ -15,7 +15,7 @@
 #define S1_PRI_COMMAND 22
 
 /* Four-bit topic ID; upper bits zero. Fixed slots preserve the four-message
- * capacity. MQTT sends only payload_size(type) bytes, never the whole slot. */
+ * capacity. MQTT sends the length selected by the topic and wire version. */
 typedef struct
 {
     UB type;

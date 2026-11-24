@@ -74,6 +74,8 @@ static uint32_t bits (const uint8_t * p_packet, unsigned start, unsigned count);
 
 static void right_wheel_tests (void);
 
+static void short_crossing_tests (void);
+
 #if APP_IMU_DEBUG
 static void hump_debug_tests (void);
 #endif
@@ -278,6 +280,7 @@ int main (void)
         assert(hump_state.b_is_hump_tracking && hump_state.height_m > 0.04f);
     }
     right_wheel_tests();
+    short_crossing_tests();
 #if APP_IMU_DEBUG
     hump_debug_tests();
 #endif
@@ -468,6 +471,73 @@ static void terrain_fixture_init (terrain_fixture_t *       p_frame,
 
     assert(p_frame->monitor.calibration.b_is_calibrated &&
            (p_frame->monitor.result.flags & TERRAIN_TILT_VALID));
+}
+
+/** @brief Cross two short 10 mm right-wheel humps at 100 mm/s and 50 Hz.
+ * A commanded pivot between them mimics a rise even with encoder drift.
+ */
+static void short_crossing_tests (void)
+{
+    const float32_t heights_m[][7] = {
+        {0.004f, 0.008f, 0.010f, 0.010f, 0.008f, 0.004f, 0.0f},
+        {0.000f, 0.007f, 0.010f, 0.010f, 0.000f, 0.000f, 0.0f}};
+    const unsigned    passes  = sizeof heights_m / sizeof heights_m[0];
+    const unsigned    samples = sizeof heights_m[0] / sizeof heights_m[0][0];
+    const unsigned    settled_samples = 6U;
+    const unsigned    rearm_samples   = 5U;
+    const uint32_t    sample_us       = 20000U;
+    const float32_t   travel_m        = 0.002f;
+    const float32_t   track_m         = 0.116f;
+    const float32_t   crest           = roll_for_height(0.010f, 0.0f, track_m);
+    terrain_fixture_t fixture;
+    terrain_fixture_init(&fixture, TERRAIN_HUMP_RIGHT_WHEEL);
+
+    /* One 20 ms excursion must not even start a crossing. */
+    terrain_step(&fixture, 0.0f, crest, travel_m, sample_us);
+    assert(!fixture.monitor.result.b_is_hump_active);
+    terrain_step(&fixture, 0.0f, 0.0f, travel_m, sample_us);
+    terrain_step(&fixture, 0.0f, 0.0f, travel_m, sample_us);
+
+    for (unsigned pass = 0U; pass < passes; ++pass)
+    {
+        fixture.max_live_mm = 0U;
+        for (unsigned sample_index = 0U; sample_index < samples; ++sample_index)
+        {
+            const float32_t roll =
+                roll_for_height(heights_m[pass][sample_index], 0.0f, track_m);
+            terrain_step(&fixture, 0.0f, roll, travel_m, sample_us);
+        }
+
+        for (unsigned sample_index = 0U; sample_index < settled_samples;
+             ++sample_index)
+        {
+            terrain_step(&fixture, 0.0f, 0.0f, travel_m, sample_us);
+        }
+
+        assert(fixture.completed == (pass + 1U));
+        assert(10U == fixture.max_live_mm);
+        if (0U == pass)
+        {
+            fixture.odometry.b_is_pivoting = true;
+            for (unsigned sample_index = 0U; sample_index < settled_samples;
+                 ++sample_index)
+            {
+                terrain_step(&fixture, 0.0f, crest, travel_m, sample_us);
+            }
+
+            assert((!fixture.monitor.hump.b_is_hump_tracking) &&
+                   (!fixture.monitor.hump.b_is_armed));
+            fixture.odometry.b_is_pivoting = false;
+            for (unsigned sample_index = 0U; sample_index < rearm_samples;
+                 ++sample_index)
+            {
+                terrain_step(&fixture, 0.0f, 0.0f, travel_m, sample_us);
+            }
+
+            assert(fixture.monitor.hump.b_is_armed &&
+                   (1U == fixture.completed));
+        }
+    }
 }
 
 /** @brief Check right-wheel hump arming, completed heights and rejection

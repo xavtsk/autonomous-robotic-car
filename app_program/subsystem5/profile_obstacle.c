@@ -14,6 +14,11 @@ static const int16_t g_cy[25] = {500, 574, 643, 707,  766, 819, 866, 906, 940,
                                  966, 985, 996, 1000, 996, 985, 966, 940, 906,
                                  866, 819, 766, 707,  643, 574, 500};
 
+static unsigned
+face_centre_depth_mm (const profile_obstacle_sample_t * p_samples,
+                      unsigned                          count);
+static unsigned face_lateral_mm (unsigned bearing, unsigned depth_mm);
+
 /** @brief Validate angle/range before writing one canonical sample packet.
  * @see profile_obstacle.h for integer units, invalid echoes and bit layout.
  */
@@ -216,9 +221,8 @@ bool profile_obstacle_build (const profile_obstacle_sample_t * p_samples,
     {
         return false;
     }
-    /* A point return is not an obstacle edge. With the beam already corrected
-     * above, pad by S5_EDGE_INFLATE_PERMIL (sin of the padding angle, 5 deg =
-     * one fine step; was 15 deg) at the FARTHEST obstacle return seen. Leg 1
+    /* Expand the corrected point returns on both sides by sin(10 degrees)
+     * times the farthest accepted range, using S5_EDGE_INFLATE_PERMIL. Leg 1
      * still checks the real diagonal path with the sensor before driving it.
      * Not a promise that acoustically invisible surfaces are detectable. */
     /* The farthest accepted echo is at most 4000 mm. The padding factor
@@ -236,6 +240,99 @@ bool profile_obstacle_build (const profile_obstacle_sample_t * p_samples,
     *p_out             = profile;
     /* clang-format on */
     return true;
+}
+
+/** @brief Derive width bounds from validated centre and side echoes.
+ * @see profile_obstacle.h for ownership, geometry and unavailable output.
+ */
+void profile_obstacle_face_width (const profile_obstacle_sample_t * p_samples,
+                                  unsigned count, const s5_config_t * p_cfg,
+                                  profile_obstacle_t * p_profile)
+{
+    unsigned hit[2]   = {0, 0};
+    unsigned clear[2] = {13, 13}; /* Beyond either 60-degree servo limit. */
+
+    if (0 == p_profile)
+    {
+        return;
+    }
+
+    p_profile->face_width_min_mm = 0U;
+    p_profile->face_width_max_mm = 0U;
+    if ((((!p_profile->b_is_valid) || (!p_samples)) || (!p_cfg)) ||
+        (count > S5_SAMPLES_MAX))
+    {
+        return;
+    }
+
+    const unsigned profile_mm = p_cfg->profile_mm;
+    const unsigned depth_mm   = face_centre_depth_mm(p_samples, count);
+    if ((0U == depth_mm) || (depth_mm >= profile_mm))
+    {
+        return;
+    }
+
+    /* Allow five percent variation in projected depth for a roughly square
+     * front face. This tolerance applies only to the reported measurement. */
+    const unsigned tolerance_mm = (depth_mm + 19U) / 20U;
+    for (unsigned sample_index = 0; sample_index < count; ++sample_index)
+    {
+        unsigned angle;
+        unsigned distance;
+        bool     b_has_echo;
+
+        /* All samples passed the first pass, so this decode cannot fail. */
+        (void)profile_obstacle_sample_unpack(&p_samples[sample_index], &angle,
+                                             &distance, &b_has_echo);
+        const unsigned side    = angle > 90U ? 1U : 0U;
+        const unsigned bearing = (angle > 90U ? angle - 90U : 90U - angle) / 5U;
+        const unsigned ray     = 12U + (bearing > 3U ? bearing - 3U : 0U);
+        /* Ray indices 12..21 select positive cosine values. */
+        const unsigned forward = (distance * (unsigned)g_cy[ray]) / 1000U;
+        if (((distance < profile_mm) &&
+             ((forward + tolerance_mm) >= depth_mm)) &&
+            (forward <= (depth_mm + tolerance_mm)))
+        {
+            if (bearing > hit[side])
+            {
+                hit[side] = bearing;
+            }
+        }
+        else if (0U == bearing)
+        {
+            return; /* Repeat centre echoes disagree about the front face. */
+        }
+        else if (((distance >= profile_mm) &&
+                  (forward > (depth_mm + tolerance_mm))) &&
+                 (bearing < clear[side]))
+        {
+            clear[side] = bearing;
+        }
+        else
+        {
+            /* A nearby return off the front plane cannot bracket this edge. */
+        }
+    }
+    if ((((clear[0] > 12U) || (clear[1] > 12U)) ||
+         ((clear[0] <= 3U) || (clear[1] <= 3U))) ||
+        ((clear[0] <= hit[0]) || (clear[1] <= hit[1])))
+    {
+        return; /* Open-ended or disjoint target. */
+    }
+    const unsigned near_mm = depth_mm - tolerance_mm;
+    const unsigned far_mm  = depth_mm + tolerance_mm;
+    const unsigned lower_mm =
+        face_lateral_mm(hit[0], near_mm) + face_lateral_mm(hit[1], near_mm);
+    /* Add one millimetre per side to bound both round-down operations. */
+    const unsigned upper_mm = (face_lateral_mm(clear[0], far_mm) +
+                               face_lateral_mm(clear[1], far_mm)) +
+                              2U;
+    if ((upper_mm > lower_mm) && (upper_mm <= 4095U))
+    {
+        /* The ordered bounds are 0..4095 mm and fit exactly in uint16_t. */
+        p_profile->face_width_min_mm = (uint16_t)lower_mm;
+        p_profile->face_width_max_mm = (uint16_t)upper_mm;
+    }
 }
 
 /** @brief Replace the measured side clearance without recomputing geometry.
@@ -281,6 +378,53 @@ bool profile_obstacle_merge_peek (profile_obstacle_t *              p_profile,
     }
 
     return true;
+}
+
+/** @brief Validate the sweep and return its first centre echo in millimetres.
+ * @param[in] p_samples Stable array with count readable samples.
+ * @param count Number of samples to validate.
+ * @return Zero if any echo is invalid or the array has no centre sample.
+ */
+static unsigned
+face_centre_depth_mm (const profile_obstacle_sample_t * p_samples,
+                      unsigned                          count)
+{
+    unsigned depth_mm = 0U;
+
+    for (unsigned sample_index = 0; sample_index < count; ++sample_index)
+    {
+        unsigned angle;
+        unsigned distance;
+        bool     b_has_echo;
+
+        if ((!profile_obstacle_sample_unpack(&p_samples[sample_index], &angle,
+                                             &distance, &b_has_echo)) ||
+            (!b_has_echo))
+        {
+            return 0U;
+        }
+
+        if ((angle == 90U) && (0U == depth_mm))
+        {
+            depth_mm = distance;
+        }
+    }
+
+    return depth_mm;
+}
+
+/** @brief Convert a bearing in five-degree steps to lateral millimetres.
+ * @param bearing Absolute offset from the centre, 0..12 five-degree steps.
+ * @param depth_mm Perpendicular distance to the modelled front face.
+ * @return Lateral distance in millimetres, rounded down.
+ * @note The model assumes the cone reaches 15 degrees inward from its axis.
+ */
+static unsigned face_lateral_mm (unsigned bearing, unsigned depth_mm)
+{
+    const unsigned ray = 12U + (bearing > 3U ? bearing - 3U : 0U);
+    /* Ray indices 12..21 select nonnegative sine and positive cosine
+     * entries. The conversions keep both values in the unsigned domain. */
+    return (depth_mm * (unsigned)g_sx[ray]) / (unsigned)g_cy[ray];
 }
 
 /* End of file. */

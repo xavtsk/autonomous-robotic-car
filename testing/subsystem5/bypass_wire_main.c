@@ -441,8 +441,12 @@ int main (void)
                                                          .left_edge_mm   = 150,
                                                          .right_edge_mm  = -250,
                                                          .forward_mm     = 380};
+        g_obstacle.profile.face_width_min_mm = 123U;
+        g_obstacle.profile.face_width_max_mm = 180U;
         cycles(5);
         assert(g_scan_reports == before + 1U);
+        assert((123 == g_last_scan.face_width_min_mm) &&
+               (180 == g_last_scan.face_width_max_mm));
         assert(g_last_scan.valid && 7U == g_last_scan.scan_id &&
                250U == g_last_scan.closest_mm && 400U == g_last_scan.width_mm &&
                180U == g_last_scan.left_clear_mm &&
@@ -455,6 +459,8 @@ int main (void)
         cycles(1);
         assert(g_scan_reports == before + 2U && !g_last_scan.valid &&
                8U == g_last_scan.scan_id && 0U == g_last_scan.closest_mm);
+        assert((0 == g_last_scan.face_width_min_mm) &&
+               (0 == g_last_scan.face_width_max_mm));
     }
     /* Raw readings follow the profile one by one, 1 per 4 cycles, only
      * while the outbox is empty; a full outbox retries the same reading; a

@@ -131,10 +131,15 @@ generated C binary or touch the car:
 python tools/compliance/barr_matrix.py --check
 python -m unittest discover -s testing/compliance -p 'test_barr*.py'
 python tools/compliance/barr_check.py
-python testing/compliance/inventory.py --check
 python tools/check_c_style.py --formatter /absolute/path/to/clang-format
 python testing/change_requirement_1/check_widths.py
 ```
+
+The width checker covers the [current submission table](compliance/CR1_SUBMISSION_WIDTHS.md).
+To reproduce the broader [20 November declaration inventory](compliance/CR1_FIELD_INVENTORY.md),
+run `python testing/compliance/inventory.py --check` in a checkout of its
+recorded revision, `a3de92a`. Running it on the later course firmware reports
+stale source bindings, including files renamed after that snapshot.
 
 The BARR audit currently reports unresolved source findings and incomplete AST/
 manual review. Its nonzero exit is a real incomplete/failing result, not an

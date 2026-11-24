@@ -5,8 +5,8 @@ separate from zero; binary shared data; synchronise actual shared updates.
 
 ## Encoded task snapshot (same-firmware internal format)
 
-Least-significant bit first; fields follow in this order. **182 meaningful bits,
-23 bytes, six zero padding bits**. Exact re-encoding rejects noncanonical padding
+Least-significant bit first; fields follow in this order. **206 meaningful bits,
+26 bytes, two zero padding bits**. Exact re-encoding rejects noncanonical padding
 and invalid values. Decoding leaves the destination unchanged on failure.
 This internal format is not a new MQTT packet/version.
 
@@ -26,6 +26,7 @@ This internal format is not a new MQTT packet/version.
 | Right clearance | 0–4000 mm | 12 |
 | Estimated forward extent | 0–4000 mm | 12 |
 | Left/right lateral edge, each | −4000..4000 mm; encoded +4000 | 13 each |
+| Lower/upper estimated flat face width, each | 0–4095 mm, lower ≤ upper, 0/0 when unavailable | 12 each |
 
 The conservative width includes angular/beam allowance; do not label it an exact
 physical width measurement. The 4000 mm sensing limit follows the HC-SR04 range;
@@ -36,7 +37,8 @@ minimum. Invalid/stale values do not become clearance.
 
 - Scan sample: 12 distance bits, 5 angle-index bits (30–150 degrees in 5 degree
   steps), one validity bit = **18 bits / 3 bytes**, upper six padding bits zero.
-  Capacity 16 samples (48 bytes); the current coarse+fine schedule uses at most 12.
+  The 16 slots hold up to 12 coarse/fine routing samples and four optional
+  measurements for bracketing the face edges.
 - Scan request ID: one 16-bit mailbox slot, with separate protected cancel/busy
   flags; no queue of old route requests.
 - Controller diagnostic status: 3 state + 3 fault + 2 route + 4 leg + 3
@@ -72,8 +74,10 @@ no encoder FIFO reader is added.
 
 Buddy 1 owns the global fault word. The controller updates only NO_ECHO using its
 existing changed-mask API; it never writes a copied global word back. Buddy 5's
-MQTT data (obstacle, avoidance and scan topics, protocol v3) uses the same
-12/13-bit distance widths as this snapshot; see Buddy 1's data representation.
+The v3 obstacle and avoidance messages retain their original fields. The v4
+scan summary can carry both face-width bounds with its padded planning width.
+See [the MQTT protocol](../subsystem1/MQTT_PROTOCOL.md) for the 13-byte v3
+and 16-byte v4 scan layouts.
 
 There was no older Buddy 5 firmware. The before/after in
 [`docs/CHANGE_REQUIREMENT_1_EVIDENCE.md`](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)

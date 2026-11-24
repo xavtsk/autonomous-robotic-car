@@ -1,5 +1,15 @@
 """Independent decoder for optional 70-byte controller diagnostics v1."""
+from math import degrees
+
 TOPIC = "car/debug/controller"
+# Wheel-centre spacing in subsystem2/motion.c (TRACK_WIDTH_M).
+WHEEL_TRACK_MM = 116
+
+
+def encoder_turn_rate(left_mm_s, right_mm_s):
+    """Estimate chassis yaw in degrees/s from signed wheel speeds. Left is positive."""
+    return round(degrees((right_mm_s - left_mm_s) / WHEEL_TRACK_MM), 1)
+
 # Field order is an explicit wire contract, not host struct layout.
 FIELDS = [
     ("timestamp_us",32,False),("motion_timestamp_us",32,False),("sequence",8,False),

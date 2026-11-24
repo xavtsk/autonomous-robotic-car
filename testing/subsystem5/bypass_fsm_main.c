@@ -92,6 +92,9 @@ static profile_obstacle_t profile (void);
 static void codecs (void);
 
 static void scans (void);
+static void routing_count_tests (void);
+static void face_width_tests (const s5_config_t *  p_cfg,
+                              profile_obstacle_t * p_profile);
 
 static void fsm (bool b_can_see_line, bool b_is_blocked,
                  bool b_has_invalid_range);
@@ -353,7 +356,10 @@ int main (void)
         s5_config_t              test_config = s5_config_defaults();
         avoidance_planner_plan_t planned_route;
         profile_obstacle_t       measured_profile = profile();
-        unsigned pad = test_config.half_width_mm + test_config.margin_mm;
+        const unsigned           extra_mm         = 5U;
+        const unsigned           half_width_mm    = test_config.half_width_mm;
+        const unsigned           margin_mm        = test_config.margin_mm;
+        const unsigned           pad = (half_width_mm + margin_mm) + extra_mm;
         assert(S5_OBSTACLE_MAX_MM == 200);
         measured_profile.left_edge_mm  = 22;
         measured_profile.right_edge_mm = -22;
@@ -426,18 +432,20 @@ int main (void)
         s5_config_t      test_config = s5_config_defaults();
         avoid_obstacle_t detour_state;
         avoid_obstacle_init(&detour_state, &test_config);
-        unsigned pad = test_config.half_width_mm + test_config.margin_mm;
+        const unsigned extra_mm      = 5U;
+        const unsigned half_width_mm = test_config.half_width_mm;
+        const unsigned margin_mm     = test_config.margin_mm;
+        const unsigned pad           = (half_width_mm + margin_mm) + extra_mm;
         assert(63U == test_config.half_width_mm && S5_SONAR_AXLE_MM == 75U &&
                S5_PEEK_STEP_MM == 25U);
         detour_state.plan.offset_mm = 250U;
-        /* 0.577 x gap + sonar-to-axle + axle-to-rear + margin: 54 + 75 + 55 +
-         * 30 = 214 mm (the shorter 139 mm hit the obstacle on the car, 17 Nov
-         * evening). */
+        /* The extra 5 mm of side gap adds 3 mm of post-peek travel:
+         * ceil(0.577 x 98) + 75 + 55 + 30 = 217 mm. */
         assert(S5_PASS_EXTRA_V2 == 0 &&
                pass_extra_test(&detour_state) ==
                    (pad * 577U + 999U) / 1000U + S5_SONAR_AXLE_MM +
                        S5_REAR_AXLE_MM + test_config.margin_mm);
-        assert(pass_extra_test(&detour_state) == 214U);
+        assert(pass_extra_test(&detour_state) == 217U);
     }
     {
         /* Single-angle peek scan and merge. */
@@ -569,13 +577,20 @@ static void codecs (void)
     s5_codec_observation_t out         = {0};
     uint8_t                bytes[S5_PACKET_BYTES];
     uint8_t                again[S5_PACKET_BYTES];
+    observation.profile.face_width_min_mm = 118U;
+    observation.profile.face_width_max_mm = 180U;
     assert(s5_codec_observation_pack(&observation, bytes));
     assert(s5_codec_observation_unpack(bytes, &out));
-    assert(out.range_us == observation.range_us && 4000 == (int)out.range_mm &&
-           65535 == (int)out.scan_id && 1900 == (int)out.profile.left_clear_mm);
+    assert(
+        (((out.range_us == observation.range_us) && (4000 == out.range_mm)) &&
+         ((65535 == out.scan_id) && (1900 == out.profile.left_clear_mm))) &&
+        ((118 == out.profile.face_width_min_mm) &&
+         (180 == out.profile.face_width_max_mm)));
     assert(s5_codec_observation_pack(&out, again) &&
            !memcmp(bytes, again, sizeof(bytes)));
-    bytes[22] = (uint8_t)((unsigned)bytes[22] | 0x80U);
+    /* Widen the byte for the reserved-bit mask. The result stays in 0..255. */
+    const unsigned last_byte = S5_PACKET_BYTES - 1U;
+    bytes[last_byte]         = (uint8_t)((unsigned)bytes[last_byte] | 0x80U);
     assert(!s5_codec_observation_unpack(bytes, &out));
     observation.b_has_no_echo = true;
     assert(!s5_codec_observation_pack(&observation, bytes));
@@ -637,10 +652,16 @@ static void scans (void)
                              90 == (int)scan.angle ? 250 : 1800);
     }
 
-    assert(!scan.b_has_failed && 12 == (int)scan.count && scan.b_is_fine);
+    assert((((!scan.b_has_failed) &&
+             (12U == scan_obstacle_profile_count(&scan))) &&
+            (16 == scan.count)) &&
+           scan.b_is_fine);
     s5_config_t        cfg = s5_config_defaults();
     profile_obstacle_t profile;
-    assert(profile_obstacle_build(scan.sample, scan.count, &cfg, &profile));
+    assert(profile_obstacle_build(
+        scan.sample, scan_obstacle_profile_count(&scan), &cfg, &profile));
+    routing_count_tests();
+    face_width_tests(&cfg, &profile);
     avoidance_planner_plan_t plan;
     assert(avoidance_planner_build(&profile, &cfg, &plan) &&
            S5_ROUTE_LEFT == (int)plan.route);
@@ -675,7 +696,7 @@ static void scans (void)
     assert(scan.b_has_failed && scan.b_is_done && 0 == (int)scan.count);
     scan_obstacle_begin(&scan, 0);
     scan_obstacle_accept(&scan, S5_SCAN_TIMEOUT_US, true, 200);
-    assert(scan.b_has_failed);
+    assert(scan.b_has_failed && (0U == scan_obstacle_profile_count(&scan)));
     profile_obstacle_sample_t invalid[5];
 
     for (unsigned angle_index = 0;
@@ -686,6 +707,130 @@ static void scans (void)
     }
 
     assert(!profile_obstacle_build(invalid, 5, &cfg, &profile));
+}
+
+/** @brief Check the base count at every possible coarse minimum, both
+ * before and after the optional width measurements.
+ */
+static void routing_count_tests (void)
+{
+    const unsigned  coarse_angles[] = {30U, 60U, 90U, 120U, 150U};
+    const unsigned  counts[]        = {9U, 12U, 12U, 12U, 9U};
+    const uint32_t  interval_us     = 200000U;
+    scan_obstacle_t scan;
+
+    for (unsigned angle_index = 0U;
+         angle_index < (sizeof coarse_angles / sizeof coarse_angles[0]);
+         ++angle_index)
+    {
+        const unsigned nearest  = coarse_angles[angle_index];
+        const unsigned expected = counts[angle_index];
+        uint32_t       now      = 0U;
+        scan_obstacle_begin(&scan, now);
+
+        for (unsigned sample_index = 0U; sample_index < expected;
+             ++sample_index)
+        {
+            assert(0U == scan_obstacle_profile_count(&scan));
+            assert(!scan.b_is_done);
+            const unsigned angle    = scan.angle;
+            const unsigned range_mm = (angle == nearest) ? 200U : 240U;
+            now                    += interval_us;
+            scan_obstacle_accept(&scan, now, true, range_mm);
+        }
+
+        const unsigned count = scan.count;
+        assert(count == expected);
+        assert(expected == scan_obstacle_profile_count(&scan));
+        assert(!scan.b_is_done);
+
+        while (!scan.b_is_done)
+        {
+            now += interval_us;
+            scan_obstacle_accept(&scan, now, true, 4000U);
+            assert(expected == scan_obstacle_profile_count(&scan));
+        }
+
+        const unsigned final_count = scan.count;
+        assert(final_count > expected);
+        assert(!scan.b_has_failed);
+    }
+
+    assert(scan_obstacle_begin_at(&scan, 0U, 30U));
+    scan_obstacle_accept(&scan, interval_us, true, 300U);
+    assert(scan.b_is_done && (0U == scan_obstacle_profile_count(&scan)));
+}
+
+/** @brief Check width bounds, open edges and optional-sweep failure handling.
+ * @param[in] p_cfg Stable scan configuration.
+ * @param[in,out] p_profile Valid routing profile, with bounds restored to
+ * unavailable by the end of the test.
+ */
+static void face_width_tests (const s5_config_t *  p_cfg,
+                              profile_obstacle_t * p_profile)
+{
+    scan_obstacle_t scan;
+    const uint32_t  interval_us = 300000U;
+
+    /* Centred flat 150 mm face at 233 mm. The 30-degree bearings hit
+     * it and the 35-degree bearings just clear it through a 15-degree cone. */
+    scan_obstacle_begin(&scan, 0U);
+    while (!scan.b_is_done)
+    {
+        const unsigned angle   = scan.angle;
+        const unsigned bearing = (angle > 90U) ? (angle - 90U) : (90U - angle);
+        const unsigned distance =
+            (bearing <= 15U) ? 233U : ((bearing == 30U) ? 241U : 4000U);
+        /* The nonnegative sample count widens exactly to uint32_t. */
+        scan_obstacle_accept(&scan, interval_us * (uint32_t)scan.count, true,
+                             distance);
+    }
+
+    profile_obstacle_face_width(scan.sample, scan.count, p_cfg, p_profile);
+    assert(
+        ((scan_obstacle_profile_count(&scan) == 12U) && (scan.count == 16)) &&
+        ((p_profile->face_width_min_mm == 118) &&
+         (p_profile->face_width_max_mm == 180)));
+
+    /* No clear ray on the left: a nearer return cannot bracket the edge. */
+    const unsigned count = scan.count;
+    for (unsigned sample_index = 0U; sample_index < count; ++sample_index)
+    {
+        unsigned angle;
+        unsigned distance;
+        bool     b_has_echo;
+        assert(profile_obstacle_sample_unpack(&scan.sample[sample_index],
+                                              &angle, &distance, &b_has_echo));
+        if ((angle > 120U) && (distance == 4000U))
+        {
+            assert(profile_obstacle_sample_pack(angle, 90U, true,
+                                                &scan.sample[sample_index]));
+        }
+    }
+
+    profile_obstacle_face_width(scan.sample, scan.count, p_cfg, p_profile);
+    assert((p_profile->face_width_min_mm == 0) &&
+           (p_profile->face_width_max_mm == 0));
+
+    scan_obstacle_begin(&scan, 0U);
+    while (!scan.b_has_profile)
+    {
+        /* The nonnegative sample count widens exactly to uint32_t. */
+        scan_obstacle_accept(&scan, interval_us * (uint32_t)scan.count, true,
+                             240U);
+    }
+
+    scan_obstacle_t late = scan;
+    scan_obstacle_accept(&late, S5_SCAN_TIMEOUT_US, true, 240U);
+    const unsigned late_count = late.count;
+    assert((late.b_is_done && (!late.b_has_failed)) &&
+           (late_count == scan_obstacle_profile_count(&late)));
+
+    /* The nonnegative sample count widens exactly to uint32_t. */
+    scan_obstacle_accept(&scan, interval_us * (uint32_t)scan.count, false, 0U);
+    const unsigned fallback_count = scan.count;
+    assert((scan.b_is_done && (!scan.b_has_failed)) &&
+           (scan_obstacle_profile_count(&scan) == fallback_count));
 }
 
 /** @brief Run the bypass scenario with the requested line, blockage and
@@ -1530,7 +1675,7 @@ static void rules_17nov (void)
                                                  .b_has_finish_tape = true};
         avoid_obstacle_t detour_state         = scripted(&scenario);
         int              straight_drive_index = rec_find(S5_ACT_DRIVE, 5, 0);
-        unsigned         edge = detour_state.plan.offset_mm - pad;
+        unsigned         edge = detour_state.plan.offset_mm - (pad + 5U);
         unsigned         lat  = edge + ((150U * 966U) / 1000U);
         assert(S5_COMPLETE == (int)detour_state.state &&
                straight_drive_index >= 0 &&

@@ -26,6 +26,15 @@ def read_csv(log, buddy):
 
 
 class RunCsvTests(unittest.TestCase):
+    def test_scan_face_bounds_and_historical_padded_width(self):
+        old, new = read_csv(archive(
+            entry(5, "scan", width_mm=209),
+            entry(5, "scan", width_mm=209, face_width_min_mm=123, face_width_max_mm=177),
+        ), 5)
+        self.assertEqual((old["padded_width_mm"], new["padded_width_mm"]), ("209", "209"))
+        self.assertEqual((old["face_width_min_mm"], old["face_width_max_mm"]), ("", ""))
+        self.assertEqual((new["face_width_min_mm"], new["face_width_max_mm"]), ("123", "177"))
+
     def test_each_export_has_its_own_records(self):
         log = archive(
             entry(1, "heartbeat", alive=True, faults_valid=True, faults={"active": ["imu_fault"], "mask": 4}),

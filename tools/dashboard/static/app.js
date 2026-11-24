@@ -173,6 +173,14 @@
     if (!field('scan', 'valid')) return 'No profile';
     return `${field('scan', 'left_edge_mm')} / ${field('scan', 'right_edge_mm')} mm`;
   }
+  function scanFaceWidth() {
+    if (!field('scan', 'valid')) return 'No profile';
+    const low = field('scan', 'face_width_min_mm');
+    const high = field('scan', 'face_width_max_mm');
+    if (low === null || high === null) return 'No estimate in this scan';
+    if (transportError || section('scan').stale) return 'Unavailable while disconnected';
+    return `≈${Math.round((low + high) / 2)} mm (${low}–${high} mm)`;
+  }
   function connected() {
     return !transportError && state?.connection?.status === 'connected';
   }
@@ -337,8 +345,8 @@
     if (section('terrain')?.received_at && ['lifted', 'overturned'].includes(field('terrain', 'safety'))) rows.push(['Car lifted / overturned', titleCase(field('terrain', 'safety')), '', 'terrain']);
     if (section('hump')?.received_at) rows.push(['Humps reported', field('hump', 'count'), '', 'hump'], ['Reported hump height', field('hump', 'height_mm'), 'mm', 'hump']);
     if (section('avoidance')?.received_at) rows.push(['Front range', field('avoidance', 'range_mm') ?? (field('avoidance', 'no_echo') ? 'No echo' : 'Unavailable'), field('avoidance', 'range_mm') === null ? '' : 'mm', 'avoidance'], ['Obstacle avoidance', titleCase(String(field('avoidance', 'state') ?? '').replaceAll('_', ' ')), '', 'avoidance']);
-    if (section('obstacle')?.received_at) rows.push(['Obstacle distance', field('obstacle', 'distance_mm'), 'mm', 'obstacle'], ['Obstacle width', field('obstacle', 'width_mm'), 'mm', 'obstacle'], ['Selected route', readable(field('obstacle', 'route')), '', 'obstacle']);
-    if (section('scan')?.received_at && field('scan', 'valid')) rows.push(['Clearance left / right', `${field('scan', 'left_clear_mm')} / ${field('scan', 'right_clear_mm')}`, 'mm', 'scan']);
+    if (section('obstacle')?.received_at) rows.push(['Obstacle distance', field('obstacle', 'distance_mm'), 'mm', 'obstacle'], ['Padded planning width', field('obstacle', 'width_mm'), 'mm', 'obstacle'], ['Selected route', readable(field('obstacle', 'route')), '', 'obstacle']);
+    if (section('scan')?.received_at && field('scan', 'valid')) rows.push(['Last scan · estimated face width', scanFaceWidth(), '', 'scan'], ['Clearance left / right', `${field('scan', 'left_clear_mm')} / ${field('scan', 'right_clear_mm')}`, 'mm', 'scan']);
     const body = document.createDocumentFragment();
     for (const [label, value, unit, source] of rows) {
       const tr = element('tr');
@@ -534,13 +542,14 @@
           ['Terrain state', field('terrain', 'state') === null ? '—' : titleCase(field('terrain', 'state')), source('terrain'), 'terrain'],
           ['Climb on current hump', climbText() === null ? '—' : `${climbText()}${field('terrain','on_hump') ? ' mm' : ''}`, source('terrain'), 'terrain'],
           ['Highest hump this run (resets at START)', peakText() === null ? '—' : `${peakText()}${field('terrain','peak_valid') ? ' mm' : ''}`, source('terrain'), 'terrain'],
+          ['Turn rate (wheel encoders, + = left)', !controller?.stale && Number.isFinite(cd?.encoder_turn_dps) ? `${cd.encoder_turn_dps} °/s` : '—', cdAge, 'controller'],
           ['Turn rate (compass, + = left)', turnText(), source('terrain'), 'terrain'],
           ['Lifted / overturned', safetyText(), source('terrain'), 'terrain'],
           ['Compass heading', section('heading')?.received_at ? valueUnit('heading', 'heading_deg', '°') : 'Not sent (compass not calibrated); wheel heading is in Buddy 2', source('heading'), 'heading'],
           ['Hump count', shown(humpCount), terrainRun ? 'Recorded for this drive' : source('hump'), 'hump'],
           ['IMU fault bit', faultGroup(['imu_fault']), source('faults'), 'faults']
         ],
-        unavailable: 'Firmware built with S4=1 reports tilt and terrain about every 200 ms, including while stopped. Turn rate comes from the compass and stays unavailable until Buddy 4’s magnetometer calibration is loaded; firmware from before 19 Nov 2026 sends neither turn rate nor lifted/overturned. A completed hump requires valid wheel travel and a return to level. The right-wheel detector estimates height from roll, pitch and wheel spacing. Open Runs to see the reported count and highest completed hump for each drive.'
+        unavailable: 'Wheel turning rate uses measured wheel speeds and 116 mm wheel spacing. Compass turning rate requires valid magnetic calibration. Terrain reports arrive about every 200 ms. The right-wheel hump detector estimates height from roll, pitch and wheel spacing, and counts a crossing once it observes forward travel and a return to level. The Buddy 4 run CSV includes turning rates and hump reports.'
       },
       '5': {
         title: 'Buddy 5 · Obstacle / recovery', description: 'Live front range, servo angle and bypass progress (5 Hz), the full obstacle profile of every scan or side peek, the no-echo fault and the avoidance state, published by firmware built with S5=1.',
@@ -552,8 +561,9 @@
           ['Buddy 5 fault reason', avoidText('fault'), source('avoidance'), 'avoidance'],
           ['Last scan', scanField('scan_id', '', 'No profile (scan failed)'), source('scan'), 'scan'],
           ['Closest distance', scanField('closest_mm', 'mm'), source('scan'), 'scan'],
-          ['Obstacle width', scanField('width_mm', 'mm'), source('scan'), 'scan'],
-          ['Obstacle position (left / right edge, + = left)', scanEdges(), source('scan'), 'scan'],
+          ['Estimated face width', scanFaceWidth(), source('scan'), 'scan'],
+          ['Padded planning width', scanField('width_mm', 'mm'), source('scan'), 'scan'],
+          ['Padded edges (left / right, + = left)', scanEdges(), source('scan'), 'scan'],
           ['Scan readings (angle: distance)', scanSamplesText(), scanSamplesSource(), null],
           ['Depth to far face', scanField('forward_mm', 'mm'), source('scan'), 'scan'],
           ['Left-side clearance', scanField('left_clear_mm', 'mm'), source('scan'), 'scan'],

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Laptop decoder and setup-command encoder for Buddy 1 binary protocol v3.
+"""Laptop decoder and setup-command encoder for Buddy 1 binary telemetry.
 
 Standard library only. Feed the original MQTT payload bytes to decode(); JSON
 is produced on the laptop for display, never sent as robot application data.
@@ -40,6 +40,7 @@ S5_PASSES = ("approach", "peek", "peeking", "step", "extra")
 S5_ROUTES = ("unknown", "left", "right")
 AVOIDANCE_BITS = 38
 SCAN_BITS = 95
+SCAN_FACE_VERSION = 4
 SCAN_SAMPLE_BITS = 35     # one reading: id, peek, index, count-1, angle, valid, mm
 TERRAIN_STATES = ("unknown", "stationary", "moving", "accelerating", "turning",
                   "climbing", "descending", "impact")
@@ -57,10 +58,10 @@ def unwrap_distance(previous_cm, wrapped_cm):
     return previous_cm + step
 
 
-def _check(payload, bits):
+def _check(payload, bits, version=VERSION):
     if len(payload) != 1 + (bits + 7) // 8:
         raise ValueError("wrong payload length")
-    if payload[0] != VERSION:
+    if payload[0] != version:
         raise ValueError("unsupported protocol version")
     value = int.from_bytes(payload[1:], "little")
     if value >> bits:
@@ -186,7 +187,13 @@ def decode(topic, payload):
                     route=S5_ROUTES[fields["route"]], leg=fields["leg"],
                     pass_step=S5_PASSES[fields["pass"]], swapped=bool(fields["swapped"]))
     if topic == "car/telemetry/scan":
-        value = _check(payload, SCAN_BITS)
+        extended = bool(payload) and payload[0] == SCAN_FACE_VERSION
+        if extended:
+            if len(payload) != 16:
+                raise ValueError("wrong extended scan length")
+            value = _check(payload[:13], SCAN_BITS, SCAN_FACE_VERSION)
+        else:
+            value = _check(payload, SCAN_BITS)
         fields, shift = {}, 0
         for name, width in (("valid", 1), ("scan_id", 8), ("closest_mm", 12), ("width_mm", 12),
                             ("left_clear_mm", 12), ("right_clear_mm", 12), ("forward_mm", 12),
@@ -207,6 +214,12 @@ def decode(topic, payload):
             if any(fields[k] for k in values):
                 raise ValueError("invalid profile with nonzero values")
             out = {k: None for k in values}
+        if extended:
+            bounds = int.from_bytes(payload[13:], "little")
+            minimum, maximum = bounds & 0xfff, bounds >> 12
+            if not fields["valid"] or not maximum or minimum > maximum:
+                raise ValueError("invalid face width interval")
+            out.update(face_width_min_mm=minimum, face_width_max_mm=maximum)
         return dict(valid=bool(fields["valid"]), scan_id=fields["scan_id"], **out)
     if topic == "car/telemetry/scan_sample":
         value = _check(payload, SCAN_SAMPLE_BITS)

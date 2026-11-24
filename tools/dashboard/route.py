@@ -194,7 +194,7 @@ class RouteTracker:
                     self.marker("hump", f"Hump {count} · peak {height} mm", received_at)
                 return True
         elif name == "obstacle":
-            self.marker("obstacle", f"Obstacle {data['width_mm']} mm wide at {data['distance_mm']} mm · "
+            self.marker("obstacle", f"Obstacle at {data['distance_mm']} mm · padded width {data['width_mm']} mm · "
                                     f"route {data['route']}", received_at)
         elif name == "state":
             state = data["state"]

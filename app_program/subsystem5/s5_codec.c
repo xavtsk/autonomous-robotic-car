@@ -47,6 +47,16 @@ bool s5_codec_observation_pack (const s5_codec_observation_t * p_observation,
         return false;
     }
 
+    const unsigned face_width_max_mm = p_profile->face_width_max_mm;
+    const unsigned face_width_min_mm = p_profile->face_width_min_mm;
+
+    if (((face_width_min_mm > face_width_max_mm) ||
+         (face_width_max_mm > 4095U)) ||
+        ((!p_profile->b_is_valid) && (face_width_max_mm != 0U)))
+    {
+        return false;
+    }
+
     write_bits(encoded, &bit_position, p_observation->range_us, 32);
     write_bits(encoded, &bit_position, p_observation->scan_us, 32);
     write_bits(encoded, &bit_position, p_observation->scan_id, 16);
@@ -66,6 +76,8 @@ bool s5_codec_observation_pack (const s5_codec_observation_t * p_observation,
                (uint32_t)(p_profile->left_edge_mm + 4000), 13);
     write_bits(encoded, &bit_position,
                (uint32_t)(p_profile->right_edge_mm + 4000), 13);
+    write_bits(encoded, &bit_position, p_profile->face_width_min_mm, 12);
+    write_bits(encoded, &bit_position, p_profile->face_width_max_mm, 12);
 
     for (unsigned byte_index = 0; byte_index < S5_PACKET_BYTES; byte_index++)
     {
@@ -122,6 +134,11 @@ bool s5_codec_observation_unpack (const uint8_t p_in[S5_PACKET_BYTES],
         (int16_t)((int)read_bits(p_in, &bit_position, 13) - 4000);
     decoded.profile.right_edge_mm =
         (int16_t)((int)read_bits(p_in, &bit_position, 13) - 4000);
+    /* Each raw 12-bit width fits in uint16_t before pair validation. */
+    decoded.profile.face_width_min_mm =
+        (uint16_t)read_bits(p_in, &bit_position, 12);
+    decoded.profile.face_width_max_mm =
+        (uint16_t)read_bits(p_in, &bit_position, 12);
     /* clang-format on */
 
     if (!s5_codec_observation_pack(&decoded, check))

@@ -219,9 +219,13 @@ diagnostic traffic and do not measure the Pico's queue depth or RAM. Buddy 2
 overlays ramped PID setpoint and measured speed for each wheel; without the
 new controller stream it falls back to measured-speed-only plots. Buddy 3
 includes a line-error graph and a per-sensor calibration table. Buddy 4 plots
-heading/hump reports only when supplied, and Buddy 5 similarly plots obstacle
-distance/width. Pitch/roll and distance-versus-scan-angle are explicitly marked
-not published: the dashboard cannot derive them from summary values.
+tilt and hump height from terrain telemetry. Its wheel-encoder turning rate
+uses the difference between the measured right and left wheel speeds and the
+116 mm wheel spacing. Positive values indicate left turns and negative values
+indicate right turns. A separate graph shows compass turning rate when valid.
+The Buddy 4 CSV includes the encoder estimate for each received controller
+preview during a run. For older runs, the export uses the wheel feedback
+samples saved at the time. Buddy 5 plots reported obstacle distance and width.
 
 Controller decisions and observed IR sampling gaps are available with the
 updated diagnostic firmware, but task execution times, stop latency and memory/
@@ -351,6 +355,8 @@ while the count is still unavailable.
 
 Launch `tools/robot_dashboard.py` with `--imu-captures` to show **Raw IMU
 captures** and record raw telemetry from firmware built with `IMU_DEBUG=1`.
+On Windows, use `.\tools\start-telemetry.ps1 -StartBroker -ImuCaptures` for a
+hump test. Check that a new raw IMU CSV appears before starting the run.
 The dashboard stores CSVs in `imu/` under its live data folder and lists the latest 40.
 Each capture contains Pico timestamps, raw and calibrated acceleration in milli-g,
 and the detector's per-sample flags. Firmware using the v2 IMU stream also

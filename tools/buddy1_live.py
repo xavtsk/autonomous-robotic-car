@@ -7,8 +7,8 @@ car and needs no extra packages: pipe mosquitto_sub's "topic hex" lines into it.
 
     mosquitto_sub -h 172.20.10.2 -t '#' -F '%t %x' | python3 tools/buddy1_live.py
 
-By default repeated heartbeats and near-identical speed reports are folded so
-the screen stays readable; use --all to print every message.
+By default the viewer labels lines by buddy and folds repeated status
+and near-identical sensor readings. Use --all to print every message.
 
 After every run the car also sends its barcode-sensor trace as text on
 car/debug/barcode. The viewer shows the summary/episode lines and saves the
@@ -24,8 +24,19 @@ from buddy1_mqtt_codec import decode  # noqa: E402  (same folder, standard libra
 from dashboard.ir_protocol import decode_ir
 from dashboard.barcode_protocol import decode_barcode
 from dashboard.control_protocol import TOPIC as CONTROL_TOPIC, decode_control, DRIVE_STATES, REASONS, ACTIONS
+from dashboard.run_control_protocol import (
+    STATUS_TOPIC as RUN_STATUS_TOPIC, REPLY_TOPIC as RUN_REPLY_TOPIC,
+    decode_status, decode_reply,
+)
 
 SPEED_STEP_MMS = 10  # fold speed reports that changed less than this
+BUDDY_BY_REPORT = {
+    "heartbeat": 1, "status": 1, "control": 1, "faults": 1,
+    "motion": 2, "pose": 2,
+    "state": 3, "barcode": 3,
+    "terrain": 4, "hump": 4,
+    "avoidance": 5, "obstacle": 5, "scan": 5, "scan_sample": 5,
+}
 
 
 def _faults(section):
@@ -64,6 +75,12 @@ def _snapshot(d):
 def describe(topic, d):
     """One readable line for a decoded message."""
     name = topic.rsplit("/", 1)[-1]
+    if topic == RUN_STATUS_TOPIC:
+        return (f"CONTROL   running={d['running']} available={d['available']} "
+                f"can_start={d['can_start']} can_reset={d['can_reset']}")
+    if topic == RUN_REPLY_TOPIC:
+        return (f"CONTROL REPLY  {d['action']} {d['result']} "
+                f"reason={d['reason']} request={d['id']}")
     if topic == "car/cmd/snapshot":
         return "SNAPSHOT REQUESTED (laptop -> car)"
     if topic == "car/cmd/barcode_map":
@@ -92,7 +109,8 @@ def describe(topic, d):
                 if d["tilt_valid"] else "tilt unavailable")
         hump = f", on hump {d['climb_mm']} mm" if d["on_hump"] else ""
         peak = f", highest this run {d['peak_mm']} mm" if d["peak_valid"] else ", no hump yet"
-        return f"TERRAIN   {tilt}, {d['state']}{hump}{peak}"
+        safety = f", safety {d['safety']}" if d.get("safety") not in (None, "none") else ""
+        return f"TERRAIN   {tilt}, {d['state']}{hump}{peak}{safety}"
     if name == "avoidance":
         rng = f"{d['range_mm']} mm" if d["range_mm"] is not None else ("no echo" if d["no_echo"] else "unavailable")
         servo = f"servo {d['servo_deg']} deg" if d["servo_deg"] else "servo not positioned"
@@ -121,10 +139,16 @@ class Folder:
         self.last_speed = None
         self.last_tilt = None  # last printed terrain report
         self.last_avoid = None  # last printed avoidance report
+        self.last_run_status = None
 
     def keep(self, topic, d):
         if self.show_all:
             return True
+        if topic == RUN_STATUS_TOPIC:
+            status = (d["epoch"], d["running"], d["available"], d["can_start"], d["can_reset"])
+            changed = status != self.last_run_status
+            self.last_run_status = status
+            return changed
         name = topic.rsplit("/", 1)[-1]
         if name == "heartbeat" or topic == "car/status":
             self.heartbeats += 1
@@ -135,18 +159,19 @@ class Folder:
         if name == "motion" and topic.startswith("car/telemetry/"):
             speed = (d["left_mms"], d["right_mms"])
             if self.last_speed is not None and all(
-                    abs(a - b) < SPEED_STEP_MMS for a, b in zip(speed, self.last_speed)):
+                    (a == 0) == (b == 0) and abs(a - b) < SPEED_STEP_MMS
+                    for a, b in zip(speed, self.last_speed)):
                 return False
             self.last_speed = speed
         if name == "terrain":
-            # 5 Hz: print only changes of >= 1 degree, state, hump or peak.
+            # Keep state, safety and hump changes even if tilt hardly changes.
             key = (d["tilt_valid"], d["state"], d["on_hump"], d["climb_mm"], d["peak_mm"],
-                   d["pitch_deg"], d["roll_deg"])
-            last, self.last_tilt = self.last_tilt, key
-            if last is not None and key[:5] == last[:5] and (not key[0] or all(
-                    abs(a - b) < 1.0 for a, b in zip(key[5:], last[5:]))):
-                self.last_tilt = last
+                   d.get("safety"), d["pitch_deg"], d["roll_deg"])
+            last = self.last_tilt
+            if last is not None and key[:-2] == last[:-2] and (not key[0] or all(
+                    abs(a - b) < 1.0 for a, b in zip(key[-2:], last[-2:]))):
                 return False
+            self.last_tilt = key
         if name == "avoidance":
             # 5 Hz: print only state/step/servo changes or >= 20 mm range changes.
             key = (d["state"], d["fault"], d["leg"], d["pass_step"], d["swapped"], d["no_echo"],
@@ -248,12 +273,19 @@ def handle(line, folder, out, trace=None):
         return
     try:
         payload = bytes.fromhex(hexpart.strip())
-        d = decode(topic, payload)
+        if topic == RUN_STATUS_TOPIC:
+            d = decode_status(payload)
+        elif topic == RUN_REPLY_TOPIC:
+            d = decode_reply(payload)
+        else:
+            d = decode(topic, payload)
     except ValueError as error:
         print(f"{stamp}  ?? {topic} {hexpart.strip()}  (not decoded: {error})", file=out, flush=True)
         return
     if folder.keep(topic, d):
-        print(f"{stamp}  {describe(topic, d)}", file=out, flush=True)
+        buddy = BUDDY_BY_REPORT.get(topic.rsplit("/", 1)[-1])
+        label = f"B{buddy}  " if buddy is not None else "    "
+        print(f"{stamp}  {label}{describe(topic, d)}", file=out, flush=True)
 
 
 def main():

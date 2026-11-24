@@ -55,6 +55,9 @@ static uint32_t now_us (void);
 static void     servo_to (unsigned angle);
 static void     scan_log (const scan_obstacle_t *    p_scan,
                           const profile_obstacle_t * p_profile);
+static void     finish_sweep (const scan_obstacle_t * p_scan,
+                              const s5_config_t *     p_cfg,
+                              profile_obstacle_t *    p_profile);
 static void     keep_samples (const scan_obstacle_t * p_scan, uint16_t value_id,
                               bool b_is_peek);
 static void     publish (const s5_codec_observation_t * p_observation);
@@ -360,16 +363,39 @@ static void scan_log (const scan_obstacle_t *    p_scan,
         }
     }
 
-    tm_printf(
-        (UB *)" | valid=%u width=%u L=%d R=%d fwd=%u lclear=%u rclear=%u\n",
-        (unsigned)p_profile->b_is_valid, (unsigned)p_profile->width_mm,
-        (int)p_profile->left_edge_mm, (int)p_profile->right_edge_mm,
-        (unsigned)p_profile->forward_mm, (unsigned)p_profile->left_clear_mm,
-        (unsigned)p_profile->right_clear_mm);
+    tm_printf((UB *)" | valid=%u width=%u L=%d R=%d fwd=%u lclear=%u rclear=%u "
+                    "face_min=%u face_max=%u\n",
+              (unsigned)p_profile->b_is_valid, (unsigned)p_profile->width_mm,
+              (int)p_profile->left_edge_mm, (int)p_profile->right_edge_mm,
+              (unsigned)p_profile->forward_mm,
+              (unsigned)p_profile->left_clear_mm,
+              (unsigned)p_profile->right_clear_mm,
+              (unsigned)p_profile->face_width_min_mm,
+              (unsigned)p_profile->face_width_max_mm);
 #else
     (void)p_scan;
     (void)p_profile;
 #endif
+}
+
+/** @brief Build and log the routing profile and optional face width bounds.
+ * @param[in] p_scan Completed sweep owned by the obstacle task.
+ * @param[in] p_cfg Stable obstacle configuration.
+ * @param[out] p_profile Writable cleared profile, unchanged on scan failure.
+ */
+static void finish_sweep (const scan_obstacle_t * p_scan,
+                          const s5_config_t *     p_cfg,
+                          profile_obstacle_t *    p_profile)
+{
+    if ((!p_scan->b_has_failed) &&
+        (profile_obstacle_build(p_scan->sample,
+                                scan_obstacle_profile_count(p_scan), p_cfg,
+                                p_profile)))
+    {
+        profile_obstacle_face_width(p_scan->sample, p_scan->count, p_cfg,
+                                    p_profile);
+    }
+    scan_log(p_scan, p_profile);
 }
 
 /** @brief Copy the owner's finished scan into the telemetry snapshot under the
@@ -646,13 +672,7 @@ static void obstacle_task (INT code, void * p_unused)
                     }
                     else
                     {
-                        if (!scan.b_has_failed)
-                        {
-                            (void)profile_obstacle_build(
-                                scan.sample, scan.count, &config, &obs.profile);
-                        }
-
-                        scan_log(&scan, &obs.profile);
+                        finish_sweep(&scan, &config, &obs.profile);
                     }
 
                     b_is_scanning = false;
@@ -705,7 +725,7 @@ static void obstacle_task (INT code, void * p_unused)
             ultrasonic_sensor_cancel();
             b_is_pinging      = false;
             b_is_scanning     = false;
-            scan.b_has_failed = 1U;
+            scan.b_has_failed = !scan.b_has_profile;
             keep_samples(&scan, peek_id ? peek_id : obs.scan_id, peek_id != 0U);
 
             if (peek_id)
@@ -717,7 +737,11 @@ static void obstacle_task (INT code, void * p_unused)
             obs.b_is_scan_done = true;
             obs.scan_us        = now;
             obs.profile        = (profile_obstacle_t){0};
-            angle              = 90;
+            if (scan.b_has_profile)
+            {
+                finish_sweep(&scan, &config, &obs.profile);
+            }
+            angle = 90;
             servo_to(angle);
             positioned = now;
         }

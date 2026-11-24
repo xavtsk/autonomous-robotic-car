@@ -1,5 +1,66 @@
 # Change Requirement 1: Minimum-Bit Data Representation, Week 13 evidence
 
+## Course-test updates after 8bc969c
+
+The terrain and obstacle changes add a roll history, scan progress fields
+and an optional face-width interval. The [current width table](compliance/CR1_SUBMISSION_WIDTHS.md)
+checks the packed fields and selected source declarations. These entries
+supplement the earlier evidence below.
+
+| Field | Range and resolution | Representation and ownership |
+| --- | --- | --- |
+| Terrain odometry pivot flag | False or true | 1 bit. Buddy 4 sets it in its task-local view of the motor feedback. |
+| Terrain monitor roll-history flag | False or true | 1 bit. The terrain monitor's owner updates it with the history. |
+| Terrain monitor motion stability count | 0..3 samples, including reset and saturation | 2 bits in the terrain monitor. |
+| Two prior right-wheel roll samples | −90..+90 degrees, floating-point resolution | Two 32-bit floating-point values in the terrain monitor. The median and hump thresholds use the existing float precision. Integer angles would change comparisons near the thresholds. |
+| Obstacle scan count | 0..16 samples, including the full buffer | 5 bits in the scan state. Buddy 5 owns it. |
+| Routing sweep complete | False or true | 1 bit in the scan state. The code derives the routing count from the completed sweep and its nearest coarse bearing. It returns 0 before completion, 9 when the fine sweep is clipped at 30° or 150°, and 12 otherwise. |
+| Face-width probe index | 0..4, including the end of the probe list | 3 bits in the scan state. |
+| Face-width lower and upper bounds, Buddy 5 snapshot | 0..4095 mm in whole millimetres. Both zero means unavailable. | 12 bits each. Buddy 5 publishes the encoded snapshot under its existing mutex. |
+| Face-width lower and upper bounds, MQTT scan v4 | Lower 0..4095 mm, upper 1..4095 mm in whole millimetres | 12 bits each. Scan v3 carries the original fields when the width interval is unavailable. |
+| Face-width bounds in the C working and codec input views | 16-bit inputs may contain 0..65535. Codecs accept bounded intervals only. | Two `uint16_t` values per view. Validate before packing so invalid inputs can be rejected without truncation. |
+
+| Encoded application message | At `8bc969c` | Current | Change |
+| --- | ---: | ---: | ---: |
+| Buddy 5 inter-task obstacle snapshot | 182 bits / 23 B | 206 bits / 26 B | +24 bits / +3 B |
+| MQTT scan without face-width bounds | 95 body bits / 13 B | 95 body bits / 13 B | 0 B |
+| MQTT scan with face-width bounds | 95 body bits / 13 B for the previous scan layout | 119 body bits / 16 B | +24 bits / +3 B |
+
+MQTT byte counts include the version byte and byte-alignment padding. The
+extended scan fits the existing MQTT payload buffer. Telemetry uses the extra
+width readings to report the measured interval. The bypass uses the padded
+routing estimate.
+The laptop estimates turning rate from received wheel speeds, so that new
+graph and log add no firmware fields or MQTT bytes.
+
+### Matched course firmware measurements, 24 November 2026
+
+All three builds used Arm GNU 14.3.1, the same Pico SDK revision, the public
+example Wi-Fi settings, and the integrated course profile with both IR and
+IMU debug enabled. Static RAM includes the vector table, data and BSS.
+
+| Source | Static RAM | GNU `size` text |
+| --- | ---: | ---: |
+| Last push, `8bc969c` | 134,192 B | 467,812 B |
+| Course changes, before this cleanup | 134,204 B | 470,048 B |
+| Course changes, after this cleanup | 134,204 B | 470,296 B |
+
+The cleanup shrank the terrain task's local monitor from 232 to 224 bytes
+with IMU debug enabled, and from 216 to 208 bytes with it disabled. The
+task keeps its existing stack allocation. The scan object stays at 60 bytes
+after alignment. The linked firmware uses the same static RAM as the
+pre-cleanup course build and 248 more text bytes.
+[Arm layouts, build settings and image hashes](compliance/evidence/COURSE_FIELD_LAYOUT.json)
+
+The Buddy 1, 4 and 5 Linux test suites passed on both the pre-cleanup course
+code and the candidate. All 42 emitted MQTT vector lines matched byte for
+byte. The hump fixtures and simulated bypass routes produced the same
+results. The optional simulation with turns 10% shorter than commanded
+still reports its known miss. The only log difference was the Python
+runner's elapsed time. The scan fixtures now also check the derived routing
+count at each coarse bearing. On-car timing and course behaviour still
+require a physical run with the candidate.
+
 ## Phase 3 submission results
 
 The final packing batch covers the drive flags and terrain reporting cache.

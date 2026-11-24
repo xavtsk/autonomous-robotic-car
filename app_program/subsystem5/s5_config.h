@@ -172,6 +172,11 @@
 #ifndef S5_MARGIN_MM
 #define S5_MARGIN_MM 30U
 #endif
+/* Outbound diagonal only: allow another 5 mm sideways once the corner
+ * has cleared. The obstacle trigger and minimum side-trim gap stay separate. */
+#ifndef S5_OUTWARD_EXTRA_MM
+#define S5_OUTWARD_EXTRA_MM 5U
+#endif
 /* Application settings, NOT measured tolerances. Units mm unless noted.
  * 12-bit distances preserve 1 mm through 4095; timings retain wrap precision.
  */
@@ -188,6 +193,17 @@ typedef struct
     unsigned sensor_axle_mm : 12;
     unsigned speed_mms : 9;
 } s5_config_t;
+
+/** @brief Return the planned axle-to-obstacle side gap in millimetres.
+ * @param[in] p_cfg Valid, readable obstacle configuration.
+ * @return Vehicle half-width and side margin plus the outbound allowance.
+ */
+static inline unsigned s5_outward_gap_mm (const s5_config_t * p_cfg)
+{
+    /* Each 12-bit input widens exactly to unsigned before addition. */
+    return ((unsigned)p_cfg->half_width_mm + (unsigned)p_cfg->margin_mm) +
+           S5_OUTWARD_EXTRA_MM;
+}
 
 /** @brief Return the configured obstacle detection, scan and bypass geometry
  * for the car. Clearance and range distances use millimetres.

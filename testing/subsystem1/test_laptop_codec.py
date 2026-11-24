@@ -81,6 +81,23 @@ class LaptopCodecTests(unittest.TestCase):
             with self.subTest(topic=topic, bad=bad), self.assertRaises(ValueError):
                 codec.decode(topic, bytes.fromhex(bad))
 
+    def test_scan_face_width_interval(self):
+        topic = "car/telemetry/scan"
+        legacy = self.vectors[topic]
+        header = bytes([4]) + legacy[1:]
+        def packet(low, high):
+            return header + (low | high << 12).to_bytes(3, "little")
+        for low, high in ((123, 177), (0, 1), (4095, 4095)):
+            with self.subTest(low=low, high=high):
+                self.assertEqual(codec.decode(topic, packet(low, high)),
+                                 dict(codec.decode(topic, legacy), face_width_min_mm=low, face_width_max_mm=high))
+        invalid_profile = bytes([4]) + ((4000 << 69) | (4000 << 82)).to_bytes(12, "little") + packet(1, 2)[13:]
+        for bad in (header, packet(0, 0), packet(200, 150), packet(1, 2)[:-1], invalid_profile,
+                    header[:12] + bytes([header[12] | 0x80]) + packet(1, 2)[13:],
+                    legacy + packet(1, 2)[13:]):
+            with self.subTest(bad=bad.hex()), self.assertRaises(ValueError):
+                codec.decode(topic, bad)
+
     def test_terrain_wire(self):
         full = dict(tilt_valid=True, pitch_deg=12.3, roll_deg=-5.1, state="climbing",
                     on_hump=True, climb_mm=23, peak_valid=True, peak_mm=41,

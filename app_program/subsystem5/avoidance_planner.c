@@ -31,7 +31,7 @@ bool avoidance_planner_build (const profile_obstacle_t * p_profile,
         return false;
     }
 
-    const unsigned lateral_pad_mm = p_cfg->half_width_mm + p_cfg->margin_mm;
+    const unsigned lateral_pad_mm = s5_outward_gap_mm(p_cfg);
     {
         /* Expand a narrow-looking obstacle about the measured centre to
          * at least S5_OBSTACLE_MAX_MM. The scan can underestimate width.

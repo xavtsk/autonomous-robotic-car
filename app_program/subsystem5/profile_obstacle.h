@@ -24,7 +24,24 @@ typedef struct
     int16_t  right_edge_mm;
     uint16_t forward_mm;
     bool     b_is_valid;
+    uint16_t face_width_min_mm;
+    uint16_t face_width_max_mm;
 } profile_obstacle_t;
+
+/** @brief Estimate the visible width of a flat face square to the car.
+ * @param[in] p_samples Stable packed echoes for the completed sweep.
+ * @param count Number of stored echoes, at most S5_SAMPLES_MAX.
+ * @param[in] p_cfg Stable configuration used for the near/far echo cutoff.
+ * @param[in,out] p_profile Caller-owned profile from the routing sweep.
+ * A null output is ignored. Width bounds are cleared if either edge is
+ * unresolved, input is missing or invalid, or the profile is invalid.
+ * @details Bracket the face using the last matching echo and next clear
+ * bearing on either side. Output bounds are in millimetres. Assign only the
+ * face width fields. Keep inputs and output distinct and stable.
+ */
+void profile_obstacle_face_width (const profile_obstacle_sample_t * p_samples,
+                                  unsigned count, const s5_config_t * p_cfg,
+                                  profile_obstacle_t * p_profile);
 
 /** @brief Pack one servo reading into an explicit 18-bit sample.
  * @param[in] angle Servo degrees, 30..150 inclusive in exact 5-degree steps;

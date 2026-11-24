@@ -103,6 +103,17 @@ class RunLogTests(unittest.TestCase):
         entry, = self.archive().download("run")["entries"]
         self.assertEqual(entry["data"], {"state": "stopped"})
 
+    def test_buddy4_legacy_wheel_rate_uses_archived_motion_samples(self):
+        archive = self.archive()
+        archive.record(self.run_record("run"))
+        archive.append("run", 2, "motor_feedback", "first", dict(measured_left=0, measured_right=116, timestamp_us=32))
+        old, = archive.download("run", buddy=4)["entries"]
+        self.assertEqual(old, dict(buddy=4, kind="encoder_turn", received_at="first",
+                                   data=dict(timestamp_us=32, encoder_turn_dps=57.3)))
+        archive.append("run", 4, "encoder_turn", "second", dict(timestamp_us=64, encoder_turn_dps=None))
+        new, = archive.download("run", buddy=4)["entries"]
+        self.assertEqual(new["data"], dict(timestamp_us=64, encoder_turn_dps=None))
+
     def test_retries_pending_updates_after_database_lock(self):
         archive = self.archive()
         archive.record(self.run_record("run"))

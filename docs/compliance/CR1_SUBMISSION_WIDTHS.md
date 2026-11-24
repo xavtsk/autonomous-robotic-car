@@ -1,14 +1,15 @@
 # Current scoped Change Requirement 1 width table
 
-Generated on 22 November 2026 by
+Generated on 24 November 2026 by
 `python testing/change_requirement_1/check_widths.py`. The group identifies the
-packet layout or named C storage record. The used width is the field width
-within that layout. Target allocation and padding are measured separately in
-the [Phase 3 evidence](../CHANGE_REQUIREMENT_1_EVIDENCE.md#phase-3-submission-results).
+packet layout or named C storage record. Used bits describe the field width
+within that layout. The [course-test evidence](../CHANGE_REQUIREMENT_1_EVIDENCE.md#course-test-updates-after-8bc969c)
+covers message size, ownership, and wider working representations.
 
-This check covers 155 selected fields and 18 codec totals. The
-[broader declaration snapshot](CR1_FIELD_INVENTORY.md) retains its original
-source bindings and open dispositions.
+This check covers 165 selected fields and 19 codec totals. It binds the
+base and extended scan packing calls, the Buddy 5 obstacle snapshot and
+selected C declarations. The [broader declaration snapshot](CR1_FIELD_INVENTORY.md)
+retains its original source bindings and open dispositions.
 
 | Group | Field | Range (step) | Codes | Min bits | Used bits | OK |
 |---|---|---|---:|---:|---:|---|
@@ -58,6 +59,8 @@ source bindings and open dispositions.
 | scan | depth to far face, mm | 0..4000 | 4001 | 12 | 12 | yes |
 | scan | left edge, mm (+4000 offset) | -4000..4000 | 8001 | 13 | 13 | yes |
 | scan | right edge, mm (+4000 offset) | -4000..4000 | 8001 | 13 | 13 | yes |
+| scan v4 bounds | face width lower estimate, mm | 0..4095 | 4096 | 12 | 12 | yes |
+| scan v4 bounds | face width upper estimate, mm | 1..4095 | 4095 | 12 | 12 | yes |
 | scan_sample | scan id (low 8 bits, 19 Nov 2026) | 0..255 | 256 | 8 | 8 | yes |
 | scan_sample | side peek | 0..1 | 2 | 1 | 1 | yes |
 | scan_sample | reading index | 0..15 | 16 | 4 | 4 | yes |
@@ -103,6 +106,8 @@ source bindings and open dispositions.
 | b5 packet | depth, mm | 0..4000 | 4001 | 12 | 12 | yes |
 | b5 packet | left edge, mm | -4000..4000 | 8001 | 13 | 13 | yes |
 | b5 packet | right edge, mm | -4000..4000 | 8001 | 13 | 13 | yes |
+| b5 packet | face width lower estimate, mm | 0..4095 | 4096 | 12 | 12 | yes |
+| b5 packet | face width upper estimate, mm | 0..4095 | 4096 | 12 | 12 | yes |
 | b5 sample | distance, mm | 0..4000 | 4001 | 12 | 12 | yes |
 | b5 sample | angle index (30..150 deg, 5 deg steps) | 0..24 | 25 | 5 | 5 | yes |
 | b5 sample | valid | 0..1 | 2 | 1 | 1 | yes |
@@ -167,6 +172,12 @@ source bindings and open dispositions.
 | terrain report cache | sent_height | 0..500 | 501 | 9 | 9 | yes |
 | terrain report cache | b_sent_fault | 0..1 | 2 | 1 | 1 | yes |
 | terrain report cache | b_has_unreported_impact | 0..1 | 2 | 1 | 1 | yes |
+| b4 odometry | b_is_pivoting | 0..1 | 2 | 1 | 1 | yes |
+| b4 monitor | b_has_right_roll | 0..1 | 2 | 1 | 1 | yes |
+| b4 monitor | stable_count | 0..3 | 4 | 2 | 2 | yes |
+| b5 scan state | count | 0..16 | 17 | 5 | 5 | yes |
+| b5 scan state | b_has_profile | 0..1 | 2 | 1 | 1 | yes |
+| b5 scan state | width_probe | 0..4 | 5 | 3 | 3 | yes |
 
 | Group | Sum of fields | Bits in codec | OK |
 |---|---:|---:|---|
@@ -181,10 +192,11 @@ source bindings and open dispositions.
 | terrain | 59 | 59 | yes |
 | avoidance | 38 | 38 | yes |
 | scan | 95 | 95 | yes |
+| scan v4 | 119 | 119 | yes |
 | scan_sample | 35 | 35 | yes |
 | control_reply | 71 | 71 | yes |
 | b4 packet | 95 | 95 | yes |
-| b5 packet | 182 | 182 | yes |
+| b5 packet | 206 | 206 | yes |
 | b5 sample | 18 | 18 | yes |
 | s5 status | 16 | 16 | yes |
 | snapshot (7 validity + 7 sections + pose validity + pose) | 124 | 124 | yes |

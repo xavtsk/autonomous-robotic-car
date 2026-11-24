@@ -481,14 +481,16 @@ static void finish_scan (void)
         }
     }
     else if ((scan.b_has_failed) ||
-             (!profile_obstacle_build(scan.sample, scan.count, &cfg,
+             (!profile_obstacle_build(scan.sample,
+                                      scan_obstacle_profile_count(&scan), &cfg,
                                       &g_last_profile)))
     {
         g_last_profile = (profile_obstacle_t){0};
     }
     else
     {
-        /* Keep the successfully built obstacle profile. */
+        profile_obstacle_face_width(scan.sample, scan.count, &cfg,
+                                    &g_last_profile);
     }
 
     g_obs.profile        = g_last_profile;
