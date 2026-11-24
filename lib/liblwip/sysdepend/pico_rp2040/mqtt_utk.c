@@ -64,6 +64,8 @@ typedef enum
 #endif
 #if APP_IMU_DEBUG
 #define MQTT_UTK_IMU_DATA_GAP 2U
+BUILD_ASSERT(MQTT_UTK_HUMP_DEBUG_SIZE <= MQTT_UTK_IMU_DEBUG_MAX,
+             mqtt_utk_hump_capacity_t);
 #endif
 
 /* Every field below is owned by the existing CYW43/lwIP task. Callback
@@ -164,6 +166,9 @@ static void application_publish_done_cb (void * p_context, err_t result);
 
 static void debug_publish_done_cb (void * p_context, err_t result);
 
+#if APP_IMU_DEBUG
+static void hump_publish_done_cb (void * p_context, err_t result);
+#endif
 #if APP_IR_DEBUG || APP_IMU_DEBUG
 static void preview_publish_done_cb (void * p_context, err_t result);
 
@@ -240,6 +245,23 @@ __attribute__((weak)) unsigned int mqtt_utk_imu_debug_take (uint8_t * p_bytes,
     (void)size;
     return 0U;
 }
+
+#if APP_IMU_DEBUG
+/** @brief No reset event when the terrain diagnostics module is absent. */
+__attribute__((weak)) unsigned int
+mqtt_utk_hump_debug_peek (uint8_t * p_bytes, unsigned int size)
+{
+    (void)p_bytes;
+    (void)size;
+    return 0U;
+}
+
+/** @brief Default acknowledgement when the producer is absent. */
+__attribute__((weak)) void mqtt_utk_hump_debug_ack (uint32_t sequence)
+{
+    (void)sequence;
+}
+#endif
 
 /** @brief Default application hook: leave output unchanged and take nothing.
  * @param p_out Ignored borrowed packet pointer; may be NULL.
@@ -485,6 +507,25 @@ void mqtt_utk_poll (void)
          !g_mqtt_state.b_has_capture_packet) ||
         g_mqtt_state.imu_data_since >= MQTT_UTK_IMU_DATA_GAP)
     {
+        /* A reset takes the next raw IMU slot. Keep the event in the
+         * producer queue until lwIP receives its PUBACK. */
+        if (MQTT_UTK_HUMP_DEBUG_SIZE ==
+            mqtt_utk_hump_debug_peek(g_preview_payload,
+                                     MQTT_UTK_HUMP_DEBUG_SIZE))
+        {
+            g_mqtt_state.imu_data_since = 0;
+            g_mqtt_state.b_has_inflight_packet = true;
+            pace_publish(MQTT_UTK_PUBLISH_GAP_MS);
+            err = mqtt_publish(gp_client, MQTT_UTK_HUMP_DEBUG_TOPIC,
+                               g_preview_payload, MQTT_UTK_HUMP_DEBUG_SIZE,
+                               1, 0, hump_publish_done_cb, NULL);
+            if (err != ERR_OK)
+            {
+                g_mqtt_state.b_has_inflight_packet = false;
+                pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+            }
+            return;
+        }
         payload_length =
             mqtt_utk_imu_debug_take(g_preview_payload, MQTT_UTK_IMU_DEBUG_MAX);
         if (payload_length > MQTT_UTK_IMU_DEBUG_MAX)
@@ -723,6 +764,30 @@ static void debug_publish_done_cb (void * p_context, err_t result)
         pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
     }
 }
+
+#if APP_IMU_DEBUG
+/** @brief Release only the broker-acknowledged event. The preview buffer
+ * belongs to the network task and stays stable during the in-flight send.
+ * Widen the four sequence bytes before shifting to rebuild the wire ID.
+ */
+static void hump_publish_done_cb (void * p_context, err_t result)
+{
+    (void)p_context;
+    if (ERR_OK == result)
+    {
+        const uint32_t sequence = (uint32_t)g_preview_payload[8] |
+            ((uint32_t)g_preview_payload[9] << 8U) |
+            ((uint32_t)g_preview_payload[10] << 16U) |
+            ((uint32_t)g_preview_payload[11] << 24U);
+        mqtt_utk_hump_debug_ack(sequence);
+    }
+    else
+    {
+        pace_publish(MQTT_UTK_PUBLISH_RETRY_MS);
+    }
+    g_mqtt_state.b_has_inflight_packet = false;
+}
+#endif
 
 #if APP_IR_DEBUG || APP_IMU_DEBUG
 /** @brief Complete a live preview send and release the in-flight slot. The

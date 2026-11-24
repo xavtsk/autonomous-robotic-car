@@ -137,12 +137,15 @@ void hump_detection_update_right (hump_detection_t * p_hump, float32_t pitch,
     const bool      b_was_active = p_hump->b_is_hump_tracking;
     const bool      b_was_armed  = p_hump->b_is_armed;
     const float32_t prior_travel = p_hump->travel_m;
+    const float32_t prior_peak   = p_hump->peak_m;
     /* The reason uses its existing wire code in the range 0..18. */
     p_hump->debug.reason   = (uint8_t)right_step(p_hump, pitch, roll, track_m,
                                                  step_distance_m, quality, now);
     p_hump->debug.travel_m = p_hump->b_is_hump_tracking
                                  ? p_hump->travel_m
                                  : (b_was_active ? prior_travel : 0);
+    p_hump->debug.candidate_peak_m =
+        p_hump->b_is_hump_tracking ? p_hump->peak_m : prior_peak;
     /* The seven debug flags occupy separate bits of the output byte. */
     p_hump->debug.flags =
         (uint8_t)((!b_was_armed && p_hump->b_is_armed ? HUMP_DEBUG_ARMED : 0) |

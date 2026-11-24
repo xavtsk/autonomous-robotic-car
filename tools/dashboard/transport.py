@@ -8,13 +8,14 @@ import subprocess
 import threading
 
 from .imu_capture import TOPIC as IMU_TOPIC
+from .hump_events import TOPIC as HUMP_EVENT_TOPIC
 
 COMMAND_TOPICS = {"car/cmd/barcode_map", "car/cmd/snapshot", "car/cmd/control"}
 
 
 def telemetry_topics(state, heartbeat_topic):
     topics = ("car/telemetry/+", "car/reply/+", "car/status", "car/debug/barcode",
-              "car/debug/ir", "car/debug/controller", heartbeat_topic)
+              "car/debug/ir", "car/debug/controller", HUMP_EVENT_TOPIC, heartbeat_topic)
     return topics if state.imu_captures is None else topics + (IMU_TOPIC,)
 
 

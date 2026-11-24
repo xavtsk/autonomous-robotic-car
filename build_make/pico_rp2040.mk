@@ -232,6 +232,18 @@ ifeq ($(CONSOLE)$(CRASH_REPORT),usb_cdc1)
 CRASH_SUFFIX := _crash
 endif
 
+# Optional read-only USB magnetometer stream for supervised calibration.
+MAG_CAL_CAPTURE ?= 0
+ifneq ($(filter $(MAG_CAL_CAPTURE),0 1),$(MAG_CAL_CAPTURE))
+$(error MAG_CAL_CAPTURE must be 0 or 1)
+endif
+ifeq ($(MAG_CAL_CAPTURE),1)
+ifneq ($(S4)$(S3_MOTION)$(CONSOLE)$(CRASH_REPORT),11usb_cdc0)
+$(error MAG_CAL_CAPTURE=1 requires S4=1 S3_MOTION=1 CONSOLE=usb_cdc CRASH_REPORT=0)
+endif
+MAG_CAPTURE_SUFFIX := _mag_capture
+endif
+
 #
 # Images are named after the profile they were built with.  Every image is
 # flashed by hand from a downloads folder, so identically-named artifacts are
@@ -266,7 +278,7 @@ ifeq ($(S5_HARDWARE_CONFIRMED),0)
 S5_SUFFIX := _s5_UNCONFIGURED
 endif
 endif
-EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(S3_STRAIGHT_TEST_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)$(S4_SUFFIX)$(S5_SUFFIX)$(IR_DEBUG_SUFFIX)$(IMU_DEBUG_SUFFIX)
+EXE_FILE := mtk3pico_smp$(SMP)_$(CONSOLE)$(WIFI_SUFFIX)$(NET_SUFFIX)$(MQTT_SUFFIX)$(CRASH_SUFFIX)$(TEST_SUFFIX)$(IR_BENCH_SUFFIX)$(S3_MOTION_SUFFIX)$(S3_STRAIGHT_TEST_SUFFIX)$(DIAGNOSTICS_SUFFIX)$(MOTION_SMOKE_SUFFIX)$(S4_SUFFIX)$(S5_SUFFIX)$(IR_DEBUG_SUFFIX)$(IMU_DEBUG_SUFFIX)$(MAG_CAPTURE_SUFFIX)
 
 GCC := arm-none-eabi-gcc
 AS := arm-none-eabi-gcc
@@ -340,6 +352,7 @@ CFLAGS  += -DAPP_DIAGNOSTICS=$(DIAGNOSTICS)
 CFLAGS  += -DAPP_MOTION_SMOKE=$(MOTION_SMOKE)
 CFLAGS  += -DAPP_IR_DEBUG=$(IR_DEBUG)
 CFLAGS  += -DAPP_IMU_DEBUG=$(IMU_DEBUG)
+CFLAGS  += -DAPP_MAG_CAL_CAPTURE=$(MAG_CAL_CAPTURE)
 CFLAGS  += -DTM_CONSOLE_UART=$(CRASH_REPORT)
 ifeq ($(CRASH_REPORT),0)
 CFLAGS  += -DBOARD_UART0_FREE=1
@@ -372,7 +385,7 @@ endif
 # before any recipe executes.
 ################################################################################
 
-PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-s3straight$(S3_STRAIGHT_TEST)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)-s4$(S4)-s4bench$(S4_BENCH)-s5$(S5)-s5confirmed$(S5_HARDWARE_CONFIRMED)-irdebug$(IR_DEBUG)-imudebug$(IMU_DEBUG)
+PROFILE_ID := smp$(SMP)-$(CONSOLE)-wifi$(WIFI)-net$(NET)-mqtt$(MQTT)-crash$(CRASH_REPORT)-test$(TEST)-irbench$(IR_BENCH)-irchannels$(IR_CHANNELS)-s3motion$(S3_MOTION)-s3straight$(S3_STRAIGHT_TEST)-diag$(DIAGNOSTICS)-smoke$(MOTION_SMOKE)-s4$(S4)-s4bench$(S4_BENCH)-s5$(S5)-s5confirmed$(S5_HARDWARE_CONFIRMED)-irdebug$(IR_DEBUG)-imudebug$(IMU_DEBUG)$(MAG_CAPTURE_SUFFIX)
 PROFILE_FILE := .build_profile
 
 ifneq ($(strip $(shell cat $(PROFILE_FILE) 2>/dev/null)),$(PROFILE_ID))

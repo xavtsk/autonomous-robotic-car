@@ -112,6 +112,15 @@ unsigned int mqtt_utk_control_debug_take (uint8_t * p_bytes, unsigned int size);
  */
 unsigned int mqtt_utk_imu_debug_take (uint8_t * p_bytes, unsigned int size);
 
+#define MQTT_UTK_HUMP_DEBUG_TOPIC "car/debug/hump_event"
+#define MQTT_UTK_HUMP_DEBUG_SIZE 24U
+/** @brief Copy the oldest queued detector reset without consuming it.
+ * @return Packet size in bytes, or zero if the queue or mutex is unavailable.
+ */
+unsigned int mqtt_utk_hump_debug_peek (uint8_t * p_bytes, unsigned int size);
+/** @brief Release the matching queue head after its QoS 1 broker ACK. */
+void mqtt_utk_hump_debug_ack (uint32_t sequence);
+
 /** @brief Handle a complete inbound payload in the network-owner task.
  * @param p_topic Borrowed NUL-terminated topic, valid during this call only.
  * @param p_payload Borrowed payload_len bytes, valid during this call only.

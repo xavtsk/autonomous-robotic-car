@@ -353,6 +353,16 @@ records still show their hump summaries. Debug's **Save received log** includes
 the recent run summary rows. A live terrain report can supply the highest hump
 while the count is still unavailable.
 
+**Discarded hump crossings** on the run log page shows the latest rejection
+reported on `car/debug/hump_event` and links to the event CSVs under
+`.dashboard-data/live/imu/hump-*.csv`. The live dashboard archives these
+events independently of raw sample capture. Each row identifies the firmware
+boot, original run, event sequence, Pico timestamp, reason, qualifying travel
+and peak in micrometres, and firmware queue drop count. Use the Pico time
+and run number to align a delayed event to its raw IMU samples. The laptop
+records the receive time separately. Firmware supporting only the older IMU
+sample packets continues to use the raw capture below.
+
 Launch `tools/robot_dashboard.py` with `--imu-captures` to show **Raw IMU
 captures** and record raw telemetry from firmware built with `IMU_DEBUG=1`.
 On Windows, use `.\tools\start-telemetry.ps1 -StartBroker -ImuCaptures` for a

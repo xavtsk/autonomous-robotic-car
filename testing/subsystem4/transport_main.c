@@ -51,6 +51,7 @@ static void owner_cycle (void);
 #if APP_IMU_DEBUG
 static void test_imu_debug (void);
 static void test_hump_imu_debug (void);
+static void test_retained_hump_event (void);
 #endif
 
 /** @brief Fail the fixture assertion if the owner unexpectedly exits its
@@ -101,7 +102,7 @@ ID tk_cre_cyc (const T_CCYC * p_cycle)
     return 3;
 }
 
-/** @brief Require cyclic ID three and update the simulated timer’s running
+/** @brief Require cyclic ID three and update the simulated timerâ€™s running
  * state.
  */
 ER tk_sta_cyc (ID h_cycle)
@@ -111,7 +112,7 @@ ER tk_sta_cyc (ID h_cycle)
     return E_OK;
 }
 
-/** @brief Require cyclic ID three and update the simulated timer’s running
+/** @brief Require cyclic ID three and update the simulated timerâ€™s running
  * state.
  */
 ER tk_stp_cyc (ID h_cycle)
@@ -421,6 +422,7 @@ int main (void)
 #if APP_IMU_DEBUG
     test_imu_debug();
     test_hump_imu_debug();
+    test_retained_hump_event();
 #endif
     puts("PASS: real S4 transport/task reset acknowledgement, "
          "count/saturation, event overflow, safety/impact delivery, stale "
@@ -635,6 +637,56 @@ static void test_hump_imu_debug (void)
     assert(wire32(p_row + 18) == (uint32_t)INT32_MIN &&
            wire32(p_row + 22) == 0U);
     assert(0 == (int)p_row[26] && 4 == (int)p_row[27]);
+}
+
+/** @brief A discarded candidate survives raw logging contention, a new run,
+ * repeated reads, and a missing or delayed acknowledgement.
+ */
+static void test_retained_hump_event (void)
+{
+    const unsigned      queue_capacity = 8U;
+    const uint16_t      first_run      = buddy4_transport_debug_run();
+    terr_data_monitor_t monitor;
+    terr_data_init(&monitor);
+    monitor.hump_geometry               = TERRAIN_HUMP_RIGHT_WHEEL;
+    imu_sensor_sample_t        sample   = {.timestamp_us = g_clock_us};
+    const terr_data_odometry_t odometry = {0};
+    uint8_t                    packet[24];
+    gb_should_fail_debug_lock = true;
+
+    for (unsigned index = 0; index <= queue_capacity; ++index)
+    {
+        monitor.hump.b_is_hump_tracking = true;
+        monitor.hump.peak_m             = 0.01f;
+        monitor.hump.travel_m           = 0.03f;
+        buddy4_transport_process(&monitor, &sample, &odometry);
+        sample.timestamp_us += 20000U;
+    }
+
+    gb_should_fail_debug_lock = false;
+    uint16_t next_run;
+    assert(buddy4_begin_run(&next_run));
+    assert(next_run != first_run);
+    assert(0U == mqtt_utk_hump_debug_peek(packet, sizeof packet - 1U));
+    assert(sizeof packet == mqtt_utk_hump_debug_peek(packet, sizeof packet));
+    assert(1 == packet[0] && HUMP_REASON_INVALID_IMU == packet[1]);
+    assert(first_run == wire16(packet + 2) && 0U != wire32(packet + 4));
+    assert(g_clock_us == wire32(packet + 12));
+    assert(30000U == wire32(packet + 16) && 10000U == wire16(packet + 20));
+    assert(1U == wire16(packet + 22));
+    const uint32_t first = wire32(packet + 8);
+    mqtt_utk_hump_debug_ack(first + 1U);
+    gb_should_fail_lock = true;
+    mqtt_utk_hump_debug_ack(first);
+    gb_should_fail_lock = false;
+    for (unsigned index = 0; index < queue_capacity; ++index)
+    {
+        assert(sizeof packet ==
+               mqtt_utk_hump_debug_peek(packet, sizeof packet));
+        assert((first + index) == wire32(packet + 8));
+        mqtt_utk_hump_debug_ack(first + index);
+    }
+    assert(0U == mqtt_utk_hump_debug_peek(packet, sizeof packet));
 }
 #endif
 

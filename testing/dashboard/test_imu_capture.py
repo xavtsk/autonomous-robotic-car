@@ -10,6 +10,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
 from dashboard import imu_capture
+from dashboard import hump_events
 from dashboard.state import DashboardState
 from dashboard.traces import TraceStore
 from dashboard.transport import telemetry_topics
@@ -30,6 +31,40 @@ def csv_rows(data):
 
 
 class ImuCaptureTests(unittest.TestCase):
+    def test_discard_log_survives_stop_next_run_reconnect_and_restart(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            state = DashboardState(TraceStore(folder))
+            topic = hump_events.TOPIC
+            self.assertIn(topic, telemetry_topics(state, state.heartbeat_topic))
+            first = struct.pack("<BBHIIIIHH", 1, 10, 8, 0x629, 1, 75638, 13244, 9730, 0)
+            second = struct.pack("<BBHIIIIHH", 1, 17, 9, 0x629, 2, 95761, 3155, 7942, 1)
+            state.ingest(topic, first, retained=True)
+            state.ingest(topic, first[:-1])
+            state.ingest(topic, bytes([2]) + first[1:])
+            state.ingest(topic, first[:1] + bytes([255]) + first[2:])
+            self.assertEqual(state.snapshot()["counters"]["malformed"], 3)
+            self.assertEqual(state.snapshot()["hump_events"]["files"], [])
+            state.ingest(topic, first)
+            state.ingest(topic, second)
+            state.ingest(topic, first)
+            snapshot = state.snapshot()["hump_events"]
+            self.assertEqual(len(snapshot["files"]), 2)
+            latest, prior = snapshot["files"]
+            rows = csv_rows(state.download_imu(prior))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual((rows[0]["rejection_reason"], rows[0]["firmware_run"],
+                              rows[0]["peak_um"], rows[0]["crossing_travel_um"]),
+                             ("reverse_travel", "8", "9730", "13244"))
+            state = DashboardState(TraceStore(folder))
+            self.assertEqual(state.snapshot()["hump_events"]["latest"], snapshot["latest"])
+            state.ingest(topic, second)
+            rows = csv_rows(state.download_imu(latest))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["firmware_dropped_events"], "1")
+            with self.assertRaises(KeyError):
+                state.download_imu("hump-../../config/wifi_secrets.h")
+
     def test_capture_is_disabled_by_default(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)

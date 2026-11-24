@@ -159,6 +159,49 @@ claim that calibration was done. Compass turn rate is an estimate, not gyro data
 motor magnetic interference must be measured. Stationary offset calibration does
 not calibrate the compass or prove acceleration scale accuracy.
 
+### Measuring this car's compass coefficients
+
+For supervised capture, build the integrated USB course profile with
+`MAG_CAL_CAPTURE=1`, `S4=1`, `S3_MOTION=1`, `CONSOLE=usb_cdc` and
+`CRASH_REPORT=0`. The image name ends in `_mag_capture`. The default build
+omits this stream. The capture build sends up to ten valid vehicle-axis
+magnetic vectors per second to an open USB console while motor feedback is
+fresh and braked. The existing MQTT packets retain their formats.
+
+1. Keep the Pico connected by USB and powered. Switch off motor power if it
+   has a separate switch. If the car's main switch also cuts power to the Pico,
+   leave that switch on. Keep the chassis flat until startup calibration
+   completes, then confirm the car reports `Off` and leave it stopped. Use an
+   area away from steel furniture, speakers, and power supplies.
+2. Find the Pico's COM port with `python tools/capture_robot_log.py --list-ports`.
+   Close any serial terminal using that port. The laptop's Python environment
+   needs pyserial. From the repository root, record two separate sweeps,
+   substituting the connected port for `COM4`:
+
+   ```powershell
+   .\build\dashboard-venv\Scripts\python.exe tools/compass_calibration.py capture --port COM4 --seconds 60 --output build/compass-first.csv
+   .\build\dashboard-venv\Scripts\python.exe tools/compass_calibration.py capture --port COM4 --seconds 60 --output build/compass-repeat.csv
+   .\build\dashboard-venv\Scripts\python.exe tools/compass_calibration.py fit build/compass-first.csv build/compass-repeat.csv
+   ```
+
+3. During **each** capture, gently rotate and tilt the whole assembled car.
+   Point the front, rear, left, right, top and underside in different
+   directions, pausing near extreme orientations. Make a different sequence
+   on the second sweep. A flat circle alone provides little Z-axis coverage.
+4. The fit estimates axis offsets and diagonal gains on the first sweep and
+   checks the result on the second. The engineering checks require at least
+   100 readings per sweep, occupied cones in all six directions, 95th
+   percentile field-strength variation at most 12%, and repeatable centres
+   and gains. A rejected capture reports the failed check. Raw files are
+   preserved for inspection.
+5. The printed coefficients are candidates in vehicle-axis order. An
+   operator can review them before including them in an integration build
+   and passing them to `buddy4_set_mag_calibration()` after Buddy 4 starts.
+   Check turn-rate sign on repeatable left/right rotations, then compare
+   the same heading with motors powered under representative conditions.
+   This capture command only records measurements. Its reader exits and
+   closes the port after the selected duration.
+
 Thresholds in the processing modules are provisional engineering defaults. Impact
 is a candidate event, not proof of collision. The controller response above is enabled only with S4=1. S4 remains off by
 default unless explicitly requested.

@@ -22,6 +22,7 @@ typedef struct
 {
     float32_t wheel_delta_m;
     float32_t travel_m;
+    float32_t candidate_peak_m;
     bool      b_is_wheel_delta_valid;
     uint8_t   flags;
     uint8_t   reason;
