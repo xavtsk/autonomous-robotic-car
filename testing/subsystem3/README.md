@@ -1,6 +1,10 @@
 # Buddy 3 stationary diagnostics and software tests
 
-> Current guide: [documentation index](../../docs/README.md), [baseline status](../../docs/CURRENT_STATUS.md), and [build/test commands](../../docs/BUILD_AND_TEST.md). Dated results below retain their original evidence limits.
+For the final submission, start with the [host tests](#repeatable-host-tests),
+[October mounted-sensor calibration](IR_CALIBRATION_2026-10-27.md) and
+[post-demo replay results](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md#recorded-barcode-regression).
+The dated development entries below describe their individual firmware builds,
+sampling rates and hardware observations.
 
 ## 11 November 2026: bounded decoding and noisy trailing paper
 
@@ -33,7 +37,7 @@ all letters in both directions, weak bars, genuine interruptions and invalid
 frames. Five additional exact exports cover the successful forward control
 and four unfinished reverse runs. Those reverse replay expectations add only
 explicit synthetic leading context; their existing trailing recordings must
-suffice. Hardware timing and reliability still need new physical runs.
+suffice. Those fixtures establish decoding behaviour for the captured inputs.
 
 Validation for the 11 November deployment: the quiet-clock tests and all 116
 new public-record checks passed with the final 14-unit limit. Record, faint,
@@ -43,8 +47,7 @@ differences; its 120 new variants passed. Final builds of the 1,008-case replay,
 incremental-budget, wide and runtime runners compiled, but Windows Application
 Control blocked their execution (4551). They are not reported as final passes.
 No security-policy workaround was used. The firmware built without warnings,
-and all ELF flash bytes were checked against the UF2 before flashing. Fresh car
-runs remain necessary to establish actual sampling gaps and physical decoding.
+and all ELF flash bytes were checked against the UF2 before flashing. That build record contains no on-car sampling-gap measurement.
 
 ## 11 November 2026: reduce synchronous sentinel-fit cost
 
@@ -99,7 +102,7 @@ successes or a guarantee about printed-barcode quality.
 
 Run `tools/test-buddy3.ps1`, then
 `python testing/subsystem3/test_barcode_replay.py` to reproduce the C and saved
-waveform regressions. Fresh on-car runs are still needed after flashing.
+waveform regressions. This comparison used saved waveforms.
 
 ## 5 November 2026: recover faint bars without selecting a known letter
 
@@ -209,7 +212,7 @@ At the user's request, the runtime map is now B=forward, A=left, Y=right,
 C=U-turn. The first map request timed out; an identical retry received an OK
 reply at 21:40:40 SGT. A now queues LEFT for a junction, rather than halting
 as an unmapped letter. This runtime map must be supplied again after reboot.
-Physical barcode/turn validation of this firmware is still pending.
+That deployment record contains no measured barcode-to-turn result.
 It retains 100 Hz, 0.04 m/s and the wider-gap settings below. Saved-waveform
 coverage is now 120 checks. New synthetic regressions cover 104 broad dips
 inside wide bars and 624 brief spikes in white gaps across A-Z and both scan
@@ -267,8 +270,7 @@ is discarded by current trimming. Diagnostic shallow-pair cleanup restores
 the opening marker but still cannot validate the closing marker. The approach
 to the first bar is only about 34 mm of logged travel. Three later attempts
 were interrupted by paper catching the sensor, as confirmed by the user;
-they are not counted as complete barcode tests. Physical A regression tests
-of this image are still pending.
+they are not counted as complete barcode tests. This image has no completed physical A regression in that session.
 The earlier 100 Hz/start-50 image
 produced 21/22 observed A successes, including the last 20 consecutively;
 those results do not validate the wider-gap changes on hardware.
@@ -294,8 +296,7 @@ their 2400-entry pool covers about 24 seconds at 100 Hz. The existing width,
 quiet-zone, frame-duration and 30 ms safety checks are retained. Host coverage
 includes faint opening stars, ring/timestamp wrap, insufficient quiet, invalid
 input/history reset, noise, 100/200 Hz shapes and recorded waveform regression.
-Fresh physical A runs are still required: the earlier failed captures omitted
-their opening readings and cannot demonstrate recovery of those missing bars.
+The earlier failed A captures omitted their opening readings and cannot establish recovery of those missing bars.
 
 The sections below retain the earlier bench/integration history.
 
@@ -303,17 +304,14 @@ The sections below retain the earlier bench/integration history.
 telemetry through a taskless facade, while preserving this runtime's single
 motion/report owner. Mac/Linux: `make -C testing/subsystem3 test codec drive
 feedback regression sizes`; `make sanitize` adds memory/undefined-behaviour
-checks. [Current review](../../docs/INTEGRATION_2026-10-25.md) supersedes older
+checks. [25 October integration review](../../docs/INTEGRATION_2026-10-25.md) supersedes older
 two-buddy-only and representation-size descriptions below.
 
-The core software is implemented and host-tested. The new firmware has **not**
-been flashed or validated on the car. Use the isolated bench UF2 for stationary
-checks; the normal firmware retains Buddy 2's existing motion startup.
+The 25 October session tested the core on the host and produced an isolated stationary bench image. It recorded no flash or car test.
 
 The [27 October wiring/calibration correction](IR_CALIBRATION_2026-10-27.md)
 records measured raw ranges, the excluded wrong-material capture, passing host
-tests/builds, and the user's decision to defer flashing. Saved calibration and
-sensor roles are corrected in source; the Pico still runs its older image.
+tests/builds, and the decision to defer flashing at that session. That source revision contains the corrected calibration and sensor roles.
 
 ## Buddy 2 integration
 
@@ -356,10 +354,11 @@ These are synthetic tests, not measured physical detection performance.
 
 The Windows script also runs `scan_record_main.c` and
 `variable_scan_main.c`, and builds a stdin replay utility. To run the saved
-3 November waveform regressions afterwards:
+3 November waveform regressions, use the replay executable from the host build. From the repository root immediately after running the Buddy 3 script:
 
 ```powershell
-python .\testing\subsystem3\test_barcode_replay.py
+$run = Get-ChildItem 'build/host-tests/buddy3' -Directory | Sort-Object Name -Descending | Select-Object -First 1
+python .\testing\subsystem3\test_barcode_replay.py (Join-Path $run.FullName 'replay_barcode_record.exe')
 ```
 
 On Mac/Linux, use `make -C testing/subsystem3 replay`. The
@@ -452,7 +451,7 @@ Explicit calibration collection and validation APIs are described in the
 minimum, maximum and average, reject missing/overlapping ranges and preserve
 previous references on failure. There is no automatic threshold adaptation.
 
-## Manual flashing and reading, when ready
+## Stationary bench procedure
 
 1. Keep battery disconnected, ensure the Pico pins are correctly aligned and
    undamaged, and use a USB data cable. If mounted, set the Robo Pico switch ON.
@@ -496,19 +495,14 @@ claim of guaranteed barcode operating speed. ADC errors invalidate samples, but
 a disconnected floating wire can still look valid: software cannot certify wire
 health from ADC counts alone.
 
-## Physical acceptance still outstanding
+## Physical evidence and test scope
 
-At final height and lighting, collect repeated white/black ranges for each sensor
-using actual track materials. Confirm steering sign from mounted left/right
-channels; tune the line thresholds and gains. Check printed barcode quiet zones,
-then measure decoding under actual movement and sampling jitter. Confirm real
-junction behaviour and action mapping with the team. Vehicle Controller/Buddy 2
-integration comes after these checks. See [test evidence](TEST_LOG.md).
+The [mounted-sensor calibration](IR_CALIBRATION_2026-10-27.md) records the
+surfaces and raw ADC ranges used for each input. The [barcode fixture notes](fixtures/barcode/README.md)
+identify the outcome recorded on the car and any synthetic margins added
+during replay. The submission includes host checks of the controller's line,
+barcode and junction decisions. It has no post-demo measurements of moving
+accuracy, reliability or sampling gaps. [Submission evidence](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)
 
-## Week 6 scope
-
-The [handoff traceability table](../../app_program/subsystem3/INTEGRATION.md#week-6-traceability-and-outstanding-team-decisions)
-distinguishes preserved algorithms, changed sensor roles, behaviour implemented
-within Buddy 3 and work awaiting integration. Outstanding decisions are sensor
-roles, 5 ms scheduling, distance tuning, mapping delivery, fault-to-brake handling
-and full-system priority/timing validation. None is certified by host tests.
+The [Buddy 3 interface guide](../../app_program/subsystem3/INTEGRATION.md) records
+the application boundary and the comparison with the Week 6 design.

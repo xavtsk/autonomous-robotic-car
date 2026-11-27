@@ -177,6 +177,7 @@ STATE_FIELDS = {
                    [(name, FLAG, 1) for name in
                     ("b_has_external_hold", "b_is_configured", "b_waits_for_stop",
                      "b_is_advancing", "b_has_touched_line", "b_is_searching",
+                     "b_sweeps_clockwise", "b_is_return_sweep",
                      "b_has_obstacle_snapshot", "b_is_bypassing")],
     "terrain report cache": [("sent_height", (0, 500, 1), 9),
                              ("b_sent_fault", FLAG, 1),

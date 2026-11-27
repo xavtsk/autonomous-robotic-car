@@ -10,7 +10,7 @@ values only: their compiler-dependent representation is never the wire format.
 
 | Application field | Valid range / codes | Resolution | Data bits | Implementation / validation status |
 |---|---|---|---:|---|
-| Each wheel magnitude | 0–510 mm/s | 2 mm/s | 8 | explicit bits; proposed team range; verify against calibration |
+| Each wheel magnitude | 0–510 mm/s | 2 mm/s | 8 | explicit telemetry bits. The adapter rejects speeds outside the wire range. |
 | Each wheel reverse flag | forward/zero or reverse | Boolean | 1 | separate sign bit; no negative zero |
 | Barcode letter | A–Z mapped to 0–25 | one letter | 5 | checked before packing |
 | Barcode action | unknown, forward, left, right, uturn (0–4) | one action | 3 | 5–7 rejected |
@@ -57,9 +57,9 @@ space for the largest packet to retain the agreed bounded message counts. The
 queue slot tail is storage capacity, not extra application fields. MQTT publishes
 only the packet's exact length.
 
-The adopted ranges come from the integrated Buddy 4/5 contracts, not invented
-telemetry-only limits. Their physical estimation accuracy and operating ranges
-still need validation on the real car. Quantisation does not establish accuracy.
+The ranges come from the integrated Buddy 4/5 contracts. Quantisation defines
+the transmitted resolution. Physical estimation accuracy over the full ranges
+is unmeasured.
 Changing any field width or meaning requires updating the codec, laptop decoder,
 this table and tests together, and increasing the wire version for an incompatible
 released format. Do not silently truncate or clamp an out-of-range measurement.
@@ -70,5 +70,5 @@ those bytes without reading peripherals or changing control values. Distance
 and relative heading use the live-only pose packet. See `docs/IR_DEBUG_PROTOCOL.md`
 and `docs/BARCODE_WIRE_PROTOCOL.md` for the source-owned diagnostic field tables.
 
-For measured sizes, RAM accounting and remaining timing checks, see
-`testing/subsystem1/EVIDENCE.md`.
+See the [Buddy 1 evidence](../../testing/subsystem1/EVIDENCE.md) and
+[submission measurements](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md).

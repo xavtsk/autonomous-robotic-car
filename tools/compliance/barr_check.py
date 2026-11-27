@@ -197,7 +197,8 @@ def owned_files(root: Path, scope: dict) -> list[Path]:
 
 def lexical_checks(path: Path, root: Path, source_override=None, file_level=True) -> list[Finding]:
     data = path.read_bytes() if source_override is None else source_override.encode("utf-8")
-    text = data.decode("utf-8")
+    # Rule 3.6.a checks the original bytes. Source checks use logical newlines.
+    text = data.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
     name = relative(path, root)
     findings = []
 

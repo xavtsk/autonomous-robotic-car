@@ -1,0 +1,32 @@
+{
+  "suite": "/repo/testing/subsystem3/test_barcode_replay.py",
+  "suite_sha256": "19ba9cc8da58a32781d0cb044211ddfefca746cc337d69165843e8dea31a2a61",
+  "collection_mode": "diagnostic accumulated assertions; no waived failures",
+  "assertions": 3110,
+  "cases": 1008,
+  "failures": [
+    {
+      "line": 73,
+      "message": [
+        "20261103-152854-successful-z.txt",
+        2000,
+        0,
+        "synthetic_leading_ms=2000 synthetic_trailing_ms=0\ndecoded=0 rejected=0 timing=0 overflow=0 state=2 count=987\n"
+      ],
+      "case": 7
+    },
+    {
+      "line": 73,
+      "message": [
+        "20261103-171918-normal-speed.txt",
+        2000,
+        0,
+        "synthetic_leading_ms=2000 synthetic_trailing_ms=0\nletter=A reversed=0 timestamp_us=6703000\ndecoded=1 rejected=0 timing=0 overflow=0 state=0 count=0\n"
+      ],
+      "case": 19
+    }
+  ],
+  "mismatches": 0,
+  "expectations_passed": false,
+  "passed": false
+}

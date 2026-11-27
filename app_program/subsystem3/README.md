@@ -9,8 +9,8 @@ The portable core remains independent. An opt-in `S3_MOTION=1` controller in
 connects it to Buddy 2, with explicit start/calibration, pending directions,
 manoeuvres and braking. See [motion integration](MOTION_INTEGRATION.md). The
 stationary `IR_BENCH` remains separate. The integrated owner also coordinates
-enabled terrain and obstacle subsystems; physical course validation is recorded
-separately from software integration.
+enabled terrain and obstacle subsystems. The [submission evidence](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)
+identifies the firmware builds, course simulations and recorded barcode comparisons.
 
 | Module | Responsibility |
 |---|---|
@@ -71,9 +71,9 @@ snapshot under a priority-inheritance mutex and prints after unlocking. Sampling
 reads/processes outside the lock; only snapshot publication and counters are
 protected. Cumulative event counts preserve visibility between reports; the last
 barcode/action is diagnostic history, never a pending turn. Counters wrap at
-32 bits. Console/kernel activity can still delay sampling, so 10 ms is a target,
-not a deadline guarantee. Latest/max gaps, counts exceeding the Week 6 5 ms target and timing rejects are
-displayed. This 10 ms bench does not meet the proposed 5 ms schedule.
+32 bits. Console and kernel activity can delay a bench sample beyond 10 ms.
+The display reports the latest and maximum
+gaps, counts above 5 ms and timing rejections. The integrated profile targets 5 ms.
 
 Active faults latch a persistent stop request; recovery requires 100 ms of healthy
 inputs, explicit reset to inactive and a separate restart. Diagnostic previews

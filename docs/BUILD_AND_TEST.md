@@ -30,10 +30,8 @@ syntax; the backslashes above are POSIX shell continuations. Supply profile
 options on every build. Compare the same options, compiler/SDK and source
 revision when measuring RAM, flash or loadable bytes.
 
-On this Windows laptop, the pinned local compiler and SDK are under
-`C:\Code\autonomous-robotic-car\build\tooling`. The corresponding explicit build
-command is below; run it from the repository root. It does not flash anything.
-Keep the resulting candidate separate from the saved baseline directory.
+The Windows example below assumes the Arm compiler and SDK are under
+`build/tooling` in the checkout. Run it from the repository root.
 
 ```powershell
 $env:Path = "$PWD\build\tooling\arm\bin;C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:Path"
@@ -81,9 +79,8 @@ Failed baseline expectations remain failures; quick does not mean full complianc
 Select `suite=full` in **Actions -> Compliance regression -> Run workflow** for
 the original six host modes, twelve target profiles, audit, documentation and
 conditional-coverage collection. Sanitizers and the additional profiles are
-part of full mode. Their historical evidence is retained, but quick runs do not
-claim to have repeated them. Final-candidate verification requires the affected
-sanitizer checks and diagnostics build as described in the cleanup plan.
+part of full mode. The [submission status](CURRENT_STATUS.md) identifies which
+checks ran on each revision.
 
 These direct commands are useful on a Linux machine that permits native test
 execution:
@@ -135,22 +132,28 @@ python tools/check_c_style.py --formatter /absolute/path/to/clang-format
 python testing/change_requirement_1/check_widths.py
 ```
 
-The width checker covers the [current submission table](compliance/CR1_SUBMISSION_WIDTHS.md).
-To reproduce the broader [20 November declaration inventory](compliance/CR1_FIELD_INVENTORY.md),
-run `python testing/compliance/inventory.py --check` in a checkout of its
-recorded revision, `a3de92a`. Running it on the later course firmware reports
-stale source bindings, including files renamed after that snapshot.
+The width checker covers the [submission table](compliance/CR1_SUBMISSION_WIDTHS.md).
+The broader declaration inventory uses the source filenames from its recorded
+revision. To reproduce it, run `python testing/compliance/inventory.py --check`
+at `a3de92a`. [Inventory and source links at that revision](https://github.com/xavtsk/autonomous-robotic-car/blob/a3de92a3465749f962540bcb75c275959e1a9ef0/docs/compliance/CR1_FIELD_INVENTORY.md)
 
-The BARR audit currently reports unresolved source findings and incomplete AST/
-manual review. Its nonzero exit is a real incomplete/failing result, not an
-installation problem to suppress. A clean format or width subset does not certify
-the full standards. See the [rule matrix](compliance/BARR_RULE_MATRIX.md) for AST
-input and function-documentation coverage, and the
-[field inventory](compliance/CR1_FIELD_INVENTORY.md) for representation closure.
+The source-only BARR check exits with a failure for four recorded host-test
+violations. The [rule matrix](compliance/BARR_RULE_MATRIX.md) documents the
+scope of the automated and manual review, and the [exception register](compliance/BARR_EXCEPTIONS.md)
+gives the disposition of the individual findings.
 
 On Windows use `py -3` if `python` resolves to an unavailable Store alias.
-Some dashboard Python tests compile and execute C helpers; run those in the
-Linux suite, not under the local native-execution restriction.
+The Linux suite also covers dashboard tests that compile and execute C helpers.
+
+For the GitHub submission, run the field-width check, the CR1 tests and the
+Buddy 3 host suite from the root of the checkout. The last command uses
+MSYS2 GCC on Windows.
+
+```powershell
+python testing/change_requirement_1/check_widths.py
+python -m unittest discover -s testing/change_requirement_1 -p 'test_*.py'
+./tools/test-buddy3.ps1
+```
 
 The Windows host scripts accept `-CompileOnly` and create a unique directory for
 every invocation under `build/host-tests/<suite>/<UTC-time>-<unique-suffix>`:
@@ -179,11 +182,9 @@ disposable input. It does not execute a generated C binary. The retained
 the interpreter used and the execution-policy limitation of the separate
 Windows PowerShell 5 launch.
 
-## Evidence to retain
+## Submission records
 
-Record the exact source commit or working-tree digest, profile flags, toolchain
-versions, test command, exit code and artifact hashes. Keep compile/link, host
-execution, replay comparison, target layout/build, transfer, boot/telemetry and
-physical validation as separate evidence levels. Flash and start actions are
-separate from this build/check workflow. Preserve the deployed rollback artifact
-identified in [CURRENT_STATUS.md](CURRENT_STATUS.md).
+The [CR1 report](CHANGE_REQUIREMENT_1_EVIDENCE.md) gives the build settings,
+UF2 hashes, measured sizes and replay results for the submitted changes.
+The [release history](CURRENT_STATUS.md) identifies the deployed baseline
+and the revision covered by each earlier test.

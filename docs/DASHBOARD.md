@@ -1,21 +1,13 @@
 # Local robot dashboard
 
-The laptop dashboard replaces the separate terminal viewer and map/snapshot
-commands with one browser window. **28 October update: robot and laptop now use
-Buddy 1 binary protocol v3 together. Rebuild/reflash the robot and restart this
-Python service; refreshing a browser alone does not reload its decoder.** Old
-v2 packets are rejected, not silently reinterpreted. Saved `.txt` captures remain
-readable. Live three-sensor graphs require optional `IR_DEBUG=1` firmware.
+The laptop dashboard displays telemetry, maps and saved barcode captures in a
+browser. For a walkthrough of the submitted interface, use [demo mode](#start-without-the-car).
+The Runs page can also open saved `.txt` captures.
 
-The terrain-fault controller reason (10) is now decoded/displayed. Recorded
-`car/debug/barcode` traffic is compact binary BCAP v2; the laptop reconstructs
-text for the existing Runs graphs and downloads, and still accepts v1 firmware.
-See `BARCODE_WIRE_PROTOCOL.md`. Before flashing v2 firmware, restart this Python
-service after the current run's upload finishes; refreshing the browser does
-not reload the binary decoder.
-This update changes representations/observation only, not motor, line-following,
-barcode-recognition, hump-estimation or avoidance algorithms. Current validation
-and the still-pending hardware checklist: `BUDDY1_PROTOCOL_V3_2026-10-28.md`.
+Live telemetry uses Buddy 1 protocol v3 and rejects v2 telemetry packets.
+The separate barcode channel accepts BCAP v1 and v2. The laptop reconstructs
+text for the Runs graphs and downloads. Live three-sensor graphs require
+firmware built with `IR_DEBUG=1`. [Barcode protocol](BARCODE_WIRE_PROTOCOL.md)
 
 ## Start without the car
 
@@ -281,21 +273,16 @@ The suffix distinguishes it from the ordinary course build. To install:
    calibration as usual. These graphs do not start the car or bypass readiness.
 6. Only after the stationary check, prepare a supervised course run using the
    existing GP20 start and GP21 software stop; keep the power cutoff accessible.
-   Measure control timing with diagnostics enabled in a separate validation run
-   before relying on this preview for a demo. Flashing restarts calibration/map
-   state as defined by the existing firmware.
+   Flashing restarts calibration and map state as defined by the firmware.
 
 The stream is optional and off by default. Rebuild without `IR_DEBUG=1` and
 flash the ordinary course UF2 to disable it. No remote debug enable/start/stop
 command was added.
 
-The updated build also sends a **70-byte controller snapshot at up to 5 Hz**
-on `car/debug/controller`. Flash this newly rebuilt UF2 even if you previously
-flashed the IR-only diagnostic build: the filename is unchanged but the contents
-now include the buddy-debug fields. Its motion read uses a nonblocking lock;
-busy, stale or out-of-range feedback is unavailable, not zero-valued evidence.
-The dashboard remains usable with ordinary firmware; the extra fields then
-remain unreceived. No firmware was flashed automatically.
+The diagnostic build also sends a **70-byte controller snapshot at up to 5 Hz**
+on `car/debug/controller`. Its motion read uses a nonblocking lock. The dashboard
+marks busy, stale or out-of-range feedback as unavailable. Ordinary firmware
+omits these extra fields.
 
 The wire preview is capped at **20 Hz**, in 16-byte QoS-0, non-retained packets.
 Normal telemetry and recorded barcode uploads take precedence, followed by the
@@ -310,9 +297,9 @@ inactive and the motor reports stopped. State changes and recovery to valid
 motion report immediately; moving motion still reports at 5 Hz. Unavailable
 motion invalidates the local snapshot on the next observation and at 5 Hz
 thereafter; this does not add an unavailable packet to the wire protocol.
-The motor and line/barcode algorithms still run at their existing 10 ms cadence.
-Added packing/network work still needs on-car timing measurement: host tests do
-not establish real-time deadlines. See [IR_DEBUG_PROTOCOL.md](IR_DEBUG_PROTOCOL.md).
+The integrated firmware schedules motion control every 10 ms and IR sampling
+every 5 ms. The dashboard refresh rate is independent of both. The submission
+records no on-car timing measurement for this revision. [IR debug protocol](IR_DEBUG_PROTOCOL.md)
 
 **Use the preview to check mounting, calibration contrast, sensor polarity and
 line behaviour. Do not use it as a complete barcode waveform:** narrow bars can
@@ -365,7 +352,7 @@ and rejection reasons. Filter the CSV by `hump_events` to find arm, start,
 discard, and completion records. The firmware run token advances on START;
 token `0` contains startup readings. A capture can also include readings after
 the run ends. Each capture holds up to 2 MiB, and the list marks captures that
-reached the limit. See [Buddy 4 pickup tests](../app_program/subsystem4/README.md#record-level-pickup-tests).
+reached the limit. [Buddy 4 hump and pickup tests](../app_program/subsystem4/README.md#record-hump-and-pickup-tests)
 
 **Barcode captures** in the same tab accepts saved `barcode_trace_*.txt` files
 and automatically saves incoming binary `car/debug/barcode` captures. Inspect a capture to plot raw ADC or

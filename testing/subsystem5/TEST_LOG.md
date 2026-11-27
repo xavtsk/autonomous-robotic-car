@@ -1,20 +1,6 @@
-# Subsystem 5 — test log
+# Buddy 5 test record
 
-**Buddy 5:** Ultrasonic scanning and obstacle avoidance. Owner: TBD.
-
-See `testing/README.md`. No subsystem tests have been implemented or run.
-The test-build hook reports SKIP.
-
-## Test cases
-
-| ID | What is tested | Requirement / interface | Method | Steps / how | Expected result |
-|---|---|---|---|---|---|
-
-## Results
-
-| Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
-|---|---|---|---|---|---|---|
-
+The dated results below cover obstacle sensing, scanning and avoidance. The original scaffold had no implemented subsystem checks and its test hook reported SKIP.
 
 ## 27 October 2026 — implementation on xavier/development
 
@@ -37,8 +23,7 @@ physical scan, broker connection, commit or push performed.
 | S5-W13 | Tribunal implementation demonstrated on robot | NOT RUN |
 
 Host sanitizer/build/regression details are in `docs/BUDDY5_IMPLEMENTATION_2026-10-27.md`.
-Earlier placeholder entries above remain historical; they do not describe this
-implementation. Current records are not evidence that the physical robot passes.
+The physical cases in this entry were not run during the 27 October session.
 
 ## 28 October 2026 — merge with main
 

@@ -1,10 +1,8 @@
-# Buddy 3 handoff: build and RAM evidence
+# Buddy 3 build and RAM evidence, October 2026
 
 **Historical same-profile measurements below.** The 25 October import changes
 motion/PIO, navigation fields and runtime ownership. These old savings must not
-be reused as a measurement of the new integration. Current build sizes,
-60/122/11-byte copied formats and remaining runtime measurements are in
-[the integration review](../../docs/INTEGRATION_2026-10-25.md).
+be reused as a measurement of the new integration. The [25 October integration review](../../docs/INTEGRATION_2026-10-25.md) describes the 60/122/11-byte copied formats. See the [submission comparison](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md) for the post-demo build sizes.
 
 Measured 2026-10-23 on the uncommitted local `integration/buddies-1-3` tree.
 Baseline is the saved working tree immediately before this Buddy 3 update,
@@ -52,7 +50,7 @@ Wide decoded/raw buffers remain where needed for validation, driver callbacks
 and calculations. Bench mode retains extra private decode buffers so console
 work stays outside the snapshot lock. Sampling uses 69 bytes of packet locals
 plus normal compiler call-frame/spill overhead; init uses a temporary wide
-config. Real stack margin is still pending, not inferred from these locals.
+config. Runtime stack margin was not measured in this comparison.
 
 ## Successful full-image builds
 

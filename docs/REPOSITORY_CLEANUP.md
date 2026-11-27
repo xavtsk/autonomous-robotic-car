@@ -1,13 +1,13 @@
 # Repository housekeeping checkpoint
 
-Phase 1 of the controlled-usage cleanup, 20 November 2026. Work remains on
-`codex/compliance-preserve-behaviour`; the behaviour baseline remains
-`4ad2cc42595722cedb47102e4343298339040d40`.
+This archive records the housekeeping decisions from 20 November 2026.
+The cleanup used `codex/compliance-preserve-behaviour` and compared firmware
+against `4ad2cc42595722cedb47102e4343298339040d40`.
 
 Phase 2 later closed for submission using the existing cleanup and baseline
 comparison. See the [Phase 2 closeout](CURRENT_STATUS.md#phase-2-closeout-for-submission)
-for the current disposition of the remaining findings. The checkpoints below
-retain the status and results recorded at each stage.
+for the recorded exceptions. The checkpoints below give the results and review
+status at each stage. The [submission summary](CURRENT_STATUS.md) covers the final code.
 
 ## Keep, move and delete decisions
 

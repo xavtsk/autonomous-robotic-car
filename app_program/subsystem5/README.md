@@ -224,9 +224,9 @@ IR mounting, both-white tracking alone is never accepted as recovery evidence.
 If the return leg does not see tape, a bounded +20/−40/+20 degree search at the
 predicted corridor restores the original heading. Failure to confirm tape
 stops the robot. Before handing back, require fresh stopped feedback and a
-healthy, non-junction line observation. This geometric/IR gate still needs real
-original-line validation: another nearby line, wheel slip or a curved detour can
-invalidate its assumptions. It is not a map-based proof of line identity.
+healthy, non-junction line observation. Another nearby line, wheel slip or a
+curved detour can invalidate the geometric estimate of the original corridor.
+The observed tape alone cannot identify the original line.
 
 A previously decoded barcode is retained; its pending timeout is paused during
 the detour. Confirm course placement so a bypass does not skip its intended

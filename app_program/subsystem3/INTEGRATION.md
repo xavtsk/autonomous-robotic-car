@@ -1,20 +1,16 @@
 # Buddy 3 team-interface handoff
 
-Buddy 2 + Buddy 3 now have an opt-in integrated runtime (`S3_MOTION=1`). It uses
-the existing motion task/PID, a coherent feedback snapshot and a bounded controller
-slice in `app_program/controller/s3_drive`. See [integrated operation](MOTION_INTEGRATION.md) for builds,
-control requests, tests and limitations. Boot is disarmed; nothing starts moving
-without explicit accepted sensor calibration and a start request.
-
-The portable navigation core below still calls no motor APIs. The temporary controller
-under `app_program/controller/` owns those calls. Normal/default and stationary `IR_BENCH` profiles retain
-their previous startup boundaries. This does not integrate Buddy 1/4/5, MQTT or
-obstacle avoidance, and does not establish full Week 6 or hardware compliance.
+In the integrated `S3_MOTION=1` profile, the controller passes Buddy 2's
+timestamped encoder feedback to Buddy 3, consumes navigation events, and
+requests motion. Buddy 2 owns the motor outputs. Buddy 1 supplies the pre-run
+map and telemetry. The same controller coordinates Buddy 4 terrain and
+Buddy 5 avoidance when enabled. The car boots disarmed. The stationary
+`IR_BENCH` profile runs sensing and diagnostics independently.
+[Integrated operation](MOTION_INTEGRATION.md)
 
 ## Ownership and input contract
 
-Include `line_navigation.h`. New public types use `s3_`/`S3_`; existing
-`ir_reflectance` types are retained. One owner serialises processing and all
+Include [line_navigation.h](line_navigation.h). One owner serialises processing and all
 control calls. The context is not internally locked. Other tasks must deliver
 requests to that owner through `s3_integration_submit()` in the integrated profile.
 
@@ -27,13 +23,13 @@ be supplied on every active processing call; NULL does not reuse old input.
   measurements. Disabled channels remain unavailable. A floating disconnected
   wire can still produce plausible counts: validity does not certify wiring.
 - Odometry: `line_navigation_odometry_t` contains signed centre displacement in metres
-  (`double centre_m`), source timestamp, validity and counter-reset `epoch`.
+  (`float64_t centre_m`), source timestamp, validity and counter-reset `epoch`.
   The producer increments/changes the epoch whenever its counter resets. Supply
   signed centre displacement, not absolute accumulated travel or either wheel alone.
   The portable core does not call motion getters or consume `motion_poll()`.
   The controller obtains `motion_get_feedback()` and forwards its odometry here;
   it alone drains ID-tagged motion reports, including cancellations. See the
-  [future-controller contract](../controller/README.md).
+  [controller contract](../controller/README.md).
 - All timestamps use the same unsigned 32-bit microsecond clock. Subtraction
   handles wrap; intervals must be below half the clock range. Future/stale samples,
   non-finite distances and invalid flags are unusable. Repeated odometry snapshots
@@ -85,7 +81,7 @@ Typical owner sequence (all return values must be checked):
 Only active, healthy TRACK processing emits actionable navigation events/steering.
 `steering_preview` remains a diagnostic calculation; never send it to motors.
 Inactive/faulted TRACK processing may decode diagnostic letters without actions.
-`diagnostic`, `barcode_status`, calibration mask, readiness, lifecycle, rearming,
+`b_is_diagnostic`, `barcode_status`, calibration mask, readiness, lifecycle, rearming,
 odometry availability and latched faults make the distinction explicit.
 
 ## Output, mapping and manoeuvre contract
@@ -146,7 +142,7 @@ unusable odometry or epoch changes latch a fault before outputs are made actiona
 additional causes accumulate while faulted, without repeated fault events.
 `fault_mask` separately reports currently invalid enabled sensor channels.
 
-`stop_requested` remains true on every faulted output, steering stays invalid and
+`b_is_stop_requested` remains true on every faulted output, steering stays invalid and
 navigation actions stop. Good readings alone do not resume operation. The owner
 must process healthy required inputs continuously for `fault_clear_us` (100 ms
 by default), then call `line_navigation_reset_fault(&nav, now_us)`. Freshness is
@@ -155,7 +151,7 @@ A changed epoch becomes the new observed baseline while faulted, but interrupts
 the healthy interval. Reset returns to inactive and a separate start is required.
 Do not use context reinitialisation as a fault-reset shortcut.
 
-The integrated `s3_drive` adapter consumes `stop_requested` and calls Buddy 2's
+The integrated `s3_drive` adapter consumes `b_is_stop_requested` and calls Buddy 2's
 `stop()`. The portable core itself calls no brake function. If processing
 itself stops, no new output can be generated: the opt-in motion-owner lease expires after 30 ms without a healthy integration
 heartbeat, including during turns. The kernel/motion task must still be running. A false process return is an API/configuration failure, not a
@@ -179,8 +175,8 @@ The 29-run buffer is bounded. Each character must contain six narrow and three
 wide elements, wide/narrow mean ratio 1.8..3.5, each element within 35% of its
 group mean. Inter-character gaps must be 0.5..1.5 local narrow units. Both quiet
 zones require ten narrow modules by default. Narrow means must meet the configured
-minimum (30 ms default) and be at least three times the largest observed sample
-gap. Maximum run/frame duration defaults are 1 s/10 s; the streaming frame timeout
+minimum (25 ms default) and be at least three times the largest observed sample
+gap. Maximum run/frame duration defaults are 1 s/15 s; the streaming frame timeout
 includes trailing quiet-zone confirmation. Invalid framing, timeout, input faults,
 overflow or inadequate timing discard the frame. A new frame is required after a
 result. Batch fixtures supply their own measured sampling gap and durations.
@@ -192,29 +188,29 @@ the bars. Relative character widths help with different scan rates; they do not
 prove tolerance to acceleration within a character or reliable decoding while moving.
 
 
-## Week 6 traceability and outstanding team decisions
+## Week 6 design and submitted implementation
 
 Source: `Project/AAI07_Week_6_Design_Review.pdf`, pages 2-8 and assumption A4.
 The submitted PDF is unchanged.
 
-| Week 6 item | Status in this update | Limit / next owner |
+| Week 6 item | Implementation | Evidence or limit |
 |---|---|---|
-| Sensor acquisition, calibration and line/barcode algorithms | Preserved and extended | Actual-track calibration and moving tests remain open (A4) |
+| Sensor acquisition, calibration and line/barcode algorithms | Implemented | [Recorded calibration](../../testing/subsystem3/IR_CALIBRATION_2026-10-27.md) and [recorded-waveform replay](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md). Maximum moving scan speed is unmeasured. |
 | L/C/R on GP26/27/28 | Confirmed different wiring, 2026-10-27 | Barcode=Grove 7 GP28, front left=Grove 6 GP27, front right=Grove 5 GP26; check GP28 VBAT jumper |
-| CALIBRATE then TRACK/start gate | Implemented within Buddy 3 | All three accepted calibrations and fresh odometry required; calibration UI/storage not supplied |
-| Encoder-distance capture input and REARM | Implemented within Buddy 3 | Distance metadata and net-clearance gate; element widths still use time; tune 30 ms/20 mm physically |
+| CALIBRATE then TRACK/start gate | Connected to the operator panel | All three channels need accepted calibration and fresh odometry. GP20 recalibration updates RAM until reboot. |
+| Encoder-distance capture input and REARM | Implemented within Buddy 3 | The default clearance is 30 ms of stable line and white space plus 20 mm net travel. Element widths use time. |
 | Line-loss / manoeuvre suppression | Implemented within Buddy 3 | Independent front-line events; controller still owns recovery and turns |
-| FR11 pre-run mapping | Connected in the team S3_MOTION profile | Buddy 1 validates four distinct letters; controller atomically freezes/copies map at explicit start; broker/hardware validation outstanding |
+| FR11 pre-run mapping | Connected in the integrated profile | Buddy 1 validates four distinct letters. The controller freezes and copies the map at explicit start. |
 | SENSOR FAULT / explicit reset | Implemented within Buddy 3 | Persistent request only; adapter now forwards stop and adds a motion-owner lease; physical latency unmeasured |
-| NFR6 safe braking within control period | Awaiting integration | Adapter calls stop; detection, command acceptance and physical stop latency unmeasured |
-| NFR3 Line+Barcode 5 ms | Awaiting scheduling/integration | Bench target remains 10 ms; unchanged kernel tick; diagnostics count actual gaps over 5 ms |
-| NFR2 priorities / full-system concurrency | Awaiting integration | Bench sampler 16, reporter 17; existing kernel Wi-Fi priority 4; validate full-system priority/timing with team |
+| NFR6 safe braking within control period | Stop request and acknowledgement connected | The host suite exercises the braking path. Physical stop latency on the submission revision is unmeasured. |
+| NFR3 Line+Barcode 5 ms | Integrated sampler configured for 5 ms | The stationary bench uses 10 ms. Diagnostics record actual gaps. No post-demo hardware timing capture exists. |
+| NFR2 priorities / full-system concurrency | Sampling owner at priority 16, reporter at 17, kernel Wi-Fi at 4 | [Task ownership](../../TEAM.md) records the configured priorities. Actual scheduling latency under load is unmeasured for the submission. |
 | NFR4 C conventions | Applied to touched code | Explicit braces, four-space indentation, bounded storage and namespaced APIs; no repository-wide Barr compliance claim |
-| Shared Vehicle Controller, network non-blocking behaviour | Buddies 1-3 connected in opt-in profile | Single sampling/controller owner and Buddy 1 bounded outbox; no obstacle/full-team arbitration; on-car timing outstanding |
+| Shared Vehicle Controller and network reporting | One control owner coordinates motion, navigation and enabled terrain/avoidance tasks | Buddy 1 publishes through a bounded outbox. Control and braking operate independently of MQTT delivery. |
 
 Default normal firmware does not acquire new sensors or start navigation.
 The separate S3_MOTION profile starts sensing and motion tasks but stays disarmed. The bench keeps
 one priority-16/core-0 sampler and a priority-17 reporter with a short protected
-snapshot; neither calls a motor API. Its measured timing counters will only become
-hardware evidence after running it. Passing synthetic 5 ms/10 ms traces does not
-certify scan speed, acceleration tolerance, junction recognition or timing compliance.
+snapshot. Both bench tasks run without motor control. The
+[submission evidence](../../docs/CURRENT_STATUS.md) records the physical demo and
+the scope of the post-demo software verification.

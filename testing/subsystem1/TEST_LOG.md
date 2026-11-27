@@ -1,16 +1,10 @@
-# Subsystem 1 — test log
+# Buddy 1 test record
 
-**Buddy 1:** WiFi communication, command and telemetry. Owner: TBD.
+The [Tribunal test report](EVIDENCE.md) records the telemetry and command tests.
+Saved outputs include the [original host checks](HOST_TEST_RESULTS.txt),
+[protocol v2 integration checks](PROTOCOL_V2_TEST_RESULTS.txt) and
+[storage measurements](SIZE_RESULTS.txt).
 
-See `testing/README.md`. No subsystem tests have been implemented or run.
-The test-build hook reports SKIP.
-
-## Test cases
-
-| ID | What is tested | Requirement / interface | Method | Steps / how | Expected result |
-|---|---|---|---|---|---|
-
-## Results
-
-| Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
-|---|---|---|---|---|---|---|
+The [course-firmware comparison](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md#course-test-updates-after-8bc969c)
+covers the later MQTT vectors and message sizes. The [host test guide](README.md)
+describes the executable checks.

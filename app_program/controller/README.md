@@ -24,7 +24,7 @@ obstacle avoidance under the same controller ownership contract.
 
 - Use `s3_integration_submit()` for calibration, mapping, START, STOP and RESET.
   One pending request is allowed; STOP overrides it. Acceptance is not execution.
-  Inspect `command_sequence` and `command_ok` in copied status.
+  Inspect `command_sequence` and `b_did_command_succeed` in copied status.
 - RESET completes asynchronously: one request resets Buddy 2, then waits up to
   500 ms for fresh post-reset stopped/braked/healthy feedback and navigation
   readiness. Only then does `command_sequence` advance with the result. Normal
@@ -99,8 +99,7 @@ The reader holds 4096 samples, with a 13-bit count that includes its full state.
 The diagnostic capture pool holds 4000 samples (about 20 s at 200 Hz), within
 the existing 12-bit wireless format. Update/restart the dashboard together with
 this firmware so it accepts the larger captures. Live telemetry retains its
-200 ms cadence. These settings require new on-car validation; old 100 Hz
-captures cannot demonstrate the additional measurements made at 200 Hz.
+200 ms cadence. Historical 100 Hz captures retain their original resolution.
 
 The next 200 Hz batch exposed a trigger-time logging cost: each capture copied
 300 history entries and converted all their double-precision odometry values
@@ -114,12 +113,12 @@ zone (currently 250 ms), instead of always waiting for the maximum allowed
 stripe duration (1 s). An early attempt still needs both stars, all 29 widths,
 and the full measured ten-module quiet zone. An incomplete attempt keeps the
 real recording and can retry after new ink or at the original final deadline.
-New on-car scans are required to verify these changes; two earlier runs ended
-with terrain/IMU faults and cannot be treated as barcode rejection results.
+Two earlier runs ended with terrain/IMU faults. They provide no barcode
+rejection result.
 
-See [operation/calibration API](../subsystem3/MOTION_INTEGRATION.md) and
-[25 October review](../../docs/INTEGRATION_2026-10-25.md) for verification,
-source revisions and remaining on-car checks.
+See the [operation and calibration API](../subsystem3/MOTION_INTEGRATION.md)
+and [submission evidence](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md) for
+the software checks, replay results and limits of the post-demo evidence.
 
 ## Straight driving on a table without a line
 

@@ -1,14 +1,9 @@
-# Buddy 2 — Data Representation (draft for team agreement)
+# Buddy 2 data representation
 
-Status: **Proposed, implemented with these values** in `motion_pack.c` /
-`motion_pack.h` (the steps and widths are `#define`s there, so they can change
-if the team agrees other values). Ranges marked *to agree* still need a team
-decision.
-
-**Fault bits are implemented.** Buddy 2's faults are 5 individual bits
-(`motion_pack_fault_bit()`, `motion_get_fault_bits()`), carried in the status word.
-Where these 5 bits sit in the team's shared fault mask, and who owns the
-mask, is still a team decision.
+[motion_pack.h](motion_pack.h) and [motion_pack.c](motion_pack.c) define the
+internal motion words, units and field widths. Buddy 2's status word carries
+five fault bits. The controller maps the stall and encoder conditions into
+Buddy 1's separately owned [MQTT fault mask](../subsystem1/MQTT_PROTOCOL.md#fault-ownership).
 
 Scope: data that leaves Buddy 2 (telemetry, reports, fault bits) or comes in
 from the Vehicle Controller (commands), packed into words with shifts and
@@ -31,7 +26,7 @@ Measured on the robot (calibration, 21 Oct 2026) unless marked.
 | Highest wheel speed | 884 mm/s (full power, wheels lifted) | calibration, `MOTOR_MAX_SPEED_MPS` |
 | Highest commanded speed | 796 mm/s (90 % of 884 mm/s) | `SPEED_LIMIT_FRACTION` |
 | Speed step of one count per 10 ms period | 8.1 mm/s | 0.0811 mm / 10 ms |
-| Longest run | **30 m** (*to agree*) | track length + margin |
+| Run length used to size the distance field | 30 m | design allowance for track length and margin |
 
 ## Encoding rules
 
@@ -54,12 +49,12 @@ Measured on the robot (calibration, 21 Oct 2026) unless marked.
 | Wheel speed, measured (L and R) | out | −1022 … +1022 mm/s | 2 mm/s | dir + 9-bit magnitude | 10 each | Covers the measured 884 mm/s. 2 mm/s is a quarter of the 8.1 mm/s count step, so finer steps carry only noise. 8 bits (510 mm/s) clipped the real robot |
 | Wheel speed, command (L and R) | in | −1022 … +1022 mm/s | 2 mm/s | dir + 9-bit magnitude | 10 each | Same format as measured speed; Buddy 2 still caps at 796 mm/s |
 | Robot distance travelled | out | −32.767 … +32.767 m | 1 mm | dir + 15-bit magnitude | 16 | Covers a 30 m run; 1 mm is finer than wheel slip errors |
-| Drive distance, command | in | −8.191 … +8.191 m | 1 mm | dir + 13-bit magnitude | 14 | Longest single straight move (*to agree*); dir 1 = backward |
+| Drive distance, command | in | −8.191 … +8.191 m | 1 mm | dir + 13-bit magnitude | 14 | Encoded limit for a single move. Direction 1 means backward. |
 | Turn angle, command | in | −511 … +511 ° | 1 ° | dir + 9-bit magnitude | 10 | U-turn is 180 °; full spin 360 °; dir 1 = right |
 | Move speed, command (drive / turn) | in | 0 … 1022 mm/s | 2 mm/s | unsigned | 9 | Direction is in the distance / angle |
 | Heading | out | 0 … 359 ° | 1 ° | unsigned, wraps at 360 | 9 | 1 ° is ten times finer than the ±10 ° turn tolerance |
 | Motion state | out | 6 states | — | code (table below) | 3 | 6 values |
-| Motion fault bits (status) | out | 5 faults | — | 1 bit per fault, several at once | 5 | One bit per fault, as the requirement asks; position in the team's shared mask *to agree* |
+| Motion fault bits (status) | out | 5 faults | — | 1 bit per fault, several at once | 5 | Independent flags in Buddy 2's status word |
 | Fault code (report) | out | 6 values | — | code (table below) | 3 | The one fault that ended a command; with several bits set it is the lowest |
 | Command ID | in / out | 1 … 255, 0 = none | — | unsigned, wraps 255 → 1 | 8 | The Vehicle Controller has one command in flight; it only checks equality |
 | Command type | in | 7 types | — | code (table below) | 3 | 7 values |
@@ -154,11 +149,11 @@ direction), and `wheel_encoder_delta()` stays correct when a count wraps.
 
 Manoeuvre codes: LEFT 0, RIGHT 1, STRAIGHT 2, U_TURN 3 (as `manoeuvre_t`).
 
-The fault **bits** above are Buddy 2's part of the shared fault mask
+The fault bits above belong to Buddy 2's status word
 (`motion_pack_fault_bit(f)` = bit f − 1). Only the motion task sets them and only
 `motion_reset()` clears them, both with the Buddy 2 mutex held. A fault on
-each wheel in the same period latches both bits. Where the 5 bits sit in the
-team's mask, and who owns it, is a team decision.
+each wheel in the same period latches both bits. Buddy 1 mirrors stall and
+encoder fault through its protected masked update API.
 
 ## Packed messages
 
@@ -225,12 +220,9 @@ Command validation (no undefined behaviour, no unintended command):
 - Moves whose allowed time (distance / speed × 3 + 2 s) is over 600 s are
   rejected before the deadline is computed, so it cannot overflow.
 
-## To agree with the team
+## Integrated telemetry
 
-1. Longest run (30 m proposed) and longest single drive (8.191 m proposed).
-2. Speed: 2 mm/s with a 9-bit magnitude (implemented, covers the measured
-   884 mm/s) or 4 mm/s with an 8-bit magnitude (1 bit less per speed).
-3. The shared fault mask: bit positions for every buddy and its owner
-   (Buddy 2's 5 bits are implemented; their position in the mask is not).
-4. Telemetry rate for the status word (Buddy 1) and byte order on MQTT.
-5. Whether commands use the packed 32-bit word or stay as function calls.
+The controller reads motion feedback and offers a telemetry update on a
+200 ms cadence. The local motion word covers up to 1022 mm/s per wheel.
+The MQTT layout covers up to 510 mm/s and rejects speeds outside its range.
+[Controller interface](../controller/README.md) · [Wire format](../subsystem1/MQTT_PROTOCOL.md)

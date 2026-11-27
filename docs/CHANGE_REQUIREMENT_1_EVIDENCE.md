@@ -1,5 +1,53 @@
 # Change Requirement 1: Minimum-Bit Data Representation, Week 13 evidence
 
+## GitHub submission after the demo, 27 November 2026
+
+| Submission item | Evidence |
+| --- | --- |
+| Field ranges, required bits and implementation | The [submission table](compliance/CR1_SUBMISSION_WIDTHS.md) verifies 167 selected fields and 19 layout totals. The [broader inventory at its original revision](https://github.com/xavtsk/autonomous-robotic-car/blob/a3de92a3465749f962540bcb75c275959e1a9ef0/docs/compliance/CR1_FIELD_INVENTORY.md) records which declarations had no verified width or ownership decision at the time of review. |
+| RAM before and after | The integrated Arm builds below measure the effect of the final drive change. Earlier tables identify their own source and build profile. |
+| Message sizes before and after | The two new fields are private to the drive controller. MQTT and inter-task payloads keep their existing layouts. The [course-test comparison](#course-test-updates-after-8bc969c) gives the measured sizes of messages changed earlier. |
+| Correctness and performance | The Buddy 3 host suite and controller integration suite passed. All 25 simulated course cases produced identical output before and after the drive change. The team has dismantled the car after its demo. The final revision has no on-car interval or recovery measurements. |
+
+### Line recovery fields and matched firmware builds
+
+During line recovery the sampling task stores which way the car is sweeping
+and whether it is on the return sweep. Each has two values. The drive state
+now stores each in one unsigned bit alongside its existing search-active
+flag. The host course comparison includes left and right turns with both
+undershoot and overshoot. [Drive implementation](../app_program/controller/s3_drive.c) ·
+[Software test commands](BUILD_AND_TEST.md)
+
+| Arm measurement | Before (`5b7b542`) | Submission cleanup |
+| --- | ---: | ---: |
+| Two drive fields | 8 bits each | 1 bit each |
+| Whole drive state object | 10,840 B | 10,840 B |
+| Linked static RAM | 134,204 B | 134,204 B |
+| GNU `size` text | 470,296 B | 470,312 B |
+
+Both fresh builds used Arm GNU 14.3.1, the same pinned SDK, public example
+network settings and the [24 November course profile](compliance/evidence/COURSE_FIELD_LAYOUT.json)
+with IR and IMU diagnostics output enabled (`IR_DEBUG=1 IMU_DEBUG=1 DIAGNOSTICS=0`).
+The only firmware source changes were in `s3_drive.c` and `s3_drive.h`.
+Alignment kept the drive allocation unchanged. Each image used 192 B for
+vectors, 696 B for data and 133,316 B for BSS.
+
+| Integrated UF2 | SHA-256 |
+| --- | --- |
+| Before | `8d37796eb96feb9b4ed25b6bdaf3ae2b47fc12bd4279fcb754c5dbd26df06af0` |
+| Submission cleanup | `2134337c27634e50be9fb14230c0b71808b270e2acb3d231d8c59e319a745d9b` |
+
+### Recorded barcode regression
+
+Replaying the saved sensor waveforms against the deployed baseline
+(`4ad2cc4`) and the submission code gave identical output in all 1,008
+cases. Two of 3,110 assertions failed in both versions. With two seconds of
+synthetic leading white and no trailing extension, one Z recording ended
+before the decoder returned a letter. One normal-speed recording returned A
+where the fixture expected silence. The audit retains both failures.
+[Replay results](compliance/evidence/post-demo-barcode-replay-20261127.json) ·
+[Original recordings and expectations](../testing/subsystem3/fixtures/barcode/README.md)
+
 ## Course-test updates after 8bc969c
 
 The terrain and obstacle changes add a roll history, scan progress fields
@@ -58,8 +106,8 @@ byte. The hump fixtures and simulated bypass routes produced the same
 results. The optional simulation with turns 10% shorter than commanded
 still reports its known miss. The only log difference was the Python
 runner's elapsed time. The scan fixtures now also check the derived routing
-count at each coarse bearing. On-car timing and course behaviour still
-require a physical run with the candidate.
+count at each coarse bearing. This comparison covered simulated behaviour
+and message encoding. It included no physical runs.
 
 ## Phase 3 submission results
 
@@ -134,7 +182,7 @@ The baseline and candidate timing-counter fixtures both passed nominal
 period, threshold, rollover and saturation checks. The integrated IR and
 motion periods remain 5 ms and 10 ms. The Arm terrain polling function grew
 by 20 code bytes. These checks cover software timing logic and code size.
-Actual cycle duration and end-to-end performance on the car remain pending.
+The comparison recorded no on-car cycle times or end-to-end timings.
 [Verification receipt](compliance/evidence/phase3-submission-20261122.json) ·
 [On-car timing check](PHYSICAL_VALIDATION.md#three-minute-timing-and-reconnection-capture)
 
@@ -192,10 +240,9 @@ These comparisons do not claim that representation changes themselves produce
 identical machine code. See the
 [verification record](../testing/change_requirement_1/logs/2026-11-19_compliance_checks.json).
 
-Current host regression executables are compiled/linked only on this Windows
-machine; Application Control blocks their execution. Pure Python checks can
-run here. Historical native PASS logs below remain historical. The separate
-physical timing/reconnection capture is still **pending**, not a PASS.
+On 19 November, Windows Application Control allowed the host executables to
+compile and link but blocked execution on that machine. The final host and
+replay results appear in the [submission summary](#github-submission-after-the-demo-27-november-2026).
 
 The change requirement asks for four things in the repository:
 
@@ -217,7 +264,7 @@ Validity is always a separate bit: zero never means "invalid".
 **Automated check.** [`check_widths.py`](../testing/change_requirement_1/check_widths.py)
 recomputes the minimum width for an explicit field inventory. It compares
 topic totals with the laptop codec and selected declarations/packing calls
-with C source. Fields outside that inventory still need review.
+with C source. Its result covers the fields listed for that revision.
 Historical result before the latest cleanup: **103 fields; 17 totals matched**
 ([log](../testing/change_requirement_1/logs/2026-11-19_widths.txt); 86 fields on 14 Nov, 7 added
 for the 17 Nov bypass state, 10 on 19 Nov: Buddy 4 turn rate + valid and
@@ -401,51 +448,17 @@ live over Wi-Fi, and the 10 mission requirements
 except the U-turn were reported demonstrated at that earlier snapshot. This is
 not a physical validation claim for the new compliance firmware.
 
-### 4.2 Timing on the real car (to be recorded by the team)
+### 4.2 Timing evidence
 
-Question: do the packing work and the network (including a Wi-Fi drop and
-reconnection) make the control loops late? (Tribunal test plan, Buddy 1
-and Buddy 2, "heavy telemetry or forced Wi-Fi reconnection".)
+The integrated firmware configures the motion PID at 10 ms and IR sampling at
+5 ms. The host fixtures exercised nominal gaps, missed-cycle detection,
+counter saturation and clock rollover. The checker flags recorded start gaps
+of at least 20 ms for motion and 10 ms for IR.
 
-The `DIAGNOSTICS=1` firmware measures, on the Pico itself, the gap between
-starts of the motion PID task (10 ms) and IR sampling task (5 ms). The checker
-reads these periods from the current headers and fails at two periods:
-20 ms for motion, 10 ms for IR. It retains the worst valid summary in a log,
-so a reset cannot hide an earlier excessive gap. This screens missed cycles;
-execution time, workload and reconnection recovery still require review.
-For an archived image use both `--motion-period-ms` and `--ir-period-ms`
-overrides matching that image; a current header cannot identify an old log's rate.
-
-1. Build and flash the diagnostics image (same as the demo build plus `DIAGNOSTICS=1`):
-   ```
-   make -C build_make CONSOLE=usb_cdc WIFI=cyw43 NET=lwip MQTT=1 TEST=0 IR_BENCH=0 S3_MOTION=1 IR_DEBUG=1 DIAGNOSTICS=1 MOTION_SMOKE=0 S4=1 S5=1 S5_HARDWARE_CONFIRMED=1 -j8
-   cp -X build_make/mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_s3_motion_diag_s4_s5_ir_debug.uf2 /Volumes/RPI-RP2/
-   ```
-2. Start the broker and the dashboard as usual and check "Car online".
-3. Keep the USB cable in and record 3 minutes of the console
-   (`pip install -r tools/requirements-robot-log.txt` once):
-   ```
-   python3 tools/capture_robot_log.py --port /dev/cu.usbmodemMTK3PICO1 --output build/robot-logs/cr1-timing --firmware diag_ir_debug --test cr1-timing --duration 180
-   ```
-   During the recording: after 1 minute turn the phone hotspot off for
-   10 seconds, turn it back on and wait until the dashboard shows the car online again.
-4. Check the result:
-   ```
-   python3 testing/change_requirement_1/timing_check.py build/robot-logs/cr1-timing/console.log
-   ```
-5. Paste the table here and add a dashboard screenshot from the same run.
-
-| Source | Period | Required evidence | Status |
-|---|---:|---|---|
-| motion | 10 ms | Three-minute workload and Wi-Fi reconnect capture | Pending physical test |
-| ir | 5 ms | Same capture; evaluate against its independent period | Pending physical test |
-
-Synthetic timing fixtures test the checker itself and must never be substituted
-for this table's physical measurements.
-
-Known risk carried from Tribunal 1: the kernel's Wi-Fi driver task runs at a
-higher priority than motion control. This test is what shows whether that
-matters in practice.
+The team completed the demo before dismantling the car. There is no matched
+three-minute hardware capture for the post-demo firmware. Its actual task
+intervals under Wi-Fi load and its hotspot recovery time are unmeasured.
+The [archived procedure](PHYSICAL_VALIDATION.md) describes the original test conditions.
 
 ## How to regenerate
 
@@ -456,16 +469,13 @@ needed only for the target RAM part):
 sh testing/change_requirement_1/run_all.sh
 ```
 
-It writes one log per check to `testing/change_requirement_1/logs/` and prints
-PASS/FAIL per step. Static RAM depends slightly on the private Wi-Fi settings
-compiled in. The historical RAM logs used the public example settings; the
-current cleanup comparison uses identical local settings for both images.
+The runner creates a fresh directory under `build/change-requirement-1/`
+with per-check logs and a `results.tsv` summary. The final paired builds used
+the same public example network settings.
 
-## Not claimed
+## Interpreting the measurements
 
-- Static RAM is not stack high-water, free heap or CPU load.
-- Host tests do not replace the on-car timing test in 4.2.
-- Buddy 4/5 "before" sizes are the same data in ordinary C types, not an
-  older firmware (none existed).
-- Buddy 3's private raw ADC readings keep full precision on purpose; only
-  processed results are packed (tribunal decision for Buddy 3).
+Static RAM figures come from the linked image. The Buddy 4 and 5 storage
+comparisons use the same values represented by ordinary C types as their
+“before” case. Buddy 3 retains the full 12-bit ADC reading for calibration
+and steering, and packs the derived results for transport.

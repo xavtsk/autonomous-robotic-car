@@ -56,19 +56,18 @@ See `testing/subsystem1/README.md` for target and hardware checks.
 
 ## Integration limits
 
-- Motion telemetry uses the proposed ±510 mm/s range in 2 mm/s steps. Odd input
+- Motion telemetry uses the ±510 mm/s range in 2 mm/s steps. Odd input
   rounds by at most 1 mm/s. Buddy 2 control calculations are unaffected.
 - Buddy 4/5 software ranges are adopted in protocol v3 (height 0–500 mm,
-  distance 30–4000 mm, width 0–4095 mm). Physical accuracy/range validation is
-  still pending; later contract changes require coordinated protocol updates.
-- Wi-Fi, motor and IR fault reporting use their owner adapters. Buddy 4/5
-  fault sources require physical validation. Buddy 4/5 adapters are integrated.
+  distance 30–4000 mm, width 0–4095 mm). These are encoding limits. Physical
+  accuracy over their full ranges is unmeasured.
+- Wi-Fi, motor, IR, terrain and obstacle fault reporting use their owner adapters.
   A cleared aggregate IR bit does not
   identify individual channels or certify physical wiring.
 - Network outage and full buffers can lose live reports; a snapshot is latest
   state, not a retry/event history. Safety decisions must not depend on MQTT.
-- Command priority 22 does not lower the kernel radio task's priority 4. Motion
-  jitter, reconnect recovery, real stack usage and full-load behaviour still
-  require testing on the robot.
+- The command task runs at priority 22 and the kernel radio task at priority 4.
+  The submission has no on-car measurements of motion jitter, reconnection
+  latency or task stack usage under load.
 - A decoded configuration map is frozen before first run and stays frozen until
   reboot. The laptop can still request snapshots during autonomous operation.

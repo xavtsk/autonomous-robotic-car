@@ -902,17 +902,16 @@ static uint32_t search_leg_us (const s3_drive_t * p_drive)
  */
 static void start_search (s3_drive_t * p_drive, uint32_t now)
 {
-    const int8_t turn_sign =
-        ((unsigned int)S3_NAV_RIGHT == p_drive->turn) ? -1 : 1;
-    const uint32_t spin_us = now - p_drive->phase_us;
+    const bool b_turns_clockwise = (unsigned int)S3_NAV_RIGHT == p_drive->turn;
+    const uint32_t spin_us       = now - p_drive->phase_us;
     const bool     b_has_overshot =
         ((p_drive->b_has_touched_line) && (spin_us > 0U)) &&
         ((now - p_drive->touch_us) < (spin_us / 2U));
-    p_drive->search_sign    = b_has_overshot ? (int8_t)-turn_sign : turn_sign;
-    p_drive->search_leg     = 0U;
-    p_drive->search_us      = now;
-    p_drive->phase_us       = now;
-    p_drive->b_is_searching = true;
+    p_drive->b_sweeps_clockwise = b_turns_clockwise != b_has_overshot;
+    p_drive->b_is_return_sweep  = false;
+    p_drive->search_us          = now;
+    p_drive->phase_us           = now;
+    p_drive->b_is_searching     = true;
 }
 
 /** @brief Stop searching on line contact or after the second sweep. While
@@ -933,22 +932,22 @@ static void search_step (s3_drive_t * p_drive, uint32_t now)
     }
 
     if ((now - p_drive->search_us) >=
-        (search_leg_us(p_drive) * (0U == p_drive->search_leg ? 1U : 2U)))
+        (search_leg_us(p_drive) * (p_drive->b_is_return_sweep ? 2U : 1U)))
     {
-        if (p_drive->search_leg != 0U)
+        if (p_drive->b_is_return_sweep)
         {
             halt_drive(p_drive, S3_DRIVE_HALTED, S3_DRIVE_LINE_LOST);
             return;
         }
 
-        p_drive->search_leg  = 1U;
-        p_drive->search_sign = (int8_t)-p_drive->search_sign;
-        p_drive->search_us   = now;
+        p_drive->b_is_return_sweep  = true;
+        p_drive->b_sweeps_clockwise = !p_drive->b_sweeps_clockwise;
+        p_drive->search_us          = now;
     }
 
-    const float32_t wheel_mps =
-        p_drive->options.search_mps *
-        (float32_t)p_drive->search_sign; /* Positive means anticlockwise. */
+    const float32_t wheel_mps = p_drive->b_sweeps_clockwise
+                                    ? -p_drive->options.search_mps
+                                    : p_drive->options.search_mps;
     if (p_drive->port.p_velocity(-wheel_mps, wheel_mps) !=
         (unsigned int)MOTION_OK)
     {

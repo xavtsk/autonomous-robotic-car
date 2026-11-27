@@ -48,22 +48,17 @@ that error and use a development environment where locally compiled C programs
 are permitted, or ask the device administrator for the supported approval path.
 Do not disable Application Control to run the tests.
 
-## Physical handoff still required
+## Physical measurement scope
 
-- For the current right-wheel profile, drive the right wheel over a measured
-  10 mm obstacle with the left wheel on the level surface. Confirm live
-  `on_hump`/height while elevated, then one completed hump and a retained peak
-  after returning to level. Repeat and verify START clears the previous run.
-  The configured 116 mm wheel spacing is a geometry input, not proof of measured
-  height accuracy. A front-lift angle check and host tests cannot replace this
-  crossing test. Stationary tilts and left-wheel-only bumps must not count.
-- Verify GP2/GP3 I2C1 wiring and mounted axes; keep the car level/still through
-  startup calibration. Confirm START is rejected before calibration completes.
-- Run known-height humps, repeat runs and verify count and highest peak reset.
-- Check stationary, accelerating, turning, climbing and descending classifications.
-- Calibrate the magnetometer and test motor interference before claiming turn-rate accuracy.
-- Test IMU disconnect/staleness, impact false positives, STOP during start/reset and
-  fault RESET. Confirm an IMU fault also brakes during Buddy 5 avoidance.
-- Verify MQTT hump payload, preservation of simultaneous fault bits and source
-  timing under full network/motor load. Retain logs/video for Week 13 and the
-  terrain analysis report. No physical pass is claimed by these software tests.
+The host tests use a configured 116 mm wheel spacing. The right-wheel crossing
+case models one wheel passing over a 10 mm obstacle with the other on level
+ground and checks that one crossing produces one reported hump. The model
+does not measure the mounted sensor's height error, magnetic interference,
+physical impact sensitivity, or task latency under combined motor and network
+load. See the [dated test log](TEST_LOG.md) for the checks performed.
+
+The hardware procedure specified GP2/GP3 I2C wiring, mounted axes and level
+startup calibration. Its cases included repeated known-height crossings,
+START/reset clearing the previous peak, left-wheel-only bumps, stationary
+tilt, motor interference, stale readings and braking on an IMU fault during
+avoidance. These cases describe the intended measurement conditions.

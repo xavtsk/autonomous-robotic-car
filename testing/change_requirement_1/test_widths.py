@@ -43,6 +43,8 @@ class WidthCheckTests(unittest.TestCase):
     def test_packed_field_width_drift_is_detected(self):
         for source, field, actual, widened in (
             ("app_program/subsystem4/buddy4.c", "head", 3, 4),
+            ("app_program/controller/s3_drive.h", "b_sweeps_clockwise", 1, 2),
+            ("app_program/controller/s3_drive.h", "b_is_return_sweep", 1, 2),
             ("app_program/subsystem5/scan_obstacle.h", "b_has_profile", 1, 2),
         ):
             with self.subTest(field=field):

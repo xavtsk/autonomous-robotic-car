@@ -119,14 +119,14 @@ smaller local/copy objects do not prove lower stack high-water usage.
 - Full-precision command function arguments remain unchanged; claiming a
   smaller command buffer would be incorrect because there is no such buffer.
 
-## Build and outstanding validation
+## October build and measurement scope
 
 Both full Wi-Fi/lwIP/MQTT production and TEST=1 profiles compile/link. Host
 fault-adapter and original Buddy 1 tests also pass. No generated image was flashed.
 
-Still required: define/validate maximum run and encoder/glitch bounds; confirm
-shared-speed reporting range/resolution; decide whether to extend the common
-fault schema for the other three primary reasons; physically test calibration,
-distance/turns and stopping; measure maximum edge load, ISR duration, control
-jitter/WCET under networking/reconnection, stack and free-heap high-water usage.
-Do not claim complete Week 13 minimum-bit or performance sign-off yet.
+This October session did not measure encoder glitch limits, stopping behaviour,
+interrupt duration, jitter under networking load, or stack and heap high-water
+use. The shared speed range and three additional fault reasons were design
+questions at that stage. The [motion test log](TEST_LOG.md) records separate
+on-car measurements, and the [submission evidence](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)
+covers the later integrated build.

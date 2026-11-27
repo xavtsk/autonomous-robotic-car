@@ -108,6 +108,9 @@ typedef struct
     unsigned b_is_advancing : 1;
     unsigned b_has_touched_line : 1;
     unsigned b_is_searching : 1;
+    /* Direction and leg are meaningful only during the two-leg search. */
+    unsigned b_sweeps_clockwise : 1;
+    unsigned b_is_return_sweep : 1;
     unsigned reset_result : 2;
 #if APP_S5
     unsigned b_has_obstacle_snapshot : 1;
@@ -131,8 +134,6 @@ typedef struct
     float64_t junction_m; /* Store odometry at junction detection. */
     uint32_t  touch_us;   /* Store the last front detection in microseconds. */
     line_navigation_action_t turn; /* Record the current manoeuvre. */
-    int8_t   search_sign;          /* Use +1 anticlockwise or -1 clockwise. */
-    uint8_t  search_leg;           /* Zero sweeps out and one sweeps back. */
     uint32_t search_us;            /* Store the sweep start in microseconds. */
 #if APP_S5
     avoid_obstacle_t obstacle;

@@ -1,10 +1,9 @@
 # Buddy 3: Tribunal 1 data representation
 
-> The dated sections retain earlier implementation evidence. In particular,
-> later protocol-v2 and unwired-start statements below are historical. Current
+> The dated sections retain the earlier packet layouts and measurements. Current
 > operation uses [Buddy 1 v3](../subsystem1/MQTT_PROTOCOL.md), the existing
 > [operator/dashboard controls](../controller/README.md), and the
-> [current validation procedure](../../docs/PHYSICAL_VALIDATION.md).
+> [post-demo software evidence](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md).
 
 ## 19 November faster-sampling capacity
 
@@ -62,7 +61,7 @@ agreed. These are diagnostics, not newly quantised control values. The 11-byte
 control packet, navigation codec and external MQTT v2 protocol are unchanged.
 The earlier sizes below are retained as historical measurements.
 
-## Current integration, 25 October 2026
+## Integration snapshot, 25 October 2026
 
 The teammate's `71193e2` navigation API adds readiness/lifecycle, persistent
 faults, accepted calibration, diagnostic steering, rearming and exact capture
@@ -87,10 +86,10 @@ private boolean/small-mask state remains compact. Host short-enum sizes are
 488 bytes for the new private navigation context, and 18 bytes per calibration
 collector. These host sizes are not a complete target RAM or stack measurement.
 
-Current regression compares against `71193e2`, not the pre-pull core. See
+The 25 October regression used `71193e2` as its baseline. See the
 [integration review](../../docs/INTEGRATION_2026-10-25.md) and
-[controller ownership](../controller/README.md). Correct-original-line identity,
-physical calibration and deadline measurements remain open.
+[controller ownership](../controller/README.md). That comparison did not
+measure original-line identity, physical calibration or deadlines.
 
 ## Historical 23 October representation-only design
 
@@ -108,8 +107,7 @@ reads barcodes.
 This implements the representation concerns in **Change Requirement 1** and
 **AAI07_ImmTri1.pdf** (Buddy 3 raw precision/validity, shared-data ownership and
 boundary/timing validation). It does not claim the whole robot is ready for the
-physical demo. Buddy 4/5 integration and correct-original-line recovery remain
-separate work.
+physical demo. This snapshot predates the integrated terrain and avoidance paths.
 
 ## Values and widths
 
@@ -208,7 +206,7 @@ Buddy 1 and the laptop codec now use **MQTT protocol version 2** together.
 Snapshot and heartbeat byte lengths are unchanged. Version 1 is rejected;
 upgrade both endpoints. See `../subsystem1/MQTT_PROTOCOL.md`.
 
-## Evidence and remaining checks
+## Evidence for the 23 October representation change
 
 - Portable behaviour, packet boundaries and bench diagnostic regression:
   `testing/subsystem3/EVIDENCE.md`.
@@ -216,8 +214,6 @@ upgrade both endpoints. See `../subsystem1/MQTT_PROTOCOL.md`.
 - Full firmware profiles and measured RAM/code trade-off:
   `testing/subsystem3/BUILD_AND_RAM.md`.
 
-Actual-track calibration, moving barcode success, real sampling jitter/WCET,
-task stack margin and concurrent hardware load remain unmeasured. The local
-start input is still not wired into the application. No automatic start,
-navigation rewrite, Buddy 4/5 behaviour or original-line identity logic was
-added by this representation update.
+This historical comparison measured software representations. Its evidence
+does not establish moving scan performance, task deadlines or stack margins.
+The integrated submission uses the [operator and dashboard control paths](../controller/README.md).

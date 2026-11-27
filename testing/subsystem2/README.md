@@ -9,8 +9,7 @@ screenshots and data are in `logs/`.
 
 `make -C testing/subsystem2 test adapter regression sizes` runs current packed
 boundaries, the teammate's production feedback and Buddy 2/3 drive tests, team
-adapters and comparisons against imported `71193e2`. These mock hardware and
-do not replace the teammate's saved physical evidence or new tests on this car.
+adapters and comparisons against imported `71193e2`. The host suite uses simulated hardware. The dated test log links the team's physical measurements.
 The old GPIO-IRQ regression harness is historical; default tests no longer use it.
 The [25 October integration review](../../docs/INTEGRATION_2026-10-25.md)
 describes the historical comparison; use the current build/test index for the

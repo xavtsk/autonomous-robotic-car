@@ -21,7 +21,7 @@ and all navigation algorithms are unchanged. No raw C struct/enum layout is sent
   field codes and incorrect lengths are rejected.
 - Zero bytes are ordinary binary data. Always use the explicit payload length;
   never `strlen()`, a terminating zero, or `%s` on a binary payload.
-- Field ranges, resolution and outstanding owner decisions are listed in
+- Field ranges, resolution and ownership are listed in
   [DATA_REPRESENTATION.md](DATA_REPRESENTATION.md).
 - Live telemetry uses QoS 0. Replies use QoS 1. Retain is always zero.
 - QoS 1 is not an application-level delivery guarantee. Buffer-full or publish
@@ -62,8 +62,8 @@ one for a negative speed. Odd integer speeds round to the nearest 2 mm/s, with
 half steps away from zero (119 → 120; -119 → -120). Error is at most 1 mm/s.
 Values outside ±510 are rejected before the cache changes. Negative zero is
 noncanonical and rejected. This quantisation applies to telemetry and its cache,
-not Buddy 2's PID calculations or control requests. Validate the proposed range
-against calibrated speed before freezing the team contract.
+not Buddy 2's PID calculations or control requests. The local motion feedback
+covers ±1022 mm/s. Readings beyond the MQTT range invalidate motion telemetry.
 
 ### Route pose (`car/telemetry/pose`, added 28 Oct 2026)
 
@@ -213,8 +213,8 @@ An invalid section has its validity bit clear and canonical zero data bits.
 A valid zero height is different from an invalid height. The snapshot holds
 the most recently reported values; it is not a history or a simultaneous sample
 of all sensors. Validity does not expire automatically. Owners should call
-`buddy1_invalidate(type)` when their cached result is no longer usable. Per-field
-age limits/timestamps remain a team integration decision.
+`buddy1_invalidate(type)` when their cached result is no longer usable. The
+MQTT snapshot carries validity bits and omits per-field age.
 
 **Replies and events are not dropped by a busy link (19 Nov 2026).** The
 outbox has four slots shared by everything. A map or snapshot reply that finds
@@ -293,9 +293,8 @@ motor-driving commands are unsupported.
 
 Buddy 1 command priority remains 22. The kernel radio/lwIP task still runs at
 priority 4, above motion at 14. A lower-priority application command task does
-not by itself prove the Week 6 low-priority networking claim. Full-load control
-jitter and reconnection timing remain physical validation items; do not claim
-they are solved by compact packets.
+not by itself prove the Week 6 low-priority networking claim. The submission
+contains no on-car measurement of full-load control jitter or reconnection time.
 
 ## Laptop examples
 

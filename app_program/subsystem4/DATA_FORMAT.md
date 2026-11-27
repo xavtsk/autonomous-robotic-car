@@ -45,9 +45,10 @@ The controller updates only `BUDDY1_FAULT_IMU` through Buddy 1's protected maske
 update API. No unsynchronised read-modify-write of the shared fault mask is used.
 Highest height/count use Buddy 1's existing hump payload; no rate-to-heading cast.
 
-Week 13 evidence still needs pack/unpack/boundary tests, actual memory/build records,
-full-load timing, and physical height/impact demonstrations. Host tests alone do not
-establish any physical demonstration.
+The [submission evidence](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)
+records the codec checks, matched Arm builds and terrain fixtures. These
+cover encoding and software behaviour. Height accuracy, impact sensitivity
+and on-car timing for the post-demo changes are unmeasured.
 
 ## Raw accelerometer diagnostic stream
 

@@ -73,7 +73,7 @@ controller's request. PIO MMIO uses per-SM control and atomic set/clear aliases;
 no encoder FIFO reader is added.
 
 Buddy 1 owns the global fault word. The controller updates only NO_ECHO using its
-existing changed-mask API; it never writes a copied global word back. Buddy 5's
+existing changed-mask API; it never writes a copied global word back.
 The v3 obstacle and avoidance messages retain their original fields. The v4
 scan summary can carry both face-width bounds with its padded planning width.
 See [the MQTT protocol](../subsystem1/MQTT_PROTOCOL.md) for the 13-byte v3
@@ -83,5 +83,5 @@ There was no older Buddy 5 firmware. The before/after in
 [`docs/CHANGE_REQUIREMENT_1_EVIDENCE.md`](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)
 compares these packed formats with the same data in the decoded-view structs,
 measured by the Arm compiler. Runtime stack/heap/timing are recorded separately.
-Physical width, clearance margins, maximum depth, scan latency and recovery
-accuracy still need real-car validation and Week 13 demonstration evidence.
+The post-demo build has no physical measurements for width accuracy, clearance
+margins, maximum depth, scan latency or recovery accuracy.

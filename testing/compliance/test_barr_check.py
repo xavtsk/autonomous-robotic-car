@@ -119,6 +119,16 @@ class LexicalTests(unittest.TestCase):
         findings = self.inspect('/* End of file. */\nint count;\n/* Later. */\n\n')
         self.assertTrue(any(row.rule == "3.3.c" for row in findings))
 
+    def test_eof_comment_and_blank_line_are_independent_of_line_endings(self):
+        for newline in ("\n", "\r\n", "\r"):
+            for marker, endings, valid_eof in (("/* End of file. */", 2, True),
+                                               ("/* End of file. */", 1, False),
+                                               ("/* Other comment. */", 2, False)):
+                with self.subTest(newline=newline, marker=marker, endings=endings):
+                    rules = {row.rule for row in self.inspect(marker + newline * endings)}
+                    self.assertEqual("3.3.c" in rules, not valid_eof)
+                    self.assertEqual("3.6.a" in rules, newline != "\n")
+
     def test_backslash_and_url_in_comment_are_reported_literally(self):
         findings = self.inspect('/** @file sample.c\n * See https://example.invalid.\n */\n')
         self.assertTrue(any(row.rule == "2.1.b" for row in findings))

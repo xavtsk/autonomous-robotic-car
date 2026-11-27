@@ -55,7 +55,7 @@ margins. These fixtures also check the interval-rounding extremes and refuse
 the clips when the missing leading quiet is not supplied. These captures were
 recorded at 0.03 m/s; the user subsequently requested 0.04 m/s for the new
 15-unit firmware, keeping 100 Hz sampling. These 0.03 m/s replays do not prove
-decoding at the restored speed; a new physical run is still needed.
+decoding at the restored speed.
 
 If uncorrected widths fail, both known star patterns first determine a shared
 black/white width correction. The fit minimises the worst relative sentinel
@@ -267,7 +267,7 @@ The replay suite runs all five recordings at raw and darkness/4 precision,
 four explicit margin choices. Every interpretation may refuse except the
 documented midpoint requirements; none may emit a different letter/orientation.
 In particular, the failed run is not reported as an unpadded software success
-or a successful hardware scan. New physical runs are required to validate it.
+or a successful hardware scan.
 
 ## 11 November: raised sensor, small and large Z
 

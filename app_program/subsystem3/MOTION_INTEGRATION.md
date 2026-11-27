@@ -1,71 +1,42 @@
-# Buddy 2 + Buddy 3 integration
+# Buddy 2 and Buddy 3 motion integration
 
-26 October operator update: the reviewed version 2 patch now provides the
-GP20/GP21 calibration/START/STOP/RESET interface in S3_MOTION, and fixes actual
-runtime calibration initialization. The older statements below that the adapter
-is outstanding are superseded. USB remains output-only. See
-[the course quickstart](../../docs/COURSE_QUICKSTART_2026-10-26.md); physical
-course success and STOP timing are not established by the host tests.
+The integrated profile (`S3_MOTION=1 IR_BENCH=0 TEST=0`) boots disarmed.
+Buddy 3 observes the line and decodes barcodes. A single controller consumes
+its events and Buddy 2's encoder feedback. Buddy 2 supplies the wheel PID and
+writes motor outputs. Buddy 1 handles map and telemetry messages. `S4=1` and
+`S5=1` add terrain and obstacle inputs to the same controller.
+[Controller contract](../controller/README.md)
 
-25 October team adaptation: `S3_MOTION=1` now also starts Buddy 1 and uses its
-atomically frozen pre-run map. `vehicle_controller.c` is a taskless telemetry/UI
-facade over this same motion/report owner, not a second controller. Shared
-request/status packets are now 11/146 bytes (27 October run-timing extension).
-See [current controller contract](../controller/README.md).
-The source and policy description below is the imported teammate handoff; its
-"only Buddy 2 and Buddy 3" and "no MQTT" statements no longer describe this
-branch's combined profile. A user-facing calibration/start adapter is still
-outstanding, and USB text still cannot control the robot.
-
-Updated against `origin/Buddy2` commit `a29f973` (22 October 2026). Its PIO
-encoders, calibrated constants, PID settings, packed formats and report queue are
-preserved. These upstream changes are included in the working tree; no branch
-merge commit, flash or push was performed. The remaining local motion changes
-are the feedback/lease contract described below.
-
-## What is connected
-
-`S3_MOTION=1 IR_BENCH=0 TEST=0` starts only Buddy 2 and Buddy 3 application tasks.
-It initialises motor outputs braked, enables all three sensor inputs and stays
-**disarmed**. The default build remains unchanged; `IR_BENCH=1` still starts only
-the stationary sensor diagnostic. Conflicting test/bench/integration flags fail
-at build time. No firmware was flashed or motor operated during development.
+## Motion requests and feedback
 
 - `app_program/controller/s3_drive` passes valid active steering (m/s) to `motion_request_velocity()`.
 - `motion_get_feedback()` provides a mutex-protected distance/source timestamp,
   validity, reset epoch, current motion state/fault, command ID, report-loss count
   and stopped acknowledgement.
   Reads do not refresh measurement timestamps or consume completion events.
-- The temporary controller alone drains `motion_get_report()` every cycle, even
+- The controller alone drains `motion_get_report()` every cycle, even
   while inactive. It matches completion to the accepted command ID and never uses
   `motion_poll()`. Unexpected cancellation, queue loss and wrong current IDs fault
   the run; an old completion cannot finish a newer manoeuvre.
-- A mapped barcode arms one direction for the next persistent junction candidate.
-  Two pending codes, an unmapped letter or an unassigned junction halt the run.
-- Before manoeuvring, it requests stop and waits for a **newer** motion update
-  reporting IDLE, applied brakes and at least 100 ms of encoder-observed
-  stillness (`motion_controller_is_stopped`). A short invalid steering interval
-  also waits for this acknowledgement before resuming. Physical stopping remains
-  dependent on working encoders and requires hardware validation.
-- Navigation capture is suppressed during a manoeuvre; sensor/freshness faults
-  still stop it. On completion, tracking is restored with fresh framing/rearming.
-  The car remains braked until the front line is reacquired. No blind line search
-  or automatic driving out of an unknown junction is implemented.
-- Persistent initial/subsequent line loss halts and requires explicit restart.
-  An instantaneous invalid steering proposal brakes immediately; a short contrast
-  interruption may recover before the persistent-loss event.
-- Sensor faults, motion faults, stale feedback, rejected motion requests and
-  manoeuvre/acknowledgement timeouts latch the adapter FAULT state. Stop takes
-  precedence, pending directions are discarded and valid readings do not restart.
+- A mapped barcode supplies the action for the next junction. The frozen
+  pre-run map and the configured course options govern crossing and turning.
+  An unmapped letter halts the run.
+- Before a manoeuvre the controller requests braking and checks newer motion
+  feedback for IDLE, applied brakes and encoder-observed stillness.
+- During a turn, manoeuvre suppression discards partial barcode captures.
+  The course configuration allows a bounded line search after a turn. The
+  drive controller can reverse the sweep once. Losing the line after that
+  halts the drive. Reacquisition indicates line presence. A nearby parallel
+  marking can also satisfy the sensor test.
+- Sensor faults, stale feedback, motion faults, rejected requests and
+  timeouts can latch a fault. Reset and start are separate operator actions.
 
-Development timeouts: pending direction 5 s, brake acknowledgement 500 ms,
-manoeuvre 10 s, post-manoeuvre line reacquisition 1 s. Distance rearming remains
-30 ms stable clear line + 20 mm net displacement. These policies/tunings need
-team and track validation. Sensor roles follow the wiring confirmed on 2026-10-27:
-left GP27 (Grove 6), barcode GP28 (Grove 7), right GP26 (Grove 5)
-(`S3_ADC_CHANNEL_*` in `ir_acquisition.h`). Check GP28's VBAT jumper.
+The wired sensor roles were confirmed on 27 October 2026: front left GP27
+(Grove 6), front right GP26 (Grove 5), and offset barcode GP28 (Grove 7).
+The default barcode rearm requires 30 ms of stable clearance and 20 mm of
+net travel. [Sensor interface and rearming](INTEGRATION.md)
 
-## Small Buddy 2 changes
+## Buddy 2 feedback and motion lease
 
 `motion.h/c` adds a non-consuming feedback snapshot and a navigation-owner
 heartbeat. The motion task publishes distance and its original measurement time
@@ -86,19 +57,18 @@ STALE_COMMAND and brakes if the lease age exceeds 30 ms, also during DRIVE/TURN
 where the old velocity-only timeout did not apply. This catches a blocked/dead
 integration task while the motion task is still running; it is not a hardware
 watchdog for a stopped kernel. Motion calibration requests are rejected while the
-lease is armed. The latest Buddy 2 PID, motor settings and 10 ms motion period are
-unchanged relative to `a29f973`. These limited changes should be reviewed by Buddy 2 before merging.
+lease is armed. The motion task is configured for a 10 ms period.
 
 A positive `motion_is_calibrated()` means Buddy 2 has non-zero configured encoder
 scaling. It does not prove the currently configured motor/encoder values were
-measured on this car. Physical calibration remains necessary.
+measured on this car. The [Buddy 2 measurements](../subsystem2/DATA_FORMAT.md) give the calibration values and their basis.
 
 ## Explicit control API
 
-Include `app_program/controller/s3_integration.h` from a future command/UI task. It exposes a bounded,
+The [integration API](../controller/s3_integration.h) exposes a bounded,
 thread-safe control queue and copied status; only the sampling owner touches the
 navigation context. `s3_integration_submit()` returning true means queued, not
-executed. Observe `command_sequence` changing and `command_ok` in
+executed. Observe `command_sequence` changing and `b_did_command_succeed` in
 `s3_integration_status()` before sending the next dependent command. The queue
 holds one pending command. STOP pre-empts/cancels queued work; normal commands
 are rejected while STOP is pending. The status is a per-cycle snapshot.
@@ -107,7 +77,7 @@ Per physical sensor (BARCODE, LEFT, RIGHT), while disarmed:
 
 1. Hold actual white material under that sensor at its final height. Submit
    `S3_CONTROL_WHITE` with that sensor ID. Wait until collection starts and
-   `collecting` returns false (one second). Inspect white count/minimum/maximum.
+   `b_is_collecting` returns false (one second). Inspect white count/minimum/maximum.
 2. Repeat with black and `S3_CONTROL_BLACK`.
 3. Submit `S3_CONTROL_APPLY_CALIBRATION`. Check command success and that sensor's
    acceptance bit. Rejection retains the previous accepted calibration. Each
@@ -123,43 +93,22 @@ samples/odometry, Buddy 2 IDLE with acknowledged stillness and no fault. `S3_CON
 ends a healthy run. `S3_CONTROL_RESET` attempts both fault resets but never starts
 motion. Buddy 2 may reset before the next copied feedback reflects IDLE, so retry
 a reset after another status update if required; persistent faults still reject.
-A separate START is always needed after reset or a halted run.
-
-Example request from an application task (not a USB terminal command):
-
-```c
-s3_control_request_t request = { .kind = S3_CONTROL_WHITE,
-                                 .sensor = S3_SENSOR_BARCODE };
-bool queued = s3_integration_submit(&request);
-/* Poll copied status; after collecting and accepting all three calibrations: */
-request.kind = S3_CONTROL_START;
-/* Only submit START when the operator actually requests a run. */
-```
-
-The USB console is output-only in this repository: it currently discards received
-characters. This update does not add a USB command parser, buttons or MQTT.
-The application control API is wired through the owner; a user-facing
-command source must call it before the integrated firmware can be operated without
-a debugger/custom application task. Sending text to the existing USB terminal
-will not start it. This deliberately avoids an automatic start or calibration bypass.
+A separate START is required after reset or a halted run. GP20/GP21 and
+the [dashboard command interface](../../docs/REMOTE_CONTROL_PROTOCOL.md)
+submit requests to this owner. USB serial provides diagnostic output.
 
 ## Scheduling and ownership
 
-The integration uses two S3 tasks (sampler/controller priority 16 and reporter
-priority 17), one snapshot/command mutex and one 10 ms cyclic handler. They replace,
-not supplement, the bench tasks in this mutually exclusive profile. Buddy 2 keeps
-its priority-14 motion task/mutex/10 ms cyclic handler. ADC reads, navigation,
-motion calls and console printing occur outside the snapshot lock. STOP is
-processed before acquisition; a stalled ADC/control task is covered by the lease.
+The integrated sampler/controller (priority 16) targets 5 ms, the motion task
+(priority 14) targets 10 ms, and the reporter (priority 17) publishes status.
+The stationary bench uses a separate profile and a 10 ms wake period. Each
+uses one sampling owner. ADC reads, navigation, motion calls and console
+printing occur outside the snapshot mutex. The sampler processes STOP before
+acquisition. The motion lease covers loss of the sampling task while the
+motion task remains operational.
 
-The integrated profile is the sole motion-request and completion consumer. Do not
-run Buddy 2 calibration/movement tests or another controller concurrently. Future
-obstacle/IMU/network arbitration belongs to one controller. See the explicit
-[replacement contract](../controller/README.md). No Buddy 1 draft was imported. The default profile still builds all existing subsystems normally.
-
-The shared kernel tick and priorities are unchanged. Measured sampling gaps and
-counts above Week 6's 5 ms target are printed. A 10 ms target does not satisfy the
-5 ms design target, and no physical stop-latency guarantee is asserted.
+The diagnostics include maximum sampling gap and counts above the configured
+period. The submission has no post-demo on-car timing or braking measurements.
 
 ## Build and tests
 
@@ -184,7 +133,6 @@ compiles production `motion.c` with a mocked kernel/hardware boundary to verify
 snapshot timestamps/epochs, calibration exclusion and the turn watchdog.
 Existing A-Z/fixture, acquisition, calibration and navigation tests are retained.
 
-Hardware testing, actual-track calibration, motor/encoder calibration, junction
-geometry, safe speeds, moving barcode performance, obstacle avoidance, MQTT and
-full-team scheduling remain outstanding. Software integration is not validated
-vehicle navigation.
+The [submission evidence](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md) records
+the integrated host results, course simulation, saved-waveform comparison
+and Arm builds. The team completed the demo before dismantling the car.

@@ -1,16 +1,13 @@
 # Specific BARR-C preservation conflicts
 
-Entries marked pending require review or approval. Resolved entries record a verified source change.
-The source references identify the `4ad2cc4` baseline; check current definitions
-after a rename. Ordinary naming, whitespace or documentation work is not grounds
-for an exception. Resolve a case with an equivalent implementation where evidence
-supports it; otherwise retain the exact behavior and request a concrete approval.
-
-An eventual approved entry must record the rule, exact files/symbols/profile,
-why a compliant alternative cannot meet the preserved contract, supporting tests,
-owner, approver name and date, limits and revisit trigger. Place a short reference
-near the affected source. Do not approve an entire chapter or imported folder to
-hide owned modifications.
+This register records the rules reviewed for team-owned C. The table gives
+the original locations at `4ad2cc4` and the review status recorded for each
+case. The dated findings below it describe later fixes and trials. A
+`pending` entry has no recorded approval. A resolved entry identifies the
+source change and its verification. An approval record identifies the rule,
+scope, justification, supporting evidence, approver and date.
+The [submission summary](../CURRENT_STATUS.md)
+gives the final source-check result.
 
 | ID | Rules | Exact baseline case | Preservation issue and required resolution | Status |
 | --- | --- | --- | --- | --- |

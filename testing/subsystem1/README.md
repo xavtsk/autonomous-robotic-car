@@ -45,23 +45,17 @@ Use the appropriate stationary/safe test setup. Buddy 1's test also closes its
 configuration map latch, so reboot into `TEST=0` before a normal setup/demo.
 Compiling the test firmware is not evidence the tests ran on the Pico.
 
-## Physical checks before Week 13
+## Physical evidence
 
-1. Update robot and laptop to protocol v3 together. Subscribe on the laptop, run each producer and verify decoded values, units,
-   direction and validity against the robot's known inputs.
-2. Send raw binary map and snapshot commands. Confirm map changes are accepted
-   before first run and refused afterward; the robot remains autonomous.
-3. Disconnect Wi-Fi and the broker separately. Confirm autonomous control keeps
-   running, reconnect/heartbeat recovery works, and the Wi-Fi bit preserves any
-   concurrent motor fault. Measure recovery time; it is not yet a proven target.
-4. Generate burst traffic from multiple buddies. Verify full-buffer rejection,
-   latest snapshot behaviour and dropped reports; agree event-loss tolerance.
-5. Record motion task start times and execution time during maximum telemetry
-   and reconnect activity. Compare with its 10 ms period and agreed jitter limit.
-6. Measure actual stack use/remaining heap under the combined workload. Keep
-   runtime buffer allocation distinct from `.data + .bss` linker accounting.
-7. Physically validate the adopted Buddy 4/5 ranges and confirm the wheel-speed range against
-   calibration. Update versioned layouts and repeat cross-decoder checks if changed.
+The host suite exercises binary messages, map locking, bounded queues and
+reconnection logic. Hardware measurements of end-to-end recovery time, task
+jitter under network load and stack or heap high-water use were outside these
+tests. The [dated report](EVIDENCE.md) gives the measurements for each protocol
+version. The [submission results](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)
+record the final software comparison.
 
-Record evidence, not only a pass assertion. Build/host results and pending items
-are tracked in [EVIDENCE.md](EVIDENCE.md).
+The Week 13 procedure compared decoded units and validity with known inputs,
+tested pre-run map locking, and interrupted Wi-Fi and the broker separately.
+It specified burst telemetry, dropped-report counts, concurrent faults and
+motion intervals against the 10 ms period. These are the conditions for
+interpreting any on-car measurements.

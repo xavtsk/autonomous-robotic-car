@@ -171,6 +171,7 @@ and the production controller runtime with simulated hardware. The Buddy 5 suite
 also tests an IMU impact during an active bypass. Firmware and software evidence
 is recorded in `docs/BUDDY4_INTEGRATION_2026-10-28.md`.
 
-No physical IMU, hump-height, impact, full-load timing or terrain validation was
-performed by this integration. The terrain analysis report and measured accuracy
-remain physical deliverables. Tribunal 1 changes must be demonstrated in Week 13.
+The [terrain analysis report](TERRAIN_ANALYSIS.md) explains how the firmware
+estimates hump height, how the detector performed on the test inputs, and the
+limits of those results. The submission records no measured height error
+against a physical reference hump for this firmware.

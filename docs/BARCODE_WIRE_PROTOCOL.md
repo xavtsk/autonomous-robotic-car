@@ -71,4 +71,5 @@ checks undersized-buffer cursor safety and unchanged USB batching. Independent
 Python roundtrips, original-C v1 fixtures, malformed/boundary/loss/duplicate tests
 and isolated MQTT
 integration live in `testing/dashboard/test_barcode_protocol.py`/`test_service.py`.
-Actual wireless load, deadlines and STOP timing remain hardware tests.
+These tests exercised the codecs and the laptop service. The submission
+records no on-car measurements of wireless load or STOP latency for this revision.

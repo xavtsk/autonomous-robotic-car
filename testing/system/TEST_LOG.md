@@ -1,24 +1,9 @@
-# System — test log
+# Whole-car demonstration
 
-Tests of the complete product against its requirements, run on the final hardware set-up. Run the full set before every demo and before hand-in.
+The team completed the physical demonstration and subsequently dismantled the
+car. No run-by-run results, measured completion time or firmware revision
+for that demonstration were entered in this log.
 
-See `testing/README.md` for how to run tests and record results.
-
-## Test cases
-
-Define a test here before running it. Test IDs never change.
-
-| ID | What is tested | Requirement / interface | Method | Steps / how | Expected result |
-|---|---|---|---|---|---|
-
-*Method:* **auto** = `TEST_CHECK` in code, result printed on the console;
-**manual** = a person observes the result (LED, scope, meter, phone app…).
-
-## Results
-
-Add a new row for every run. Never edit or delete old rows.
-
-| Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
-|---|---|---|---|---|---|---|
-
-No car test cases or results have been recorded yet.
+The [test index](../README.md) links the subsystem records and dated hardware
+captures. The [submission evidence](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)
+records the simulated course comparison for the subsequent GitHub cleanup.

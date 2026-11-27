@@ -20,30 +20,19 @@ They do not access a sensor, serial port, broker or robot.
 Passing those is software evidence only. The existing Buddies 1–4, controller,
 startup and course simulation suites are also regression checks.
 
-## Required physical records (NOT RUN by this implementation)
+## Physical measurement scope
 
-1. Verify GP0/GP1 signal roles and level protection; GP12 servo signal, supply,
-   common ground, pulse centre/orientation and safe angle limits. Scope trigger
-   pulse, echo width and servo PWM if available; check shared PIO/PWM operation.
-2. Measure known distances across the useful range; include tilted/poorly
-   reflecting targets, no echo, stuck-high/disconnected input and timed recovery.
-3. While stationary, verify coarse/fine angles, servo settling, bounded retries,
-   scan duration and profiles against measured obstacle positions/widths.
-4. Measure robot footprint, sensor-to-axle distance and obstacle depth; update
-   the configuration. Confirm clearance and braking margins at operating speed.
-5. Record stop request → actual stopped ACK → first scan movement, proving
-   detailed scanning did not begin while the car was moving.
-6. Repeat LEFT and RIGHT bypasses, both sides blocked, blocked second leg,
-   invalid/stale range during a drive, and local STOP at every phase.
-7. Recover the original line, including slip/offset and failed recovery cases.
-   Test nearby lines/junctions: a white-only frame must not establish recovery.
-   Confirm no replayed barcode and correct retained-command/junction association.
-8. Run with network load/reconnect and simultaneous motor/Wi-Fi/no-echo faults.
-   Save fault-mask values, motion/sensor gaps, STOP timing and relevant telemetry.
-9. Save the tested commit (or patch hash), build flags, geometry/calibration,
-   measured results, state-transition log and video. Demonstrate Tribunal 1
-   changes in Week 13; host tests are not a substitute.
+The dated test log distinguishes host, register-level and physical cases.
+Host fixtures provide echoes, servo angles and motion feedback. They cover
+scan ordering, clearance decisions, return to the original line and response
+to stale inputs. Physical echo accuracy, servo settling, clearance margins,
+wheel slip and stopping latency require instrumented observations. The
+submission contains no such measurements for the post-demo revision.
+[Dated obstacle tests](TEST_LOG.md).
 
-Acceptance tolerances must be agreed from actual course geometry; the initial
-configuration constants are provisional engineering settings. Do not label any
-of the above PASS merely because the build or a mocked test succeeds.
+The hardware procedure covered GP0/GP1 signal levels and echo pulses, GP12
+servo orientation, stationary scan timing and known obstacle dimensions.
+The bypass cases checked that stopped acknowledgement preceded scanning,
+tested both turn directions and blocked legs, and required recovery onto the
+original line without a repeated barcode. Simultaneous Wi-Fi, motor and echo
+faults formed the load case for STOP timing.

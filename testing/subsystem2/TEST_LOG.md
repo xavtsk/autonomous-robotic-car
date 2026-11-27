@@ -2,16 +2,15 @@
 
 **Buddy 2:** Motion control using motors and wheel encoders. Owner: 2503508.
 
-See `testing/README.md` and [how to run the Buddy 2 tests](README.md). Unit
-tests S2-U01 to S2-U22 are automated in
-`app_program/subsystem2/subsystem2_test.c` (`make TEST=1`). S2-U23 to S2-U30
+See `testing/README.md` and [how to run the Buddy 2 tests](README.md). The historical unit tests S2-U01 to S2-U22 are now in
+[`buddy2_test.c`](../../app_program/subsystem2/buddy2_test.c) (`make TEST=1`). S2-U23 to S2-U30
 are manual hardware tests: the robot is measured by hand.
 
 - S2-U01 to S2-U10 and S2-U13 to S2-U20 never move the robot. S2-U05 runs only
   while the robot is **not** calibrated; S2-U06 to S2-U22 run only once the
   CALIBRATE values in `motion.c` are set. The others print SKIP.
 - S2-U11, S2-U12, S2-U21 and S2-U22 drive the robot. Set `S2_TEST_MOVE` to 1 in
-  `subsystem2_test.c`, put the robot on the floor with 30 cm clear ahead and
+  `buddy2_test.c`, put the robot on the floor with 30 cm clear ahead and
   room to turn, then reset the Pico. They drive forward, turn left, turn right
   and drive back, ending on the start mark.
 - Acceptance criteria for the manual accuracy tests come from S2-U11 / S2-U12:

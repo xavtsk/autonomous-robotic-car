@@ -1,12 +1,8 @@
 # Integration — test log
 
-Tests that two or more subsystems work together. There is one test (or more) for every interface listed in TEAM.md section 5. Both owners agree on the test and sign off the result.
-
-See `testing/README.md` for how to run tests and record results.
+These dated cases cover communication between subsystems. The [test index](../README.md) links the run records and the [submission results](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md) cover the post-demo controller comparison.
 
 ## Test cases
-
-Define a test here before running it. Test IDs never change.
 
 | ID | What is tested | Requirement / interface | Method | Steps / how | Expected result |
 |---|---|---|---|---|---|
@@ -26,8 +22,6 @@ Define a test here before running it. Test IDs never change.
 
 ## Results
 
-Add a new row for every run. Never edit or delete old rows.
-
 | Date | Test ID | Commit | Tester | Result | Log / evidence | Notes |
 |---|---|---|---|---|---|---|
 | 2026-10-17 | INT-B01 | `integration/buddies-1-3` working tree | Codex | PASS | Local build output | Normal, test, IR bench, and full Wi-Fi/lwIP/MQTT firmware compiled and linked. MQTT used temporary non-secret compile-only settings, removed afterward. No flashing or hardware runtime claim. |
@@ -37,7 +31,7 @@ Add a new row for every run. Never edit or delete old rows.
 | 2026-10-25 | INT-B01 | `71193e2` plus local integration | Codex | PASS (build) | `docs/INTEGRATION_2026-10-25.md` | Combined offline diagnostics, full network compile-only, 1/3-channel IR bench, offline self-tests and isolated smoke images build/link. Network uses public placeholders and is labelled COMPILE_ONLY; no flashing. |
 | 2026-10-25 | INT-B02 | `71193e2` plus local integration | Codex | PASS (host) | `testing/integration/controller_test.mk`, `docs/INTEGRATION_2026-10-25.md` | Real single-owner runtime, facade and full 60/122/11-byte codecs tested with sanitizer/fake hardware boundaries; STOP precedence, calibration gate, map freeze, owned faults and safe telemetry range checked. Current teammate motion feedback/drive tests pass; Buddy 3 navigation and stationary bench traces match imported revision. INT-H01/H02 still open. |
 
-Physical tests INT-H01 and INT-H02 remain pending.
+The 25 October session did not record physical results for INT-H01 or INT-H02.
 
 ## 26 October — reviewed operator version 2
 
@@ -64,5 +58,4 @@ physical course success is still not claimed.
 | 2026-10-27 | INT-B08 | Same working tree | Codex | PASS (host/sanitizer) | logs/2026-10-27_integration.txt | Target/safety boundaries, wrapping timestamps, saturating counters, per-START reset, fault-causing gap, freeze after halt, malformed/roundtrip 146-byte packed status. Instrumentation is not proof of timing bounds. |
 | 2026-10-27 | INT-B01 | Same working tree | Codex | PASS (six builds) | logs/2026-10-27_network_build.txt and matching offline/ir_bench/smoke/selftest/network_diag build logs | Normal combined Wi-Fi and offline course, three-channel IR bench, smoke, offline self-test and combined Wi-Fi diagnostics all compile/link with zero compiler warnings. Final build is normal combined Wi-Fi course. No flash. |
 
-Physical line-following, barcode/crossing, Wi-Fi recovery and measured STOP/timing
-tests remain open. Unrelated changes and earlier results were preserved.
+The 27 October session recorded no physical line-following, barcode/crossing, Wi-Fi recovery or STOP latency measurements.

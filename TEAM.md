@@ -1,50 +1,25 @@
 # Team and subsystems
 
-Subsystem numbers correspond to Buddy numbers. Motor/encoder and Buddy 5 resource
-claims were reconciled with code on 27 October 2026. Physical validation and
-remaining owner/interface sign-offs are still required.
-
-Fill this in at the start of the project and keep it up to date. It is the
-single place that says **who owns what**, so that five people can work in
-one firmware image without clashing over pins, priorities, or kernel objects.
-
-A **subsystem** is one student's part of the product, with its own folder.
-It may contain several tasks and own several peripherals (see section 3).
-
-Rule: **only the owner edits a subsystem's folders.** To change another
-subsystem, ask its owner or open a pull request for them to review.
+This register identifies the five subsystem owners, their resources and the
+interfaces used by the course firmware. [Submission status](docs/CURRENT_STATUS.md)
+records the demo and the scope of the software checks.
 
 ## 1. Members and subsystems
 
-| # | Subsystem (what it does) | Student ID | GitHub username | Code | Tests |
-|---|---|---|---|---|---|
-| 1 | WiFi communication, command and telemetry | | | `app_program/subsystem1/` | `testing/subsystem1/` |
-| 2 | Motion control using motors and wheel encoders | | | `app_program/subsystem2/` | `testing/subsystem2/` |
-| 3 | IR line following and barcode decoding | | | `app_program/subsystem3/` | `testing/subsystem3/` |
-| 4 | IMU-based motion and terrain monitoring | | | `app_program/subsystem4/` | `testing/subsystem4/` |
-| 5 | Ultrasonic scanning and obstacle avoidance | | | `app_program/subsystem5/` | `testing/subsystem5/` |
+| Buddy | Subsystem | Code and tests |
+|---|---|---|
+| 1 | Wi-Fi commands and telemetry | [Implementation](app_program/subsystem1/README.md) · [Tests](testing/subsystem1/README.md) |
+| 2 | Motor and wheel-encoder control | [Implementation](app_program/subsystem2/README.md) · [Tests](testing/subsystem2/README.md) |
+| 3 | IR line following and barcode decoding | [Implementation](app_program/subsystem3/README.md) · [Tests](testing/subsystem3/README.md) |
+| 4 | IMU motion and terrain monitoring | [Implementation](app_program/subsystem4/README.md) · [Tests](testing/subsystem4/README.md) |
+| 5 | Ultrasonic scanning and obstacle avoidance | [Implementation](app_program/subsystem5/README.md) · [Tests](testing/subsystem5/README.md) |
 
-Shared files (`app_program/app_main.c`, `app_program/app.h`, this file)
-are changed only by agreement of the team. The exception is claiming an empty
-row in this file (a pin, a peripheral, an interface ID), which anyone may do
-(section 2).
+Each subsystem owner reviews changes to their code. Changes to shared
+application files and resource assignments require team agreement.
 
 ## 2. Pins
 
-One owner per pin. Claim a pin here **before** you wire or code it.
-
-**Why:** two subsystems using the same pin is one of the most common and
-hardest-to-find mistakes in a team project. The code builds without any
-error, but the hardware misbehaves. Each subsystem can pass its own tests
-and then fail once they are combined, and two outputs driving the same pin
-against each other can damage it. Writing the claim down first means a clash
-is spotted when someone edits this table, not hours later on the bench.
-
-**No instructor check needed.** The team keeps this table itself. You do not
-need the instructor, or the rest of the team, to check or approve a claim:
-if the row is empty, fill it in and commit. If two people claim the same
-pin, they agree between themselves who moves. Only the *reserved* rows are
-fixed.
+The table lists application assignments and pins reserved for the Pico W radio.
 
 | Pin | Owner | Used for |
 |---|---|---|
@@ -55,23 +30,15 @@ fixed.
 | GP3 | 4 | Grove 2 IMU SCL, I2C1 |
 | GP4 | 2 | Right encoder A; existing Buddy 2 implementation |
 | GP5 | 2 | Right encoder B; existing Buddy 2 implementation |
-| GP6 | | |
-| GP7 | | |
 | GP8 | 2 | Left motor A; existing Buddy 2 implementation |
 | GP9 | 2 | Left motor B; existing Buddy 2 implementation |
 | GP10 | 2 | Right motor A; existing Buddy 2 implementation |
 | GP11 | 2 | Right motor B; existing Buddy 2 implementation |
-| GP12 | 5 | Servo signal, PWM6A; user-confirmed 2026-10-27; pulse/travel calibration pending |
-| GP13 | | |
-| GP14 | | |
-| GP15 | | |
+| GP12 | 5 | Servo signal, PWM6A. Wiring confirmed 2026-10-27. No pulse-to-travel calibration measurement is recorded. |
 | GP16 | 2 | Left encoder A; existing Buddy 2 implementation |
 | GP17 | 2 | Left encoder B; existing Buddy 2 implementation |
-| GP18 | | |
-| GP19 | | |
 | GP20 | MOTION_SMOKE and S3_MOTION operator panel | Next calibration step / START (3 s countdown); hold 2 s = recalibrate; no automatic start |
 | GP21 | MOTION_SMOKE and S3_MOTION operator panel | Software STOP button; power switch remains the independent fallback |
-| GP22 | | |
 | GP26 | 3 | Front-RIGHT line IR analogue input (AO), ADC0, Grove 5; wiring confirmed 2026-10-27 |
 | GP27 | 3 | Front-LEFT line IR analogue input (AO), ADC1, Grove 6; wiring confirmed 2026-10-27 |
 | GP28 | 3 | BARCODE IR analogue input (AO), ADC2, Grove 7 yellow wire; wiring confirmed 2026-10-27; check VBAT jumper |
@@ -106,11 +73,7 @@ the drivers have no locking to stop it.
 
 | Peripheral | Owner subsystem | Owning task | Pins |
 |---|---|---|---|
-| UART1 | | | |
-| I2C0 | | | |
 | I2C1 | 4 | Buddy 4 sensing task, S4=1 | GP2/GP3 |
-| SPI0 | | | |
-| SPI1 | | | |
 | ADC | 3 | `ir-sample` in bench or `s3-motion` in integrated profile; exclusive kernel `adca` driver | GP28 barcode only in default bench; GP27 left/GP26 right enabled with IR_CHANNELS=3 or the integrated profile. Mapping: `S3_ADC_CHANNEL_*` in `ir_acquisition.h` |
 | PWM4/5 | 2 | motion task | GP8–11; 10 kHz motor PWM |
 | PWM6A | 5 | obstacle-scan task | GP12; 50 Hz servo, never reset other slices |
@@ -134,15 +97,10 @@ What students *can* do:
   T_CYW43_UTK_STATUS st;
   cyw43_utk_get_status(&st);   /* st.ready, st.link_status, st.ip_addr, ... */
   ```
-- **Send or receive data over the network** by adding code that *runs
-  inside the service task*. The MQTT client is in
-  `lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.c`. It publishes a heartbeat
-  today. A "cloud / reporting" subsystem would add a kernel object
-  (e.g. a message buffer) that application tasks fill. The MQTT code then
-  reads it with `TMO_POL` (never blocking) and publishes it.
-  Because this changes shared library code, **agree it with the team and
-  the instructor first**, and record it as an interface in section 5.
-  It needs the `NET=lwip MQTT=1` build (docs/UPSTREAM_README.md section 3).
+- **Send or receive application data** through Buddy 1. The firmware uses a
+  bounded outbox for telemetry and a command buffer for inbound requests.
+  The network service publishes and receives MQTT messages when built with
+  `NET=lwip MQTT=1`. [Application and MQTT interface](app_program/subsystem1/README.md)
 
 ## 4. Task priorities
 
@@ -163,35 +121,28 @@ Core: `TP_PRC1` = core 0, `TP_PRC2` = core 1, or "any".
 The optional diagnostics reporter runs in the initial task lowered to priority
 23; it adds one mutex. The old priority-15 Vehicle Controller task is not started:
 `s3-motion` is the sole navigation/motion-request/report owner in the integrated
-profile. Application tasks retain 2048-byte stacks; runtime high-water marks and
-radio-induced latency still require on-car measurements.
+profile. Per-task stack high-water marks and radio-induced latency are
+unmeasured for the submission revision.
 
 ## 5. Interfaces between subsystems
 
-Current integration, 25 October 2026: Buddy 1's binary v2 service is connected
-to the single `s3_integration`/`s3_drive` controller through the taskless
-`vehicle_controller` facade. Its pre-run A=forward/B=left/C=right/D=U-turn map
-(or a validated remote replacement) is atomically frozen/copied on explicit
-start. The standalone sensor default mapping below is not authoritative at
-team start. Runtime requests/status use 11/146-byte explicit packets under
-the existing snapshot mutex. The older two-buddy-only description below is
-the imported handoff history; see `docs/INTEGRATION_2026-10-25.md` for current
-ownership, tests and open issues. Buddy 5 arbitration now extends this same owner when S5=1; Buddy 4 run/event/fault arbitration is also connected through this owner when S4=1.
+Buddy 1's binary service connects to the sampling and drive controller through
+the taskless `vehicle_controller` facade. At explicit START, the controller
+freezes the accepted pre-run map (default A=forward, B=left, C=right, D=U-turn).
+The request/status packets use 11/146 bytes under the snapshot mutex. The
+same owner handles Buddy 4 terrain events and Buddy 5 avoidance when enabled.
+[Controller contract](app_program/controller/README.md) · [MQTT layouts](app_program/subsystem1/MQTT_PROTOCOL.md)
 
-Every arrow between two subsystems is listed here. The **provider** creates
-the kernel object and publishes its ID in its own `subsystemN.h`; the **user** only
-sends to it or waits on it. Agree on the data format before coding.
-
-| ID | From → To | Mechanism | Object ID name | Data / meaning | Agreed by |
+| ID | From → To | Mechanism | Shared object | Data / meaning | Scope |
 |---|---|---|---|---|---|
-| S4-I1 | S4 sensing → controller | 11-byte packet + 16-bit run/count metadata, protected snapshot; eight-event queue | existing S4 mutex | Terrain/tilt/rate, peak/count, validity, impact and loss | Integration policy 28 Oct; physical validation pending |
-| S4-I2 | Controller → S4 | Bounded reset request with 16-bit generation | existing S4 mutex | Clear run statistics; wait for matching publication before driving | Same |
-| S4-I3 | Controller → Buddy 1 | Existing hump telemetry and masked IMU fault API | existing Buddy 1 mutex/outbox | Count/highest peak; update only IMU fault bit | Binary MQTT v2 unchanged |
-| S5-I1 | S5 sensing → controller | 23-byte protected snapshot | private S5 mutex | Source-timed forward range, validity/no-echo, identified scan result and profile | Implementation in Xavier branch; physical validation pending |
-| S5-I2 | Controller → S5 sensing | Bounded 16-bit scan token + cancel flag | same S5 mutex | Request scan only after stopped ACK; sensing owner independently checks stopped feedback | Same |
+| S4-I1 | S4 sensing → controller | 12-byte packet + 16-bit run/count metadata, protected snapshot and eight-event queue | existing S4 mutex | Terrain/tilt/rate, peak/count, validity, impact and loss | Integrated terrain profile |
+| S4-I2 | Controller → S4 | Bounded reset request with 16-bit generation | existing S4 mutex | Clear run statistics and wait for matching publication before driving | Integrated terrain profile |
+| S4-I3 | Controller → Buddy 1 | Hump telemetry and masked IMU fault API | existing Buddy 1 mutex/outbox | Count/highest peak and IMU fault | Integrated terrain telemetry |
+| S5-I1 | S5 sensing → controller | 26-byte protected snapshot | private S5 mutex | Source-timed forward range, validity/no-echo, identified scan result and profile | Integrated avoidance profile |
+| S5-I2 | Controller → S5 sensing | Bounded 16-bit scan token + cancel flag | same S5 mutex | Request scan only after stopped ACK. The sensing owner independently checks stopped feedback. | Integrated avoidance profile |
 | S5-I3 | Controller → Buddy 2 | Existing Motion API and identified reports | existing motion objects | One requester/report consumer; S5 task never commands motors | Existing ownership preserved |
-| S5-I4 | Buddy 3 → controller recovery | Existing fresh line observations | same controller context | Tape evidence near predicted original corridor; suppress barcode/junction actions during detour | Physical original-line identity still needs proof |
-| S5-I5 | Controller → Buddy 1 | Existing telemetry API | Buddy 1 mutex/outbox | Closest distance, conservative width, chosen route, state; only owned NO_ECHO bit modified | Binary v2 unchanged |
+| S5-I4 | Buddy 3 → controller recovery | Fresh line observations | same controller context | Tape evidence near the predicted corridor during detour recovery | Cannot distinguish a nearby parallel marking |
+| S5-I5 | Controller → Buddy 1 | Telemetry API | Buddy 1 mutex/outbox | Closest distance, width, chosen route, state and owned NO_ECHO bit | v3 scan or v4 with face-width bounds |
 
 Buddy 3's pure context API in `app_program/subsystem3/line_navigation.h` emits
 observations, steering proposals in m/s and edge events. The controller supplies
@@ -203,15 +154,14 @@ competing motion callers/report consumers are added.
 Upstream Buddy 2 `a29f973` uses PIO0 SM0/SM1 for encoders and retains its
 measured settings. Imported `71193e2` adds timestamp/epoch feedback, wrap-safe
 centre displacement, report loss and the opt-in navigation lease. Buddy 1's
-v2 telemetry range is narrower; the adapter invalidates out-of-range speeds.
+wire telemetry range is narrower. The adapter invalidates out-of-range speeds.
 See `app_program/controller/README.md` for the current handoff.
 
 The car's wiring confirmed on 2026-10-27 differs from the Week 6 L/C/R pin order:
 GP27 front-left, GP26 front-right, GP28 barcode. The code follows this wiring
 via `S3_ADC_CHANNEL_*` in `ir_acquisition.h`. The
-bench's 10 ms target also differs from Week 6's 5 ms Line+Barcode schedule; no
-shared tick or priority changes are made here. See the handoff traceability table
-for scheduling, mapping delivery, distance tuning and fault-to-brake decisions.
+stationary bench uses 10 ms and the integrated line/barcode sampler targets 5 ms.
+[Week 6 design traceability](app_program/subsystem3/INTEGRATION.md#week-6-design-and-submitted-implementation)
 
 Each interface is tested by at least one integration test
 (`testing/integration/TEST_LOG.md`).
@@ -222,8 +172,8 @@ and `MQTT=1` adds `car/debug/ir`, a 16-byte latest-only binary frame capped at
 readings after normal processing, using the existing status mutex; the network
 owner takes them with `TMO_POL`. No new task, kernel object, ADC read or motor
 caller is introduced. Normal telemetry and recorded BCAP uploads have priority;
-congested/stale previews are discarded. The line/motion algorithms and 10 ms
-schedule are unchanged, but added work still needs on-car timing validation.
+congested/stale previews are discarded. The submission has no measurement of
+the preview's contribution to on-car scheduling latency.
 See `docs/IR_DEBUG_PROTOCOL.md` and `docs/DASHBOARD.md` for format and operation.
 
 The same opt-in build now adds `car/debug/controller`: 70 bytes at up to 5 Hz,
@@ -240,7 +190,7 @@ peripheral owners, control equations or state transitions are introduced.
 Limits are set in `config/config.h`. If the team needs more, raise the
 limit there. Buddy 2's task, mutex and cyclic handler are now recorded from its implementation;
 this is still not a full kernel/library resource audit.
-Buddy 3 uses two tasks, one snapshot/control mutex and one 10 ms cyclic handler
+Buddy 3 uses two tasks, one snapshot/control mutex and one cyclic handler
 in either opt-in profile (bench or integrated; never both). The existing ADC driver owns its completion flag; Buddy 3
 does not create another flag. The kernel has its own usage.
 
@@ -272,8 +222,9 @@ Buddy 1 receives cumulative completed-hump count/highest valid peak and masked I
 fault updates. USB reports terrain/tilt/turn rate. Internal packets now use 83
 meaningful bits in 11 bytes; run/count are protected 16-bit metadata. No new task
 or mutex was added for the controller adapter. See the Buddy 4 integration guide.
-Calibration, magnetic interference, impact sensitivity, height accuracy and
-full-load timing remain physical validation work.
+The historical integration checks cover the software data path. The submission
+has no post-demo measurements for height accuracy, impact sensitivity,
+magnetic interference or full-load timing.
 
 ## Buddy 5 implementation, 27 October 2026
 

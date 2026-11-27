@@ -60,8 +60,9 @@ by the actual algorithms are unchanged.
   this is a source-clock discontinuity, not proof of a detected physical reboot.
 
 This best-effort stream cannot show every narrow barcode edge. Use the existing
-higher-rate BCAP upload for detailed decoding analysis. On-car control timing,
-stack use and Wi-Fi behaviour with the stream enabled remain hardware checks.
+higher-rate BCAP upload for detailed decoding analysis. The recorded host tests
+cover packet delivery and decoding. They did not measure control timing, stack
+use or Wi-Fi performance on the car.
 
 ## Controller/buddy debug snapshot, version 1
 
@@ -164,6 +165,6 @@ MQTT tests use a disposable broker and do not communicate with the car.
 - Browser checks: generated three-channel waveforms, raw/normalized switching,
   pause while reception continues, and stale last-known values on disconnection.
 
-Firmware was **not flashed** in this verification. Physical sensor correspondence,
-radio load, motion deadlines and stop latency with the preview enabled remain
-on-car validation, not established by the simulation or host tests.
+This 28 October verification used software tests and target builds. It did
+not include a hardware run to measure radio load, motion deadlines or stop
+latency, or to verify physical sensor correspondence with the preview enabled.

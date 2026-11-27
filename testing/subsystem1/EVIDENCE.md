@@ -1,8 +1,8 @@
 # Buddy 1 Tribunal 1 implementation evidence
 
-## Current protocol v3 — 28 October 2026
+## Protocol v3 on 28 October 2026
 
-Current format, combined firmware sizes and reproducible tests are recorded in
+The October format, combined firmware sizes and reproducible tests are recorded in
 [`docs/BUDDY1_PROTOCOL_V3_2026-10-28.md`](../../docs/BUDDY1_PROTOCOL_V3_2026-10-28.md).
 Height is now 9 bits; obstacle distance/width 12 bits each; snapshot 14 bytes;
 outbox slot 15 bytes. Recorded wireless barcode traces are binary, while local
@@ -23,8 +23,7 @@ eight concurrent producers preserve all six fault bits alongside heading and
 obstacle values. The snapshot's first padding bit moved from 116 to 117 and the
 new IR bit occupies heartbeat bit 7; boundary/padding cases are explicitly tested.
 The aggregate IR bit does not replace Buddy 3's channel-specific mask or become
-the controller's authoritative safety state. Hardware timing/physical fault
-validation remains pending. The controller reporting adapter is integrated by
+the controller's authoritative safety state. That session did not measure timing or inject faults on the robot. The controller reporting adapter is integrated by
 the current Buddy 3 work, separate from this codec change.
 
 Current raw host results are in `PROTOCOL_V2_TEST_RESULTS.txt`. The original
@@ -44,7 +43,7 @@ flashing or broker connections were made during these checks.
 
 ## Requirement and design trace
 
-| Source | Implementation / evidence | Remaining work |
+| Source | Implementation / evidence | Outside the October check |
 |---|---|---|
 | Change Requirement 1: binary telemetry/commands | explicit codec, raw MQTT receive bytes, explicit lengths, laptop decoder | physical broker/laptop exchange |
 | Minimum bits for valid range | `DATA_REPRESENTATION.md`: heading 9, barcode 5, state 3, faults 5, wheel direction | Buddy 4/5 physical ranges; Buddy 2 confirmation of proposed speed contract |
@@ -112,7 +111,7 @@ Static RAM decreases by 136 bytes. Code/flash grows; the revised profile also
 contains more tests. RTOS buffers are allocated inside the kernel heap already
 reserved in BSS: the 2,616-byte allocation saving gives more space inside that
 heap. Do not add it again as a linker static-RAM reduction. Runtime free-heap
-and stack high-water measurements remain pending.
+and stack high-water use were not measured in that build.
 
 ## Completed checks
 
@@ -134,9 +133,10 @@ and stack high-water measurements remain pending.
 Reproduce with `make -C testing/subsystem1 test`, `sizes` and `sanitize`.
 Raw generated results: `HOST_TEST_RESULTS.txt` and `SIZE_RESULTS.txt`.
 
-## Still required for Week 13
+## Scope of the October results
 
-Buddy 1's existing supported fields have been converted. Final subsystem ranges,
-missing real fault adapters, actual Wi-Fi/broker recovery, stack/heap high-water
-use and control-task timing remain open. Host threads do not prove interrupt or
-kernel timing. No hardware success is claimed. See `README.md` for physical tests.
+The October tests establish encoding, queue and fault-bit behaviour for the
+protocol versions listed above. They do not measure Wi-Fi recovery, stack and
+heap high-water use or task timing on the robot. The
+[submission evidence](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md) includes
+the subsequent comparison of MQTT payloads.

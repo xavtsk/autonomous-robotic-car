@@ -1,15 +1,16 @@
 # Current scoped Change Requirement 1 width table
 
-Generated on 24 November 2026 by
+Generated on 27 November 2026 by
 `python testing/change_requirement_1/check_widths.py`. The group identifies the
 packet layout or named C storage record. Used bits describe the field width
 within that layout. The [course-test evidence](../CHANGE_REQUIREMENT_1_EVIDENCE.md#course-test-updates-after-8bc969c)
 covers message size, ownership, and wider working representations.
 
-This check covers 165 selected fields and 19 codec totals. It binds the
+This check covers 167 selected fields and 19 codec totals. It binds the
 base and extended scan packing calls, the Buddy 5 obstacle snapshot and
-selected C declarations. The [broader declaration snapshot](CR1_FIELD_INVENTORY.md)
-retains its original source bindings and open dispositions.
+selected C declarations. The broader review recorded the other declarations,
+including those without verified ranges. Its source links use the filenames
+from the 20 November snapshot. [Inventory at its original revision](https://github.com/xavtsk/autonomous-robotic-car/blob/a3de92a3465749f962540bcb75c275959e1a9ef0/docs/compliance/CR1_FIELD_INVENTORY.md)
 
 | Group | Field | Range (step) | Codes | Min bits | Used bits | OK |
 |---|---|---|---:|---:|---:|---|
@@ -167,6 +168,8 @@ retains its original source bindings and open dispositions.
 | drive state | b_is_advancing | 0..1 | 2 | 1 | 1 | yes |
 | drive state | b_has_touched_line | 0..1 | 2 | 1 | 1 | yes |
 | drive state | b_is_searching | 0..1 | 2 | 1 | 1 | yes |
+| drive state | b_sweeps_clockwise | 0..1 | 2 | 1 | 1 | yes |
+| drive state | b_is_return_sweep | 0..1 | 2 | 1 | 1 | yes |
 | drive state | b_has_obstacle_snapshot | 0..1 | 2 | 1 | 1 | yes |
 | drive state | b_is_bypassing | 0..1 | 2 | 1 | 1 | yes |
 | terrain report cache | sent_height | 0..500 | 501 | 9 | 9 | yes |

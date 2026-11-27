@@ -1,10 +1,6 @@
-# Subsystem 3 — test log
+# Buddy 3 test record
 
-**Buddy 3:** IR line following and barcode decoding. Owner: TBD.
-
-Buddy 3 core software is implemented and software-tested. Actual track and
-moving-car validation remain pending. The current stationary UF2 has not been
-flashed. The general target `TEST=1` hook reports SKIP; the host suite is separate.
+These dated entries cover IR acquisition, calibration, line following and barcode decoding. The cited firmware builds and hardware observations belong to those sessions. The [post-demo submission results](../../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md) cover the final host tests and recorded-waveform comparison.
 
 ## Wiring and measured calibration correction, 2026-10-27
 
@@ -16,7 +12,7 @@ barcode pair used black path material; that pair is excluded from saved defaults
 | Check | Result | Evidence / limitation |
 |---|---|---|
 | Per-sensor raw white/black collection | PASS | At least 3 valid pairs per sensor, 101 samples per surface; combined ranges do not overlap |
-| Physical ADC routing and barcode isolation | PASS | `test_mapping.c`, independent ADC0/1/2 inputs and line-sign checks |
+| ADC channel mapping and barcode isolation (host) | PASS | `test_mapping.c`, independent simulated ADC0/1/2 inputs and line-sign checks |
 | Buddy 3 and integration host suites | PASS | Saved-calibration endpoints, bench agreement, operator controls/rejection, navigation, motion feedback and course simulation |
 | GP28-only bench, all-three bench, offline integrated firmware | PASS | ARM compile/link and profile-symbol checks; final UF2 structure validated |
 | Flash and power-cycle verification | NOT RUN | RPI-RP2 did not appear; user requested finishing the source changes without flashing |
@@ -94,7 +90,7 @@ SHA-256: `4f75dedd8ab13fc8e476f88418011cc5cbbaba5db5522ddb975f8a1685aaa698`.
 Machine-readable evidence: `build/host-tests/s3-motion-verification.json`.
 The records below describe earlier snapshots and hashes. See
 [MOTION_INTEGRATION.md](../../app_program/subsystem3/MOTION_INTEGRATION.md)
-for the explicit application control API and remaining user-interface/hardware work.
+for the application control API used by the integrated profile.
 
 ## Week 6 alignment acceptance, 2026-10-18
 
@@ -125,10 +121,8 @@ Local machine-readable record: `build/host-tests/buddy3-alignment-verification.j
 Symbol records: `bench-alignment-symbols.txt`, `normal-alignment-symbols.txt` in
 the same ignored folder. Historical hashes below refer to earlier firmware.
 
-See [Week 6 traceability](../../app_program/subsystem3/INTEGRATION.md#week-6-traceability-and-outstanding-team-decisions)
-for preserved/changed/implemented/awaiting-integration items. Actual sensor roles,
-5 ms scheduling, distance tuning, mapping delivery, fault-to-brake handling and
-full-system priority/timing validation still require the team and hardware.
+The [interface history](../../app_program/subsystem3/INTEGRATION.md) records the transition from the Week 6 design to the integrated firmware. This 18 October session covered the portable core and stationary bench.
+
 
 ## Core implementation acceptance, 2026-10-16
 
