@@ -63,6 +63,7 @@ static unsigned g_tel_bad;
 /* ---- Scenarios ------------------------------------------------------------
  */
 static int       g_verbose;
+static bool      gb_emit_results;
 static float64_t g_end_x;
 static float64_t g_end_y;
 
@@ -78,13 +79,13 @@ static void         finish_scan (void);
 static const char * s5_state_name (unsigned state_code);
 static const char * fault_name (unsigned fault_code);
 static void         bypass_run (const char * p_name, float64_t seconds,
-                                bool b_should_go_right, bool b_should_succeed);
+                                bool b_should_go_right);
 static void         straight_case (float64_t obstacle_width_m,
                                    float64_t obstacle_depth_m, float64_t rot,
                                    float64_t side_off);
 static void         left_blocked_case (void);
 static void bend_after_case (float64_t bend_radius_m, int dir, float64_t gap,
-                             float64_t obstacle_width_m, bool b_should_succeed);
+                             float64_t obstacle_width_m);
 static void bend_before_case (float64_t bend_radius_m, int dir, float64_t gap,
                               float64_t obstacle_width_m);
 
@@ -230,7 +231,11 @@ int main (int argument_count, char * pp_arguments[])
     for (int argument_index = 1; argument_index < argument_count;
          argument_index++)
     {
-        if ('-' == pp_arguments[argument_index][0])
+        if (0 == strcmp(pp_arguments[argument_index], "--results"))
+        {
+            gb_emit_results = true;
+        }
+        else if ('-' == pp_arguments[argument_index][0])
         {
             g_verbose = ('v' == pp_arguments[argument_index][1]) &&
                                 ('v' == pp_arguments[argument_index][2])
@@ -267,14 +272,10 @@ int main (int argument_count, char * pp_arguments[])
 
     for (int dir = 1; dir >= -1; dir -= 2)
     {
-        bend_after_case(0.30, dir, 0.10, 0.20, true);
-        bend_after_case(0.30, dir, 0.25, 0.20, true);
-        /* Known limit with the full 214 mm pass (S5_PASS_EXTRA_V2 0, chosen
-         * after the shorter pass hit the obstacle on the car): a tight bend
-         * AWAY from the bypass side starting 10 cm after a 20 cm box has
-         * curved out of reach by the time the car comes back. */
-        bend_after_case(0.20, dir, 0.10, 0.20, (dir > 0) || S5_PASS_EXTRA_V2);
-        bend_after_case(0.20, dir, 0.25, 0.10, true);
+        bend_after_case(0.30, dir, 0.10, 0.20);
+        bend_after_case(0.30, dir, 0.25, 0.20);
+        bend_after_case(0.20, dir, 0.10, 0.20);
+        bend_after_case(0.20, dir, 0.25, 0.10);
         bend_before_case(0.30, dir, 0.15, 0.20);
         bend_before_case(0.20, dir, 0.25, 0.20);
     }
@@ -283,6 +284,11 @@ int main (int argument_count, char * pp_arguments[])
            "10), %u out of place\n",
            g_tel_reverse, g_tel_aim, g_tel_bad);
     int failures = course_sim_failures();
+
+    if (gb_emit_results)
+    {
+        printf("SUMMARY\t%d\t%u\n", failures, g_tel_bad);
+    }
 
     if (g_tel_bad)
     {
@@ -526,7 +532,7 @@ static const char * fault_name (unsigned fault_code)
  * while following, or the scenario times out.
  */
 static void bypass_run (const char * p_name, float64_t seconds,
-                        bool b_should_go_right, bool b_should_succeed)
+                        bool b_should_go_right)
 {
     const s3_drive_t * const p_drive            = course_sim_drive();
     float64_t                worst_clear        = 1e9;
@@ -672,15 +678,19 @@ static void bypass_run (const char * p_name, float64_t seconds,
              s5_state_name(p_drive->obstacle.state),
              fault_name(p_drive->obstacle.fault));
 
-    if (!b_should_succeed)
+    if (gb_emit_results)
     {
-        printf("     (known limit, expected to miss: %s)\n",
-               b_is_ok ? "but it passed" : "missed");
+        /* Case names contain no tabs. Record full-precision clearance so that
+         * comparisons can detect changes below the rounded console value. */
+        printf("CASE\t%s\t%d\t%d\t%d\t%.17g\t%s\t%s\t%s\t%d\t%d\t%.17g\n",
+               p_name, b_is_ok, followed_ticks > 0U, b_has_reached_goal,
+               worst_clear * 1000, course_sim_state_name(p_drive->state),
+               s5_state_name(p_drive->obstacle.state),
+               fault_name(p_drive->obstacle.fault), b_did_bypass,
+               b_is_right == b_should_go_right, after_error * 1000);
     }
 
-    course_sim_verdict(
-        p_name, b_should_succeed ? b_is_ok : true,
-        detail); /* Allow this documented limit in the fixture. */
+    course_sim_verdict(p_name, b_is_ok, detail);
 }
 
 /** @brief Run a straight positive-x track with an obstacle of the supplied
@@ -702,7 +712,7 @@ static void straight_case (float64_t obstacle_width_m,
              obstacle_width_m * 100, obstacle_depth_m * 100,
              rot != 0 ? ", turned 45" : "",
              side_off != 0 ? ", 3 cm off-centre" : "");
-    bypass_run(name, 150, false, true);
+    bypass_run(name, 150, false);
 }
 
 /** @brief Place a wall 23 cm to the left of the track and check whether the
@@ -717,15 +727,14 @@ static void left_blocked_case (void)
     g_end_x = 2.2;
     g_end_y = 0;
     course_sim_setup(0, 0, 0, 0);
-    bypass_run("straight, 20 cm box, wall 23 cm away on the LEFT", 150, true,
-               true);
+    bypass_run("straight, 20 cm box, wall 23 cm away on the LEFT", 150, true);
 }
 
 /** @brief Run a straight followed by a 90-degree curve of radius r starting
  * gap metres after the rear obstacle face. Positive dir turns left.
  */
 static void bend_after_case (float64_t bend_radius_m, int dir, float64_t gap,
-                             float64_t obstacle_width_m, bool b_should_succeed)
+                             float64_t obstacle_width_m)
 {
     char            name[80];
     const float64_t ob_x           = 0.9;
@@ -746,7 +755,7 @@ static void bend_after_case (float64_t bend_radius_m, int dir, float64_t gap,
              "%s bend r=%2.0f cm starts %2.0f cm after a %2.0f cm box",
              dir > 0 ? "left" : "right", bend_radius_m * 100, gap * 100,
              obstacle_width_m * 100);
-    bypass_run(name, 200, false, b_should_succeed);
+    bypass_run(name, 200, false);
 }
 
 /** @brief Run a 90-degree curve into a straight with the obstacle centred
@@ -773,7 +782,7 @@ static void bend_before_case (float64_t bend_radius_m, int dir, float64_t gap,
              "%s bend r=%2.0f cm ends %2.0f cm before a %2.0f cm box",
              dir > 0 ? "left" : "right", bend_radius_m * 100, gap * 100,
              obstacle_width_m * 100);
-    bypass_run(name, 200, false, true);
+    bypass_run(name, 200, false);
 }
 
 /* End of file. */

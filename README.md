@@ -3,11 +3,19 @@
 INF2004 Embedded Systems Programming project for Raspberry Pi Pico W and Cytron
 Robo Pico, implemented in C on micro T-Kernel 3.0 by five subsystem teams.
 
-The team completed the physical demo and dismantled the car. The final software
-checks covered the integrated firmware build, 25 simulated course cases and
-1,008 barcode replays against the deployed baseline. The submission record
-includes the measured memory use, two inherited barcode expectation failures
-and the limits of the available timing data. [Submission results](docs/CURRENT_STATUS.md) ·
+The team completed the physical demo and dismantled the car. The
+[mission results](docs/CURRENT_STATUS.md#mission-requirements) link each of the ten
+course requirements to the implementation, test result and measurement conditions.
+The obstacle simulation completed 80 of 85 bypasses, including 16 of 17 in
+the standard configuration. The [build and test guide](docs/BUILD_AND_TEST.md)
+gives Linux prerequisites for the whole-repo check. From a fresh checkout run:
+
+```sh
+python3 tools/verify_submission.py
+```
+
+The results distinguish actual mission outcomes from changes since the submitted
+baseline. [Submission results](docs/CURRENT_STATUS.md) ·
 [Change Requirement 1 evidence](docs/CHANGE_REQUIREMENT_1_EVIDENCE.md) ·
 [BARR-C review](docs/compliance/BARR_RULE_MATRIX.md)
 

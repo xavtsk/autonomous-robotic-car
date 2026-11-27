@@ -2,9 +2,10 @@
 
 The team completed the physical demonstration and dismantled the car. The
 post-demo submission was checked with host tests, recorded barcode waveforms,
-course simulation and matched Arm builds. The [submission results](../docs/CHANGE_REQUIREMENT_1_EVIDENCE.md)
-give the comparison and both inherited barcode failures. [Build and test commands](../docs/BUILD_AND_TEST.md)
-describe how to repeat the software checks.
+course simulation and matched Arm builds. The [mission results](../docs/CURRENT_STATUS.md#mission-requirements)
+identify the five simulated bypass misses. The [barcode endpoint review](subsystem3/fixtures/barcode/README.md#submission-review-of-two-recorded-endpoints)
+explains the two corrected expectations. Run `python3 tools/verify_submission.py`
+from the repository root on Linux. [Prerequisites and commands](../docs/BUILD_AND_TEST.md)
 
 | Area | Evidence |
 | --- | --- |

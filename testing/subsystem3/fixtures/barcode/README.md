@@ -1,5 +1,40 @@
 # 3 November 2026 barcode replay fixtures
 
+## Submission review of two recorded endpoints
+
+The November regression suite expected the Z recording to finish with its own
+trailing margin and every other recording in the first group to need extra white
+samples. This assumption failed for two midpoint reconstructions. The revised
+test checks the expected letter for each recording with its original tail and
+with an extended tail. Both disputed variants restore 2 seconds of **synthetic
+leading white**. [Original two failures](../../../../docs/compliance/evidence/post-demo-barcode-replay-20261127.json)
+
+| Recording | Independent measurement from the saved signal | Result on the submitted decoder |
+| --- | --- | --- |
+| 15:28:54, reversed Z, 855 samples | 1,476.5 ms of trailing paper. Ten narrow elements estimated from the final marker span 1,470.0–1,487.5 ms. The waveform ends at the ten-module boundary within the resolution of this measurement. | At EOF the decoder had a reverse-Z candidate in its quiet-wait state, with 1,457,500 µs of qualified quiet against a required 1,490,510 µs. Adding 30 ms of white still yielded silence. At 40 ms it emitted one reverse Z. |
+| 17:19:18, forward A, 487 samples | 982.0 ms of trailing paper. Ten narrow elements span 712.5–728.3 ms. Both printed markers and the payload are present. | One forward A appeared 169.5 ms before the end of the recorded samples. Removing the last 400 ms of recorded paper prevented release. The original car run recorded a rejection. |
+
+The [focused test](../../test_recorded_margins.py) reconstructs each saved
+interval at its midpoint and measures crossings at four darkness thresholds
+(32, 40, 48 and 56 on the 0–1000 scale). At each threshold it ranks the nine
+widths in each character and obtains the patterns in the
+[supplied A/Z print fixtures](../../test_core_main.c). It estimates ten modules
+as ten times the mean of the six narrow elements in the final marker. The Z
+counter values above are a separate observation of the production reader.
+Both clips used alone, without synthetic leading white, yield no letter.
+
+Run `make -C testing/subsystem3 replay` from the repository root on Linux with
+GCC, Make and Python 3.10 or later. The focused controls run separately from
+the 1,008-variant matrix. All 3,110 matrix assertions passed on recheck.
+Every input and output row in the paired audit matched the original run
+(SHA-256 of both `cases.jsonl` files:
+`1e90cf677e181aaf860e77db005cedf269f35d12e406fda14d56593f1ba7fcc2`).
+Both firmware revisions, deployed `4ad2cc4` and submitted `8131e1a`, produced
+identical outputs. These checks establish behaviour on recorded signals with
+the stated margin assumptions. [Revised paired audit](../../../../docs/compliance/evidence/reviewed-barcode-replay-20261127.json)
+
+## Recorded data
+
 These are unmodified BCAP exports, not synthetic sensor readings. Filenames
 identify the local capture time. Source exports:
 
@@ -341,7 +376,10 @@ the original 888 replay checks retain their leading/trailing margin requirements
 The full suite contains 1008 variants. Fresh physical tests remain necessary
 to establish whether the firmware changes resolve these failures on the car.
 
-### Explicit latency accounting for the bounded worker
+### Earlier expectations for bounded-worker latency
+
+The table below records the older suite. The submission review above shows why
+the first row (15:28:54 Z) now requires quiet-wait at the observed endpoint.
 
 The former synchronous decoder could publish on the final sample retained by
 the capture. After moving that work across subsequent updates, EOF can arrive

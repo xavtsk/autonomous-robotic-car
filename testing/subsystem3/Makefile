@@ -17,7 +17,7 @@ BASELINE_CPPFLAGS = -DS3_LEGACY_MODULE_NAMES
 BASELINE_BENCH = $(BASELINE_DIR)/subsystem3.c
 endif
 
-.PHONY: test replay regression compare bench bench-compare codec sanitize sizes drive feedback
+.PHONY: test replay replay-build replay-margins regression compare bench bench-compare codec sanitize sizes drive feedback
 test:
 	mkdir -p $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) test_core_main.c test_navigation.c $(SOURCES) -o $(BUILD)/test_core
@@ -38,9 +38,14 @@ test:
 	$(BUILD)/test_barcode_wide
 
 PYTHON ?= python3
-replay:
+replay-build:
 	mkdir -p $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) replay_barcode_record_main.c $(SOURCE_DIR)/bc_decoder.c -o $(BUILD)/replay_barcode_record
+
+replay-margins: replay-build
+	$(PYTHON) test_recorded_margins.py $(BUILD)/replay_barcode_record
+
+replay: replay-margins
 	$(PYTHON) test_barcode_replay.py $(BUILD)/replay_barcode_record
 
 regression:

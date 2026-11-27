@@ -1,5 +1,41 @@
 # Change Requirement 1: Minimum-Bit Data Representation, Week 13 evidence
 
+## Rechecking the submitted interfaces
+
+The [current table](compliance/CR1_SUBMISSION_WIDTHS.md) gives the ranges and
+widths of 167 selected fields and 19 encoded layouts. Its checker verifies
+the declared ranges and selected bindings to C source. The broader
+[declaration inventory](https://github.com/xavtsk/autonomous-robotic-car/blob/a3de92a3465749f962540bcb75c275959e1a9ef0/docs/compliance/CR1_FIELD_INVENTORY.md)
+belongs to revision `a3de92a`.
+
+The Linux submission verifier exercises three different properties of packed data:
+
+| Property | What a reviewer can verify |
+| --- | --- |
+| Wire encoding | The C and Python MQTT codec tests check payload length, signed values, field limits and fault masks. The [message comparison](#github-submission-after-the-demo-27-november-2026) records before/after sizes and distinguishes private state from transmitted data. |
+| Shared updates | Buddy 1's [host test](../testing/subsystem1/host_main.c) runs eight concurrent producers and checks all 64 combinations of the six fault bits. The [motion](../app_program/subsystem2/DATA_FORMAT.md), [navigation](../app_program/subsystem3/DATA_REPRESENTATION.md), [terrain](../app_program/subsystem4/DATA_FORMAT.md) and [obstacle](../app_program/subsystem5/DATA_FORMAT.md) interfaces identify the owner or lock for each shared packet. Controller tests exercise publication, contention and reset with simulated task boundaries. |
+| Timing counters | The [firmware counter fixture](../testing/integration/timing_main.c) and [timing analysis tests](../testing/change_requirement_1/test_timing_check.py) exercise timestamps, missed intervals and reset handling. They check that a delay can be reported. Meeting the 5 ms IR and 10 ms motor-control periods under load would require measurements on the car. |
+
+### Integrated build after the submission test changes
+
+Two fresh checkouts, each using only the public example Wi-Fi configuration,
+were built with Arm GNU 14.3.1, Pico SDK `98a542c1a62fb549ffb5d66a3e5892b06276b670`
+and the `imu_debug` course profile. The reference was `8131e1a`. The candidate
+added the submission verification changes. Both local Windows builds used the
+same compiler installation and SDK. Linux CI records its own matched pair and
+tool details. [Verification commands](BUILD_AND_TEST.md)
+
+| Measurement | Submitted reference | Reviewed candidate |
+| --- | ---: | ---: |
+| GNU size text | 470,312 B | 470,312 B |
+| Static RAM (192 B vectors + 696 B data + 133,316 B BSS) | 134,204 B | 134,204 B |
+| UF2 SHA-256 | `2134337c27634e50be9fb14230c0b71808b270e2acb3d231d8c59e319a745d9b` | identical |
+| Full ELF SHA-256 | `9edb36c40ade7bba674dd1408c797eeb0fb5f3ef1bdb497e0c30b0baa247b68a` | `fd3ef3a693c930284156f13336cd702b8434a1fa91b21dec7793bfd45f960901` |
+
+Removing debug information with `arm-none-eabi-objcopy --strip-debug` produced
+the same ELF hash in both checkouts (`865d3aba9de487564361fa4e3792429a73290103d54a257967da9627c9ddc3f1`).
+The UF2 comparison covers the loadable firmware. Neither image was flashed.
+
 ## GitHub submission after the demo, 27 November 2026
 
 | Submission item | Evidence |
@@ -47,6 +83,12 @@ before the decoder returned a letter. One normal-speed recording returned A
 where the fixture expected silence. The audit retains both failures.
 [Replay results](compliance/evidence/post-demo-barcode-replay-20261127.json) ·
 [Original recordings and expectations](../testing/subsystem3/fixtures/barcode/README.md)
+
+The subsequent [endpoint review](../testing/subsystem3/fixtures/barcode/README.md#submission-review-of-two-recorded-endpoints)
+corrected those two expectations using the recorded white margins and the
+printed barcode patterns. All 3,110 reviewed assertions passed. The full set
+of 1,008 input and decoder output comparisons was identical to the earlier
+audit. [Reviewed replay results](compliance/evidence/reviewed-barcode-replay-20261127.json)
 
 ## Course-test updates after 8bc969c
 

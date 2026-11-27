@@ -1,0 +1,11 @@
+{
+  "suite": "/repo/testing/subsystem3/test_barcode_replay.py",
+  "suite_sha256": "05428ae3d82522ef3c77dfcd12e516ee502fd305ade8df5d903a3bc7e166194c",
+  "collection_mode": "diagnostic accumulated assertions; no waived failures",
+  "assertions": 3110,
+  "cases": 1008,
+  "failures": [],
+  "mismatches": 0,
+  "expectations_passed": true,
+  "passed": true
+}

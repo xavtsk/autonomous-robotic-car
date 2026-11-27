@@ -2,6 +2,14 @@
 
 The dated results below cover obstacle sensing, scanning and avoidance. The original scaffold had no implemented subsystem checks and its test hook reported SKIP.
 
+## Submission review against `8131e1a`
+
+Linux and Windows host runs reproduced 80 successful bypasses across 85 cases,
+including 16/17 in the standard profile. The five misses comprised four
+`NO_LINE` results at the same right bend and one collision with short turns.
+All 85 named cases passed the comparison to the submitted baseline. See the
+[per-profile results and repeat commands](README.md).
+
 ## 27 October 2026 — implementation on xavier/development
 
 Base commit `6225b04` plus uncommitted Buddy 5 implementation. Pins confirmed by

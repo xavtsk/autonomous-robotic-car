@@ -5,6 +5,57 @@ checkout with its required submodules. Use a native host compiler for host tests
 and `arm-none-eabi-gcc` for firmware. Keep private Wi-Fi credentials in ignored
 `config/wifi_secrets.h`; the example file is not a deployment configuration.
 
+## Check the submitted system
+
+Use a full Git clone on Linux with Git, GNU Make, GCC (`cc`), binutils,
+Python 3.10+, Node.js 18+ and Mosquitto with its command-line clients. On
+Ubuntu 24.04 the host packages are `git build-essential binutils python3
+nodejs mosquitto mosquitto-clients`. Run the verifier as an ordinary Linux
+user. The dashboard tests launch a broker on loopback. No Pico SDK or robot is
+needed for this command.
+
+```sh
+python3 tools/verify_submission.py
+```
+
+Each invocation creates a fresh directory under `build/submission-verification/`.
+Open `summary.md` for the results and `results.json` for the revision, working
+tree changes, exact commands and per-suite logs. Use `--output NEW_DIRECTORY`
+to select the destination. The verifier runs the five subsystems, controller,
+Wi-Fi, dashboard, diagnostics, CR1 field and timing checks, BARR source review
+and checker tests. It compiles the deployed barcode reader from Git objects at
+`4ad2cc4`. A shallow clone lacking those objects needs `git fetch --unshallow`.
+
+The strict column records the actual test outcomes. The regression column flags
+new failures, including a missing scenario, a worsened obstacle result or a
+barcode output difference from the deployed reader. Inspect
+`bin/subsystem5/bypass-results.json` for individual simulated missions and
+`replay/cases.jsonl` for paired waveform outputs. The BARR source-review row
+reports the checker's raw findings separately from mission behaviour.
+
+The default command returns 0 when all required checks ran and the regression
+gate passed, 1 for a regression and 2 for an incomplete run. Add `--strict` to
+return 1 for any behavioural miss as well. Only the optional local dashboard
+hardware capture can be skipped without making a required suite incomplete.
+
+The [submission workflow](../.github/workflows/submission.yml) runs this command
+on pull requests to `main` and pushes to `main`. Its separate Arm job builds
+the submission baseline `8131e1a` and the candidate in fresh checkouts. It
+uses the existing `imu_debug` course profile (`IR_DEBUG=1`, `IMU_DEBUG=1`,
+`DIAGNOSTICS=0`), Arm GCC 14.3.1, the pinned SDK and public example network
+settings. Download the Arm artifact for the ELF, UF2, map, hashes, measured
+static RAM and build commands.
+
+To repeat the Arm comparison locally, install the same Arm compiler, GNU Make
+and `/usr/bin/g++-13`. From the parent of two disposable, clean checkouts
+named `baseline` (detached at `8131e1a`) and `candidate` (submission under
+review), with the pinned Pico SDK and its submodules in `pico-sdk`, run:
+
+```sh
+python3 candidate/tools/compliance/build_targets.py --baseline baseline --candidate candidate \
+  --sdk pico-sdk --profile imu_debug --output arm-evidence
+```
+
 ## Target builds
 
 The default profile leaves integrated navigation disabled:
@@ -145,9 +196,8 @@ gives the disposition of the individual findings.
 On Windows use `py -3` if `python` resolves to an unavailable Store alias.
 The Linux suite also covers dashboard tests that compile and execute C helpers.
 
-For the GitHub submission, run the field-width check, the CR1 tests and the
-Buddy 3 host suite from the root of the checkout. The last command uses
-MSYS2 GCC on Windows.
+For a focused Windows check of CR1 and Buddy 3, run these commands from the
+root of the checkout. The last command uses MSYS2 GCC.
 
 ```powershell
 python testing/change_requirement_1/check_widths.py

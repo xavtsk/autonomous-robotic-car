@@ -1,0 +1,86 @@
+profile,case,min_clearance_mm,failures,line_reacquired
+standard,"straight, 10x10 cm box",95.14703799728217,,1
+standard,"straight, 20x20 cm box",53.48794645995217,,1
+standard,"straight, 20x20 cm box, turned 45",55.827462398737744,,1
+standard,"straight, 20x10 cm box, 3 cm off-centre",24.148246562110646,,1
+standard,"straight, 20 cm box, wall 23 cm away on the LEFT",8.499265877930686,,1
+standard,left bend r=30 cm starts 10 cm after a 20 cm box,55.550084857812095,,1
+standard,left bend r=30 cm starts 25 cm after a 20 cm box,55.550084857812095,,1
+standard,left bend r=20 cm starts 10 cm after a 20 cm box,55.550084857812095,,1
+standard,left bend r=20 cm starts 25 cm after a 10 cm box,95.90114535456141,,1
+standard,left bend r=30 cm ends 15 cm before a 20 cm box,21.558236185176465,,1
+standard,left bend r=20 cm ends 25 cm before a 20 cm box,68.05498252715155,,1
+standard,right bend r=30 cm starts 10 cm after a 20 cm box,55.550084857812095,,1
+standard,right bend r=30 cm starts 25 cm after a 20 cm box,55.550084857812095,,1
+standard,right bend r=20 cm starts 10 cm after a 20 cm box,55.550084857812095,goal missed|FAULT/FAULT/NO_LINE,0
+standard,right bend r=20 cm starts 25 cm after a 10 cm box,95.90114535456141,,1
+standard,right bend r=30 cm ends 15 cm before a 20 cm box,67.8875562271766,,1
+standard,right bend r=20 cm ends 25 cm before a 20 cm box,44.881150942369054,,1
+beam=10,"straight, 10x10 cm box",95.59571653479226,,1
+beam=10,"straight, 20x20 cm box",57.595700511126644,,1
+beam=10,"straight, 20x20 cm box, turned 45",26.96122920823396,,1
+beam=10,"straight, 20x10 cm box, 3 cm off-centre",31.230410193015256,,1
+beam=10,"straight, 20 cm box, wall 23 cm away on the LEFT",36.96700498424452,,1
+beam=10,left bend r=30 cm starts 10 cm after a 20 cm box,58.69611760441026,,1
+beam=10,left bend r=30 cm starts 25 cm after a 20 cm box,58.69611760441026,,1
+beam=10,left bend r=20 cm starts 10 cm after a 20 cm box,58.69611760441026,,1
+beam=10,left bend r=20 cm starts 25 cm after a 10 cm box,95.948548908189,,1
+beam=10,left bend r=30 cm ends 15 cm before a 20 cm box,28.092769963712836,,1
+beam=10,left bend r=20 cm ends 25 cm before a 20 cm box,21.494875988075677,,1
+beam=10,right bend r=30 cm starts 10 cm after a 20 cm box,58.69611760441026,,1
+beam=10,right bend r=30 cm starts 25 cm after a 20 cm box,58.69611760441026,,1
+beam=10,right bend r=20 cm starts 10 cm after a 20 cm box,58.69611760441026,goal missed|FAULT/FAULT/NO_LINE,0
+beam=10,right bend r=20 cm starts 25 cm after a 10 cm box,95.948548908189,,1
+beam=10,right bend r=30 cm ends 15 cm before a 20 cm box,43.3925163636702,,1
+beam=10,right bend r=20 cm ends 25 cm before a 20 cm box,23.91745849093917,,1
+beam=20,"straight, 10x10 cm box",102.39173065898038,,1
+beam=20,"straight, 20x20 cm box",52.35826769242251,,1
+beam=20,"straight, 20x20 cm box, turned 45",36.338036655065146,,1
+beam=20,"straight, 20x10 cm box, 3 cm off-centre",22.402728266419814,,1
+beam=20,"straight, 20 cm box, wall 23 cm away on the LEFT",9.210230316969968,,1
+beam=20,left bend r=30 cm starts 10 cm after a 20 cm box,52.761511465180504,,1
+beam=20,left bend r=30 cm starts 25 cm after a 20 cm box,52.761511465180504,,1
+beam=20,left bend r=20 cm starts 10 cm after a 20 cm box,52.761511465180504,,1
+beam=20,left bend r=20 cm starts 25 cm after a 10 cm box,102.16273640695974,,1
+beam=20,left bend r=30 cm ends 15 cm before a 20 cm box,25.242012232024663,,1
+beam=20,left bend r=20 cm ends 25 cm before a 20 cm box,16.635403207832546,,1
+beam=20,right bend r=30 cm starts 10 cm after a 20 cm box,52.761511465180504,,1
+beam=20,right bend r=30 cm starts 25 cm after a 20 cm box,52.761511465180504,,1
+beam=20,right bend r=20 cm starts 10 cm after a 20 cm box,52.761511465180504,goal missed|FAULT/FAULT/NO_LINE,0
+beam=20,right bend r=20 cm starts 25 cm after a 10 cm box,102.16273640695974,,1
+beam=20,right bend r=30 cm ends 15 cm before a 20 cm box,86.79468758028302,,1
+beam=20,right bend r=20 cm ends 25 cm before a 20 cm box,30.994669647824615,,1
+turn=1.1,"straight, 10x10 cm box",111.93184882683863,,1
+turn=1.1,"straight, 20x20 cm box",70.32490483602142,,1
+turn=1.1,"straight, 20x20 cm box, turned 45",74.09812245612841,,1
+turn=1.1,"straight, 20x10 cm box, 3 cm off-centre",40.45892244047081,,1
+turn=1.1,"straight, 20 cm box, wall 23 cm away on the LEFT",26.54674728791363,,1
+turn=1.1,left bend r=30 cm starts 10 cm after a 20 cm box,70.72642171276615,,1
+turn=1.1,left bend r=30 cm starts 25 cm after a 20 cm box,70.72642171276615,,1
+turn=1.1,left bend r=20 cm starts 10 cm after a 20 cm box,70.72642171276615,,1
+turn=1.1,left bend r=20 cm starts 25 cm after a 10 cm box,110.8131688635415,,1
+turn=1.1,left bend r=30 cm ends 15 cm before a 20 cm box,23.918474580176035,,1
+turn=1.1,left bend r=20 cm ends 25 cm before a 20 cm box,94.69854000996408,,1
+turn=1.1,right bend r=30 cm starts 10 cm after a 20 cm box,70.72642171276615,,1
+turn=1.1,right bend r=30 cm starts 25 cm after a 20 cm box,70.72642171276615,,1
+turn=1.1,right bend r=20 cm starts 10 cm after a 20 cm box,70.72642171276615,,1
+turn=1.1,right bend r=20 cm starts 25 cm after a 10 cm box,110.8131688635415,,1
+turn=1.1,right bend r=30 cm ends 15 cm before a 20 cm box,78.46596969055406,,1
+turn=1.1,right bend r=20 cm ends 25 cm before a 20 cm box,49.638554156824405,,1
+turn=0.9,"straight, 10x10 cm box",79.37640429254422,,1
+turn=0.9,"straight, 20x20 cm box",37.95950523664117,,1
+turn=0.9,"straight, 20x20 cm box, turned 45",36.15289587997993,,1
+turn=0.9,"straight, 20x10 cm box, 3 cm off-centre",8.42352289171451,,1
+turn=0.9,"straight, 20 cm box, wall 23 cm away on the LEFT",-1.0,collision,1
+turn=0.9,left bend r=30 cm starts 10 cm after a 20 cm box,38.13956313049713,,1
+turn=0.9,left bend r=30 cm starts 25 cm after a 20 cm box,38.13956313049713,,1
+turn=0.9,left bend r=20 cm starts 10 cm after a 20 cm box,38.13956313049713,,1
+turn=0.9,left bend r=20 cm starts 25 cm after a 10 cm box,79.98249689840686,,1
+turn=0.9,left bend r=30 cm ends 15 cm before a 20 cm box,19.24007010513918,,1
+turn=0.9,left bend r=20 cm ends 25 cm before a 20 cm box,42.9497003135091,,1
+turn=0.9,right bend r=30 cm starts 10 cm after a 20 cm box,38.13956313049713,,1
+turn=0.9,right bend r=30 cm starts 25 cm after a 20 cm box,38.13956313049713,,1
+turn=0.9,right bend r=20 cm starts 10 cm after a 20 cm box,38.13956313049713,goal missed|FAULT/FAULT/NO_LINE,0
+turn=0.9,right bend r=20 cm starts 25 cm after a 10 cm box,79.98249689840686,,1
+turn=0.9,right bend r=30 cm ends 15 cm before a 20 cm box,59.524039065725646,,1
+turn=0.9,right bend r=20 cm ends 25 cm before a 20 cm box,32.52688834002619,,1

@@ -21,7 +21,6 @@ def main():
     # their existing explicitly padded counterparts must still decode. Do not
     # invent extra timestamped samples or relax clipped leading/quiet margins.
     pending_eof_cases = {
-        ("20261103-152854-successful-z.txt", False, 2000),
         ("20261110-165431-small-a-decoded.txt", True, 0),
         ("20261110-165431-small-a-decoded.txt", True, 100),
         ("20261110-165500-small-a-decoded.txt", True, 0),
@@ -38,20 +37,25 @@ def main():
                 (name, raw, lead) in pending_eof_cases and
                 "decoded=0 rejected=0 timing=0 overflow=0 state=3 " in out)
 
+    # Expected midpoint letters after restoring the clipped leading margin.
+    # The two columns use (recorded tail, recorded tail + 1 s white).
+    # The captured trailing paper differs by waveform even for the same letter.
+    # test_recorded_margins.py checks the disputed A/Z endpoints against the
+    # print patterns, timing and intentionally shortened/extended captures.
     cases = {
-        "20261103-152854-successful-z.txt": "Z",
-        "20261103-171918-normal-speed.txt": "A",
-        "20261103-173819-half-speed-1.txt": "",
-        "20261103-173958-half-speed-2.txt": "A",
-        "20261103-181733-adaptive-a.txt": "A",
-        "20261103-182659-varying-a.txt": "A",
-        "20261103-191949-speed003-a.txt": "A",
-        "20261103-192042-speed003-a.txt": "A",
-        "20261103-192137-speed003-a.txt": "A",
-        "20261103-212737-wide-f-shifted-rejected.txt": "F",
+        "20261103-152854-successful-z.txt": ("", "Z"),
+        "20261103-171918-normal-speed.txt": ("A", "A"),
+        "20261103-173819-half-speed-1.txt": ("", ""),
+        "20261103-173958-half-speed-2.txt": ("", "A"),
+        "20261103-181733-adaptive-a.txt": ("", "A"),
+        "20261103-182659-varying-a.txt": ("", "A"),
+        "20261103-191949-speed003-a.txt": ("", "A"),
+        "20261103-192042-speed003-a.txt": ("", "A"),
+        "20261103-192137-speed003-a.txt": ("", "A"),
+        "20261103-212737-wide-f-shifted-rejected.txt": ("", "F"),
     }
     checks = 0
-    for name, padded_letter in cases.items():
+    for name, (recorded_tail_letter, padded_letter) in cases.items():
         trace = parse_trace((Path(__file__).parent / "fixtures/barcode" / name).read_text())
         assert trace["complete"] and len(trace["episodes"]) == 1, name
         # BCAP floors each interval to milliseconds. Its missing sub-ms part
@@ -69,9 +73,8 @@ def main():
                 if lead == 0:
                     assert not letters, (name, "missing leading quiet must not be fabricated", run.stdout)
                 if fraction == 500:
-                    expected = padded_letter if lead and (trail or padded_letter == "Z") else ""
-                    assert (letters == expected or (expected and pending_at_eof(
-                        name, False, fraction, False, lead, trail, run.stdout))), (name, lead, trail, run.stdout)
+                    expected = padded_letter if trail else recorded_tail_letter
+                    assert letters == (expected if lead else ""), (name, lead, trail, run.stdout)
                 checks += 1
     # These observed A/Z captures include their real leading margin. Raw ADC is
     # retained exactly; reconstruct the firmware's 215/3550 calibration rather

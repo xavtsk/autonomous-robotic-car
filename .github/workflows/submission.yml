@@ -1,0 +1,107 @@
+name: Submission verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host:
+    name: Host tests and mission regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install host test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential mosquitto mosquitto-clients
+          node --version
+      - name: Run submission verification
+        run: python3 tools/verify_submission.py --output build/submission-check
+      - name: Retain per-suite commands, logs and outcomes
+        id: host_artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: host-verification-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            build/submission-check/*.md
+            build/submission-check/*.log
+            build/submission-check/*.json
+            build/submission-check/bin/subsystem5/*.json
+            build/submission-check/bin/subsystem5/*.log
+            build/submission-check/replay/
+      - name: Show strict outcomes and regression verdicts
+        if: always() && hashFiles('build/submission-check/summary.md') != ''
+        env:
+          RESULT_URL: ${{ steps.host_artifact.outputs.artifact-url }}
+        run: |
+          echo "[Download the report and logs]($RESULT_URL)" >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          sed -E 's/\[log\]\(([^)]*)\)/\1/g' build/submission-check/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+  firmware:
+    name: Integrated Arm build, size and hashes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: 8131e1a577ee47f59531da44b831ee0eaf4a9a4c
+          path: baseline
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: 98a542c1a62fb549ffb5d66a3e5892b06276b670
+          submodules: recursive
+          path: pico-sdk
+          persist-credentials: false
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential g++-13
+          bash candidate/tools/compliance/install_arm.sh "$RUNNER_TEMP/arm"
+      - name: Build the same course profile at both revisions
+        run: |
+          python3 candidate/tools/compliance/build_targets.py --baseline baseline --candidate candidate \
+            --sdk pico-sdk --profile imu_debug --output arm-evidence
+      - name: Report measured sizes and image hashes
+        if: always() && hashFiles('arm-evidence/results.json') != ''
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          receipt = json.loads(Path('arm-evidence/results.json').read_text())
+          print('| Build | Revision | Static RAM (B) | GNU text (B) |')
+          print('| --- | --- | ---: | ---: |')
+          for label, build in receipt['builds'].items():
+              sizes = build.get('sizes', {})
+              print(f"| {label} | `{build['revision'][:12]}` | {sizes.get('static_ram', 'unavailable')} | "
+                    f"{sizes.get('text', 'unavailable')} |")
+          for label, build in receipt['builds'].items():
+              for name, digest in build.get('artifacts', {}).items():
+                  if name.endswith(('.elf', '.uf2')):
+                      print(f"\n{label} `{name}` SHA-256 `{digest}`")
+          PY
+      - name: Retain firmware, SHA-256 hashes, RAM and build commands
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: integrated-arm-${{ github.sha }}
+          path: arm-evidence/
+          if-no-files-found: error

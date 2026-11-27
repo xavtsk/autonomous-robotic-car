@@ -71,8 +71,12 @@ original-heading/stopped/healthy-line confirmation → normal following.
 Coarse angles are 30/60/90/120/150 degrees; fine scans use 5 degree steps in a
 bounded ±15 degree sector around the nearest coarse return. Each angle settles
 250 ms, measurements are at least 70 ms apart, and invalid returns get at most
-three attempts. Echo timeout is 25 ms; the whole scan is limited to 10 s.
-Neither no echo nor a failed scan is converted into open space.
+three attempts. The echo timeout is 25 ms and the whole scan is limited to 10 s.
+If the capture FIFO is still empty at the timeout, a LOW ECHO yields an invalid
+range. A HIGH ECHO yields a valid 4,000 mm clear-range reading. An ECHO held
+high by a fault after a valid trigger can therefore give one false clear reading.
+The driver rejects a new trigger while ECHO is already high.
+[Driver behaviour exercised by the register fixture](../../testing/subsystem5/hardware_main.c)
 
 The profile reports nearest return, estimated forward extent, left/right
 clearance and a conservative lateral obstacle envelope. Angular/beam uncertainty
@@ -94,17 +98,17 @@ The planned distance after the side peek clears is 217 mm (previously 214 mm).
 
 ## Route and recovery limits — physical tuning required
 
-Initial configuration is in `s5_config.h`, NOT a set of agreed physical tolerances:
+The course configuration uses these values. [Configuration](s5_config.h)
 
-| Setting | Initial value |
+| Setting | Configured value |
 |---|---:|
-| Obstacle detection / moving emergency distance | 350 / 150 mm |
-| Profile obstacle cutoff | 700 mm |
-| Robot half width / additional margin | 90 / 70 mm |
+| Obstacle detection / moving emergency distance | 250 / 80 mm |
+| Profile obstacle cutoff | 350 mm |
+| Robot half width / side margin | 63 / 30 mm |
 | Assumed maximum obstacle depth | 500 mm |
 | Maximum lateral detour | 700 mm |
 | Recovery corridor half-width | 100 mm |
-| Sensor-to-axle offset | 0 mm: MUST measure and update |
+| Forward offsets from axle, ultrasonic / line sensors | 75 / 135 mm |
 | Drive/turn wheel speed | 80 mm/s |
 | Complete avoidance deadline | 60 s |
 
@@ -122,15 +126,20 @@ the diagonal and the forward sweep of the car's inner front corner (face
 distance vs. obstacle edge + 1.414 × half width + margin) must be clear; a wide
 obstacle close ahead therefore needs more stopping distance than with 90° legs.
 
-### Current bypass (17 Nov 2026), calibrated in the course simulator
+### Bypass behaviour and simulator results
 
-`testing/subsystem5/bypass_course_test.c` runs the real line follower, s3_drive,
-Buddy 5 FSM and Buddy 2 motion controller on simulated wheels, IR and
-ultrasonic, with 10–20 cm boxes on a straight and near bends (radius 20/30 cm,
-starting 10/25 cm after the obstacle or ending 15/25 cm before it), plus a wall
-blocking the left. Before this change 8 of 17 cases rejoined the line; now all
-17 do, and 151 of 153 with the sonar cone set to ±10/±20° or the turns 10 %
-short/long (the 2 misses: wall on the left together with 10 % short turns).
+With the `8131e1a` course firmware, 16 of 17 standard simulated bypasses
+completed successfully. Across the five profiles run by Make, 80 of 85 succeeded.
+The 20 cm radius right bend starting 10 cm after a 20 cm box ends in `NO_LINE`
+in four profiles. The 10%-short-turn case alongside a left wall regains the line
+but intersects the obstacle. The simulator returns −1 mm as a contact indicator.
+[Simulator](../../testing/subsystem5/bypass_course_main.c) ·
+[Results, reference and repeatable commands](../../testing/subsystem5/README.md#bypass-simulation)
+
+The 17 November tuning notes reported 8/17 before that tuning, 17/17 afterwards
+and 151/153 in a wider sensitivity sweep. They used the geometry and verdicts
+of that session. The results above count actual mission completions at the
+submitted revision, including the tight bend previously labelled as a pass.
 
 1. Side: LEFT unless the left is shown impossible (obstacle too wide on the
    left, the left diagonal blocked on 3 consecutive readings, or too close for
@@ -140,9 +149,10 @@ short/long (the 2 misses: wall on the left together with 10 % short turns).
 3. Passing: side peeks every 25 mm; each peek also checks the side gap. If the
    car has drifted closer than planned (left a bend crooked, inexact turns) it
    turns away by up to 10° (3 times at most) and peeks again.
-4. After the side reads clear: 214 mm more, so the car's back is past the
-   rear edge + margin. (A shorter 139 mm version, `S5_PASS_EXTRA_V2 1`, hit
-   the obstacle on the real car on 17 Nov evening and is off.)
+4. After the side reads clear, drive far enough to take the rear of the car
+   past the estimated edge with a margin. The November 23 example above gives
+   217 mm. The shorter 139 mm version hit the obstacle on the car on
+   17 November and is disabled.
 5. Turn back in to 45° off the passing heading. Return diagonal long enough
    for the larger of the planned offset (+ any turn away) and the distance the
    last side peek measured (a car that drifted outward still reaches the line).
@@ -159,9 +169,9 @@ short/long (the 2 misses: wall on the left together with 10 % short turns).
    100) and no double aim on bends (`S5_BEND_AIM_PCT 100`, was 200): both made
    bend cases worse in the simulator.
 
-On a straight with the box centred the path is the old one; the side check
-never fires there. The simulator's wheel/IR/sonar constants are guesses
-(see course_sim.c): this shows the logic, not the real car.
+On a straight with the box centred, the side correction does not trigger.
+The simulator uses estimated wheel, IR and sonar parameters.
+[Simulation model](../../testing/integration/course_sim_main.c)
 
 ### History (13 Nov 2026, superseded where the list above differs)
 
@@ -212,11 +222,14 @@ Track run 2 fixes (13 Nov 2026):
   the heading it sweeps +45 / −90 / +45° and stops as soon as tape is confirmed.
   No tape after that is still STOP/NO_LINE.
 
-Every move requires a new valid centre reading after the previous phase;
-ongoing movement, including turns, stops on stale/invalid range or emergency distance.
-If neither side has enough observed clearance, the current policy is STOP/NO_PATH.
-It does not reverse blindly into unobserved space or repeatedly retry an unsafe
-route. A reverse-and-reattempt policy requires verified rear clearance first.
+Forward legs require a fresh centre reading after the preceding turn. During
+issued moves the forward-range gate stops the car on a stale, invalid or
+emergency-close reading, except while backing away from the front obstacle.
+If neither side offers a permitted route, the controller stops with `NO_PATH`.
+When backing can create room for the front corner, the planner may instead
+request one reverse manoeuvre of up to 100 mm. During that manoeuvre a close
+front obstacle is expected. The front-facing scan cannot establish rear
+clearance. [Bounded backup tests](../../testing/subsystem5/bypass_fsm_main.c)
 
 Recovery requires sustained actual tape evidence (30 ms) near the predicted
 original corridor, rejecting junction candidates. With the current wide-spaced

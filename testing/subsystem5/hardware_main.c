@@ -171,13 +171,14 @@ int main (void)
     gb_is_echo_high = true;
     assert(!ultrasonic_sensor_trigger(140000));
     gb_is_echo_high = false;
-    /* Path clear: pulse started (ECHO high) but nothing returned within 25 ms.
-     */
+    /* A normal long pulse and a wire stuck HIGH after a valid trigger give
+     * the same first 4,000 mm result. HIGH blocks the following trigger. */
     assert(ultrasonic_sensor_trigger(210000));
     gb_is_echo_high = true;
     assert(!ultrasonic_sensor_poll(220000, &millimetres, &b_is_valid));
     assert(ultrasonic_sensor_poll(236000, &millimetres, &b_is_valid) &&
            b_is_valid && S5_RANGE_MAX_MM == millimetres && !(g_control & 4U));
+    assert(!ultrasonic_sensor_trigger(280000));
     gb_is_echo_high = false;
     /* Completed pulse longer than the range window is also clear. */
     assert(ultrasonic_sensor_trigger(280000));
