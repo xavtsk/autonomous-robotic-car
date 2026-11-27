@@ -26,7 +26,6 @@
   let lastBuddyRunOptions = '';
   let selectedBuddyRunId = '';
   let lastImuCaptureKey = '';
-  let lastHumpEventKey = '';
   let lastRunsKey = '';
   let barcodeCapturesExpanded = false;
   let lastMapResult = '';
@@ -729,7 +728,6 @@
   }
 
   function renderImuCaptures() {
-    renderHumpEvents();
     const log = state?.imu_captures;
     $('imu-captures').hidden = !log;
     if (!log) return;
@@ -761,29 +759,6 @@
       rows.append(row);
     }
     $('imu-capture-body').replaceChildren(rows);
-  }
-
-  function renderHumpEvents() {
-    const log = state?.hump_events;
-    const event = log?.latest;
-    const key = JSON.stringify(log ?? null);
-    if (lastHumpEventKey === key) return;
-    lastHumpEventKey = key;
-    $('hump-discards').hidden = !event && !log?.error;
-    if (!log) return;
-    const millimetres = um => (um / 1000).toFixed(2);
-    $('hump-discard-summary').textContent = log.error || (event
-      ? `Run ${event.firmware_run}, event ${event.event_sequence} at ${new Date(event.received_at_utc).toLocaleTimeString()} (received). ${titleCase(event.rejection_reason)}. Travel ${millimetres(event.crossing_travel_um)} mm, peak ${millimetres(event.peak_um)} mm. Firmware queue drops ${event.firmware_dropped_events}.`
-      : '');
-    const list = document.createDocumentFragment();
-    for (const name of log.files) {
-      const item = element('li'), link = element('a', name);
-      link.href = `/api/imu/${encodeURIComponent(name)}`;
-      link.download = name;
-      item.append(link);
-      list.append(item);
-    }
-    $('hump-discard-files').replaceChildren(list);
   }
 
   function renderBarcodeCaptures() {

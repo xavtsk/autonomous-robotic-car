@@ -10,13 +10,6 @@
  * Cast them in the existing unsigned arithmetic or comparison domain.
  * Unsigned casts spell out the original modulo conversion.
  */
-#if APP_IMU_DEBUG
-/* Use libc's size_t for the byte-copy routines and kernel headers. */
-#ifndef PROHIBIT_DEF_SIZE_T
-#define PROHIBIT_DEF_SIZE_T
-#endif
-#include <stddef.h>
-#endif
 #include "buddy4.h"
 #include "../build_assert.h"
 #include "../app_types.h"
@@ -27,9 +20,6 @@
 #define APP_S4_BENCH 0
 #endif
 #if APP_S4
-#if APP_MAG_CAL_CAPTURE
-#include "mag_capture.h"
-#endif
 #ifdef BUDDY4_TRANSPORT_TEST
 #include "transport_main.h"
 #endif
@@ -47,7 +37,6 @@
 #include "../subsystem2/motion.h"
 #if APP_IMU_DEBUG
 #include "../../lib/liblwip/sysdepend/pico_rp2040/mqtt_utk.h"
-#include <string.h>
 #endif
 /* The host transport fixture substitutes these three operations. */
 #ifdef BUDDY4_TRANSPORT_TEST
@@ -94,9 +83,6 @@ typedef struct
     (IMU_DEBUG_HEADER_BYTES + IMU_DEBUG_BATCH_ROWS * IMU_DEBUG_ROW_BYTES)
 #define IMU_DEBUG_QUEUE_ROWS 128U
 #define IMU_DEBUG_FLUSH_US 250000U
-#define HUMP_EVENT_CAPACITY 8U
-#define HUMP_EVENT_ROW_BYTES 17U
-#define HUMP_EVENT_WIRE_BYTES 24U
 
 typedef enum
 {
@@ -150,16 +136,6 @@ static unsigned        g_imu_debug_head;
 static unsigned        g_imu_debug_count;
 static uint32_t        g_imu_debug_sequence;
 static uint32_t        g_imu_debug_boot_tag;
-/* Terrain mutex protects the FIFO. Run reset leaves pending events intact. */
-static uint8_t g_hump_events[HUMP_EVENT_CAPACITY][HUMP_EVENT_ROW_BYTES];
-
-static struct
-{
-    unsigned head : 3;
-    unsigned count : 4;
-    uint16_t dropped;
-    uint32_t sequence;
-} g_hump_queue;
 
 #endif
 
@@ -167,8 +143,7 @@ static uint32_t now_us (void);
 static bool bus_read (void * p_ctx, uint8_t addr, uint8_t reg, uint8_t * p_out,
                       unsigned byte_count);
 static bool bus_write (void * p_ctx, uint8_t addr, uint8_t reg, uint8_t value);
-static bool publish (const terr_data_result_t * p_terrain, uint16_t * p_run,
-                     const terr_data_monitor_t * p_monitor);
+static bool publish (const terr_data_result_t * p_terrain, uint16_t * p_run);
 static void process_sample (terr_data_monitor_t *        p_monitor,
                             const imu_sensor_sample_t *  p_sample,
                             const terr_data_odometry_t * p_odometry);
@@ -184,55 +159,6 @@ static void    imu_debug_record (const imu_sensor_sample_t * p_sample,
                                  uint16_t                    run);
 static void    imu_debug_put16 (uint8_t * p_bytes, uint16_t value);
 static void    imu_debug_put32 (uint8_t * p_bytes, uint32_t value);
-static void    hump_debug_store (const terr_data_monitor_t * p_monitor,
-                                 uint16_t                    run);
-
-/** @brief Copy the oldest candidate discard without consuming it.
- * The publisher retries on mutex contention or until its QoS 1 ACK.
- */
-unsigned mqtt_utk_hump_debug_peek (uint8_t * p_bytes, unsigned size)
-{
-    if (((NULL == p_bytes) || (size < HUMP_EVENT_WIRE_BYTES)) ||
-        ((gh_terrain_mutex <= 0) ||
-         (tk_loc_mtx(gh_terrain_mutex, TMO_POL) != E_OK)))
-    {
-        return 0U;
-    }
-    if (0 == g_hump_queue.count)
-    {
-        tk_unl_mtx(gh_terrain_mutex);
-        return 0U;
-    }
-    const uint8_t * p_row = g_hump_events[g_hump_queue.head];
-    p_bytes[0]            = 1U;
-    memcpy(p_bytes + 1, p_row, 3U);
-    imu_debug_put32(p_bytes + 4, g_imu_debug_boot_tag);
-    memcpy(p_bytes + 8, p_row + 3, HUMP_EVENT_ROW_BYTES - 3U);
-    imu_debug_put16(p_bytes + 22, g_hump_queue.dropped);
-    tk_unl_mtx(gh_terrain_mutex);
-    return HUMP_EVENT_WIRE_BYTES;
-}
-
-/** @brief Release only the acknowledged head. A busy mutex permits replay. */
-void mqtt_utk_hump_debug_ack (uint32_t sequence)
-{
-    if ((gh_terrain_mutex <= 0) ||
-        (tk_loc_mtx(gh_terrain_mutex, TMO_POL) != E_OK))
-    {
-        return;
-    }
-    uint8_t serial[4];
-    imu_debug_put32(serial, sequence);
-    if ((g_hump_queue.count != 0) &&
-        (memcmp(g_hump_events[g_hump_queue.head] + 3, serial, sizeof serial) ==
-         0))
-    {
-        g_hump_queue.head =
-            ((unsigned)g_hump_queue.head + 1U) % HUMP_EVENT_CAPACITY;
-        --g_hump_queue.count;
-    }
-    tk_unl_mtx(gh_terrain_mutex);
-}
 
 /** @brief Take up to five consecutive rows from one run under the debug mutex.
  * A short tail waits up to 250 ms. Return the encoded byte count, or
@@ -563,7 +489,7 @@ bool buddy4_set_mag_calibration (const float32_t p_offset[3],
 /** @brief Inject a terrain publication into the original queue path. */
 void buddy4_transport_publish (const terr_data_result_t * p_terrain)
 {
-    (void)publish(p_terrain, NULL, NULL);
+    (void)publish(p_terrain, NULL);
 }
 
 /** @brief Process one caller-owned IMU sample with its matching odometry. */
@@ -668,47 +594,6 @@ static int32_t imu_debug_um (float32_t metres)
     return (int32_t)(micrometres + (micrometres < 0.0f ? -0.5f : 0.5f));
 }
 
-/** @brief Save the final classified rejection before the next IMU sample.
- * Caller owns the terrain mutex. A full queue preserves its oldest events
- * and exposes lost new events in both the serial and the overflow count.
- */
-static void hump_debug_store (const terr_data_monitor_t * p_monitor,
-                              uint16_t                    run)
-{
-    if ((NULL == p_monitor) ||
-        (0U == ((unsigned)p_monitor->hump.debug.flags & HUMP_DEBUG_DISCARDED)))
-    {
-        return;
-    }
-    ++g_hump_queue.sequence;
-    if (HUMP_EVENT_CAPACITY == (unsigned)g_hump_queue.count)
-    {
-        if (g_hump_queue.dropped < UINT16_MAX)
-        {
-            ++g_hump_queue.dropped;
-        }
-        return;
-    }
-    const unsigned tail =
-        ((unsigned)g_hump_queue.head + (unsigned)g_hump_queue.count) %
-        HUMP_EVENT_CAPACITY;
-    uint8_t *     p_row = g_hump_events[tail];
-    const int32_t peak_um =
-        imu_debug_um(p_monitor->hump.debug.candidate_peak_m);
-    const int32_t travel_um = imu_debug_um(p_monitor->hump.debug.travel_m);
-    p_row[0]                = p_monitor->hump.debug.reason;
-    imu_debug_put16(p_row + 1, run);
-    imu_debug_put32(p_row + 3, g_hump_queue.sequence);
-    imu_debug_put32(p_row + 7, p_monitor->result.timestamp_us);
-    /* Only nonnegative distances are encoded. The peak saturates at 65535. */
-    imu_debug_put32(p_row + 11, travel_um > 0 ? (uint32_t)travel_um : 0U);
-    imu_debug_put16(
-        p_row + 15,
-        peak_um <= 0 ? 0U
-                     : (peak_um > UINT16_MAX ? UINT16_MAX : (uint16_t)peak_um));
-    ++g_hump_queue.count;
-}
-
 /** @brief Build one row for the published run. The terrain owner advances the
  * sequence before polling the debug mutex. Contention drops the row
  * and a full queue discards its oldest row.
@@ -796,6 +681,21 @@ static void imu_debug_record (const imu_sensor_sample_t * p_sample,
         return;
     }
 
+    if (0U == g_imu_debug_boot_tag)
+    {
+        /* A best-effort session tag from startup timing and the first reading.
+         */
+        uint32_t tag = row.timestamp_us;
+
+        for (unsigned axis = 0; axis < (unsigned)IMU_AXIS_COUNT; ++axis)
+        {
+            /* Mix each signed sample's low 16 bits into the boot tag. */
+            tag = (tag ^ (uint16_t)row.raw_mg[axis]) * 16777619U;
+        }
+
+        g_imu_debug_boot_tag = tag | 1U;
+    }
+
     if (IMU_DEBUG_QUEUE_ROWS == g_imu_debug_count)
     {
         g_imu_debug_head = (g_imu_debug_head + 1U) % IMU_DEBUG_QUEUE_ROWS;
@@ -870,8 +770,7 @@ static bool bus_write (void * p_ctx, uint8_t addr, uint8_t reg, uint8_t value)
  * optionally return the current run token. A pending reset or failed
  * lock rejects publication.
  */
-static bool publish (const terr_data_result_t * p_terrain, uint16_t * p_run,
-                     const terr_data_monitor_t * p_monitor)
+static bool publish (const terr_data_result_t * p_terrain, uint16_t * p_run)
 {
     if (tk_loc_mtx(gh_terrain_mutex, TMO_FEVR) != E_OK)
     {
@@ -880,14 +779,6 @@ static bool publish (const terr_data_result_t * p_terrain, uint16_t * p_run,
 
     terr_data_result_t previous;
 
-#if APP_IMU_DEBUG
-    /* Between a reset request and its owner acknowledgement, the completed
-     * sample belongs to the preceding run. */
-    hump_debug_store(p_monitor,
-                     g_queue.b_is_reset_pending ? g_published_run : g_run);
-#else
-    (void)p_monitor;
-#endif
     if (g_queue.b_is_reset_pending)
     {
         tk_unl_mtx(gh_terrain_mutex);
@@ -945,33 +836,16 @@ static void process_sample (terr_data_monitor_t *        p_monitor,
                             const imu_sensor_sample_t *  p_sample,
                             const terr_data_odometry_t * p_odometry)
 {
-#if APP_MAG_CAL_CAPTURE
-    mag_capture_sample(p_sample, p_odometry);
-#endif
     BUDDY4_TERRAIN_PROCESS(p_monitor, p_sample, p_odometry);
 #if APP_IMU_DEBUG
     uint16_t run;
 
-    if (0U == g_imu_debug_boot_tag)
-    {
-        /* The owner seeds once, before publishing either queue. Hash the
-         * low 16 bits of each signed milligravity sample with startup time. */
-        uint32_t tag = p_sample->timestamp_us;
-        for (unsigned axis = 0; axis < (unsigned)IMU_AXIS_COUNT; ++axis)
-        {
-            const int16_t raw = p_sample->b_is_valid
-                                    ? imu_debug_mg(p_sample->accel_g[axis])
-                                    : 0;
-            tag               = (tag ^ (uint16_t)raw) * 16777619U;
-        }
-        g_imu_debug_boot_tag = tag | 1U;
-    }
-    if (publish(&p_monitor->result, &run, p_monitor))
+    if (publish(&p_monitor->result, &run))
     {
         imu_debug_record(p_sample, p_monitor, run);
     }
 #else
-    (void)publish(&p_monitor->result, NULL, NULL);
+    (void)publish(&p_monitor->result, NULL);
 #endif
 }
 

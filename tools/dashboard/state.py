@@ -14,7 +14,6 @@ from .control_protocol import (TOPIC as CONTROL_TOPIC, ACTIONS, BARCODE_STATUS, 
                                encoder_turn_rate)
 from .debug_history import DebugHistory
 from .imu_capture import ImuCaptures, TOPIC as IMU_TOPIC, decode_imu
-from .hump_events import HumpEventLog, TOPIC as HUMP_EVENT_TOPIC, decode_event
 from .route import ACTIVE_STATES, RouteTracker
 from .run_log import RunLog
 from .run_control_protocol import (COMMAND_TOPIC as RUN_COMMAND_TOPIC, REPLY_TOPIC as RUN_REPLY_TOPIC,
@@ -83,7 +82,6 @@ class DashboardState:
         self._demo_epoch = self.clock()
         self._demo_sequence = 0
         self.run_log = RunLog(traces.folder, clock=clock)
-        self.hump_events = HumpEventLog(traces.folder) if mode == "live" else None
         self.imu_captures = ImuCaptures(traces.folder) if capture_imu and mode == "live" else None
         self.route = RouteTracker(clock, self.run_log.record)
         # Buddy 5 raw readings of the latest scan/peek (car/telemetry/scan_sample).
@@ -286,22 +284,6 @@ class DashboardState:
                     self.counters["bytes_received"] += len(payload)
                     self.debug.receive(len(payload))
                     self._log_run(3, "ir_preview", frame, received_at)
-                return
-            if topic == HUMP_EVENT_TOPIC and self.hump_events is not None:
-                try:
-                    event = decode_event(payload)
-                except ValueError as exc:
-                    self.counters["malformed"] += 1
-                    self.add_event(4, "warning", str(exc))
-                    return
-                self.last_car = self.clock()
-                self.counters["received"] += 1
-                self.counters["bytes_received"] += len(payload)
-                self.debug.receive(len(payload))
-                if self.hump_events.record(event, received_at):
-                    reason = event["rejection_reason"].replace("_", " ")
-                    self.add_event(4, "info", f"Hump candidate discarded in firmware run "
-                                   f"{event['firmware_run']}: {reason}")
                 return
             if topic == IMU_TOPIC:
                 if self.imu_captures is None:
@@ -714,7 +696,6 @@ class DashboardState:
                         control=self._run_view(),
                         run_log=self.run_log.snapshot(self.route.current_log_id, not self.route.ended),
                         imu_captures=self.imu_captures.snapshot() if self.imu_captures is not None else None,
-                        hump_events=self.hump_events.snapshot() if self.hump_events is not None else None,
                         events=list(self.events), counters=dict(self.counters),
                         traces=self.traces.list(), diagnostics={"raw_messages": list(self.history),
                             "ir": self.ir.snapshot(self.connection["status"] == "connected", False),
@@ -780,8 +761,6 @@ class DashboardState:
 
     def download_imu(self, name):
         with self.lock:
-            if name.startswith("hump-") and self.hump_events is not None:
-                return self.hump_events.download(name)
             if self.imu_captures is None:
                 raise KeyError(name)
             return self.imu_captures.download(name)

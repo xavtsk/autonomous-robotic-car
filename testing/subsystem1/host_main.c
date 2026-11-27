@@ -12,7 +12,6 @@
 #include <assert.h>
 #include <pthread.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -109,7 +108,6 @@ static unsigned g_control_frames;
 
 #if APP_IMU_DEBUG
 static unsigned g_imu_batches;
-static bool g_has_hump_event;
 #endif
 
 static void empty_outbox (void);
@@ -585,27 +583,6 @@ unsigned int mqtt_utk_ir_debug_take (uint8_t * p_bytes, unsigned int size)
 
 #endif
 #if APP_IMU_DEBUG
-/** @brief Present one queued event until the subscriber-facing publish
- * receives its broker acknowledgement. */
-unsigned int mqtt_utk_hump_debug_peek (uint8_t * p_bytes, unsigned int size)
-{
-    static const uint8_t event[MQTT_UTK_HUMP_DEBUG_SIZE] = {
-        1, 9, 1, 0, 1, 0, 0, 0, 0x89, 0x67, 0x45, 0x23};
-    if ((!g_has_hump_event) || (size < sizeof event))
-    {
-        return 0U;
-    }
-    memcpy(p_bytes, event, sizeof event);
-    return sizeof event;
-}
-
-/** @brief Remove only the sequence actually transmitted. */
-void mqtt_utk_hump_debug_ack (uint32_t sequence)
-{
-    assert(g_has_hump_event && (sequence == 0x23456789U));
-    g_has_hump_event = false;
-}
-
 /** @brief Write one synthetic IMU batch into an exactly sized buffer. Return
  * zero when the batches are exhausted.
  */
@@ -834,18 +811,6 @@ int host_main_run (void)
 #endif
 #if APP_IMU_DEBUG
     test_imu_stream();
-    g_has_hump_event = true;
-    g_defer_completion = 1;
-    poll_after(200);
-    assert(!strcmp(g_published_topic, MQTT_UTK_HUMP_DEBUG_TOPIC));
-    assert(g_has_hump_event && (g_published_qos == 1));
-    complete_publish(ERR_MEM);
-    assert(g_has_hump_event);
-    poll_after(100);
-    assert(!strcmp(g_published_topic, MQTT_UTK_HUMP_DEBUG_TOPIC));
-    complete_publish(ERR_OK);
-    assert(!g_has_hump_event);
-    g_defer_completion = 0;
 #endif
     emit_vectors();
     puts("HOST PASS: binary FIFO, full speed range, 64 fault masks, eight "

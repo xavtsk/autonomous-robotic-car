@@ -88,18 +88,6 @@ test('face width estimate comes only from bounds on the last usable scan', async
   assert.equal(estimate(), 'No estimate in this scan');
 });
 
-test('discarded hump events show original firmware run, measurements and downloadable CSV', async () => {
-  const state = robotState();
-  const name = 'hump-abc12342-r00009-000000.csv';
-  state.hump_events = {latest: {firmware_run: 9, event_sequence: 2, received_at_utc: '2026-11-24T05:00:00Z',
-    rejection_reason: 'reverse_travel', crossing_travel_um: 7800, peak_um: 9200, firmware_dropped_events: 1},
-    files: [name], error: null};
-  const ui = await dashboard(state);
-  assert.equal(ui.get('hump-discards').hidden, false);
-  assert.match(ui.get('hump-discard-summary').textContent, /Run 9, event 2.*Reverse travel.*7.80 mm.*9.20 mm.*drops 1/);
-  assert.equal(ui.get('hump-discard-files').children[0].children[0].children[0].href, '/api/imu/' + name);
-});
-
 test('run history shows run summaries and keeps downloads in the Buddy sections', async () => {
   const started_at = '2026-11-13T07:34:22Z';
   const runs = [
